@@ -1,0 +1,33 @@
+{
+  "name": "兜行",
+  "appid": "__UNI__DOUXING",
+  "description": "兜行移动端",
+  "versionName": "1.0.0",
+  "versionCode": "100",
+  "transformPx": false,
+  "vueVersion": "3",
+  "h5": {
+    "title": "兜行",
+    "router": {
+      "mode": "hash"
+    },
+    "devServer": {
+      "port": 5174
+    }
+  },
+  "mp-weixin": {
+    "appid": "wx8bdbe398733ca0f0",
+    "setting": {
+      "urlCheck": false,
+      "es6": true,
+      "postcss": true,
+      "minified": true,
+      "enhance": true
+    },
+    "usingComponents": true,
+    "lazyCodeLoading": "requiredComponents",
+    "optimization": {
+      "subPackages": true
+    }
+  }
+}

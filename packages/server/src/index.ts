@@ -1,0 +1,20 @@
+import './config/env.js';
+import express from 'express';
+import cors from 'cors';
+import routes from './routes/index.js';
+import { APP_NAME } from '@douxing/shared';
+
+const app = express();
+const port = Number(process.env.SERVER_PORT) || 3000;
+
+app.use(cors());
+app.use(express.json());
+app.use(routes);
+
+app.get('/', (_req, res) => {
+  res.json({ name: APP_NAME, message: '兜行 API 服务运行中' });
+});
+
+app.listen(port, () => {
+  console.log(`[server] ${APP_NAME} API listening on http://localhost:${port}`);
+});

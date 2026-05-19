@@ -1,0 +1,25 @@
+services:
+  mysql:
+    # 国内默认走镜像加速；能直连 Docker Hub 时在 .env 设置 MYSQL_IMAGE=mysql:8.0
+    image: ${MYSQL_IMAGE:-docker.m.daocloud.io/library/mysql:8.0}
+    container_name: douxing-mysql
+    restart: unless-stopped
+    # 宿主机端口：默认 3307，避免与本机 MySQL（常见占用 3306）冲突
+    ports:
+      - '${DOCKER_MYSQL_HOST_PORT:-3307}:3306'
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123456}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-douxing}
+      MYSQL_USER: ${MYSQL_USER:-douxing}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-douxing123}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-u', 'root', '-p${MYSQL_ROOT_PASSWORD:-root123456}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mysql_data:

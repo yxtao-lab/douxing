@@ -1,0 +1,16 @@
+node_modules
+dist
+packages/mobile/dist
+packages/mobile/unpackage
+packages/mobile/project.private.config.json
+.unpackage
+.DS_Store
+*.log
+.env
+.env.local
+.env.*.local
+coverage
+.idea
+.vscode/*
+!.vscode/extensions.json
+*.local

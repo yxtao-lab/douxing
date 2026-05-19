@@ -1,0 +1,38 @@
+{
+  "name": "douxing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "兜行 - 多端出行服务平台",
+  "scripts": {
+    "dev": "concurrently -k -n api,web,mobile,mp -c blue,green,magenta,yellow \"pnpm dev:server\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\"",
+    "dev:web": "pnpm --filter @douxing/web dev",
+    "dev:mobile": "pnpm --filter @douxing/mobile dev:h5",
+    "dev:mp-weixin": "pnpm --filter @douxing/mobile dev:mp-weixin",
+    "dev:server": "pnpm --filter @douxing/server dev",
+    "build": "pnpm run -r build",
+    "build:web": "pnpm --filter @douxing/web build",
+    "build:mobile": "pnpm --filter @douxing/mobile build:h5",
+    "build:mp-weixin": "pnpm --filter @douxing/mobile build:mp-weixin",
+    "build:server": "pnpm --filter @douxing/server build",
+    "db:migrate": "pnpm --filter @douxing/server db:migrate",
+    "db:seed": "pnpm --filter @douxing/server db:seed",
+    "db:setup": "pnpm db:migrate && pnpm db:seed",
+    "db:reset": "pnpm --filter @douxing/server db:reset",
+    "bootstrap": "node scripts/deploy.mjs",
+    "bootstrap:dev": "node scripts/deploy.mjs --skip-build --dev",
+    "stop": "node scripts/stop.mjs",
+    "stop:dev": "node scripts/stop.mjs --skip-docker",
+    "stop:docker": "node scripts/stop.mjs --docker-only",
+    "preview:web": "pnpm --filter @douxing/web preview",
+    "lint": "pnpm run -r lint --if-present"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@9.15.0",
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "kill-port": "^2.0.1"
+  }
+}
