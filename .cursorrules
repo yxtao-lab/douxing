@@ -11,6 +11,7 @@
 # Git 提交规范
 - 提交信息必须遵循 Conventional Commits 格式，例如：`feat(auth): 添加用户登录接口` 或 `fix(ui): 修复按钮点击无效的问题`。
 - 常用 type 包括：feat, fix, docs, style, refactor, test, chore。
+- 第一行概述，第二行空行，第三行详细描述。
 
 # 安全与性能
 - 所有用户输入在用于数据库查询前必须进行验证或参数化，防止 SQL 注入。
