@@ -15,6 +15,13 @@
       "when": 1747641600000,
       "tag": "0001_core_entities",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1747728000000,
+      "tag": "0002_mvp_orders",
+      "breakpoints": true
     }
   ]
 }

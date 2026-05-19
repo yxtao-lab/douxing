@@ -89,9 +89,52 @@ pnpm dev:mp-weixin     # 微信小程序编译 → dist/dev/mp-weixin
 
 ## 默认账号
 
-| 用户名 | 密码 |
-|--------|------|
-| admin | admin123 |
+| 用户名 | 密码 | 说明 |
+|--------|------|------|
+| admin | admin123 | 管理员（Web 管理端） |
+| demo | demo123 | 体验用户（移动端 MVP） |
+
+## MVP 功能（基于详细设计文档 Sprint 1-2）
+
+| 模块 | 功能 | 说明 |
+|------|------|------|
+| 用户 | 注册 / 登录 | `POST /api/auth/register`、`/api/auth/login` |
+| AI 规划 | 一句话生成路线 | **LM Studio** 本地大模型，`POST /api/routes/generate`（失败时回退模板） |
+| 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
+| 打卡 | 景点打卡 | `POST /api/checkins`，自动触发成就 |
+| 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
+| 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
+| 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航 |
+| 管理端 | 路线 / 订单 / 打卡一览 | 需 admin 账号登录 |
+
+### LM Studio 接入
+
+1. 安装并打开 [LM Studio](https://lmstudio.ai/)，加载一个中文能力较好的模型  
+2. 进入 **Local Server**，点击 **Start Server**（默认 `http://127.0.0.1:1234`）  
+3. 在项目根目录 `.env` 中配置（可参考 `.env.example`）：
+
+```env
+LLM_ENABLED=true
+LLM_BASE_URL=http://127.0.0.1:1234/v1
+LLM_MODEL=你的模型名称
+```
+
+模型名称可在 LM Studio 的 Server 页面查看，或请求 `GET http://127.0.0.1:1234/v1/models`。  
+后端会先调用 LLM；若连接失败或 JSON 解析失败，自动降级为模板生成。
+
+### MVP API 清单
+
+- `POST /api/auth/register` — 注册
+- `GET /api/routes/llm-status` — 检测 LM Studio 是否可用
+- `POST /api/routes/generate` — 生成路线（需登录，优先 LLM）
+- `GET /api/routes` — 我的路线；`?all=1` 管理员查看全部
+- `GET /api/routes/:id` — 路线详情
+- `POST /api/routes/:id/publish` — 发布路线
+- `POST /api/checkins` — 打卡
+- `GET /api/checkins` — 打卡列表
+- `GET /api/achievements` — 我的成就
+- `POST /api/orders` — 创建解锁订单
+- `POST /api/orders/:id/pay` — 模拟支付
 
 ## 数据库
 

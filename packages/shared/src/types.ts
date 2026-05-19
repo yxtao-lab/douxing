@@ -30,6 +30,43 @@ export interface TravelRouteInfo {
   routeDetail: Record<string, unknown> | null;
   creatorId: number;
   status: number;
+  isAiGenerated?: boolean;
+  unlockPrice?: number;
+  isUnlocked?: boolean;
+  generationSource?: 'llm' | 'template';
+}
+
+export interface LlmStatusInfo {
+  enabled: boolean;
+  available: boolean;
+  baseUrl: string;
+  model: string;
+  error?: string;
+  message?: string;
+}
+
+export interface GenerateRouteRequest {
+  prompt: string;
+  days?: number;
+  budget?: string;
+}
+
+export interface OrderInfo {
+  id: number;
+  orderNo: string;
+  userId: number;
+  orderType: string;
+  productId: number;
+  productName: string;
+  totalAmount: string;
+  status: number;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface CheckInResult {
+  checkIn: CheckInInfo;
+  newAchievements: AchievementInfo[];
 }
 
 export interface CheckInInfo {

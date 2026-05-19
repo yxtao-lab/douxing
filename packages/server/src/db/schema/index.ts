@@ -4,4 +4,5 @@ export * from './user-roles.js';
 export * from './system-config.js';
 export * from './travel-routes.js';
 export * from './check-ins.js';
+export * from './orders.js';
 export * from './achievements.js';

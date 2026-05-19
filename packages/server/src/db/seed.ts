@@ -3,7 +3,8 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { ensureDatabase } from './ensure-database.js';
 import { getDb } from './client.js';
-import { users, roles, userRoles, systemConfig } from './schema/index.js';
+import { users, roles, userRoles, systemConfig, travelRoutes } from './schema/index.js';
+import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType } from '@douxing/shared';
 
 async function seedRoles() {
@@ -53,6 +54,69 @@ async function seedAdminUser() {
   console.log('[seed] Created admin user (username: admin, password: admin123)');
 }
 
+async function seedDemoUser() {
+  const db = getDb();
+  const username = 'demo';
+  const existing = await db.select().from(users).where(eq(users.username, username)).limit(1);
+  if (existing.length > 0) {
+    console.log('[seed] Demo user already exists, skip');
+    return existing[0]!.id;
+  }
+
+  const hashed = await bcrypt.hash('demo123', 10);
+  const [result] = await db.insert(users).values({
+    username,
+    passwordHash: hashed,
+    nickname: '体验用户',
+    email: 'demo@douxing.com',
+    userType: UserType.NORMAL,
+    status: 1,
+  });
+
+  const userId = Number(result.insertId);
+  const userRole = await db.select().from(roles).where(eq(roles.code, RoleCode.USER)).limit(1);
+  if (userRole[0]) {
+    await db.insert(userRoles).values({ userId, roleId: userRole[0].id });
+  }
+  console.log('[seed] Created demo user (username: demo, password: demo123)');
+  return userId;
+}
+
+async function seedSampleRoutes(creatorId: number) {
+  const db = getDb();
+  const existing = await db.select().from(travelRoutes).limit(1);
+  if (existing.length > 0) {
+    console.log('[seed] Sample routes already exist, skip');
+    return;
+  }
+
+  await db.insert(travelRoutes).values({
+    name: '杭州西湖经典一日游',
+    description: '适合周末短途，含西湖核心景点。',
+    budgetRange: '500-1000',
+    days: 1,
+    interestTags: ['文化', '自然'],
+    routeDetail: {
+      days: [
+        {
+          date: '第1天',
+          title: '西湖环线',
+          attractions: [
+            { name: '断桥', time: '09:00-10:30', cost: 0, description: '西湖标志' },
+            { name: '苏堤', time: '11:00-13:00', cost: 0, description: '漫步赏景' },
+          ],
+        },
+      ],
+      isAiGenerated: false,
+      unlockPrice: 0,
+      isUnlocked: true,
+    },
+    creatorId,
+    status: RouteStatus.PUBLISHED,
+  });
+  console.log('[seed] Created sample travel route');
+}
+
 async function seedSystemConfig() {
   const db = getDb();
   const configs = [
@@ -85,6 +149,8 @@ async function main() {
   console.log('[seed] Starting...');
   await seedRoles();
   await seedAdminUser();
+  const demoUserId = await seedDemoUser();
+  await seedSampleRoutes(demoUserId);
   await seedSystemConfig();
   console.log('[seed] Done');
   process.exit(0);

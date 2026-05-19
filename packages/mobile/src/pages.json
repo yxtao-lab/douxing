@@ -7,12 +7,66 @@
       }
     },
     {
+      "path": "pages/plan/plan",
+      "style": {
+        "navigationBarTitleText": "智能规划"
+      }
+    },
+    {
+      "path": "pages/routes/list",
+      "style": {
+        "navigationBarTitleText": "我的路线"
+      }
+    },
+    {
+      "path": "pages/routes/detail",
+      "style": {
+        "navigationBarTitleText": "路线详情"
+      }
+    },
+    {
+      "path": "pages/profile/profile",
+      "style": {
+        "navigationBarTitleText": "我的"
+      }
+    },
+    {
+      "path": "pages/checkins/list",
+      "style": {
+        "navigationBarTitleText": "打卡记录"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationBarTitleText": "登录"
       }
     }
   ],
+  "tabBar": {
+    "color": "#6b7280",
+    "selectedColor": "#1677ff",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/plan/plan",
+        "text": "规划"
+      },
+      {
+        "pagePath": "pages/routes/list",
+        "text": "路线"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
   "globalStyle": {
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "兜行",

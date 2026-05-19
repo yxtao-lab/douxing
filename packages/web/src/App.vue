@@ -5,8 +5,11 @@
         <span class="logo">兜</span>
         <span class="title">{{ APP_NAME }}</span>
       </div>
-      <nav v-if="userStore.token">
+      <nav v-if="userStore.token" class="nav">
         <router-link to="/">首页</router-link>
+        <router-link to="/routes">路线</router-link>
+        <router-link to="/orders">订单</router-link>
+        <router-link to="/checkins">打卡</router-link>
         <a href="#" @click.prevent="handleLogout">退出</a>
       </nav>
     </header>

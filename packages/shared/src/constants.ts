@@ -31,3 +31,23 @@ export const CheckInStatus = {
   APPROVED: 1,
   REJECTED: 2,
 } as const;
+
+/** 订单状态（orders.status） */
+export const OrderStatus = {
+  PENDING: 0,
+  PAID: 1,
+  COMPLETED: 2,
+  CANCELLED: 3,
+} as const;
+
+/** 订单类型 */
+export const OrderType = {
+  ROUTE: 'route',
+} as const;
+
+/** 成就类型 */
+export const AchievementType = {
+  FIRST_CHECKIN: 'first_checkin',
+  EXPLORER: 'explorer',
+  ROUTE_MASTER: 'route_master',
+} as const;

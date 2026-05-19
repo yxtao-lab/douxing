@@ -2,10 +2,18 @@ import { Router } from 'express';
 import { API_PREFIX } from '@douxing/shared';
 import healthRouter from './health.js';
 import authRouter from './auth.js';
+import routesRouter from './routes.js';
+import checkinsRouter from './checkins.js';
+import ordersRouter from './orders.js';
+import achievementsRouter from './achievements.js';
 
 const router = Router();
 
 router.use(`${API_PREFIX}/health`, healthRouter);
 router.use(`${API_PREFIX}/auth`, authRouter);
+router.use(`${API_PREFIX}/routes`, routesRouter);
+router.use(`${API_PREFIX}/checkins`, checkinsRouter);
+router.use(`${API_PREFIX}/orders`, ordersRouter);
+router.use(`${API_PREFIX}/achievements`, achievementsRouter);
 
 export default router;
