@@ -13,9 +13,14 @@
 | 数据库 | MySQL 8 + Drizzle ORM |
 | 共享 | `@douxing/shared` 类型与常量 |
 
-## 功能路线图
+## 项目文档
 
-未完成能力与分步实施计划见 **[docs/ROADMAP.md](docs/ROADMAP.md)**（对照详细设计文档 V2.0）。
+| 文档 | 链接 |
+|------|------|
+| 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
+| 功能路线图 | [docs/ROADMAP.md](docs/ROADMAP.md) |
+
+未完成能力与分步实施计划见 **ROADMAP**（对照详细设计文档 V2.0）。
 
 ## 目录结构
 
