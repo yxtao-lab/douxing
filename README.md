@@ -13,6 +13,10 @@
 | 数据库 | MySQL 8 + Drizzle ORM |
 | 共享 | `@douxing/shared` 类型与常量 |
 
+## 功能路线图
+
+未完成能力与分步实施计划见 **[docs/ROADMAP.md](docs/ROADMAP.md)**（对照详细设计文档 V2.0）。
+
 ## 目录结构
 
 ```
@@ -22,6 +26,7 @@ project/
 │   ├── mobile/   # UniApp 移动端
 │   ├── server/   # Node 后端 API
 │   └── shared/   # 跨端共享类型
+├── docs/         # 路线图等文档
 ├── scripts/      # 部署脚本
 ├── docker-compose.yml
 └── package.json
