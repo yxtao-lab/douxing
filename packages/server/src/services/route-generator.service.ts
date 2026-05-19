@@ -1,9 +1,13 @@
 import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js';
+import type { LlmProviderChoice } from '../config/llm.js';
+import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 
 export interface GenerateRouteInput {
   prompt: string;
   days?: number;
   budget?: string;
+  /** 模型提供商：auto | deepseek | lmstudio */
+  provider?: LlmProviderChoice;
 }
 
 export interface GeneratedRouteDraft {
@@ -59,18 +63,22 @@ function scoreTemplate(template: RouteTemplate, city: string | null, days: numbe
   return score;
 }
 
-import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
-
 export type GenerationSource = 'llm' | 'template';
 
-/** 优先 LLM（LM Studio），失败则回退模板 */
+/** 优先 LLM（可选 DeepSeek / LM Studio），失败则回退模板 */
 export async function generateRoute(
   input: GenerateRouteInput,
-): Promise<GeneratedRouteDraft & { generationSource: GenerationSource }> {
+): Promise<
+  GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string }
+> {
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(input);
-      return { ...draft, generationSource: 'llm' };
+      return {
+        ...draft,
+        generationSource: 'llm',
+        llmProvider: draft.llmProvider,
+      };
     } catch (err) {
       console.warn(
         '[route-generator] LLM 生成失败，回退模板:',

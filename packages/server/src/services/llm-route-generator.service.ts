@@ -1,16 +1,19 @@
+import type { LlmProviderChoice } from '../config/llm.js';
 import type { GenerateRouteInput, GeneratedRouteDraft } from './route-generator.service.js';
 import { chatCompletionForRoute } from './llm-client.service.js';
-import { isLlmEnabled } from '../config/llm.js';
+import { isLlmEnabled, hasDeepseekApiKey, resolveProviderChain } from '../config/llm.js';
 
 export type GenerationSource = 'llm' | 'template';
+export type LlmProviderUsed = 'deepseek' | 'lmstudio';
 
-/** 使用 LM Studio 大模型生成路线 */
+/** 使用大模型生成路线（支持 DeepSeek / LM Studio） */
 export async function generateRouteFromLlm(
   input: GenerateRouteInput,
-): Promise<GeneratedRouteDraft> {
-  const payload = await chatCompletionForRoute(input.prompt.trim(), {
+): Promise<GeneratedRouteDraft & { llmProvider: LlmProviderUsed }> {
+  const { payload, provider } = await chatCompletionForRoute(input.prompt.trim(), {
     days: input.days,
     budget: input.budget,
+    provider: input.provider,
   });
 
   return {
@@ -23,9 +26,11 @@ export async function generateRouteFromLlm(
     unlockPrice: payload.unlockPrice,
     matchedCity: payload.matchedCity,
     isAiGenerated: true,
+    llmProvider: provider,
   };
 }
 
 export function canUseLlm(): boolean {
-  return isLlmEnabled();
+  if (!isLlmEnabled()) return false;
+  return resolveProviderChain('auto').length > 0 || hasDeepseekApiKey();
 }

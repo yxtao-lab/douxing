@@ -34,21 +34,42 @@ export interface TravelRouteInfo {
   unlockPrice?: number;
   isUnlocked?: boolean;
   generationSource?: 'llm' | 'template';
+  llmProvider?: 'deepseek' | 'lmstudio';
+}
+
+export type LlmProviderChoice = 'auto' | 'deepseek' | 'lmstudio';
+
+export interface LlmProviderStatusItem {
+  id: 'deepseek' | 'lmstudio';
+  label: string;
+  configured: boolean;
+  available: boolean;
+  model?: string;
+  error?: string;
 }
 
 export interface LlmStatusInfo {
   enabled: boolean;
   available: boolean;
-  baseUrl: string;
-  model: string;
+  model?: string;
+  defaultProvider?: string;
+  deepseekConfigured?: boolean;
+  providers?: LlmProviderStatusItem[];
   error?: string;
   message?: string;
+}
+
+export interface LlmProviderOption {
+  id: LlmProviderChoice;
+  label: string;
+  available: boolean;
 }
 
 export interface GenerateRouteRequest {
   prompt: string;
   days?: number;
   budget?: string;
+  provider?: LlmProviderChoice;
 }
 
 export interface OrderInfo {

@@ -10,37 +10,51 @@ import {
   listAllRoutesForAdmin,
 } from '../services/route.service.js';
 import { getUserWithRoles } from '../services/user.service.js';
-import { checkLlmAvailability } from '../services/llm-client.service.js';
-import { getLlmConfig, isLlmEnabled } from '../config/llm.js';
+import { getAllProvidersStatus, listProviderOptions } from '../services/llm-client.service.js';
+import { isLlmEnabled } from '../config/llm.js';
 import { RoleCode } from '@douxing/shared';
 
 const router = Router();
+
+const providerSchema = z.enum(['auto', 'deepseek', 'lmstudio']).optional();
 
 const generateSchema = z.object({
   prompt: z.string().min(2, '请描述您的旅行需求'),
   days: z.number().int().min(1).max(7).optional(),
   budget: z.string().optional(),
+  provider: providerSchema,
+});
+
+router.get('/llm-providers', async (_req, res) => {
+  try {
+    success(res, {
+      options: listProviderOptions(),
+    });
+  } catch (err) {
+    console.error('[routes/llm-providers]', err);
+    return fail(res, '获取模型列表失败', 500, 500);
+  }
 });
 
 router.get('/llm-status', async (_req, res) => {
   try {
-    const config = getLlmConfig();
     if (!isLlmEnabled()) {
       return success(res, {
         enabled: false,
-        available: false,
-        baseUrl: config.baseUrl,
-        model: config.model,
         message: 'LLM 已在环境变量中禁用',
+        providers: [],
       });
     }
-    const status = await checkLlmAvailability();
+    const status = await getAllProvidersStatus();
+    const ready = status.providers.find((p) => p.available);
     success(res, {
-      enabled: true,
-      available: status.available,
-      baseUrl: config.baseUrl,
-      model: status.model ?? config.model,
-      error: status.error,
+      enabled: status.enabled,
+      available: Boolean(ready),
+      model: ready?.model,
+      defaultProvider: status.defaultProvider,
+      deepseekConfigured: status.deepseekConfigured,
+      providers: status.providers,
+      error: ready ? undefined : status.providers.map((p) => p.error).filter(Boolean).join('; '),
     });
   } catch (err) {
     console.error('[routes/llm-status]', err);
@@ -54,15 +68,20 @@ router.post('/generate', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const { route, generationSource } = await createRouteFromPrompt(
+    const { route, generationSource, llmProvider } = await createRouteFromPrompt(
       req.auth!.userId,
       parsed.data,
     );
-    const message =
-      generationSource === 'llm'
-        ? '路线已由 AI 生成'
-        : '路线已生成（模板模式，请确认 LM Studio 已启动）';
-    success(res, { ...route, generationSource }, message);
+    let message = '路线已生成（模板模式）';
+    if (generationSource === 'llm') {
+      message =
+        llmProvider === 'deepseek'
+          ? '路线已由 DeepSeek 生成'
+          : llmProvider === 'lmstudio'
+            ? '路线已由本地模型生成'
+            : '路线已由 AI 生成';
+    }
+    success(res, { ...route, generationSource, llmProvider }, message);
   } catch (err) {
     console.error('[routes/generate]', err);
     return fail(res, '路线生成失败', 500, 500);

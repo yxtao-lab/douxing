@@ -109,7 +109,7 @@ pnpm dev:mp-weixin     # 微信小程序编译 → dist/dev/mp-weixin
 | 模块 | 功能 | 说明 |
 |------|------|------|
 | 用户 | 注册 / 登录 | `POST /api/auth/register`、`/api/auth/login` |
-| AI 规划 | 一句话生成路线 | **LM Studio** 本地大模型，`POST /api/routes/generate`（失败时回退模板） |
+| AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
 | 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
 | 打卡 | 景点打卡 | `POST /api/checkins`，自动触发成就 |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
@@ -117,26 +117,40 @@ pnpm dev:mp-weixin     # 微信小程序编译 → dist/dev/mp-weixin
 | 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航 |
 | 管理端 | 路线 / 订单 / 打卡一览 | 需 admin 账号登录 |
 
-### LM Studio 接入
+### AI 模型接入（DeepSeek / LM Studio）
 
-1. 安装并打开 [LM Studio](https://lmstudio.ai/)，加载一个中文能力较好的模型  
-2. 进入 **Local Server**，点击 **Start Server**（默认 `http://127.0.0.1:1234`）  
-3. 在项目根目录 `.env` 中配置（可参考 `.env.example`）：
+路线生成支持三种模式（移动端「规划」页可切换）：
+
+| 模式 | 说明 |
+|------|------|
+| `auto` | 优先 DeepSeek，失败再试本地 LM Studio，最后模板 |
+| `deepseek` | 仅使用 [DeepSeek API](https://platform.deepseek.com/) |
+| `lmstudio` | 仅使用本地 [LM Studio](https://lmstudio.ai/) |
+
+**DeepSeek（推荐云端）** — 在 `.env` 中配置（密钥勿提交 Git）：
 
 ```env
-LLM_ENABLED=true
+DEEPSEEK_API_KEY=你的密钥
+DEEPSEEK_MODEL=deepseek-chat
+LLM_DEFAULT_PROVIDER=auto
+```
+
+**LM Studio（本地）** — 启动 Local Server 后配置：
+
+```env
 LLM_BASE_URL=http://127.0.0.1:1234/v1
 LLM_MODEL=你的模型名称
 ```
 
-模型名称可在 LM Studio 的 Server 页面查看，或请求 `GET http://127.0.0.1:1234/v1/models`。  
-后端会先调用 LLM；若连接失败或 JSON 解析失败，自动降级为模板生成。
+检测状态：`GET /api/routes/llm-status` · 可选列表：`GET /api/routes/llm-providers`  
+生成时传参：`{ "prompt": "...", "provider": "deepseek" }`（`auto` | `deepseek` | `lmstudio`）
 
 ### MVP API 清单
 
 - `POST /api/auth/register` — 注册
-- `GET /api/routes/llm-status` — 检测 LM Studio 是否可用
-- `POST /api/routes/generate` — 生成路线（需登录，优先 LLM）
+- `GET /api/routes/llm-providers` — 可选模型列表
+- `GET /api/routes/llm-status` — 检测各模型是否可用
+- `POST /api/routes/generate` — 生成路线（`provider` 可选）
 - `GET /api/routes` — 我的路线；`?all=1` 管理员查看全部
 - `GET /api/routes/:id` — 路线详情
 - `POST /api/routes/:id/publish` — 发布路线

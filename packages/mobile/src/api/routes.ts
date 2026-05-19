@@ -1,8 +1,18 @@
-import type { TravelRouteInfo, GenerateRouteRequest, LlmStatusInfo } from '@douxing/shared';
+import type {
+  TravelRouteInfo,
+  GenerateRouteRequest,
+  LlmStatusInfo,
+  LlmProviderOption,
+} from '@douxing/shared';
 import { request } from '@/utils/request';
 
 export interface GenerateRouteResult extends TravelRouteInfo {
   generationSource?: 'llm' | 'template';
+  llmProvider?: 'deepseek' | 'lmstudio';
+}
+
+export function fetchLlmProviders() {
+  return request<{ options: LlmProviderOption[] }>('/routes/llm-providers');
 }
 
 export function fetchLlmStatus() {

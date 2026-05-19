@@ -1,6 +1,6 @@
+# yaml-language-server: $schema=./schemas/compose-spec.json
 services:
-  mysql:
-    # 国内默认走镜像加速；能直连 Docker Hub 时在 .env 设置 MYSQL_IMAGE=mysql:8.0
+  mysql:    # 国内默认走镜像加速；能直连 Docker Hub 时在 .env 设置 MYSQL_IMAGE=mysql:8.0
     image: ${MYSQL_IMAGE:-docker.m.daocloud.io/library/mysql:8.0}
     container_name: douxing-mysql
     restart: unless-stopped

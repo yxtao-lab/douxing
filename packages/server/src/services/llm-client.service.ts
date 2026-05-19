@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { getLlmConfig } from '../config/llm.js';
+import {
+  type LlmProviderId,
+  type LlmProviderChoice,
+  getProviderConfig,
+  resolveProviderChain,
+  isLlmEnabled,
+  hasDeepseekApiKey,
+  getLmStudioConfig,
+  getDeepseekConfig,
+} from '../config/llm.js';
 
 const attractionSchema = z.object({
   name: z.string().min(1),
@@ -39,6 +48,15 @@ interface ChatCompletionResponse {
     message?: { content?: string };
   }>;
   error?: { message?: string };
+}
+
+export interface ProviderStatus {
+  id: LlmProviderId;
+  label: string;
+  configured: boolean;
+  available: boolean;
+  model?: string;
+  error?: string;
 }
 
 const SYSTEM_PROMPT = `你是兜行（Douxing）旅游规划助手。根据用户需求生成中国境内旅行路线。
@@ -97,52 +115,111 @@ function authHeaders(apiKey: string): Record<string, string> {
   return headers;
 }
 
-/** 检测 LM Studio 是否在线 */
-export async function checkLlmAvailability(): Promise<{
-  available: boolean;
-  model?: string;
-  error?: string;
-}> {
-  const config = getLlmConfig();
-  if (!config.enabled) {
-    return { available: false, error: 'LLM 已禁用' };
+async function resolveModelId(provider: LlmProviderId): Promise<string> {
+  const config = getProviderConfig(provider);
+  if (provider === 'deepseek' || (config.model && config.model !== 'local-model')) {
+    return config.model;
   }
-
   try {
     const res = await fetchWithTimeout(
       `${config.baseUrl}/models`,
       { method: 'GET', headers: authHeaders(config.apiKey) },
       5000,
     );
-    if (!res.ok) {
-      return { available: false, error: `HTTP ${res.status}` };
+    if (res.ok) {
+      const data = (await res.json()) as { data?: Array<{ id?: string }> };
+      const first = data.data?.find((m) => m.id && !m.id.includes('embed'));
+      if (first?.id) return first.id;
     }
-    const data = (await res.json()) as { data?: Array<{ id?: string }> };
-    const firstModel = data.data?.[0]?.id;
-    return { available: true, model: firstModel ?? config.model };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : '连接失败';
-    return { available: false, error: message };
+  } catch {
+    /* 使用配置默认模型 */
   }
-}
-
-async function resolveModelId(): Promise<string> {
-  const config = getLlmConfig();
-  if (config.model && config.model !== 'local-model') {
-    return config.model;
-  }
-  const status = await checkLlmAvailability();
-  if (status.model) return status.model;
   return config.model;
 }
 
-/** 调用 LM Studio chat/completions 生成路线 JSON */
-export async function chatCompletionForRoute(
+export async function checkProviderStatus(provider: LlmProviderId): Promise<ProviderStatus> {
+  const config = getProviderConfig(provider);
+  const base: ProviderStatus = {
+    id: provider,
+    label: config.label,
+    configured: config.configured,
+    available: false,
+  };
+
+  if (!config.configured) {
+    return {
+      ...base,
+      error: provider === 'deepseek' ? '未配置 DEEPSEEK_API_KEY' : '本地服务未配置',
+    };
+  }
+
+  try {
+    const res = await fetchWithTimeout(
+      `${config.baseUrl}/models`,
+      { method: 'GET', headers: authHeaders(config.apiKey) },
+      8000,
+    );
+    if (!res.ok) {
+      return { ...base, error: `HTTP ${res.status}` };
+    }
+    const data = (await res.json()) as { data?: Array<{ id?: string }> };
+    const model =
+      provider === 'deepseek'
+        ? config.model
+        : data.data?.find((m) => m.id && !m.id.includes('embed'))?.id ?? config.model;
+    return { ...base, available: true, model };
+  } catch (err) {
+    return {
+      ...base,
+      error: err instanceof Error ? err.message : '连接失败',
+    };
+  }
+}
+
+export async function getAllProvidersStatus(): Promise<{
+  enabled: boolean;
+  defaultProvider: string;
+  deepseekConfigured: boolean;
+  providers: ProviderStatus[];
+}> {
+  const providers = await Promise.all([
+    checkProviderStatus('deepseek'),
+    checkProviderStatus('lmstudio'),
+  ]);
+  return {
+    enabled: isLlmEnabled(),
+    defaultProvider: process.env.LLM_DEFAULT_PROVIDER ?? 'auto',
+    deepseekConfigured: hasDeepseekApiKey(),
+    providers,
+  };
+}
+
+/** @deprecated 使用 getAllProvidersStatus */
+export async function checkLlmAvailability(): Promise<{
+  available: boolean;
+  model?: string;
+  error?: string;
+}> {
+  const all = await getAllProvidersStatus();
+  const ready = all.providers.find((p) => p.available);
+  if (ready) {
+    return { available: true, model: ready.model };
+  }
+  const err = all.providers.map((p) => `${p.label}: ${p.error ?? '不可用'}`).join('; ');
+  return { available: false, error: err || '无可用模型' };
+}
+
+async function chatCompletionWithProvider(
+  provider: LlmProviderId,
   userPrompt: string,
   options?: { days?: number; budget?: string },
 ): Promise<LlmRoutePayload> {
-  const config = getLlmConfig();
-  const model = await resolveModelId();
+  const config = getProviderConfig(provider);
+  if (!config.configured) {
+    throw new Error(`${config.label} 未配置`);
+  }
+
+  const model = await resolveModelId(provider);
   let userContent = userPrompt;
   if (options?.days) userContent += `\n（期望天数：${options.days}天）`;
   if (options?.budget) userContent += `\n（预算：${options.budget}）`;
@@ -160,18 +237,22 @@ export async function chatCompletionForRoute(
     stream: false,
   };
 
+  const useJsonMode = provider === 'deepseek';
+
   let res = await fetchWithTimeout(
     `${config.baseUrl}/chat/completions`,
     {
       method: 'POST',
       headers: authHeaders(config.apiKey),
-      body: JSON.stringify({ ...baseBody, response_format: { type: 'json_object' } }),
+      body: JSON.stringify(
+        useJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
+      ),
     },
     config.timeoutMs,
   );
 
   let data = (await res.json()) as ChatCompletionResponse;
-  if (!res.ok) {
+  if (!res.ok && useJsonMode) {
     res = await fetchWithTimeout(
       `${config.baseUrl}/chat/completions`,
       {
@@ -185,12 +266,12 @@ export async function chatCompletionForRoute(
   }
 
   if (!res.ok) {
-    throw new Error(data.error?.message ?? `LLM 请求失败 HTTP ${res.status}`);
+    throw new Error(data.error?.message ?? `${config.label} 请求失败 HTTP ${res.status}`);
   }
 
   const content = data.choices?.[0]?.message?.content;
   if (!content) {
-    throw new Error('LLM 返回内容为空');
+    throw new Error(`${config.label} 返回内容为空`);
   }
 
   const jsonText = extractJsonObject(content);
@@ -198,12 +279,12 @@ export async function chatCompletionForRoute(
   try {
     parsed = JSON.parse(jsonText);
   } catch {
-    throw new Error('LLM 返回的不是有效 JSON');
+    throw new Error(`${config.label} 返回的不是有效 JSON`);
   }
 
   const result = llmRouteSchema.safeParse(parsed);
   if (!result.success) {
-    throw new Error(`LLM 返回格式不符合要求: ${result.error.errors[0]?.message}`);
+    throw new Error(`返回格式不符合要求: ${result.error.errors[0]?.message}`);
   }
 
   if (result.data.routeDetail.days.length !== result.data.days) {
@@ -211,4 +292,53 @@ export async function chatCompletionForRoute(
   }
 
   return result.data;
+}
+
+/** 按提供商链依次尝试生成路线 */
+export async function chatCompletionForRoute(
+  userPrompt: string,
+  options?: { days?: number; budget?: string; provider?: LlmProviderChoice },
+): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
+  const chain = resolveProviderChain(options?.provider);
+  if (chain.length === 0) {
+    throw new Error('未配置任何可用模型（请设置 DEEPSEEK_API_KEY 或启动 LM Studio）');
+  }
+
+  const errors: string[] = [];
+  for (const provider of chain) {
+    try {
+      const payload = await chatCompletionWithProvider(provider, userPrompt, options);
+      return { payload, provider };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${getProviderConfig(provider).label}: ${msg}`);
+      console.warn(`[llm] ${provider} 失败:`, msg);
+    }
+  }
+
+  throw new Error(errors.join(' | '));
+}
+
+export function listProviderOptions(): Array<{
+  id: LlmProviderChoice;
+  label: string;
+  available: boolean;
+}> {
+  return [
+    {
+      id: 'auto',
+      label: '自动（优先 DeepSeek，其次本地）',
+      available: hasDeepseekApiKey() || true,
+    },
+    {
+      id: 'deepseek',
+      label: `DeepSeek（${getDeepseekConfig().model}）`,
+      available: hasDeepseekApiKey(),
+    },
+    {
+      id: 'lmstudio',
+      label: '本地 LM Studio',
+      available: true,
+    },
+  ];
 }

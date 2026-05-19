@@ -2,12 +2,24 @@
   <view class="page">
     <view class="header">
       <text class="title">AI 智能规划</text>
-      <text class="desc">一句话描述需求，由本地 LM Studio 大模型生成专属路线</text>
+      <text class="desc">支持 DeepSeek 云端或本地 LM Studio，也可自动选择</text>
       <view class="llm-status" :class="llmStatusClass">
         <text>{{ llmStatusText }}</text>
       </view>
     </view>
     <view class="card">
+      <text class="label">选择模型</text>
+      <view class="provider-row">
+        <view
+          v-for="opt in providerOptions"
+          :key="opt.id"
+          class="provider-item"
+          :class="{ active: provider === opt.id, disabled: !opt.available }"
+          @click="selectProvider(opt)"
+        >
+          <text class="provider-name">{{ opt.label }}</text>
+        </view>
+      </view>
       <textarea
         v-model="prompt"
         class="input"
@@ -29,18 +41,22 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { generateRoute, fetchLlmStatus } from '@/api/routes';
+import { generateRoute, fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
 import { getStoredUser } from '@/utils/request';
+import type { LlmProviderChoice, LlmProviderOption } from '@douxing/shared';
+import { LlmProvider } from '@douxing/shared';
 
 const prompt = ref('');
 const loading = ref(false);
+const provider = ref<LlmProviderChoice>(LlmProvider.AUTO);
+const providerOptions = ref<LlmProviderOption[]>([]);
 const llmAvailable = ref<boolean | null>(null);
-const llmModel = ref('');
+const statusDetail = ref('');
 
 const llmStatusText = computed(() => {
   if (llmAvailable.value === null) return '正在检测 AI 服务…';
-  if (llmAvailable.value) return `AI 已就绪${llmModel.value ? `（${llmModel.value}）` : ''}`;
-  return 'AI 未连接，将使用模板生成（请启动 LM Studio）';
+  if (llmAvailable.value) return statusDetail.value || 'AI 已就绪';
+  return '当前模型不可用，将尝试其他源或模板生成';
 });
 
 const llmStatusClass = computed(() => {
@@ -48,11 +64,42 @@ const llmStatusClass = computed(() => {
   return llmAvailable.value ? 'ok' : 'warn';
 });
 
+function selectProvider(opt: LlmProviderOption) {
+  if (!opt.available) {
+    uni.showToast({ title: '该模型未配置', icon: 'none' });
+    return;
+  }
+  provider.value = opt.id;
+  refreshStatusForProvider();
+}
+
+function refreshStatusForProvider() {
+  const p = provider.value;
+  if (p === LlmProvider.AUTO) {
+    llmAvailable.value = providerOptions.value.some((o) => o.available);
+    statusDetail.value = '自动：优先 DeepSeek，其次本地';
+    return;
+  }
+  const opt = providerOptions.value.find((o) => o.id === p);
+  llmAvailable.value = opt?.available ?? false;
+  statusDetail.value = opt?.available ? opt.label : `${opt?.label ?? p} 未就绪`;
+}
+
 onMounted(async () => {
   try {
-    const status = await fetchLlmStatus();
+    const [{ options }, status] = await Promise.all([fetchLlmProviders(), fetchLlmStatus()]);
+    providerOptions.value = options;
+    if (status.defaultProvider === 'deepseek') {
+      provider.value = LlmProvider.DEEPSEEK;
+    }
+    const lines: string[] = [];
+    for (const p of status.providers ?? []) {
+      const mark = p.available ? '✓' : '✗';
+      lines.push(`${mark} ${p.label}${p.model ? ` (${p.model})` : ''}`);
+    }
+    statusDetail.value = lines.join(' · ') || statusDetail.value;
     llmAvailable.value = status.enabled && status.available;
-    llmModel.value = status.model ?? '';
+    refreshStatusForProvider();
   } catch {
     llmAvailable.value = false;
   }
@@ -75,9 +122,19 @@ async function handleGenerate() {
   }
   loading.value = true;
   try {
-    const route = await generateRoute({ prompt: prompt.value.trim() });
-    const tip =
-      route.generationSource === 'llm' ? 'AI 生成成功' : '已生成（模板模式）';
+    const route = await generateRoute({
+      prompt: prompt.value.trim(),
+      provider: provider.value,
+    });
+    let tip = '已生成（模板模式）';
+    if (route.generationSource === 'llm') {
+      tip =
+        route.llmProvider === 'deepseek'
+          ? 'DeepSeek 生成成功'
+          : route.llmProvider === 'lmstudio'
+            ? '本地模型生成成功'
+            : 'AI 生成成功';
+    }
     uni.showToast({ title: tip, icon: 'success' });
     uni.navigateTo({ url: `/pages/routes/detail?id=${route.id}` });
   } catch (e) {
@@ -112,7 +169,8 @@ async function handleGenerate() {
   margin-top: 16rpx;
   padding: 12rpx 20rpx;
   border-radius: 8rpx;
-  font-size: 24rpx;
+  font-size: 22rpx;
+  line-height: 1.5;
 }
 .llm-status.pending {
   background: #f3f4f6;
@@ -131,6 +189,35 @@ async function handleGenerate() {
   border-radius: 16rpx;
   padding: 32rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+}
+.label {
+  font-size: 26rpx;
+  color: #6b7280;
+  display: block;
+  margin-bottom: 16rpx;
+}
+.provider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+.provider-item {
+  padding: 20rpx 24rpx;
+  border: 2rpx solid #e5e7eb;
+  border-radius: 12rpx;
+  background: #fafafa;
+}
+.provider-item.active {
+  border-color: #1677ff;
+  background: #e8f3ff;
+}
+.provider-item.disabled {
+  opacity: 0.5;
+}
+.provider-name {
+  font-size: 26rpx;
+  color: #1f2937;
 }
 .input {
   width: 100%;

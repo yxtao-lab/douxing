@@ -45,6 +45,13 @@ export const OrderType = {
   ROUTE: 'route',
 } as const;
 
+/** LLM 模型提供商（路线生成） */
+export const LlmProvider = {
+  AUTO: 'auto',
+  DEEPSEEK: 'deepseek',
+  LMSTUDIO: 'lmstudio',
+} as const;
+
 /** 成就类型 */
 export const AchievementType = {
   FIRST_CHECKIN: 'first_checkin',
