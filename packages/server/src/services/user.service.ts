@@ -9,6 +9,12 @@ export async function findUserByUsername(username: string) {
   return rows[0] ?? null;
 }
 
+export async function findUserByPhone(phone: string) {
+  const db = getDb();
+  const rows = await db.select().from(users).where(eq(users.phone, phone)).limit(1);
+  return rows[0] ?? null;
+}
+
 export async function getUserWithRoles(userId: number): Promise<UserInfo | null> {
   const db = getDb();
   const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
