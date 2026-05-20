@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page tab-page">
     <view class="user-card" v-if="user">
       <view class="avatar">{{ avatarText }}</view>
       <view class="info">
@@ -29,6 +29,7 @@
       <view class="menu-item" @click="goCheckins">打卡记录</view>
       <view class="menu-item" v-if="user" @click="handleLogout">退出登录</view>
     </view>
+    <DouxingTabBar :current="3" />
   </view>
 </template>
 
@@ -39,6 +40,7 @@ import type { UserInfo, AchievementInfo } from '@douxing/shared';
 import { AchievementType } from '@douxing/shared';
 import { fetchAchievements } from '@/api/achievements';
 import { getStoredUser } from '@/utils/request';
+import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
 const user = ref<UserInfo | null>(getStoredUser());
 const achievements = ref<AchievementInfo[]>([]);
@@ -75,6 +77,7 @@ function handleLogout() {
 }
 
 onShow(async () => {
+  uni.hideTabBar({ animation: false });
   user.value = getStoredUser();
   if (!user.value) return;
   try {

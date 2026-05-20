@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page tab-page">
     <view class="header">
       <text class="title">AI 智能规划</text>
       <text class="desc">支持 DeepSeek 云端或本地 LM Studio，也可自动选择</text>
@@ -36,13 +36,16 @@
       </view>
       <button class="btn-primary" :loading="loading" @click="handleGenerate">生成路线</button>
     </view>
+    <DouxingTabBar :current="1" />
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { generateRoute, fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
 import { getStoredUser } from '@/utils/request';
+import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import type { LlmProviderChoice, LlmProviderOption } from '@douxing/shared';
 import { LlmProvider } from '@douxing/shared';
 
@@ -103,6 +106,10 @@ onMounted(async () => {
   } catch {
     llmAvailable.value = false;
   }
+});
+
+onShow(() => {
+  uni.hideTabBar({ animation: false });
 });
 
 const quickPrompts = [

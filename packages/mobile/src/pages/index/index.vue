@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container tab-page">
     <view class="hero">
       <text class="logo">兜</text>
       <text class="title">{{ APP_NAME }}</text>
@@ -30,6 +30,7 @@
     <view class="card" v-else>
       <button class="btn" @click="goLogin">登录体验 MVP</button>
     </view>
+    <DouxingTabBar :current="0" />
   </view>
 </template>
 
@@ -39,10 +40,12 @@ import { onShow } from '@dcloudio/uni-app';
 import { APP_NAME } from '@douxing/shared';
 import type { UserInfo } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
+import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
 const user = ref<UserInfo | null>(getStoredUser());
 
 onShow(() => {
+  uni.hideTabBar({ animation: false });
   user.value = getStoredUser();
 });
 

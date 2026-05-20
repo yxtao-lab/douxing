@@ -1,0 +1,31 @@
+@font-face {
+  font-family: 'iconfont';
+  src: url('/static/iconfont/iconfont.woff2') format('woff2'),
+    url('/static/iconfont/iconfont.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+.iconfont {
+  font-family: 'iconfont' !important;
+  font-style: normal;
+  font-weight: normal;
+  line-height: 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.icon-home::before {
+  content: '\e600';
+}
+
+.icon-plan::before {
+  content: '\e601';
+}
+
+.icon-routes::before {
+  content: '\e602';
+}
+
+.icon-profile::before {
+  content: '\e603';
+}

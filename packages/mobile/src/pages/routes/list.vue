@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page tab-page">
     <view v-if="routes.length === 0" class="empty">
       <text>暂无路线，去「规划」生成一条吧</text>
       <button class="btn" @click="goPlan">去规划</button>
@@ -16,6 +16,7 @@
         <text class="arrow">查看 ›</text>
       </view>
     </view>
+    <DouxingTabBar :current="2" />
   </view>
 </template>
 
@@ -26,6 +27,7 @@ import type { TravelRouteInfo } from '@douxing/shared';
 import { fetchRoutes } from '@/api/routes';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
+import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
 const routes = ref<TravelRouteInfo[]>([]);
 
@@ -44,6 +46,7 @@ function goPlan() {
 }
 
 onShow(async () => {
+  uni.hideTabBar({ animation: false });
   if (!getStoredUser()) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
