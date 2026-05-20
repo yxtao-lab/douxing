@@ -16,6 +16,8 @@ export const attractions = mysqlTable(
   {
     id: int('id').primaryKey().autoincrement(),
     name: varchar('name', { length: 128 }).notNull(),
+    /** attraction | restaurant | hotel */
+    category: varchar('category', { length: 16 }).notNull().default('attraction'),
     city: varchar('city', { length: 64 }).notNull(),
     cityCode: varchar('city_code', { length: 32 }).notNull(),
     latitude: decimal('latitude', { precision: 10, scale: 7 }),

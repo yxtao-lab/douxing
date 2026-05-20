@@ -5,6 +5,7 @@ import {
   AttractionStatus,
   AttractionSource,
   AttractionPriceSource,
+  AttractionCategory,
 } from '@douxing/shared';
 import type { AttractionInfo, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
@@ -15,6 +16,7 @@ function toAttractionInfo(row: typeof attractions.$inferSelect): AttractionInfo 
   return {
     id: row.id,
     name: row.name,
+    category: row.category,
     city: row.city,
     cityCode: row.cityCode,
     latitude: row.latitude != null ? Number(row.latitude) : null,
@@ -48,6 +50,7 @@ export async function enrichRouteDetailWithAttractionIds(
 export async function listAttractions(options: {
   city?: string;
   cityCode?: string;
+  category?: string;
   tags?: string[];
   keyword?: string;
   limit?: number;
@@ -64,6 +67,9 @@ export async function listAttractions(options: {
   }
   if (options.cityCode) {
     conditions.push(eq(attractions.cityCode, options.cityCode));
+  }
+  if (options.category) {
+    conditions.push(eq(attractions.category, options.category));
   }
   if (options.keyword?.trim()) {
     const kw = `%${options.keyword.trim()}%`;
@@ -145,6 +151,7 @@ export async function seedAttractions() {
   for (const seed of ATTRACTION_SEEDS) {
     await db.insert(attractions).values({
       name: seed.name,
+      category: AttractionCategory.ATTRACTION,
       city: seed.city,
       cityCode: seed.cityCode,
       latitude: seed.latitude,

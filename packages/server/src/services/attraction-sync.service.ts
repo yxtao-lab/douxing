@@ -11,6 +11,15 @@ import {
 import type { RouteDayAttraction } from '@douxing/shared';
 import { resolveCityCode } from '../data/city-codes.js';
 import type { RouteDayPlan } from '../data/route-templates.js';
+import {
+  shouldSyncSpotToAttractions,
+  resolvePoiCategory,
+  hasValidCoordinates,
+  requiresCoordinatesForInsert,
+  mapPoiCategoryToDbCategory,
+  defaultTagsForCategory,
+} from '../utils/poi-classifier.js';
+import { resolveCoordinatesFromAmap } from './amap-geocode.service.js';
 
 export type AttractionMatchType = 'exact_name' | 'exact_alias' | 'fuzzy';
 
@@ -70,14 +79,28 @@ function estimateTicketFromCost(cost: number): number {
   return Math.round(cost);
 }
 
+function coordFieldsFromSpot(spot: RouteDayAttraction): {
+  latitude: string | null;
+  longitude: string | null;
+} {
+  if (!hasValidCoordinates(spot)) {
+    return { latitude: null, longitude: null };
+  }
+  return {
+    latitude: String(spot.latitude),
+    longitude: String(spot.longitude),
+  };
+}
+
 function statusActiveOrPending() {
   return inArray(attractions.status, [AttractionStatus.ACTIVE, AttractionStatus.PENDING]);
 }
 
-/** 在库内解析景点（含 active + pending） */
+/** 在库内解析 POI（含 active + pending，可按 category 限定） */
 export async function resolveAttractionMatch(
   name: string,
   city?: string | null,
+  category?: string | null,
 ): Promise<AttractionMatchResult | null> {
   const normalized = normalizeName(name);
   if (!normalized) return null;
@@ -86,6 +109,9 @@ export async function resolveAttractionMatch(
   const conditions = [statusActiveOrPending()];
   if (city?.trim()) {
     conditions.push(eq(attractions.city, city.trim()));
+  }
+  if (category?.trim()) {
+    conditions.push(eq(attractions.category, mapPoiCategoryToDbCategory(category)));
   }
 
   const rows = await db
@@ -123,13 +149,36 @@ export async function resolveAttractionMatch(
 interface MergeInput {
   spot: RouteDayAttraction;
   routeTags: string[];
+  dbCategory: string;
 }
 
-/** 将 LLM/路线节点数据按来源策略合并到已有景点 */
+function applyCoordinateMerge(
+  existing: Attraction,
+  spot: RouteDayAttraction,
+  updates: Partial<typeof attractions.$inferInsert>,
+) {
+  if (!hasValidCoordinates(spot)) return;
+  const hasExisting =
+    existing.latitude != null &&
+    existing.longitude != null &&
+    !(Number(existing.latitude) === 0 && Number(existing.longitude) === 0);
+  if (hasExisting && isTrustedSource(existing.source)) return;
+
+  const coords = coordFieldsFromSpot(spot);
+  if (!hasExisting) {
+    updates.latitude = coords.latitude;
+    updates.longitude = coords.longitude;
+  }
+}
+
+/** 将 LLM/路线节点数据按来源策略合并到已有记录 */
 function buildMergedFields(existing: Attraction, input: MergeInput) {
-  const { spot, routeTags } = input;
+  const { spot, routeTags, dbCategory } = input;
   const incomingPrice = estimateTicketFromCost(spot.cost);
-  const mergedTags = mergeUniqueStrings(existing.tags, routeTags);
+  const mergedTags = mergeUniqueStrings(
+    existing.tags,
+    defaultTagsForCategory(dbCategory, routeTags),
+  );
   const mergedAliases = mergeAliases(existing.aliases, spot.name, existing.name);
   const mergedDescription = pickLongerDescription(existing.description, spot.description);
 
@@ -138,6 +187,8 @@ function buildMergedFields(existing: Attraction, input: MergeInput) {
     aliases: mergedAliases.length > 0 ? mergedAliases : existing.aliases,
     description: mergedDescription,
   };
+
+  applyCoordinateMerge(existing, spot, updates);
 
   if (isTrustedSource(existing.source)) {
     return updates;
@@ -161,17 +212,20 @@ async function insertPendingAttraction(
   spot: RouteDayAttraction,
   city: string,
   routeTags: string[],
+  dbCategory: string,
 ): Promise<number> {
   const db = getDb();
   const ticketPrice = estimateTicketFromCost(spot.cost);
-  const tags = mergeUniqueStrings(routeTags.length > 0 ? routeTags : ['休闲'], []);
+  const tags = mergeUniqueStrings(defaultTagsForCategory(dbCategory, routeTags), []);
+  const coords = coordFieldsFromSpot(spot);
 
   const [result] = await db.insert(attractions).values({
     name: spot.name.trim(),
+    category: dbCategory,
     city,
     cityCode: resolveCityCode(city),
-    latitude: null,
-    longitude: null,
+    latitude: coords.latitude,
+    longitude: coords.longitude,
     tags,
     description: spot.description.trim() || null,
     ticketPrice,
@@ -204,7 +258,7 @@ async function mergeMatchedAttraction(
 }
 
 /**
- * 同步路线景点到内容库：匹配则合并，未达阈值则 pending 新建，并写回 attractionId
+ * 同步路线 POI 到内容库：仅具体景点/餐厅/酒店；笼统用餐不入库；景点需坐标
  */
 export async function syncAttractionsFromRouteDetail(
   routeDetail: { days: RouteDayPlan[] },
@@ -221,17 +275,43 @@ export async function syncAttractionsFromRouteDetail(
       ...day,
       attractions: await Promise.all(
         day.attractions.map(async (spot) => {
-          const match = await resolveAttractionMatch(spot.name, city);
+          if (!shouldSyncSpotToAttractions(spot)) {
+            return { ...spot };
+          }
+
+          const poiCategory = resolvePoiCategory(spot);
+          const dbCategory = mapPoiCategoryToDbCategory(poiCategory);
+
+          let workingSpot = await enrichSpotCoordinates(spot, city);
+
+          if (requiresCoordinatesForInsert(poiCategory) && !hasValidCoordinates(workingSpot)) {
+            console.warn(
+              `[attraction-sync] 跳过无坐标景点，不入库: ${spot.name} (${city})`,
+            );
+            return { ...spot, poiType: poiCategory };
+          }
+
+          const match = await resolveAttractionMatch(workingSpot.name, city, dbCategory);
 
           let attractionId: number;
           if (match && match.confidence >= ATTRACTION_MATCH_MERGE_THRESHOLD) {
-            attractionId = await mergeMatchedAttraction(match, { spot, routeTags });
+            attractionId = await mergeMatchedAttraction(match, {
+              spot: workingSpot,
+              routeTags,
+              dbCategory,
+            });
           } else {
-            attractionId = await insertPendingAttraction(spot, city, routeTags);
+            attractionId = await insertPendingAttraction(
+              workingSpot,
+              city,
+              routeTags,
+              dbCategory,
+            );
           }
 
           return {
-            ...spot,
+            ...workingSpot,
+            poiType: poiCategory,
             attractionId,
           };
         }),
@@ -240,4 +320,21 @@ export async function syncAttractionsFromRouteDetail(
   );
 
   return { days };
+}
+
+/** 无坐标时尝试高德补全（place/text → geocode/geo） */
+async function enrichSpotCoordinates(
+  spot: RouteDayAttraction,
+  city: string,
+): Promise<RouteDayAttraction> {
+  if (hasValidCoordinates(spot)) return spot;
+
+  const geocoded = await resolveCoordinatesFromAmap(spot.name, city);
+  if (!geocoded) return spot;
+
+  return {
+    ...spot,
+    latitude: geocoded.latitude,
+    longitude: geocoded.longitude,
+  };
 }

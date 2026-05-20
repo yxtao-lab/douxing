@@ -3,7 +3,7 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：2.3  
+**文档版本**：2.4  
 **更新日期**：2026-05-20  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
@@ -104,118 +104,20 @@ gantt
 
 > 计划日随实际进度调整；完成某步后请将上表「状态」改为 `[x]` 并填写实际完成日。
 
-### 2.4 开发记录（重难点与方案）
+### 2.4 开发记录索引（重难点与亮点）
 
-> 每完成一项任务在此追加一条；**无重难点/亮点则省略本节对应条目**。
+> **详细内容**（思考过程、取舍、每任务 2～3 亮点 + 2～3 重难点）见独立文档：  
+> **[开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md)**
 
-#### 2026-05-20 · M0-7 手机验证码登录注册 + 腾讯云短信
+| 完成日 | 任务 | 文档章节 |
+|--------|------|----------|
+| 2026-05-20 | M0-7 手机验证码登录 + 腾讯云短信 | [§ M0-7](./开发记录-重难点与亮点.md#m0-7-手机验证码登录--腾讯云短信) |
+| 2026-05-20 | A1 用户资料与偏好 | [§ A1](./开发记录-重难点与亮点.md#a1-用户资料与偏好) |
+| 2026-05-20 | A2 景点/内容基础库 | [§ A2](./开发记录-重难点与亮点.md#a2-景点内容基础库) |
+| 2026-05-20 | A2+ AI 景点同步（pending + 合并） | [§ A2+](./开发记录-重难点与亮点.md#a2-ai-景点同步pending--合并) |
+| 2026-05-20 | 数据库命令体系（Drizzle） | [§ Drizzle](./开发记录-重难点与亮点.md#数据库生成与使用命令drizzle) |
 
-| 类型 | 内容 | 解决方案 |
-|------|------|----------|
-| **亮点** | 登录与注册合一 | 验证码校验通过后，手机号未注册则自动建号（`u_{phone}`），已注册则直接登录，前端统一「登录 / 注册」按钮 |
-| **亮点** | 短信渠道可插拔 | `config/sms.ts` 解析 `SMS_PROVIDER=auto\|tencent\|mock`；配置齐全走腾讯云，否则开发环境 mock 并在控制台/接口返回 `devCode` |
-| **重难点** | 阿里云 SDK 与 NodeNext ESM 不兼容 | `@alicloud/dysmsapi20170525` v4 在 `module: NodeNext` 下 default export 无法作为构造器；曾改用 `@alicloud/pop-core`，最终按产品决策统一为腾讯云 `tencentcloud-sdk-nodejs` |
-| **重难点** | 腾讯云模板参数顺序 | 模板占位符为 `{1}`、`{2}` 而非命名字段；通过 `TemplateParamSet: [code]` 传参，若模板含有效期变量则配置 `TENCENT_SMS_TEMPLATE_MINUTES` 追加第二参数 |
-| **重难点** | 验证码存储与限流 | 进程内 `Map` 存码（5 分钟 TTL、60 秒发送冷却、最多 5 次校验）；生产多实例需后续 G1 Redis 改造 |
-| **重难点** | `.env` 与示例不同步 | `.env` 被 Git 忽略，已有本地文件不会自动合并新变量；需手动从 `.env.example` **追加**腾讯云相关键，密钥在控制台单独申请 |
-
-**下一阶段准备（认证 → 阶段 A）：**
-
-1. 在 `.env` 填入 `TENCENT_SECRET_ID`、`TENCENT_SECRET_KEY`、`TENCENT_SMS_SDK_APP_ID`、签名与模板 ID，重启 `pnpm dev:server` 验证真实短信
-2. 腾讯云控制台：短信应用、签名、验证码模板（变量 `{1}` 验证码；可选 `{2}` 分钟）需审核通过；子账号授予 `QcloudSMSFullAccess`
-3. 启动 **A1 用户资料与偏好**：`PUT /users/me`、头像上传（依赖 G2 OSS 可先用 URL）、兴趣标签编辑页
-
----
-
-#### 2026-05-20 · A2 景点/内容基础库
-
-| 类型 | 内容 | 解决方案 |
-|------|------|----------|
-| **亮点** | 路线与景点库联动 | 生成路线后按名称+城市解析 `attractionId` 写入 `route_detail` |
-| **亮点** | 打卡可追溯景点 | `check_ins.attraction_id` 外键，移动端打卡传真实 ID |
-| **重难点** | 景点名称不完全一致 | `aliases` 别名 + 双向包含匹配（如「断桥」→「断桥残雪」） |
-
----
-
-#### 2026-05-20 · A2+ AI 景点同步（pending + 合并策略）
-
-| 类型 | 内容 | 解决方案 |
-|------|------|----------|
-| **亮点** | 路线生成即写库 | `syncAttractionsFromRouteDetail` 在 `createRouteFromPrompt` 后执行，未匹配则 `status=pending` |
-| **亮点** | 分来源合并 | `seed/manual` 仅补空字段与别名/标签；`llm` 来源票价仅在为空或超过 90 天且仍为 `llm_estimate` 时可更新 |
-| **重难点** | 模糊匹配误合并 | 置信度 &lt; 0.85（含模糊 0.72）不合并，新建 pending；精确名 1.0、别名 0.95 才合并 |
-| **重难点** | 公开 API 与待审隔离 | 列表/详情仅 `ACTIVE`；生成路线与打卡可用 `pending` 的 `attractionId` |
-| **重难点** | AI 无坐标 | pending 景点 `latitude/longitude` 可为空，审核通过前不接地图围栏 |
-| **亮点** | 管理端审核 | `GET /api/attractions/admin/pending`、`POST /api/attractions/admin/:id/approve`（需 admin） |
-
----
-
-#### 2026-05-20 · 数据库生成与使用命令（Drizzle）
-
-> 本仓库用 **Drizzle ORM + SQL 迁移文件 + TypeScript 种子脚本** 管理 MySQL，与业务代码同仓、可版本化。
-
-**整体原理（三层分工）**
-
-| 层级 | 职责 | 代码/产物位置 |
-|------|------|----------------|
-| **Schema 定义** | 用 TypeScript 描述表结构（类型即契约） | `packages/server/src/db/schema/*.ts` |
-| **结构迁移（migrate）** | 把表结构变更应用到数据库（DDL） | `packages/server/drizzle/*.sql` + `meta/_journal.json` |
-| **种子数据（seed）** | 写入演示账号、角色、景点库等初始行（DML） | `packages/server/src/db/seed.ts`、`src/data/*-seeds.ts` |
-
-```mermaid
-flowchart LR
-  subgraph dev [开发改表]
-    S[编辑 schema/*.ts]
-    G["pnpm db:generate"]
-    SQL[drizzle/000N_*.sql]
-    S --> G --> SQL
-  end
-  subgraph runtime [应用到库]
-    M["pnpm db:migrate"]
-    DB[(MySQL)]
-    SE["pnpm db:seed"]
-    SQL --> M --> DB
-    SE --> DB
-  end
-```
-
-**命令对照与原理**
-
-| 命令 | 实际执行 | 作用 | 何时使用 |
-|------|----------|------|----------|
-| `pnpm db:generate` | `drizzle-kit generate`（server 包） | 对比 **当前 schema** 与 **上次快照**，在 `drizzle/` 生成新的 `.sql` 并更新 `meta/_journal.json` | 修改 `schema/*.ts` 之后、提交前 |
-| `pnpm db:migrate` | `tsx src/db/migrate.ts` | 1）`ensureDatabase` 等待 MySQL 并 `CREATE DATABASE IF NOT EXISTS`；2）`drizzle-orm/migrator` 按 journal **顺序执行尚未跑过的 SQL** | 新环境、拉代码后有新迁移、部署时 |
-| `pnpm db:seed` | `tsx src/db/seed.ts` | 幂等插入：角色/admin/demo 用户、景点库、示例路线等；**已存在则 skip** | migrate 之后首次初始化或补种子（不删表） |
-| `pnpm db:setup` | `db:migrate && db:seed` | 一键「建表 + 灌数据」 | `bootstrap` 内、本地快速就绪 |
-| `pnpm db:reset` | `DROP DATABASE` → migrate → seed | **清空整库**后重建 | 仅开发环境需要彻底重来时 |
-
-| 类型 | 内容 | 解决方案 |
-|------|------|----------|
-| **重难点** | `generate` 与 `migrate` 不是同一步 | `generate` 只**产出** SQL 文件，不会连库改表；必须再执行 `migrate` 才会在 MySQL 里 `CREATE/ALTER`。漏跑 migrate 会导致运行时「表不存在」 |
-| **重难点** | 迁移执行记录存在哪 | Drizzle 在库内维护 `__drizzle_migrations`（由 migrator 管理），已执行的 `tag` 不会重复跑；因此 **不要手改已发布环境的 journal 顺序** |
-| **重难点** | Docker MySQL 启动晚于脚本 | `ensureDatabase` / `wait-only.ts` 对 `DATABASE_URL` 主机端口轮询（默认 30 次 × 2s）；`bootstrap` 先 `docker compose up` 再 `wait-only` 再 `db:setup` |
-| **重难点** | `seed` 不替代迁移 | seed 只做 `INSERT`，不会 `ALTER TABLE`；新增列/表必须先 migrate。种子对「已有数据」多为 skip，**不会**给旧路线自动补 `attractionId`，需重新生成路线或 `db:reset` |
-| **重难点** | 改表标准流程 | ① 改 `schema/*.ts` → ② `pnpm db:generate` → ③ **人工检查**生成的 SQL（外键、索引、数据兼容）→ ④ 提交 `drizzle/` 与 `meta/` → ⑤ 各环境执行 `pnpm db:migrate` → ⑥ 若需新种子逻辑再改 `seed.ts` 并 `db:seed` |
-| **重难点** | 与 `bootstrap` 的关系 | `pnpm bootstrap` / `bootstrap:dev` 在 `scripts/deploy.mjs` 中：装依赖 →（可选）起 Docker → `db:setup` → 再 build/dev；日常仅改业务数据用 `db:seed`，改表结构用 `db:migrate` |
-| **亮点** | Monorepo 根命令转发 | 根 `package.json` 的 `db:*` 通过 `pnpm --filter @douxing/server` 转发，开发者无需 `cd packages/server` |
-| **亮点** | 配置单一来源 | `DATABASE_URL` 写在根目录 `.env`；`drizzle.config.ts` 与 `migrate.ts`/`seed.ts` 均读同一变量，避免多套连接配置 |
-
-**推荐操作顺序（速查）**
-
-```text
-# 首次 / 克隆仓库后
-cp .env.example .env
-pnpm bootstrap:dev          # Docker MySQL + migrate + seed + 启动 dev
-
-# 仅同步表结构（已有库、有新迁移文件）
-pnpm db:migrate
-
-# 改了 schema 并 generate 之后
-pnpm db:migrate && pnpm db:seed
-
-# 开发环境彻底清空重来（慎用）
-pnpm db:reset
-```
+新任务完成后：在独立文档按附录模板追加一章，并在此表增加一行索引。
 
 ---
 
@@ -490,6 +392,7 @@ GET  /api/orders
 |------|------|
 | 项目说明 | [README.md](../README.md) |
 | 详细设计（Markdown） | [docs/详细设计文档.md](./详细设计文档.md) |
+| 开发记录（重难点与亮点） | [docs/开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) |
 | 微信小程序 | [scripts/mp-weixin.md](../scripts/mp-weixin.md) |
 | 原生 App 部署 | [scripts/app-native.md](../scripts/app-native.md) |
 
@@ -498,11 +401,11 @@ GET  /api/orders
 ## 附录 C：维护说明
 
 1. **每完成一步**：更新 §5 状态为 `[x]`，填写「完成日」；同步 §2.1 或 §2.2。  
-2. **每完成一项任务**：在 §2.4 追加开发记录；有重难点/亮点则写清**问题与方案**，无则跳过该条。  
+2. **每完成一项任务**：在 [开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) 追加一章（含思考过程；每章 2～3 亮点 + 2～3 重难点），并在 §2.4 索引表增加一行。  
 3. **每发布版本**：在 §2.2 追加版本行（如 v0.3.2）。  
 4. **计划变更**：只改 §2.3 与 §5「计划完成」列，保留历史于 Git 提交记录。  
 5. **README**：MVP / API 有重大变更时同步 [README.md](../README.md)。
 
 ---
 
-*文档版本 2.3 · 最后更新：2026-05-20*
+*文档版本 2.4 · 最后更新：2026-05-20*

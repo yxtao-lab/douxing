@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PoiCategory } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -10,17 +11,54 @@ import {
   getDeepseekConfig,
 } from '../config/llm.js';
 
-const attractionSchema = z.object({
-  name: z.string().min(1),
-  time: z.string().min(1),
-  cost: z.number().min(0),
-  description: z.string().min(1),
-});
+const poiTypeEnum = z.enum([
+  PoiCategory.ATTRACTION,
+  PoiCategory.RESTAURANT,
+  PoiCategory.HOTEL,
+  PoiCategory.MEAL,
+  PoiCategory.TRANSPORT,
+  PoiCategory.OTHER,
+]);
+
+const routeSpotSchema = z
+  .object({
+    name: z.string().min(1),
+    time: z.string().min(1),
+    cost: z.number().min(0),
+    description: z.string().min(1),
+    poiType: poiTypeEnum,
+    latitude: z.number().min(-90).max(90).optional(),
+    longitude: z.number().min(-180).max(180).optional(),
+  })
+  .superRefine((spot, ctx) => {
+    if (spot.poiType === PoiCategory.ATTRACTION) {
+      if (spot.latitude == null || spot.longitude == null) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '景点必须提供 latitude 与 longitude',
+          path: ['latitude'],
+        });
+      }
+    }
+    if (
+      spot.poiType === PoiCategory.RESTAURANT ||
+      spot.poiType === PoiCategory.HOTEL
+    ) {
+      const generic = /^(午餐|晚餐|早餐|吃饭|用膳|住宿|入住酒店|酒店休息)$/;
+      if (generic.test(spot.name.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: '餐厅/酒店须使用具体店名，笼统用餐/住宿请用 poiType=meal',
+          path: ['name'],
+        });
+      }
+    }
+  });
 
 const daySchema = z.object({
   date: z.string().min(1),
   title: z.string().min(1),
-  attractions: z.array(attractionSchema).min(1),
+  attractions: z.array(routeSpotSchema).min(1),
 });
 
 export const llmRouteSchema = z.object({
@@ -76,13 +114,26 @@ JSON 结构：
         "date": "第1天",
         "title": "当日主题",
         "attractions": [
-          { "name": "景点名", "time": "09:00-11:00", "cost": 0, "description": "简短说明" }
+          {
+            "name": "景点或具体店名",
+            "time": "09:00-11:00",
+            "cost": 0,
+            "description": "简短说明",
+            "poiType": "attraction",
+            "latitude": 30.25,
+            "longitude": 120.15
+          }
         ]
       }
     ]
   }
 }
-要求：景点真实可去；每天2-4个景点；days 字段与 routeDetail.days 长度一致；费用 cost 为人民币数字。`;
+要求：
+1. 每天2-4个节点；days 与 routeDetail.days 长度一致；cost 为人民币数字。
+2. poiType 取值：attraction（景区/地标）、restaurant（具体餐厅名）、hotel（具体酒店名）、meal（笼统用餐如「午餐」不入库）、transport、other。
+3. 笼统「午餐」「晚餐」「自行用餐」「入住酒店」等必须用 poiType=meal 或 other，禁止虚构店名。
+4. poiType=attraction 时必须填写真实可参考的 latitude、longitude（中国境内 WGS84）。
+5. poiType=restaurant/hotel 时 name 必须是具体店名；鼓励填写 latitude、longitude。`;
 
 function extractJsonObject(text: string): string {
   const trimmed = text.trim();

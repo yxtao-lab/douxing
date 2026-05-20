@@ -30,13 +30,17 @@ export interface LoginResult {
   user: UserInfo;
 }
 
-/** 路线日程中的景点节点 */
+/** 路线日程中的 POI 节点（含景点、具体餐厅/酒店；笼统「午餐」等不入库） */
 export interface RouteDayAttraction {
   attractionId?: number;
   name: string;
   time: string;
   cost: number;
   description: string;
+  /** attraction | restaurant | hotel | meal | transport | other */
+  poiType?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface RouteDayPlan {
@@ -58,6 +62,8 @@ export interface RouteDetailPayload {
 export interface AttractionInfo {
   id: number;
   name: string;
+  /** attraction | restaurant | hotel */
+  category: string;
   city: string;
   cityCode: string;
   latitude: number | null;

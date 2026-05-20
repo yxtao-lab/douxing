@@ -26,6 +26,7 @@ async function requireAdmin(req: import('express').Request, res: import('express
 const listQuerySchema = z.object({
   city: z.string().max(64).optional(),
   cityCode: z.string().max(32).optional(),
+  category: z.enum(['attraction', 'restaurant', 'hotel']).optional(),
   keyword: z.string().max(64).optional(),
   tags: z
     .union([z.string(), z.array(z.string())])

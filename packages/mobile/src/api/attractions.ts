@@ -4,6 +4,7 @@ import { request } from '@/utils/request';
 export function fetchAttractions(params?: {
   city?: string;
   cityCode?: string;
+  category?: 'attraction' | 'restaurant' | 'hotel';
   keyword?: string;
   tags?: string;
   limit?: number;
@@ -11,6 +12,7 @@ export function fetchAttractions(params?: {
 }) {
   const query = new URLSearchParams();
   if (params?.city) query.set('city', params.city);
+  if (params?.category) query.set('category', params.category);
   if (params?.cityCode) query.set('cityCode', params.cityCode);
   if (params?.keyword) query.set('keyword', params.keyword);
   if (params?.tags) query.set('tags', params.tags);

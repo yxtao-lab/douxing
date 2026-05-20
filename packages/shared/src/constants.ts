@@ -95,6 +95,23 @@ export const AttractionPriceSource = {
   EXTERNAL: 'external',
 } as const;
 
+/** 路线节点 POI 类型（不入库的用 meal/transport/other） */
+export const PoiCategory = {
+  ATTRACTION: 'attraction',
+  RESTAURANT: 'restaurant',
+  HOTEL: 'hotel',
+  MEAL: 'meal',
+  TRANSPORT: 'transport',
+  OTHER: 'other',
+} as const;
+
+/** attractions 表 category 字段（可入库类型） */
+export const AttractionCategory = {
+  ATTRACTION: 'attraction',
+  RESTAURANT: 'restaurant',
+  HOTEL: 'hotel',
+} as const;
+
 /** 名称匹配合并最低置信度（低于则新建 pending） */
 export const ATTRACTION_MATCH_MERGE_THRESHOLD = 0.85;
 
