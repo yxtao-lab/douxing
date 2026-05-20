@@ -1,11 +1,16 @@
 <template>
   <view class="page tab-page">
-    <view class="user-card" v-if="user">
-      <view class="avatar">{{ avatarText }}</view>
+    <view class="user-card" v-if="user" @click="goEdit">
+      <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
+      <view v-else class="avatar">{{ avatarText }}</view>
       <view class="info">
         <text class="name">{{ user.nickname || user.username }}</text>
         <text class="sub">@{{ user.username }}</text>
+        <view v-if="user.interestTags?.length" class="tag-row">
+          <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ tag }}</text>
+        </view>
       </view>
+      <text class="edit-arrow">›</text>
     </view>
     <view class="user-card" v-else>
       <text>未登录</text>
@@ -25,6 +30,7 @@
     </view>
 
     <view class="menu">
+      <view class="menu-item" v-if="user" @click="goEdit">编辑资料</view>
       <view class="menu-item" @click="goRoutes">我的路线</view>
       <view class="menu-item" @click="goCheckins">打卡记录</view>
       <view class="menu-item" v-if="user" @click="handleLogout">退出登录</view>
@@ -39,7 +45,8 @@ import { onShow } from '@dcloudio/uni-app';
 import type { UserInfo, AchievementInfo } from '@douxing/shared';
 import { AchievementType } from '@douxing/shared';
 import { fetchAchievements } from '@/api/achievements';
-import { getStoredUser } from '@/utils/request';
+import { fetchCurrentUser } from '@/api/user';
+import { getStoredUser, setAuth } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
 const user = ref<UserInfo | null>(getStoredUser());
@@ -58,6 +65,14 @@ function achievementLabel(type: string) {
 
 function goLogin() {
   uni.navigateTo({ url: '/pages/login/login' });
+}
+
+function goEdit() {
+  if (!user.value) {
+    goLogin();
+    return;
+  }
+  uni.navigateTo({ url: '/pages/profile/edit' });
 }
 
 function goRoutes() {
@@ -81,6 +96,14 @@ onShow(async () => {
   user.value = getStoredUser();
   if (!user.value) return;
   try {
+    const fresh = await fetchCurrentUser();
+    user.value = fresh;
+    const token = uni.getStorageSync('douxing_token') as string;
+    if (token) setAuth(token, fresh);
+  } catch {
+    /* 离线时沿用本地缓存 */
+  }
+  try {
     achievements.value = await fetchAchievements();
   } catch {
     achievements.value = [];
@@ -100,15 +123,37 @@ onShow(async () => {
   align-items: center;
   gap: 24rpx;
 }
-.avatar {
+.avatar,
+.avatar-img {
   width: 96rpx;
   height: 96rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.avatar {
   line-height: 96rpx;
   text-align: center;
   background: #1677ff;
   color: #fff;
-  border-radius: 50%;
   font-size: 40rpx;
+}
+.edit-arrow {
+  color: #9ca3af;
+  font-size: 40rpx;
+  margin-left: auto;
+}
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+.user-tag {
+  font-size: 22rpx;
+  color: #1677ff;
+  background: #e6f4ff;
+  padding: 4rpx 16rpx;
+  border-radius: 999rpx;
 }
 .name {
   font-size: 34rpx;

@@ -1,7 +1,44 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { users, roles, userRoles } from '../db/schema/index.js';
-import type { UserInfo } from '@douxing/shared';
+import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
+import { USER_INTEREST_MAX, USER_INTEREST_PRESETS } from '@douxing/shared';
+
+const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
+
+function normalizeInterestTags(tags: string[] | undefined): string[] | undefined {
+  if (tags === undefined) return undefined;
+  const unique: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim();
+    if (!tag || unique.includes(tag)) continue;
+    if (!PRESET_SET.has(tag)) {
+      throw new Error(`不支持的标签：${tag}`);
+    }
+    unique.push(tag);
+    if (unique.length > USER_INTEREST_MAX) {
+      throw new Error(`兴趣标签最多 ${USER_INTEREST_MAX} 个`);
+    }
+  }
+  return unique;
+}
+
+function mapUserRow(
+  user: typeof users.$inferSelect,
+  roleCodes: string[],
+): UserInfo {
+  return {
+    id: user.id,
+    username: user.username,
+    nickname: user.nickname,
+    avatar: user.avatar,
+    phone: user.phone,
+    email: user.email,
+    interestTags: user.interestTags ?? null,
+    status: user.status,
+    roles: roleCodes,
+  };
+}
 
 export async function findUserByUsername(username: string) {
   const db = getDb();
@@ -27,14 +64,48 @@ export async function getUserWithRoles(userId: number): Promise<UserInfo | null>
     .innerJoin(roles, eq(userRoles.roleId, roles.id))
     .where(eq(userRoles.userId, userId));
 
-  return {
-    id: user.id,
-    username: user.username,
-    nickname: user.nickname,
-    avatar: user.avatar,
-    phone: user.phone,
-    email: user.email,
-    status: user.status,
-    roles: roleRows.map((r) => r.code),
-  };
+  return mapUserRow(user, roleRows.map((r) => r.code));
+}
+
+export async function updateUserProfile(
+  userId: number,
+  input: UpdateUserProfileRequest,
+): Promise<UserInfo | null> {
+  const db = getDb();
+  const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  const existing = userRows[0];
+  if (!existing) return null;
+
+  const patch: Partial<typeof users.$inferInsert> = {};
+
+  if (input.nickname !== undefined) {
+    const nickname = input.nickname.trim();
+    if (!nickname) throw new Error('昵称不能为空');
+    patch.nickname = nickname;
+  }
+
+  if (input.avatar !== undefined) {
+    patch.avatar = input.avatar;
+  }
+
+  if (input.email !== undefined) {
+    patch.email = input.email;
+  }
+
+  if (input.interestTags !== undefined) {
+    patch.interestTags = normalizeInterestTags(input.interestTags);
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return getUserWithRoles(userId);
+  }
+
+  await db.update(users).set(patch).where(eq(users.id, userId));
+  return getUserWithRoles(userId);
+}
+
+export async function setUserAvatar(userId: number, avatarUrl: string): Promise<UserInfo | null> {
+  const db = getDb();
+  await db.update(users).set({ avatar: avatarUrl }).where(eq(users.id, userId));
+  return getUserWithRoles(userId);
 }

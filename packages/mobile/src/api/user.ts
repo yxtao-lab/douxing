@@ -1,0 +1,56 @@
+import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
+import { request, setAuth } from '@/utils/request';
+import { getApiBaseUrl } from '@/utils/api-base';
+
+const TOKEN_KEY = 'douxing_token';
+
+export function fetchCurrentUser() {
+  return request<UserInfo>('/users/me');
+}
+
+export async function updateUserProfile(data: UpdateUserProfileRequest) {
+  const user = await request<UserInfo>('/users/me', {
+    method: 'PUT',
+    data,
+  });
+  const token = uni.getStorageSync(TOKEN_KEY) as string;
+  if (token) {
+    setAuth(token, user);
+  }
+  return user;
+}
+
+export function uploadUserAvatar(filePath: string): Promise<UserInfo> {
+  const token = uni.getStorageSync(TOKEN_KEY) as string;
+  const base = getApiBaseUrl();
+  const url = `${base}/users/me/avatar`;
+
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url,
+      filePath,
+      name: 'file',
+      header: token ? { Authorization: `Bearer ${token}` } : {},
+      success: (res) => {
+        try {
+          const body = JSON.parse(res.data as string) as {
+            code: number;
+            message: string;
+            data: UserInfo;
+          };
+          if (body.code === 0) {
+            if (token) {
+              setAuth(token, body.data);
+            }
+            resolve(body.data);
+            return;
+          }
+          reject(new Error(body.message || '上传失败'));
+        } catch {
+          reject(new Error('响应格式错误'));
+        }
+      },
+      fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+    });
+  });
+}

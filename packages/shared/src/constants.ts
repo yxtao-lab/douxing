@@ -52,6 +52,25 @@ export const LlmProvider = {
   LMSTUDIO: 'lmstudio',
 } as const;
 
+/** 用户资料：可选兴趣标签（预设） */
+export const USER_INTEREST_PRESETS = [
+  '文化',
+  '自然',
+  '美食',
+  '亲子',
+  '娱乐',
+  '都市',
+  '购物',
+  '夜景',
+  '历史',
+  '休闲',
+  '户外',
+  '摄影',
+] as const;
+
+/** 用户资料：兴趣标签数量上限 */
+export const USER_INTEREST_MAX = 8;
+
 /** 成就类型 */
 export const AchievementType = {
   FIRST_CHECKIN: 'first_checkin',

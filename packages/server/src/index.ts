@@ -2,6 +2,7 @@ import './config/env.js';
 import express from 'express';
 import cors from 'cors';
 import routes from './routes/index.js';
+import { uploadsDir } from './routes/users.js';
 import { APP_NAME } from '@douxing/shared';
 
 const app = express();
@@ -9,6 +10,7 @@ const port = Number(process.env.SERVER_PORT) || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads/avatars', express.static(uploadsDir));
 app.use(routes);
 
 app.get('/', (_req, res) => {

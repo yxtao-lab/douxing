@@ -11,8 +11,18 @@ export interface UserInfo {
   avatar: string | null;
   phone: string | null;
   email: string | null;
+  /** 用户兴趣偏好标签 */
+  interestTags: string[] | null;
   status: number;
   roles: string[];
+}
+
+/** 更新当前用户资料（PUT /users/me） */
+export interface UpdateUserProfileRequest {
+  nickname?: string;
+  avatar?: string | null;
+  email?: string | null;
+  interestTags?: string[];
 }
 
 export interface LoginResult {

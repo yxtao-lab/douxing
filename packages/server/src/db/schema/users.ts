@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, tinyint, timestamp } from 'drizzle-orm/mysql-core';
+import { mysqlTable, int, varchar, tinyint, timestamp, json } from 'drizzle-orm/mysql-core';
 
 /** 用户表：认证信息、联系方式、用户类型 */
 export const users = mysqlTable('users', {
@@ -12,6 +12,8 @@ export const users = mysqlTable('users', {
   userType: tinyint('user_type').notNull().default(1),
   nickname: varchar('nickname', { length: 64 }).notNull().default(''),
   avatar: varchar('avatar', { length: 512 }),
+  /** 用户兴趣偏好标签 */
+  interestTags: json('interest_tags').$type<string[]>(),
   status: tinyint('status').notNull().default(1),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
