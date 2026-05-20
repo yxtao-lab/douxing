@@ -71,6 +71,36 @@ export const USER_INTEREST_PRESETS = [
 /** 用户资料：兴趣标签数量上限 */
 export const USER_INTEREST_MAX = 8;
 
+/** 景点状态（attractions.status） */
+export const AttractionStatus = {
+  DISABLED: 0,
+  ACTIVE: 1,
+  /** AI 同步新建，待运营审核 */
+  PENDING: 2,
+} as const;
+
+/** 景点数据来源（attractions.source） */
+export const AttractionSource = {
+  SEED: 'seed',
+  LLM: 'llm',
+  MANUAL: 'manual',
+  AMAP: 'amap',
+} as const;
+
+/** 门票/参考价来源（attractions.price_source） */
+export const AttractionPriceSource = {
+  SEED: 'seed',
+  LLM_ESTIMATE: 'llm_estimate',
+  MANUAL: 'manual',
+  EXTERNAL: 'external',
+} as const;
+
+/** 名称匹配合并最低置信度（低于则新建 pending） */
+export const ATTRACTION_MATCH_MERGE_THRESHOLD = 0.85;
+
+/** LLM 来源景点票价可覆盖的天数阈值 */
+export const ATTRACTION_LLM_PRICE_STALE_DAYS = 90;
+
 /** 成就类型 */
 export const AchievementType = {
   FIRST_CHECKIN: 'first_checkin',

@@ -1,6 +1,7 @@
 import { mysqlTable, int, varchar, tinyint, timestamp, json } from 'drizzle-orm/mysql-core';
 import { users } from './users.js';
 import { travelRoutes } from './travel-routes.js';
+import { attractions } from './attractions.js';
 
 export type CheckInLocation = {
   latitude?: number;
@@ -18,6 +19,7 @@ export const checkIns = mysqlTable('check_ins', {
   routeId: int('route_id')
     .notNull()
     .references(() => travelRoutes.id, { onDelete: 'cascade' }),
+  attractionId: int('attraction_id').references(() => attractions.id, { onDelete: 'set null' }),
   location: json('location').$type<CheckInLocation>().notNull(),
   checkedAt: timestamp('checked_at').notNull().defaultNow(),
   status: tinyint('status').notNull().default(0),

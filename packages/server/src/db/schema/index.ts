@@ -1,4 +1,5 @@
 export * from './users.js';
+export * from './attractions.js';
 export * from './roles.js';
 export * from './user-roles.js';
 export * from './system-config.js';

@@ -10,6 +10,7 @@ function toCheckInInfo(row: typeof checkIns.$inferSelect): CheckInInfo {
     id: row.id,
     userId: row.userId,
     routeId: row.routeId,
+    attractionId: row.attractionId ?? null,
     location: row.location,
     checkedAt: row.checkedAt.toISOString(),
     status: row.status,
@@ -19,12 +20,18 @@ function toCheckInInfo(row: typeof checkIns.$inferSelect): CheckInInfo {
 
 export async function createCheckIn(
   userId: number,
-  data: { routeId: number; location: CheckInLocation; remark?: string },
+  data: {
+    routeId: number;
+    location: CheckInLocation;
+    attractionId?: number;
+    remark?: string;
+  },
 ) {
   const db = getDb();
   const [result] = await db.insert(checkIns).values({
     userId,
     routeId: data.routeId,
+    attractionId: data.attractionId ?? null,
     location: data.location,
     remark: data.remark ?? null,
     status: CheckInStatus.APPROVED,

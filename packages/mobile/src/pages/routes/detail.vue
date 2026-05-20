@@ -19,7 +19,7 @@
           <text class="spot-name">{{ spot.name }}</text>
           <text class="spot-time">{{ spot.time }} · ¥{{ spot.cost }}</text>
           <text class="spot-desc">{{ spot.description }}</text>
-          <button size="mini" class="btn-checkin" @click="handleCheckIn(spot.name)">在此打卡</button>
+          <button size="mini" class="btn-checkin" @click="handleCheckIn(spot)">在此打卡</button>
         </view>
       </view>
     </view>
@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import type { TravelRouteInfo } from '@douxing/shared';
+import type { RouteDayAttraction, TravelRouteInfo } from '@douxing/shared';
 import { fetchRouteDetail, publishRoute } from '@/api/routes';
 import { createUnlockOrder, payOrder } from '@/api/orders';
 import { createCheckIn } from '@/api/checkins';
@@ -60,7 +60,7 @@ const days = computed(() => {
   const detail = route.value?.routeDetail as { days?: Array<{
     date: string;
     title: string;
-    attractions: Array<{ name: string; time: string; cost: number; description: string }>;
+    attractions: RouteDayAttraction[];
   }> } | null;
   return detail?.days ?? [];
 });
@@ -96,11 +96,12 @@ async function handlePublish() {
   }
 }
 
-async function handleCheckIn(placeName: string) {
+async function handleCheckIn(spot: RouteDayAttraction) {
   try {
     const result = await createCheckIn({
       routeId,
-      location: { placeName, address: placeName },
+      attractionId: spot.attractionId,
+      location: { placeName: spot.name, address: spot.name },
     });
     let msg = '打卡成功';
     if (result.newAchievements.length > 0) {

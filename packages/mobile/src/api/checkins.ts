@@ -3,6 +3,7 @@ import { request } from '@/utils/request';
 
 export function createCheckIn(data: {
   routeId: number;
+  attractionId?: number;
   location: { placeName: string; address?: string; latitude?: number; longitude?: number };
   remark?: string;
 }) {

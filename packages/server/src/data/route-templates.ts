@@ -1,15 +1,8 @@
 /** MVP：基于模板的路线生成数据（模拟 AI 规划） */
 
-export interface RouteDayPlan {
-  date: string;
-  title: string;
-  attractions: Array<{
-    name: string;
-    time: string;
-    cost: number;
-    description: string;
-  }>;
-}
+import type { RouteDayPlan } from '@douxing/shared';
+
+export type { RouteDayPlan };
 
 export interface RouteTemplate {
   city: string;

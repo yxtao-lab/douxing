@@ -29,6 +29,20 @@
       "when": 1747814400000,
       "tag": "0003_user_interest_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1747900800000,
+      "tag": "0004_attractions",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1747987200000,
+      "tag": "0005_attraction_sync_meta",
+      "breakpoints": true
     }
   ]
 }

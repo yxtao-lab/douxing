@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { ensureDatabase } from './ensure-database.js';
 import { getDb } from './client.js';
 import { users, roles, userRoles, systemConfig, travelRoutes } from './schema/index.js';
+import { seedAttractions, syncAttractionsFromRouteDetail } from '../services/attraction.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType } from '@douxing/shared';
 
@@ -90,13 +91,8 @@ async function seedSampleRoutes(creatorId: number) {
     return;
   }
 
-  await db.insert(travelRoutes).values({
-    name: '杭州西湖经典一日游',
-    description: '适合周末短途，含西湖核心景点。',
-    budgetRange: '500-1000',
-    days: 1,
-    interestTags: ['文化', '自然'],
-    routeDetail: {
+  const sampleDetail = await syncAttractionsFromRouteDetail(
+    {
       days: [
         {
           date: '第1天',
@@ -107,6 +103,18 @@ async function seedSampleRoutes(creatorId: number) {
           ],
         },
       ],
+    },
+    { city: '杭州', interestTags: ['文化', '自然'] },
+  );
+
+  await db.insert(travelRoutes).values({
+    name: '杭州西湖经典一日游',
+    description: '适合周末短途，含西湖核心景点。',
+    budgetRange: '500-1000',
+    days: 1,
+    interestTags: ['文化', '自然'],
+    routeDetail: {
+      days: sampleDetail.days,
       isAiGenerated: false,
       unlockPrice: 0,
       isUnlocked: true,
@@ -150,6 +158,7 @@ async function main() {
   await seedRoles();
   await seedAdminUser();
   const demoUserId = await seedDemoUser();
+  await seedAttractions();
   await seedSampleRoutes(demoUserId);
   await seedSystemConfig();
   console.log('[seed] Done');

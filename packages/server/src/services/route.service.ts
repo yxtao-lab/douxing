@@ -4,6 +4,7 @@ import { travelRoutes } from '../db/schema/travel-routes.js';
 import { RouteStatus } from '@douxing/shared';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
+import { syncAttractionsFromRouteDetail } from './attraction.service.js';
 
 function toRouteInfo(row: typeof travelRoutes.$inferSelect): TravelRouteInfo {
   return {
@@ -25,8 +26,12 @@ function toRouteInfo(row: typeof travelRoutes.$inferSelect): TravelRouteInfo {
 export async function createRouteFromPrompt(userId: number, input: GenerateRouteInput) {
   const draft = await generateRoute(input);
   const db = getDb();
+  const linkedDays = await syncAttractionsFromRouteDetail(draft.routeDetail, {
+    city: draft.matchedCity || '未知',
+    interestTags: draft.interestTags,
+  });
   const detail = {
-    ...draft.routeDetail,
+    days: linkedDays.days,
     isAiGenerated: draft.isAiGenerated,
     unlockPrice: draft.unlockPrice,
     isUnlocked: false,

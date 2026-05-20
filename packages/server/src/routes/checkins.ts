@@ -15,6 +15,7 @@ const router = Router();
 
 const checkInSchema = z.object({
   routeId: z.number().int().positive(),
+  attractionId: z.number().int().positive().optional(),
   location: z.object({
     latitude: z.number().optional(),
     longitude: z.number().optional(),

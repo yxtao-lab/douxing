@@ -30,6 +30,56 @@ export interface LoginResult {
   user: UserInfo;
 }
 
+/** 路线日程中的景点节点 */
+export interface RouteDayAttraction {
+  attractionId?: number;
+  name: string;
+  time: string;
+  cost: number;
+  description: string;
+}
+
+export interface RouteDayPlan {
+  date: string;
+  title: string;
+  attractions: RouteDayAttraction[];
+}
+
+export interface RouteDetailPayload {
+  days: RouteDayPlan[];
+  isAiGenerated?: boolean;
+  unlockPrice?: number;
+  isUnlocked?: boolean;
+  matchedCity?: string;
+  generationSource?: 'llm' | 'template';
+  llmProvider?: string;
+}
+
+export interface AttractionInfo {
+  id: number;
+  name: string;
+  city: string;
+  cityCode: string;
+  latitude: number | null;
+  longitude: number | null;
+  tags: string[];
+  description: string | null;
+  ticketPrice: number;
+  aliases: string[] | null;
+  status: number;
+  source: string;
+  priceSource: string | null;
+  matchConfidence: number | null;
+  priceUpdatedAt: string | null;
+  verifiedAt: string | null;
+}
+
+export interface AttractionCitySummary {
+  city: string;
+  cityCode: string;
+  count: number;
+}
+
 export interface TravelRouteInfo {
   id: number;
   name: string;
@@ -104,6 +154,7 @@ export interface CheckInInfo {
   id: number;
   userId: number;
   routeId: number;
+  attractionId: number | null;
   location: {
     latitude?: number;
     longitude?: number;

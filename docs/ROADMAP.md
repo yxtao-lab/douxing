@@ -3,7 +3,7 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：2.1  
+**文档版本**：2.3  
 **更新日期**：2026-05-20  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
@@ -28,9 +28,9 @@
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **整体阶段** | Sprint 1–2 MVP 骨架已完成 | 对照设计文档 §2–§5 核心链路可演示 |
-| **当前焦点** | 登录注册能力补全（已完成）→ 阶段 A | 手机验证码登录/注册 + 腾讯云短信已接入 |
-| **下一步建议** | A1 → A2 → A4 | 资料完善 + 景点库 + 订单可靠 |
-| **完成度（里程碑）** | M0：**7/7** 已完成 · A～G：**0/38** 未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
+| **当前焦点** | 阶段 A 进行中 | A1、A2 已完成，下一步 A4 订单状态机 |
+| **下一步建议** | A4 → A3 | 订单可靠 + 路线互动 |
+| **完成度（里程碑）** | M0：**7/7** 已完成 · A：**2/4** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
 
@@ -89,6 +89,7 @@ gantt
 | v0.3.0 | 2026-05-20 | 工程 | 单平台 dev/build、原生 App 一键部署脚本 |
 | v0.3.1 | 2026-05-20 | 移动端 | iconfont TabBar；修复 H5 底部栏与高亮同步 |
 | v0.3.2 | 2026-05-20 | 认证 | 手机验证码登录/注册；腾讯云短信；密码/验证码双模式登录页 |
+| v0.4.0 | 2026-05-20 | 内容库 | `attractions` 表、28 条种子、景点 API、路线关联 `attractionId` |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -126,6 +127,98 @@ gantt
 
 ---
 
+#### 2026-05-20 · A2 景点/内容基础库
+
+| 类型 | 内容 | 解决方案 |
+|------|------|----------|
+| **亮点** | 路线与景点库联动 | 生成路线后按名称+城市解析 `attractionId` 写入 `route_detail` |
+| **亮点** | 打卡可追溯景点 | `check_ins.attraction_id` 外键，移动端打卡传真实 ID |
+| **重难点** | 景点名称不完全一致 | `aliases` 别名 + 双向包含匹配（如「断桥」→「断桥残雪」） |
+
+---
+
+#### 2026-05-20 · A2+ AI 景点同步（pending + 合并策略）
+
+| 类型 | 内容 | 解决方案 |
+|------|------|----------|
+| **亮点** | 路线生成即写库 | `syncAttractionsFromRouteDetail` 在 `createRouteFromPrompt` 后执行，未匹配则 `status=pending` |
+| **亮点** | 分来源合并 | `seed/manual` 仅补空字段与别名/标签；`llm` 来源票价仅在为空或超过 90 天且仍为 `llm_estimate` 时可更新 |
+| **重难点** | 模糊匹配误合并 | 置信度 &lt; 0.85（含模糊 0.72）不合并，新建 pending；精确名 1.0、别名 0.95 才合并 |
+| **重难点** | 公开 API 与待审隔离 | 列表/详情仅 `ACTIVE`；生成路线与打卡可用 `pending` 的 `attractionId` |
+| **重难点** | AI 无坐标 | pending 景点 `latitude/longitude` 可为空，审核通过前不接地图围栏 |
+| **亮点** | 管理端审核 | `GET /api/attractions/admin/pending`、`POST /api/attractions/admin/:id/approve`（需 admin） |
+
+---
+
+#### 2026-05-20 · 数据库生成与使用命令（Drizzle）
+
+> 本仓库用 **Drizzle ORM + SQL 迁移文件 + TypeScript 种子脚本** 管理 MySQL，与业务代码同仓、可版本化。
+
+**整体原理（三层分工）**
+
+| 层级 | 职责 | 代码/产物位置 |
+|------|------|----------------|
+| **Schema 定义** | 用 TypeScript 描述表结构（类型即契约） | `packages/server/src/db/schema/*.ts` |
+| **结构迁移（migrate）** | 把表结构变更应用到数据库（DDL） | `packages/server/drizzle/*.sql` + `meta/_journal.json` |
+| **种子数据（seed）** | 写入演示账号、角色、景点库等初始行（DML） | `packages/server/src/db/seed.ts`、`src/data/*-seeds.ts` |
+
+```mermaid
+flowchart LR
+  subgraph dev [开发改表]
+    S[编辑 schema/*.ts]
+    G["pnpm db:generate"]
+    SQL[drizzle/000N_*.sql]
+    S --> G --> SQL
+  end
+  subgraph runtime [应用到库]
+    M["pnpm db:migrate"]
+    DB[(MySQL)]
+    SE["pnpm db:seed"]
+    SQL --> M --> DB
+    SE --> DB
+  end
+```
+
+**命令对照与原理**
+
+| 命令 | 实际执行 | 作用 | 何时使用 |
+|------|----------|------|----------|
+| `pnpm db:generate` | `drizzle-kit generate`（server 包） | 对比 **当前 schema** 与 **上次快照**，在 `drizzle/` 生成新的 `.sql` 并更新 `meta/_journal.json` | 修改 `schema/*.ts` 之后、提交前 |
+| `pnpm db:migrate` | `tsx src/db/migrate.ts` | 1）`ensureDatabase` 等待 MySQL 并 `CREATE DATABASE IF NOT EXISTS`；2）`drizzle-orm/migrator` 按 journal **顺序执行尚未跑过的 SQL** | 新环境、拉代码后有新迁移、部署时 |
+| `pnpm db:seed` | `tsx src/db/seed.ts` | 幂等插入：角色/admin/demo 用户、景点库、示例路线等；**已存在则 skip** | migrate 之后首次初始化或补种子（不删表） |
+| `pnpm db:setup` | `db:migrate && db:seed` | 一键「建表 + 灌数据」 | `bootstrap` 内、本地快速就绪 |
+| `pnpm db:reset` | `DROP DATABASE` → migrate → seed | **清空整库**后重建 | 仅开发环境需要彻底重来时 |
+
+| 类型 | 内容 | 解决方案 |
+|------|------|----------|
+| **重难点** | `generate` 与 `migrate` 不是同一步 | `generate` 只**产出** SQL 文件，不会连库改表；必须再执行 `migrate` 才会在 MySQL 里 `CREATE/ALTER`。漏跑 migrate 会导致运行时「表不存在」 |
+| **重难点** | 迁移执行记录存在哪 | Drizzle 在库内维护 `__drizzle_migrations`（由 migrator 管理），已执行的 `tag` 不会重复跑；因此 **不要手改已发布环境的 journal 顺序** |
+| **重难点** | Docker MySQL 启动晚于脚本 | `ensureDatabase` / `wait-only.ts` 对 `DATABASE_URL` 主机端口轮询（默认 30 次 × 2s）；`bootstrap` 先 `docker compose up` 再 `wait-only` 再 `db:setup` |
+| **重难点** | `seed` 不替代迁移 | seed 只做 `INSERT`，不会 `ALTER TABLE`；新增列/表必须先 migrate。种子对「已有数据」多为 skip，**不会**给旧路线自动补 `attractionId`，需重新生成路线或 `db:reset` |
+| **重难点** | 改表标准流程 | ① 改 `schema/*.ts` → ② `pnpm db:generate` → ③ **人工检查**生成的 SQL（外键、索引、数据兼容）→ ④ 提交 `drizzle/` 与 `meta/` → ⑤ 各环境执行 `pnpm db:migrate` → ⑥ 若需新种子逻辑再改 `seed.ts` 并 `db:seed` |
+| **重难点** | 与 `bootstrap` 的关系 | `pnpm bootstrap` / `bootstrap:dev` 在 `scripts/deploy.mjs` 中：装依赖 →（可选）起 Docker → `db:setup` → 再 build/dev；日常仅改业务数据用 `db:seed`，改表结构用 `db:migrate` |
+| **亮点** | Monorepo 根命令转发 | 根 `package.json` 的 `db:*` 通过 `pnpm --filter @douxing/server` 转发，开发者无需 `cd packages/server` |
+| **亮点** | 配置单一来源 | `DATABASE_URL` 写在根目录 `.env`；`drizzle.config.ts` 与 `migrate.ts`/`seed.ts` 均读同一变量，避免多套连接配置 |
+
+**推荐操作顺序（速查）**
+
+```text
+# 首次 / 克隆仓库后
+cp .env.example .env
+pnpm bootstrap:dev          # Docker MySQL + migrate + seed + 启动 dev
+
+# 仅同步表结构（已有库、有新迁移文件）
+pnpm db:migrate
+
+# 改了 schema 并 generate 之后
+pnpm db:migrate && pnpm db:seed
+
+# 开发环境彻底清空重来（慎用）
+pnpm db:reset
+```
+
+---
+
 ## 3. 当前实现概况
 
 ### 3.1 已完成（M0 · 对应设计文档 Sprint 1–2 骨架）
@@ -142,6 +235,7 @@ gantt
 | 移动端 | 2026-05-20 | Tab：首页 / 规划 / 路线 / 我的；iconfont 底栏；登录注册（验证码 + 密码） |
 | 管理端 | 2026-05-19 | 路线、订单、打卡列表（admin） |
 | 多端脚本 | 2026-05-20 | `dev:only`、`deploy:app`、H5 / 微信小程序 / Android / iOS |
+| 景点库 | 2026-05-20 | `attractions` 表 + 28 条种子；路线生成自动关联 `attractionId` |
 | 数据表 | 2026-05-19 | `users`、`travel_routes`、`check_ins`、`achievements`、`orders`、`roles` 等 |
 
 ### 3.2 主要 API（已实现）
@@ -168,6 +262,10 @@ POST /api/checkins
 GET  /api/checkins
 
 GET  /api/achievements
+
+GET  /api/attractions
+GET  /api/attractions/cities
+GET  /api/attractions/:id
 
 POST /api/orders
 POST /api/orders/:id/pay
@@ -225,7 +323,7 @@ GET  /api/orders
 | 步 | 状态 | 计划完成 | 名称 | 设计文档 | 交付内容 | 验收标准 |
 |----|------|----------|------|----------|----------|----------|
 | A1 | [x] | 2026-05-20 | 用户资料与偏好 | §7.2.1、§12.2.1 | `PUT /users/me`、头像、兴趣标签；移动端编辑页 | 修改资料持久化 |
-| A2 | [ ] | 2026-05-28 | 景点/内容基础库 | §3.5、内容服务 | `attractions` 表 + 种子数据（城市、坐标、标签） | 路线可关联真实景点 ID |
+| A2 | [x] | 2026-05-20 | 景点/内容基础库 | §3.5、内容服务 | `attractions` 表 + 种子数据（城市、坐标、标签） | 路线可关联真实景点 ID |
 | A3 | [ ] | 2026-06-07 | 路线能力补全 | §12.2.2 | 点赞/收藏、热门列表、草稿编辑、浏览量 | 列表筛选与统计可用 |
 | A4 | [ ] | 2026-06-02 | 订单状态机 | §5.3 | `pending→paid→completed/cancelled`、超时取消 | 状态流转正确、不可重复支付 |
 
@@ -407,4 +505,4 @@ GET  /api/orders
 
 ---
 
-*文档版本 2.1 · 最后更新：2026-05-20*
+*文档版本 2.3 · 最后更新：2026-05-20*

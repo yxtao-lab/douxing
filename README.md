@@ -240,7 +240,8 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | 用户 | 注册 / 登录 | `POST /api/auth/register`、`/api/auth/login` |
 | AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
 | 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
-| 打卡 | 景点打卡 | `POST /api/checkins`，自动触发成就 |
+| 景点库 | 城市景点基础数据 | `GET /api/attractions`；AI 生成路线自动同步（pending + 合并）；管理员审核 |
+| 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就 |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
 | 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航 |
@@ -283,7 +284,12 @@ LLM_MODEL=你的模型名称
 - `GET /api/routes` — 我的路线；`?all=1` 管理员查看全部
 - `GET /api/routes/:id` — 路线详情
 - `POST /api/routes/:id/publish` — 发布路线
-- `POST /api/checkins` — 打卡
+- `GET /api/attractions` — 景点列表（`city` / `cityCode` / `keyword` / `tags`）
+- `GET /api/attractions/cities` — 有景点的城市汇总
+- `GET /api/attractions/:id` — 景点详情（仅已发布）
+- `GET /api/attractions/admin/pending` — 待审核景点（admin）
+- `POST /api/attractions/admin/:id/approve` — 审核通过（admin）
+- `POST /api/checkins` — 打卡（可传 `attractionId`）
 - `GET /api/checkins` — 打卡列表
 - `GET /api/achievements` — 我的成就
 - `POST /api/orders` — 创建解锁订单
@@ -300,7 +306,8 @@ LLM_MODEL=你的模型名称
 |----|------|----------|
 | `users` | 用户 | id、username、password_hash、phone、email、user_type、created_at、updated_at |
 | `travel_routes` | 路线 | id、name、description、budget_range、days、interest_tags(JSON)、route_detail(JSON)、creator_id、status |
-| `check_ins` | 打卡记录 | id、user_id、route_id、location(JSON)、checked_at、status、remark |
+| `attractions` | 景点基础库 | id、name、city、city_code、latitude、longitude、tags(JSON)、ticket_price、aliases |
+| `check_ins` | 打卡记录 | id、user_id、route_id、attraction_id、location(JSON)、checked_at、status、remark |
 | `achievements` | 成就 | id、user_id、achievement_type、unlocked_at、description |
 
 另有 RBAC 辅助表：`roles`、`user_roles`；系统配置：`system_config`。
