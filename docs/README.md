@@ -4,6 +4,7 @@
 |------|------|
 | [详细设计文档.md](./详细设计文档.md) | 《兜行平台最终详细设计文档》V2.0 完整 Markdown 版 |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划 |
+| [../scripts/app-native.md](../scripts/app-native.md) | iOS / Android 一键部署与单平台开发 |
 
 ## 阅读建议
 

@@ -8,7 +8,7 @@
 |------|------|
 | 包管理 | pnpm workspace |
 | Web 管理端 | Vue 3 + Vite + Pinia + Vue Router |
-| 移动端 | UniApp (Vue 3) + Vite（H5 / 微信小程序） |
+| 移动端 | UniApp (Vue 3) + Vite（H5 / 微信小程序 / Android / iOS App） |
 | 后端 | Node.js + Express + TypeScript |
 | 数据库 | MySQL 8 + Drizzle ORM |
 | 共享 | `@douxing/shared` 类型与常量 |
@@ -19,6 +19,7 @@
 |------|------|
 | 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图 | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 
 未完成能力与分步实施计划见 **ROADMAP**（对照详细设计文档 V2.0）。
 
@@ -42,60 +43,188 @@ project/
 - Node.js >= 18
 - pnpm >= 8
 - Docker（用于本地 MySQL，可选）
+- 原生 App 打包： [HBuilderX](https://www.dcloud.io/hbuilderx.html)（Android / iOS 云打包或真机调试）
 
-## 快速开始
+## 命令速查
 
-### 一键部署（推荐）
+> 以下命令均在**项目根目录**执行。组合启动可用 `pnpm dev:only <平台>`，平台标识见 [平台标识表](#平台标识表)。
+
+### 环境与初始化
 
 ```bash
 # 安装 pnpm（若未安装）
 npm install -g pnpm
 
-# 一键：启动 MySQL → 安装依赖 → 迁移表结构 → 初始化数据 → 构建（含微信小程序）
+# 复制环境变量（首次）
+cp .env.example .env
+
+# 安装依赖
+pnpm install
+
+# 一键部署：MySQL → 迁移 → 种子数据 → 全量构建
 pnpm bootstrap
 
-# 开发模式（部署后自动启动全部 dev 服务，含微信小程序编译监听）
+# 一键部署并进入开发模式（自动 pnpm dev）
 pnpm bootstrap:dev
 
-# ⚠️ bootstrap 只构建，不启动页面。部署完成后必须执行：
-pnpm dev   # 含 API、管理端、H5、微信小程序（mp-weixin 监听编译）
+# 跳过 Docker（本机已有 MySQL）
+pnpm bootstrap --skip-docker
+pnpm bootstrap:dev --skip-docker
 
-# 一键停止所有服务（开发端口 + Docker MySQL）
-pnpm stop
-
-# 仅停止开发服务，保留 Docker / 本机 MySQL
-pnpm stop:dev
+# 手动只启动 MySQL（可选，bootstrap 已包含）
+docker compose up -d mysql
 ```
 
-启动后访问：
-
-| 端 | 地址 / 操作 |
-|----|-------------|
-| 管理端 | http://localhost:5173 |
-| 移动端 H5 | http://localhost:5174 |
-| API | http://localhost:3000/api/health |
-| 微信小程序 | 用[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)导入 `packages/mobile/dist/dev/mp-weixin`（`pnpm dev` 会自动编译）；开发阶段关闭「校验合法域名」 |
-
-Windows PowerShell:
+Windows 也可用：
 
 ```powershell
 .\scripts\deploy.ps1
 .\scripts\deploy.ps1 --dev
 ```
 
-### 手动启动
+### 数据库
 
 ```bash
-cp .env.example .env
-docker compose up -d mysql
-pnpm install
-pnpm db:setup          # 建表 + 种子数据
-pnpm dev:server        # API :3000
-pnpm dev:web           # Web :5173
-pnpm dev:mobile        # H5  :5174
-pnpm dev:mp-weixin     # 微信小程序编译 → dist/dev/mp-weixin
-# 或 pnpm dev 一次启动以上全部（含小程序）
+pnpm db:setup      # 迁移 + 种子数据（等价 db:migrate && db:seed）
+pnpm db:migrate    # 仅执行迁移
+pnpm db:seed       # 仅初始化数据
+pnpm db:reset      # 重置库并重新迁移、种子
 ```
+
+### 开发运行（dev）
+
+**一次启动全部（API + Web + H5 + 微信小程序）：**
+
+```bash
+pnpm dev
+```
+
+**只启动某一个或几个平台：**
+
+```bash
+pnpm dev:only server              # 仅后端 API
+pnpm dev:only web                 # 仅 Web 管理端
+pnpm dev:only mobile              # 仅移动端 H5
+pnpm dev:only mp-weixin           # 仅微信小程序编译
+pnpm dev:only app-android         # 仅 Android App（自动带上 server）
+pnpm dev:only app-ios             # 仅 iOS App（自动带上 server）
+pnpm dev:only server,web,mobile   # 任意组合，逗号分隔
+```
+
+**等价单平台命令（不自动组合其他端）：**
+
+```bash
+pnpm dev:server        # 后端 API       → http://localhost:3000
+pnpm dev:web           # Web 管理端     → http://localhost:5173
+pnpm dev:mobile        # 移动端 H5      → http://localhost:5174
+pnpm dev:mp-weixin     # 微信小程序     → packages/mobile/dist/dev/mp-weixin
+pnpm dev:app           # 原生 App 开发
+pnpm dev:app-android   # Android App 开发
+pnpm dev:app-ios       # iOS App 开发（需 macOS + Xcode）
+```
+
+### 构建（build）
+
+**全量构建（所有子包）：**
+
+```bash
+pnpm build
+```
+
+**按平台单独构建：**
+
+```bash
+pnpm build:server        # 后端
+pnpm build:web           # Web 管理端
+pnpm build:mobile        # H5
+pnpm build:mp-weixin     # 微信小程序
+pnpm build:app           # 原生 App 资源
+pnpm build:app-android   # Android App 资源
+pnpm build:app-ios       # iOS App 资源
+pnpm build:app-all       # Android + iOS 连续构建
+
+# 任意组合
+pnpm build:only server,web
+pnpm build:only app-android,app-ios
+```
+
+**生产环境启动后端：**
+
+```bash
+pnpm build:server
+pnpm --filter @douxing/server start
+```
+
+### 原生 App（iOS / Android）一键部署
+
+```bash
+# 构建 Android + iOS 原生资源（产物目录见下表）
+pnpm deploy:app
+
+# 含数据库迁移、种子、依赖安装
+pnpm deploy:app:full
+
+# 构建后启动 API + 原生开发
+pnpm deploy:app:dev
+
+# 只构建某一端
+pnpm deploy:app -- --platform android
+pnpm deploy:app -- --platform ios
+```
+
+详细打包上架步骤：[scripts/app-native.md](scripts/app-native.md)
+
+### 停止服务
+
+```bash
+pnpm stop          # 停止开发端口 + Docker MySQL
+pnpm stop:dev      # 仅停止开发服务，保留 MySQL
+pnpm stop:docker   # 仅停止 Docker MySQL
+```
+
+### 其他
+
+```bash
+pnpm preview:web   # 预览 Web 生产构建
+pnpm lint          # 各包 TypeScript 检查（若配置）
+
+# 修改 Drizzle schema 后生成迁移（在 server 包）
+pnpm --filter @douxing/server db:generate
+```
+
+AI 路线生成（DeepSeek / LM Studio）环境变量与接口说明见下文 [AI 模型接入](#ai-模型接入-deepseek--lm-studio)。
+
+### 平台标识表
+
+| 标识 | 说明 | 开发 | 默认端口 / 产物 |
+|------|------|------|-----------------|
+| `server` | 后端 API | `pnpm dev:server` | http://localhost:3000 |
+| `web` | Web 管理端 | `pnpm dev:web` | http://localhost:5173 |
+| `mobile` / `h5` | 移动端 H5 | `pnpm dev:mobile` | http://localhost:5174 |
+| `mp-weixin` / `mp` | 微信小程序 | `pnpm dev:mp-weixin` | `packages/mobile/dist/dev/mp-weixin` |
+| `app-android` / `android` | Android App | `pnpm dev:app-android` | `packages/mobile/dist/build/app` |
+| `app-ios` / `ios` | iOS App | `pnpm dev:app-ios` | `packages/mobile/dist/build/app` |
+| `app` / `native` | 原生 App（通用） | `pnpm dev:app` | `packages/mobile/dist/build/app` |
+
+### 启动后访问
+
+| 端 | 地址 / 操作 |
+|----|-------------|
+| 管理端 | http://localhost:5173 |
+| 移动端 H5 | http://localhost:5174 |
+| API 健康检查 | http://localhost:3000/api/health |
+| 微信小程序 | [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) 导入 `packages/mobile/dist/dev/mp-weixin`；开发阶段关闭「校验合法域名」 |
+| Android / iOS | `pnpm deploy:app` 后，HBuilderX 导入 `packages/mobile/dist/build/app` |
+
+## 快速开始
+
+```bash
+npm install -g pnpm
+cp .env.example .env
+pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
+```
+
+日常开发只需记住：`pnpm dev`（全端）或 `pnpm dev:only <平台>`（单端）。
 
 ## 默认账号
 
@@ -163,9 +292,7 @@ LLM_MODEL=你的模型名称
 ## 数据库
 
 - 表结构由 Drizzle 迁移管理：`packages/server/drizzle/`
-- 修改 schema 后生成迁移：`pnpm --filter @douxing/server db:generate`
-- 执行迁移：`pnpm db:migrate`
-- 初始化数据：`pnpm db:seed`
+- 常用命令见上文 [命令速查 · 数据库](#数据库)
 
 ### 1.3 核心实体（MySQL + Drizzle ORM）
 
@@ -186,25 +313,20 @@ LLM_MODEL=你的模型名称
 - `POST /api/auth/login` — 登录
 - `GET /api/auth/me` — 当前用户（需 Bearer Token）
 
-## 生产构建
+## 构建产物目录
 
-```bash
-pnpm build
-pnpm --filter @douxing/server start
-```
-
-Web 静态资源输出在 `packages/web/dist`，可交由 Nginx 托管；移动端 H5 输出在 `packages/mobile/dist/build/h5`；微信小程序输出在 `packages/mobile/dist/build/mp-weixin`（`pnpm build` 已包含）。
+| 端 | 开发 | 生产构建 |
+|----|------|----------|
+| Web | — | `packages/web/dist` |
+| H5 | — | `packages/mobile/dist/build/h5` |
+| 微信小程序 | `packages/mobile/dist/dev/mp-weixin` | `packages/mobile/dist/build/mp-weixin` |
+| Android / iOS App | HBuilderX 真机调试 | `packages/mobile/dist/build/app` |
 
 ## 微信小程序
 
 AppID：`wx8bdbe398733ca0f0`（已写入 `packages/mobile/src/manifest.json`）
 
-```bash
-pnpm dev:server          # 先启动 API
-pnpm dev:mp-weixin       # 编译小程序（开发模式）
-
-pnpm build:mp-weixin     # 生产构建 → dist/build/mp-weixin
-```
+常用命令见 [命令速查 · 开发运行](#开发运行dev) 与 [构建](#构建build)。
 
 用 **微信开发者工具** 导入目录：
 
