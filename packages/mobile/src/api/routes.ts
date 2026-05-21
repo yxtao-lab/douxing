@@ -1,10 +1,11 @@
 import type {
   TravelRouteInfo,
   GenerateRouteRequest,
+  RegenerateRouteRequest,
   LlmStatusInfo,
   LlmProviderOption,
 } from '@douxing/shared';
-import { request } from '@/utils/request';
+import { request, requestAiPlan } from '@/utils/request';
 
 export interface GenerateRouteResult extends TravelRouteInfo {
   generationSource?: 'llm' | 'template';
@@ -20,7 +21,11 @@ export function fetchLlmStatus() {
 }
 
 export function generateRoute(data: GenerateRouteRequest) {
-  return request<GenerateRouteResult>('/routes/generate', { method: 'POST', data });
+  return requestAiPlan<GenerateRouteResult>('/routes/generate', {
+    method: 'POST',
+    data,
+    loadingMessage: 'AI 正在规划路线…',
+  });
 }
 
 export function fetchRoutes() {
@@ -33,4 +38,12 @@ export function fetchRouteDetail(id: number) {
 
 export function publishRoute(id: number) {
   return request<TravelRouteInfo>(`/routes/${id}/publish`, { method: 'POST' });
+}
+
+export function regenerateRoute(id: number, data: RegenerateRouteRequest) {
+  return requestAiPlan<GenerateRouteResult>(`/routes/${id}/regenerate`, {
+    method: 'POST',
+    data,
+    loadingMessage: 'AI 正在重新规划路线…',
+  });
 }

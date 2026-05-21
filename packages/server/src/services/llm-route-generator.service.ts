@@ -22,7 +22,13 @@ export async function generateRouteFromLlm(
     budgetRange: payload.budgetRange,
     days: payload.days,
     interestTags: payload.interestTags,
-    routeDetail: payload.routeDetail,
+    routeDetail: {
+      days: payload.routeDetail.days.map((day) => ({
+        date: day.date,
+        title: day.title,
+        attractions: day.attractions.map((spot) => ({ ...spot })),
+      })),
+    },
     unlockPrice: payload.unlockPrice,
     matchedCity: payload.matchedCity,
     isAiGenerated: true,

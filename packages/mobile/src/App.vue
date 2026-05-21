@@ -25,10 +25,10 @@ page {
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 }
 
-/* Tab 页底部留白，避免被自定义 tabBar 遮挡 */
+/* Tab 页底部留白，避免被自定义 tabBar 遮挡（子页面 padding 简写会覆盖 bottom，需分边设置） */
 .tab-page {
-  padding-bottom: calc(100rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   min-height: 100vh;
+  padding-bottom: calc(120rpx + env(safe-area-inset-bottom));
 }
 </style>

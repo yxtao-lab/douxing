@@ -1,21 +1,25 @@
 <template>
   <view class="page tab-page">
-    <view v-if="routes.length === 0" class="empty">
-      <text>暂无路线，去「规划」生成一条吧</text>
-      <button class="btn" @click="goPlan">去规划</button>
-    </view>
-    <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item.id)">
-      <view class="card-head">
-        <text class="name">{{ item.name }}</text>
-        <text class="tag" v-if="item.isAiGenerated">AI</text>
+    <scroll-view scroll-y class="scroll" enable-back-to-top>
+      <view class="list-inner">
+        <view v-if="routes.length === 0" class="empty">
+          <text>暂无路线，去「规划」生成一条吧</text>
+          <button class="btn" @click="goPlan">去规划</button>
+        </view>
+        <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item.id)">
+          <view class="card-head">
+            <text class="name">{{ item.name }}</text>
+            <text class="tag" v-if="item.isAiGenerated">AI</text>
+          </view>
+          <text class="meta">{{ item.days }}天 · 预算 {{ item.budgetRange || '待定' }}</text>
+          <text class="desc">{{ item.description }}</text>
+          <view class="footer">
+            <text class="status">{{ statusText(item.status) }}</text>
+            <text class="arrow">查看 ›</text>
+          </view>
+        </view>
       </view>
-      <text class="meta">{{ item.days }}天 · 预算 {{ item.budgetRange || '待定' }}</text>
-      <text class="desc">{{ item.description }}</text>
-      <view class="footer">
-        <text class="status">{{ statusText(item.status) }}</text>
-        <text class="arrow">查看 ›</text>
-      </view>
-    </view>
+    </scroll-view>
     <DouxingTabBar :current="2" />
   </view>
 </template>
@@ -61,20 +65,39 @@ onShow(async () => {
 
 <style scoped>
 .page {
-  padding: 24rpx;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: #f5f7fa;
+  box-sizing: border-box;
+  overflow: hidden;
 }
+
+.scroll {
+  flex: 1;
+  height: 0;
+  width: 100%;
+}
+
+.list-inner {
+  padding: 24rpx;
+  /* 为底部固定 TabBar（约 100rpx）+ 安全区预留空间 */
+  padding-bottom: calc(32rpx + 120rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+}
+
 .empty {
   text-align: center;
   padding: 80rpx 0;
   color: #6b7280;
 }
+
 .btn {
   margin-top: 24rpx;
   background: #1677ff;
   color: #fff;
 }
+
 .card {
   background: #fff;
   border-radius: 16rpx;
@@ -82,28 +105,39 @@ onShow(async () => {
   margin-bottom: 24rpx;
   box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
 }
+
+.card:last-child {
+  margin-bottom: 0;
+}
+
 .card-head {
   display: flex;
   align-items: center;
   gap: 12rpx;
 }
+
 .name {
   font-size: 32rpx;
   font-weight: 600;
+  flex: 1;
 }
+
 .tag {
   background: #1677ff;
   color: #fff;
   font-size: 20rpx;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
+  flex-shrink: 0;
 }
+
 .meta {
   display: block;
   color: #6b7280;
   font-size: 24rpx;
   margin-top: 8rpx;
 }
+
 .desc {
   display: block;
   color: #374151;
@@ -113,16 +147,21 @@ onShow(async () => {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .footer {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   margin-top: 16rpx;
 }
+
 .status {
   color: #1677ff;
   font-size: 24rpx;
 }
+
 .arrow {
   color: #9ca3af;
+  font-size: 24rpx;
 }
 </style>

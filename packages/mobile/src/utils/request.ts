@@ -1,8 +1,18 @@
 import type { ApiResponse, UserInfo } from '@douxing/shared';
 import { getApiBaseUrl } from './api-base';
+import {
+  beginAiPlanLoading,
+  endAiPlanLoading,
+  registerAiPlanRequestTask,
+  isRequestAbortedError,
+  AI_PLAN_CANCELLED_MESSAGE,
+} from './ai-plan-loading';
 
 const TOKEN_KEY = 'douxing_token';
 const USER_KEY = 'douxing_user';
+
+/** 封装请求选项（url 由 path 拼接，无需传入） */
+export type AppRequestOptions = Omit<UniApp.RequestOptions, 'url'>;
 
 export function getStoredUser(): UserInfo | null {
   try {
@@ -18,16 +28,20 @@ export function setAuth(token: string, user: UserInfo) {
   uni.setStorageSync(USER_KEY, JSON.stringify(user));
 }
 
-export function request<T>(
-  path: string,
-  options: UniApp.RequestOptions = {},
+function buildRequestUrl(path: string): string {
+  const base = getApiBaseUrl();
+  return path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
+}
+
+function runRequest<T>(
+  url: string,
+  options: AppRequestOptions,
+  trackForAbort = false,
 ): Promise<T> {
   const token = uni.getStorageSync(TOKEN_KEY);
-  const base = getApiBaseUrl();
-  const url = path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
 
   return new Promise((resolve, reject) => {
-    uni.request({
+    const task = uni.request({
       url,
       method: options.method || 'GET',
       data: options.data,
@@ -48,7 +62,40 @@ export function request<T>(
         }
         reject(new Error('响应格式错误'));
       },
-      fail: (err) => reject(new Error(err.errMsg || '网络错误')),
+      fail: (err) => {
+        if (trackForAbort && isRequestAbortedError(err.errMsg)) {
+          reject(new Error(AI_PLAN_CANCELLED_MESSAGE));
+          return;
+        }
+        reject(new Error(err.errMsg || '网络错误'));
+      },
     });
+    if (trackForAbort) {
+      registerAiPlanRequestTask(task);
+    }
+  });
+}
+
+export function request<T>(path: string, options: AppRequestOptions = {}): Promise<T> {
+  return runRequest<T>(buildRequestUrl(path), options);
+}
+
+export interface RequestAiPlanOptions extends AppRequestOptions {
+  loadingMessage?: string;
+}
+
+/** AI 路线生成/重新生成：全局遮罩 + 可 abort */
+export function requestAiPlan<T>(path: string, options: RequestAiPlanOptions = {}): Promise<T> {
+  if (options.loadingMessage) {
+    beginAiPlanLoading(options.loadingMessage);
+  } else {
+    beginAiPlanLoading();
+  }
+
+  const { loadingMessage: _msg, ...requestOptions } = options;
+  const url = buildRequestUrl(path);
+
+  return runRequest<T>(url, requestOptions, true).finally(() => {
+    endAiPlanLoading();
   });
 }

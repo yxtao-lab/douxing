@@ -21,5 +21,21 @@ services:
       timeout: 5s
       retries: 10
 
+  redis:
+    image: ${REDIS_IMAGE:-docker.m.daocloud.io/library/redis:7-alpine}
+    container_name: douxing-redis
+    restart: unless-stopped
+    ports:
+      - '${DOCKER_REDIS_HOST_PORT:-6379}:6379'
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
 volumes:
   mysql_data:
+  redis_data:

@@ -1,4 +1,5 @@
 <template>
+  <AiPlanBlockingOverlay />
   <view class="page" v-if="route">
     <view class="hero">
       <text class="title">{{ route.name }}</text>
@@ -24,6 +25,20 @@
       </view>
     </view>
 
+    <view v-if="canRegenerate" class="card regenerate-card">
+      <text class="regenerate-title">不满意？修改需求重新生成</text>
+      <text class="regenerate-hint">将覆盖当前草稿行程，解锁状态会重置</text>
+      <textarea
+        v-model="regeneratePrompt"
+        class="regenerate-input"
+        placeholder="描述你想要的行程，例如：增加西湖、减少购物、预算控制在3000"
+        :maxlength="200"
+      />
+      <button class="btn-regenerate" :loading="aiPlanning" :disabled="aiPlanning" @click="handleRegenerate">
+        重新生成
+      </button>
+    </view>
+
     <view class="actions">
       <button v-if="route.status !== publishedStatus" class="btn-outline" @click="handlePublish">发布路线</button>
     </view>
@@ -34,15 +49,24 @@
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type { RouteDayAttraction, TravelRouteInfo } from '@douxing/shared';
-import { fetchRouteDetail, publishRoute } from '@/api/routes';
+import { fetchRouteDetail, publishRoute, regenerateRoute } from '@/api/routes';
 import { createUnlockOrder, payOrder } from '@/api/orders';
 import { createCheckIn } from '@/api/checkins';
 import { RouteStatus } from '@douxing/shared';
+import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
+import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
 
 const route = ref<TravelRouteInfo | null>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
+const regeneratePrompt = ref('');
+const aiPlanning = computed(() => aiPlanLoadingState.active);
 let routeId = 0;
+
+const canRegenerate = computed(
+  () =>
+    route.value?.isAiGenerated === true && route.value?.status === RouteStatus.DRAFT,
+);
 
 const isUnlocked = computed(() => {
   const detail = route.value?.routeDetail as Record<string, unknown> | null;
@@ -68,8 +92,42 @@ const days = computed(() => {
 async function loadDetail() {
   try {
     route.value = await fetchRouteDetail(routeId);
+    if (route.value?.sourcePrompt) {
+      regeneratePrompt.value = route.value.sourcePrompt;
+    } else if (canRegenerate.value && !regeneratePrompt.value) {
+      regeneratePrompt.value = route.value?.description ?? '';
+    }
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '加载失败', icon: 'none' });
+  }
+}
+
+async function handleRegenerate() {
+  if (aiPlanLoadingState.active) return;
+  const text = regeneratePrompt.value.trim();
+  if (!text) {
+    uni.showToast({ title: '请输入旅行需求', icon: 'none' });
+    return;
+  }
+  try {
+    const result = await regenerateRoute(routeId, { prompt: text });
+    let tip = '已重新生成（模板模式）';
+    if (result.generationSource === 'llm') {
+      tip =
+        result.llmProvider === 'deepseek'
+          ? 'DeepSeek 重新生成成功'
+          : result.llmProvider === 'lmstudio'
+            ? '本地模型重新生成成功'
+            : 'AI 重新生成成功';
+    }
+    uni.showToast({ title: tip, icon: 'success' });
+    route.value = result;
+    regeneratePrompt.value = result.sourcePrompt ?? text;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : '重新生成失败';
+    if (msg !== AI_PLAN_CANCELLED_MESSAGE) {
+      uni.showToast({ title: msg, icon: 'none' });
+    }
   }
 }
 
@@ -210,5 +268,34 @@ onLoad((query) => {
   background: #fff;
   color: #1677ff;
   border: 1rpx solid #1677ff;
+}
+.regenerate-card {
+  border: 2rpx dashed #d1d5db;
+}
+.regenerate-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2937;
+  display: block;
+}
+.regenerate-hint {
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-top: 8rpx;
+  display: block;
+}
+.regenerate-input {
+  width: 100%;
+  min-height: 160rpx;
+  margin-top: 20rpx;
+  font-size: 26rpx;
+  line-height: 1.5;
+}
+.btn-regenerate {
+  margin-top: 24rpx;
+  background: #fff7ed;
+  color: #d97706;
+  border: 1rpx solid #fcd34d;
+  border-radius: 12rpx;
 }
 </style>

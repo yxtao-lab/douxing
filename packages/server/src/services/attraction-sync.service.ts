@@ -284,30 +284,32 @@ export async function syncAttractionsFromRouteDetail(
 
           let workingSpot = await enrichSpotCoordinates(spot, city);
 
-          if (requiresCoordinatesForInsert(poiCategory) && !hasValidCoordinates(workingSpot)) {
-            console.warn(
-              `[attraction-sync] 跳过无坐标景点，不入库: ${spot.name} (${city})`,
-            );
-            return { ...spot, poiType: poiCategory };
-          }
-
           const match = await resolveAttractionMatch(workingSpot.name, city, dbCategory);
-
-          let attractionId: number;
           if (match && match.confidence >= ATTRACTION_MATCH_MERGE_THRESHOLD) {
-            attractionId = await mergeMatchedAttraction(match, {
+            const attractionId = await mergeMatchedAttraction(match, {
               spot: workingSpot,
               routeTags,
               dbCategory,
             });
-          } else {
-            attractionId = await insertPendingAttraction(
-              workingSpot,
-              city,
-              routeTags,
-              dbCategory,
+            return {
+              ...workingSpot,
+              poiType: poiCategory,
+              attractionId,
+            };
+          }
+
+          if (requiresCoordinatesForInsert(poiCategory) && !hasValidCoordinates(workingSpot)) {
+            console.warn(
+              `[attraction-sync] 无坐标且未匹配，仍入库待补全: ${spot.name} (${city})`,
             );
           }
+
+          const attractionId = await insertPendingAttraction(
+            workingSpot,
+            city,
+            routeTags,
+            dbCategory,
+          );
 
           return {
             ...workingSpot,

@@ -34,7 +34,9 @@
           @click="prompt = item"
         >{{ item }}</text>
       </view>
-      <button class="btn-primary" :loading="loading" @click="handleGenerate">生成路线</button>
+      <button class="btn-primary" :loading="aiPlanning" :disabled="aiPlanning" @click="handleGenerate">
+        生成路线
+      </button>
     </view>
     <DouxingTabBar :current="1" />
   </view>
@@ -42,15 +44,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
+import { onShow, onLoad } from '@dcloudio/uni-app';
 import { generateRoute, fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
 import { getStoredUser } from '@/utils/request';
+import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import type { LlmProviderChoice, LlmProviderOption } from '@douxing/shared';
 import { LlmProvider } from '@douxing/shared';
 
 const prompt = ref('');
-const loading = ref(false);
+const aiPlanning = computed(() => aiPlanLoadingState.active);
 const provider = ref<LlmProviderChoice>(LlmProvider.AUTO);
 const providerOptions = ref<LlmProviderOption[]>([]);
 const llmAvailable = ref<boolean | null>(null);
@@ -68,6 +71,7 @@ const llmStatusClass = computed(() => {
 });
 
 function selectProvider(opt: LlmProviderOption) {
+  if (aiPlanLoadingState.active) return;
   if (!opt.available) {
     uni.showToast({ title: '该模型未配置', icon: 'none' });
     return;
@@ -112,6 +116,13 @@ onShow(() => {
   uni.hideTabBar({ animation: false });
 });
 
+onLoad((query) => {
+  const fromPrompt = query?.prompt;
+  if (typeof fromPrompt === 'string' && fromPrompt.trim()) {
+    prompt.value = decodeURIComponent(fromPrompt.trim());
+  }
+});
+
 const quickPrompts = [
   '杭州3天亲子游，预算5000',
   '上海周末情侣游',
@@ -119,6 +130,7 @@ const quickPrompts = [
 ];
 
 async function handleGenerate() {
+  if (aiPlanLoadingState.active) return;
   if (!getStoredUser()) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
@@ -127,7 +139,6 @@ async function handleGenerate() {
     uni.showToast({ title: '请输入旅行需求', icon: 'none' });
     return;
   }
-  loading.value = true;
   try {
     const route = await generateRoute({
       prompt: prompt.value.trim(),
@@ -145,9 +156,10 @@ async function handleGenerate() {
     uni.showToast({ title: tip, icon: 'success' });
     uni.navigateTo({ url: `/pages/routes/detail?id=${route.id}` });
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '生成失败', icon: 'none' });
-  } finally {
-    loading.value = false;
+    const msg = e instanceof Error ? e.message : '生成失败';
+    if (msg !== AI_PLAN_CANCELLED_MESSAGE) {
+      uni.showToast({ title: msg, icon: 'none' });
+    }
   }
 }
 </script>

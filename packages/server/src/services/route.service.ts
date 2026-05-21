@@ -5,8 +5,13 @@ import { RouteStatus } from '@douxing/shared';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
+import {
+  normalizeRouteDetailDays,
+  cloneRouteDaysForSync,
+} from '../utils/route-detail.util.js';
 
 function toRouteInfo(row: typeof travelRoutes.$inferSelect): TravelRouteInfo {
+  const detail = row.routeDetail as Record<string, unknown> | null;
   return {
     id: row.id,
     name: row.name,
@@ -17,20 +22,38 @@ function toRouteInfo(row: typeof travelRoutes.$inferSelect): TravelRouteInfo {
     routeDetail: row.routeDetail,
     creatorId: row.creatorId,
     status: row.status,
-    isAiGenerated: (row.routeDetail as Record<string, unknown> | null)?.isAiGenerated === true,
-    unlockPrice: (row.routeDetail as Record<string, unknown> | null)?.unlockPrice as number | undefined,
-    isUnlocked: (row.routeDetail as Record<string, unknown> | null)?.isUnlocked === true,
+    isAiGenerated: detail?.isAiGenerated === true,
+    unlockPrice: detail?.unlockPrice as number | undefined,
+    isUnlocked: detail?.isUnlocked === true,
+    generationSource: detail?.generationSource as TravelRouteInfo['generationSource'],
+    llmProvider: detail?.llmProvider as TravelRouteInfo['llmProvider'],
+    sourcePrompt: (detail?.sourcePrompt as string | undefined) ?? null,
   };
 }
 
-export async function createRouteFromPrompt(userId: number, input: GenerateRouteInput) {
-  const draft = await generateRoute(input);
-  const db = getDb();
-  const linkedDays = await syncAttractionsFromRouteDetail(draft.routeDetail, {
+async function syncDraftToAttractionLibrary(
+  draft: Awaited<ReturnType<typeof generateRoute>>,
+  options: { stripAttractionIds?: boolean } = {},
+) {
+  const { days } = normalizeRouteDetailDays(draft.routeDetail);
+  if (days.length === 0) {
+    throw new Error('生成的路线没有有效行程节点，无法同步景点库');
+  }
+  const routeDetailForSync = {
+    days: cloneRouteDaysForSync(days, options.stripAttractionIds ?? false),
+  };
+  return syncAttractionsFromRouteDetail(routeDetailForSync, {
     city: draft.matchedCity || '未知',
     interestTags: draft.interestTags,
   });
-  const detail = {
+}
+
+function buildRouteDetailFromDraft(
+  draft: Awaited<ReturnType<typeof generateRoute>>,
+  linkedDays: Awaited<ReturnType<typeof syncAttractionsFromRouteDetail>>,
+  options: { sourcePrompt: string; provider?: GenerateRouteInput['provider'] },
+) {
+  return {
     days: linkedDays.days,
     isAiGenerated: draft.isAiGenerated,
     unlockPrice: draft.unlockPrice,
@@ -38,7 +61,19 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
     matchedCity: draft.matchedCity,
     generationSource: draft.generationSource,
     llmProvider: draft.llmProvider,
+    sourcePrompt: options.sourcePrompt,
+    llmProviderChoice: options.provider ?? 'auto',
   };
+}
+
+export async function createRouteFromPrompt(userId: number, input: GenerateRouteInput) {
+  const draft = await generateRoute(input);
+  const db = getDb();
+  const linkedDays = await syncDraftToAttractionLibrary(draft);
+  const detail = buildRouteDetailFromDraft(draft, linkedDays, {
+    sourcePrompt: input.prompt.trim(),
+    provider: input.provider,
+  });
 
   const [result] = await db.insert(travelRoutes).values({
     name: draft.name,
@@ -121,4 +156,57 @@ export async function listAllRoutesForAdmin() {
   const db = getDb();
   const rows = await db.select().from(travelRoutes).orderBy(desc(travelRoutes.createdAt));
   return rows.map(toRouteInfo);
+}
+
+export async function regenerateRouteFromPrompt(
+  routeId: number,
+  userId: number,
+  input: GenerateRouteInput,
+) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(travelRoutes)
+    .where(and(eq(travelRoutes.id, routeId), eq(travelRoutes.creatorId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+
+  const existingDetail = (row.routeDetail ?? {}) as Record<string, unknown>;
+  if (existingDetail.isAiGenerated !== true) {
+    throw new Error('仅 AI 生成的路线支持重新生成');
+  }
+  if (row.status !== RouteStatus.DRAFT) {
+    throw new Error('已发布的路线不可重新生成，请复制需求后新建路线');
+  }
+
+  const draft = await generateRoute({
+    ...input,
+    provider: input.provider ?? (existingDetail.llmProviderChoice as GenerateRouteInput['provider']),
+  });
+  const linkedDays = await syncDraftToAttractionLibrary(draft, { stripAttractionIds: true });
+  const detail = buildRouteDetailFromDraft(draft, linkedDays, {
+    sourcePrompt: input.prompt.trim(),
+    provider: input.provider ?? (existingDetail.llmProviderChoice as GenerateRouteInput['provider']),
+  });
+
+  await db
+    .update(travelRoutes)
+    .set({
+      name: draft.name,
+      description: draft.description,
+      budgetRange: draft.budgetRange,
+      days: draft.days,
+      interestTags: draft.interestTags,
+      routeDetail: detail,
+    })
+    .where(eq(travelRoutes.id, routeId));
+
+  const route = await getRouteById(routeId, userId);
+  if (!route) return null;
+  return {
+    route,
+    generationSource: draft.generationSource,
+    llmProvider: draft.llmProvider,
+  };
 }

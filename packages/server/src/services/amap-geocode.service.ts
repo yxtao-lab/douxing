@@ -1,4 +1,5 @@
 import { isAmapGeocodeEnabled, getAmapWebKey, getAmapGeocodeTimeoutMs } from '../config/amap.js';
+import { getCachedGeocode, setCachedGeocode } from './geocode-cache.service.js';
 
 const AMAP_PLACE_TEXT_URL = 'https://restapi.amap.com/v3/place/text';
 const AMAP_GEO_URL = 'https://restapi.amap.com/v3/geocode/geo';
@@ -136,10 +137,25 @@ export async function resolveCoordinatesFromAmap(
 ): Promise<GeocodeResult | null> {
   if (!isAmapGeocodeEnabled()) return null;
 
+  const cached = await getCachedGeocode(city, name);
+  if (cached) {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`[amap] 缓存命中: ${city} · ${name}`);
+    }
+    return cached;
+  }
+
   try {
     const fromPlace = await geocodeByPlaceText(name, city);
-    if (fromPlace) return fromPlace;
-    return await geocodeByAddress(name, city);
+    if (fromPlace) {
+      await setCachedGeocode(city, name, fromPlace);
+      return fromPlace;
+    }
+    const fromGeo = await geocodeByAddress(name, city);
+    if (fromGeo) {
+      await setCachedGeocode(city, name, fromGeo);
+    }
+    return fromGeo;
   } catch (err) {
     console.warn(
       '[amap] 地理编码失败:',

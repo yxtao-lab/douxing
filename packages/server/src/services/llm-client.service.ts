@@ -31,15 +31,6 @@ const routeSpotSchema = z
     longitude: z.number().min(-180).max(180).optional(),
   })
   .superRefine((spot, ctx) => {
-    if (spot.poiType === PoiCategory.ATTRACTION) {
-      if (spot.latitude == null || spot.longitude == null) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: '景点必须提供 latitude 与 longitude',
-          path: ['latitude'],
-        });
-      }
-    }
     if (
       spot.poiType === PoiCategory.RESTAURANT ||
       spot.poiType === PoiCategory.HOTEL

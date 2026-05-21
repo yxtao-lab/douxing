@@ -101,6 +101,8 @@ export interface TravelRouteInfo {
   isUnlocked?: boolean;
   generationSource?: 'llm' | 'template';
   llmProvider?: 'deepseek' | 'lmstudio';
+  /** AI 生成时用户输入的原始需求 */
+  sourcePrompt?: string | null;
 }
 
 export type LlmProviderChoice = 'auto' | 'deepseek' | 'lmstudio';
@@ -137,6 +139,9 @@ export interface GenerateRouteRequest {
   budget?: string;
   provider?: LlmProviderChoice;
 }
+
+/** 修改 prompt 后重新生成（与 GenerateRouteRequest 字段一致） */
+export type RegenerateRouteRequest = GenerateRouteRequest;
 
 export interface OrderInfo {
   id: number;

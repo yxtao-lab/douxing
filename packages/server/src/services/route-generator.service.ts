@@ -113,13 +113,21 @@ export function generateRouteFromTemplate(input: GenerateRouteInput): GeneratedR
     ? `${city}${tags[0] ?? '精选'}${days}日游`
     : best.name;
 
+  const routeDetail = {
+    days: best.routeDetail.days.map((day) => ({
+      date: day.date,
+      title: day.title,
+      attractions: day.attractions.map((spot) => ({ ...spot })),
+    })),
+  };
+
   return {
     name,
     description: `${best.description}（根据「${prompt.slice(0, 50)}${prompt.length > 50 ? '…' : ''}」智能匹配）`,
     budgetRange,
     days: best.days,
     interestTags: [...new Set([...best.interestTags, ...tags])],
-    routeDetail: best.routeDetail,
+    routeDetail,
     unlockPrice: best.unlockPrice,
     matchedCity: city ?? best.city,
     isAiGenerated: true,

@@ -1,4 +1,5 @@
 <template>
+  <AiPlanBlockingOverlay />
   <view class="tab-bar">
     <view class="tab-bar-border" />
     <view
@@ -18,6 +19,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
+import { isAiPlanLoading } from '@/utils/ai-plan-loading';
 
 interface TabItem {
   pagePath: string;
@@ -44,6 +47,7 @@ const tabList: TabItem[] = [
 
 function onSwitch(pagePath: string, index: number) {
   if (current.value === index) return;
+  if (isAiPlanLoading()) return;
   uni.switchTab({ url: pagePath });
 }
 </script>

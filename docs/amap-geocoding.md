@@ -56,13 +56,42 @@ POST /api/routes/generate
 
 返回字段格式：`location = "经度,纬度"`（注意顺序，代码中已解析为 `latitude` / `longitude`）。
 
-## 5. 配额与限流
+## 5. Redis 缓存（已实现）
+
+对 `(city, name)` 缓存高德解析结果，避免同一景点重复扣配额。
+
+| 环境变量 | 说明 | 默认 |
+|----------|------|------|
+| `REDIS_URL` | 连接串，如 `redis://127.0.0.1:6379` | 未配置则不走缓存 |
+| `REDIS_ENABLED` | `false` 可强制关闭 | 有 `REDIS_URL` 即启用 |
+| `AMAP_GEOCODE_CACHE_TTL_SEC` | 缓存过期（秒） | `2592000`（30 天） |
+
+缓存键格式：`douxing:amap:geocode:{city}:{name}`（城市与名称归一化后拼接）。
+
+启动 Redis：
+
+```bash
+docker compose up -d redis
+```
+
+`.env` 示例：
+
+```env
+REDIS_URL=redis://127.0.0.1:6379
+AMAP_WEB_KEY=你的Key
+```
+
+调用链：`resolveCoordinatesFromAmap` → 先读 Redis → 未命中再请求高德 → 成功则写入 Redis。
+
+Redis 不可用时会自动降级为直接调高德（日志 `[redis] 连接失败，地理编码缓存已禁用`）。
+
+## 6. 配额与限流
 
 - 个人开发者有日调用量上限，见控制台「配额」。  
-- 路线一次生成约 N 个 POI ≈ N 次 place（最多 2N 含回退），注意批量测试频率。  
-- 生产建议：对 `(city, name)` 做 Redis 缓存（G1），避免同景点重复请求。
+- 路线一次生成约 N 个 POI；有缓存后仅**首次**名称命中高德 API。  
+- 批量压测前可先预热缓存，或调高 `AMAP_GEOCODE_CACHE_TTL_SEC`。
 
-## 6. 验证
+## 7. 验证
 
 ```bash
 pnpm db:migrate
@@ -80,7 +109,7 @@ pnpm dev:server
 curl "https://restapi.amap.com/v3/place/text?key=KEY&keywords=雷峰塔&city=杭州&citylimit=true"
 ```
 
-## 7. 常见问题
+## 8. 常见问题
 
 | 现象 | 处理 |
 |------|------|
@@ -90,7 +119,7 @@ curl "https://restapi.amap.com/v3/place/text?key=KEY&keywords=雷峰塔&city=杭
 | place 无结果 | 检查 `city` 是否与高德城市名一致（如「杭州」）；尝试 geocode 回退 |
 | 仍不入库 | 笼统「午餐」等 `poiType=meal` 本来就不入库，与 geocoding 无关 |
 
-## 8. 相关文档
+## 9. 相关文档
 
 - [搜索 POI](https://lbs.amap.com/api/webservice/guide/api/search)  
 - [地理/逆地理编码](https://lbs.amap.com/api/webservice/guide/api/georegeo)  
