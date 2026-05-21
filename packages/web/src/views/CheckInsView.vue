@@ -7,6 +7,9 @@
           <th>用户</th>
           <th>路线</th>
           <th>地点</th>
+          <th>城市</th>
+          <th>积分</th>
+          <th>照片</th>
           <th>时间</th>
         </tr>
       </thead>
@@ -15,6 +18,9 @@
           <td>{{ c.userId }}</td>
           <td>{{ c.routeId }}</td>
           <td>{{ c.location.placeName || '-' }}</td>
+          <td>{{ c.city || c.cityCode }}</td>
+          <td>{{ c.pointsEarned }}</td>
+          <td>{{ c.photos.length > 0 ? `${c.photos.length} 张` : '-' }}</td>
           <td>{{ c.checkedAt.slice(0, 16).replace('T', ' ') }}</td>
         </tr>
       </tbody>

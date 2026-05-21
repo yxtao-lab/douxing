@@ -259,6 +259,11 @@ export interface CheckInInfo {
     address?: string;
     placeName?: string;
   };
+  cityCode: string;
+  /** 城市名称（由 cityCode 解析，展示用） */
+  city?: string | null;
+  photos: string[];
+  pointsEarned: number;
   checkedAt: string;
   status: number;
   remark: string | null;

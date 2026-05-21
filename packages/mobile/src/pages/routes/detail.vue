@@ -110,7 +110,7 @@ import {
   createRouteComment,
 } from '@/api/routes';
 import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
-import { createCheckIn } from '@/api/checkins';
+import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
@@ -164,6 +164,11 @@ const unlockPrice = computed(() => {
 });
 
 const tags = computed(() => route.value?.interestTags?.join('、') ?? '');
+
+const matchedCity = computed(() => {
+  const detail = route.value?.routeDetail as { matchedCity?: string } | null;
+  return detail?.matchedCity;
+});
 
 const days = computed(() => {
   const detail = route.value?.routeDetail as { days?: Array<{
@@ -339,18 +344,51 @@ async function handlePublish() {
 
 async function handleCheckIn(spot: RouteDayAttraction) {
   try {
-    const result = await createCheckIn({
-      routeId,
-      attractionId: spot.attractionId,
-      location: { placeName: spot.name, address: spot.name },
+    uni.showActionSheet({
+      itemList: ['直接打卡', '添加照片打卡'],
+      success: async (res) => {
+        try {
+          let photos: string[] | undefined;
+          if (res.tapIndex === 1) {
+            const choose = await new Promise<UniApp.ChooseImageSuccessCallbackResult>((resolve, reject) => {
+              uni.chooseImage({
+                count: 1,
+                sizeType: ['compressed'],
+                sourceType: ['album', 'camera'],
+                success: resolve,
+                fail: reject,
+              });
+            });
+            const filePath = choose.tempFilePaths[0];
+            if (filePath) {
+              uni.showLoading({ title: '上传中...' });
+              const url = await uploadCheckInPhoto(filePath);
+              photos = [url];
+            }
+          }
+
+          const result = await createCheckIn({
+            routeId,
+            attractionId: spot.attractionId,
+            cityName: matchedCity.value,
+            location: { placeName: spot.name, address: spot.name },
+            photos,
+          });
+
+          let msg = `打卡成功 +${result.checkIn.pointsEarned} 积分`;
+          if (result.newAchievements.length > 0) {
+            msg += `，解锁成就 ${result.newAchievements.length} 个`;
+          }
+          uni.showToast({ title: msg, icon: 'success' });
+        } catch (e) {
+          uni.showToast({ title: e instanceof Error ? e.message : '打卡失败', icon: 'none' });
+        } finally {
+          uni.hideLoading();
+        }
+      },
     });
-    let msg = '打卡成功';
-    if (result.newAchievements.length > 0) {
-      msg += `，解锁成就 ${result.newAchievements.length} 个`;
-    }
-    uni.showToast({ title: msg, icon: 'success' });
-  } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '打卡失败', icon: 'none' });
+  } catch {
+    // 用户取消选择
   }
 }
 

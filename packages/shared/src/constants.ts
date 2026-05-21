@@ -130,3 +130,15 @@ export const AchievementType = {
   EXPLORER: 'explorer',
   ROUTE_MASTER: 'route_master',
 } as const;
+
+/** 打卡基础积分 */
+export const CHECKIN_BASE_POINTS = 10;
+
+/** 打卡附带照片额外积分 */
+export const CHECKIN_PHOTO_BONUS = 5;
+
+/** 首次打卡某景点额外积分 */
+export const CHECKIN_FIRST_ATTRACTION_BONUS = 10;
+
+/** 单条打卡最多上传照片数 */
+export const CHECKIN_MAX_PHOTOS = 3;

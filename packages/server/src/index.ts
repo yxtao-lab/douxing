@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import routes from './routes/index.js';
 import { uploadsDir } from './routes/users.js';
+import { checkInPhotosDir } from './routes/checkins.js';
 import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 import { wechatPayNotifyHandler } from './routes/payments.js';
@@ -18,6 +19,7 @@ app.post(
 );
 app.use(express.json());
 app.use('/uploads/avatars', express.static(uploadsDir));
+app.use('/uploads/checkins', express.static(checkInPhotosDir));
 app.use(routes);
 
 app.get('/', (_req, res) => {

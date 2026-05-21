@@ -64,6 +64,13 @@
       "when": 1748246400000,
       "tag": "0008_route_plaza",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "5",
+      "when": 1748332800000,
+      "tag": "0009_checkin_fields",
+      "breakpoints": true
     }
   ]
 }

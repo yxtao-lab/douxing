@@ -1,4 +1,4 @@
-import { mysqlTable, int, varchar, tinyint, timestamp, json } from 'drizzle-orm/mysql-core';
+import { mysqlTable, int, varchar, tinyint, timestamp, json, index } from 'drizzle-orm/mysql-core';
 import { users } from './users.js';
 import { travelRoutes } from './travel-routes.js';
 import { attractions } from './attractions.js';
@@ -11,22 +11,31 @@ export type CheckInLocation = {
 };
 
 /** 打卡记录表 */
-export const checkIns = mysqlTable('check_ins', {
-  id: int('id').primaryKey().autoincrement(),
-  userId: int('user_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'cascade' }),
-  routeId: int('route_id')
-    .notNull()
-    .references(() => travelRoutes.id, { onDelete: 'cascade' }),
-  attractionId: int('attraction_id').references(() => attractions.id, { onDelete: 'set null' }),
-  location: json('location').$type<CheckInLocation>().notNull(),
-  checkedAt: timestamp('checked_at').notNull().defaultNow(),
-  status: tinyint('status').notNull().default(0),
-  remark: varchar('remark', { length: 512 }),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
-});
+export const checkIns = mysqlTable(
+  'check_ins',
+  {
+    id: int('id').primaryKey().autoincrement(),
+    userId: int('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    routeId: int('route_id')
+      .notNull()
+      .references(() => travelRoutes.id, { onDelete: 'cascade' }),
+    attractionId: int('attraction_id').references(() => attractions.id, { onDelete: 'set null' }),
+    location: json('location').$type<CheckInLocation>().notNull(),
+    cityCode: varchar('city_code', { length: 32 }).notNull(),
+    photos: json('photos').$type<string[]>(),
+    pointsEarned: int('points_earned').notNull().default(0),
+    checkedAt: timestamp('checked_at').notNull().defaultNow(),
+    status: tinyint('status').notNull().default(0),
+    remark: varchar('remark', { length: 512 }),
+    createdAt: timestamp('created_at').notNull().defaultNow(),
+    updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
+  },
+  (table) => ({
+    cityIdx: index('idx_check_ins_city').on(table.cityCode),
+  }),
+);
 
 export type CheckIn = typeof checkIns.$inferSelect;
 export type NewCheckIn = typeof checkIns.$inferInsert;
