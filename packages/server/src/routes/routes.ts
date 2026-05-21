@@ -5,15 +5,23 @@ import { success, fail } from '../utils/response.js';
 import {
   createRouteFromPrompt,
   regenerateRouteFromPrompt,
-  listUserRoutes,
   getRouteById,
   publishRoute,
   listAllRoutesForAdmin,
+  updateDraftRoute,
+  setRoutePublicShare,
 } from '../services/route.service.js';
+import {
+  listRoutesForUser,
+  toggleRouteLike,
+  toggleRouteFavorite,
+} from '../services/route-interaction.service.js';
+import { listRouteComments, createRouteComment } from '../services/route-comment.service.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import { getAllProvidersStatus, listProviderOptions } from '../services/llm-client.service.js';
 import { isLlmEnabled } from '../config/llm.js';
 import { RoleCode } from '@douxing/shared';
+import { optionalQueryInt } from '../utils/query-coerce.util.js';
 
 const router = Router();
 
@@ -24,6 +32,33 @@ const generateSchema = z.object({
   days: z.number().int().min(1).max(7).optional(),
   budget: z.string().optional(),
   provider: providerSchema,
+});
+
+const listQuerySchema = z.object({
+  scope: z.enum(['mine', 'hot', 'favorites', 'plaza']).optional(),
+  status: optionalQueryInt(0, 2),
+  sort: z.enum(['recent', 'hot', 'views']).optional(),
+  limit: optionalQueryInt(1, 100),
+});
+
+const updateDraftSchema = z.object({
+  name: z.string().min(1).max(128).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  budgetRange: z.string().max(64).nullable().optional(),
+  days: z.number().int().min(1).max(30).optional(),
+  interestTags: z.array(z.string().min(1).max(16)).max(8).optional(),
+  routeDetail: z
+    .object({
+      days: z.array(z.any()),
+      isAiGenerated: z.boolean().optional(),
+      unlockPrice: z.number().optional(),
+      isUnlocked: z.boolean().optional(),
+      matchedCity: z.string().optional(),
+      generationSource: z.enum(['llm', 'template']).optional(),
+      llmProvider: z.string().optional(),
+      sourcePrompt: z.string().optional(),
+    })
+    .optional(),
 });
 
 router.get('/llm-providers', async (_req, res) => {
@@ -96,12 +131,58 @@ router.get('/', authMiddleware, async (req, res) => {
       const routes = await listAllRoutesForAdmin();
       return success(res, routes);
     }
-    const routes = await listUserRoutes(req.auth!.userId);
+    const parsed = listQuerySchema.safeParse(req.query);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const routes = await listRoutesForUser(req.auth!.userId, parsed.data);
     success(res, routes);
   } catch (err) {
     console.error('[routes/list]', err);
     return fail(res, '获取路线列表失败', 500, 500);
   }
+});
+
+router.get('/plaza', authMiddleware, async (req, res) => {
+  try {
+    const parsed = listQuerySchema.safeParse({ ...req.query, scope: 'plaza' });
+    const limit = parsed.success ? parsed.data.limit : undefined;
+    const sort = parsed.success ? parsed.data.sort : undefined;
+    const routes = await listRoutesForUser(req.auth!.userId, {
+      scope: 'plaza',
+      sort: sort ?? 'hot',
+      limit,
+    });
+    success(res, routes);
+  } catch (err) {
+    console.error('[routes/plaza]', err);
+    return fail(res, '获取广场路线失败', 500, 500);
+  }
+});
+
+/** @deprecated 请使用 GET /routes/plaza */
+router.get('/hot', authMiddleware, async (req, res) => {
+  try {
+    const parsed = listQuerySchema.safeParse({ ...req.query, scope: 'plaza' });
+    const limit = parsed.success ? parsed.data.limit : undefined;
+    const routes = await listRoutesForUser(req.auth!.userId, {
+      scope: 'plaza',
+      sort: 'hot',
+      limit,
+    });
+    success(res, routes);
+  } catch (err) {
+    console.error('[routes/hot]', err);
+    return fail(res, '获取热门路线失败', 500, 500);
+  }
+});
+
+const sharePublicSchema = z.object({
+  isPublic: z.boolean(),
+});
+
+const commentSchema = z.object({
+  content: z.string().min(1, '请输入评论').max(500),
 });
 
 router.post('/:id/regenerate', authMiddleware, async (req, res) => {
@@ -137,6 +218,108 @@ router.post('/:id/regenerate', authMiddleware, async (req, res) => {
     }
     console.error('[routes/regenerate]', err);
     return fail(res, '路线重新生成失败', 500, 500);
+  }
+});
+
+router.put('/:id', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const parsed = updateDraftSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const route = await updateDraftRoute(routeId, req.auth!.userId, parsed.data);
+    if (!route) return fail(res, '路线不存在', 404, 404);
+    success(res, route, '草稿已保存');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('草稿')) {
+      return fail(res, err.message);
+    }
+    console.error('[routes/update]', err);
+    return fail(res, '保存草稿失败', 500, 500);
+  }
+});
+
+router.get('/:id/comments', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
+    if (!route) return fail(res, '路线不存在或无权查看', 404, 404);
+    const parsed = listQuerySchema.safeParse(req.query);
+    const limit = parsed.success ? parsed.data.limit : 50;
+    const comments = await listRouteComments(routeId, limit);
+    success(res, comments);
+  } catch (err) {
+    console.error('[routes/comments GET]', err);
+    return fail(res, '获取评论失败', 500, 500);
+  }
+});
+
+router.post('/:id/comments', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const parsed = commentSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const comment = await createRouteComment(routeId, req.auth!.userId, parsed.data.content);
+    if (!comment) return fail(res, '仅广场公开路线可评论', 404, 404);
+    success(res, comment, '评论成功');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('评论')) {
+      return fail(res, err.message);
+    }
+    console.error('[routes/comments POST]', err);
+    return fail(res, '发表评论失败', 500, 500);
+  }
+});
+
+router.post('/:id/share', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const parsed = sharePublicSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const route = await setRoutePublicShare(routeId, req.auth!.userId, parsed.data.isPublic);
+    if (!route) return fail(res, '路线不存在', 404, 404);
+    success(res, route, parsed.data.isPublic ? '已公开到广场' : '已取消公开');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('发布')) {
+      return fail(res, err.message);
+    }
+    console.error('[routes/share]', err);
+    return fail(res, '设置公开分享失败', 500, 500);
+  }
+});
+
+router.post('/:id/like', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const result = await toggleRouteLike(routeId, req.auth!.userId);
+    if (!result) return fail(res, '路线未公开或不存在', 404, 404);
+    success(res, result, result.liked ? '已点赞' : '已取消点赞');
+  } catch (err) {
+    console.error('[routes/like]', err);
+    return fail(res, '点赞操作失败', 500, 500);
+  }
+});
+
+router.post('/:id/favorite', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const result = await toggleRouteFavorite(routeId, req.auth!.userId);
+    if (!result) return fail(res, '路线未公开或不存在', 404, 404);
+    success(res, result, result.favorited ? '已收藏' : '已取消收藏');
+  } catch (err) {
+    console.error('[routes/favorite]', err);
+    return fail(res, '收藏操作失败', 500, 500);
   }
 });
 

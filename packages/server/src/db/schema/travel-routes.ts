@@ -22,6 +22,12 @@ export const travelRoutes = mysqlTable('travel_routes', {
   creatorId: int('creator_id')
     .notNull()
     .references(() => users.id, { onDelete: 'restrict' }),
+  viewCount: int('view_count').notNull().default(0),
+  likeCount: int('like_count').notNull().default(0),
+  collectCount: int('collect_count').notNull().default(0),
+  commentCount: int('comment_count').notNull().default(0),
+  /** 是否公开到广场（1=所有人可见并可互动） */
+  isPublic: tinyint('is_public').notNull().default(0),
   status: tinyint('status').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

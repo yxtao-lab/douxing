@@ -121,6 +121,10 @@ async function seedSampleRoutes(creatorId: number) {
     },
     creatorId,
     status: RouteStatus.PUBLISHED,
+    isPublic: 1,
+    viewCount: 128,
+    likeCount: 12,
+    collectCount: 5,
   });
   console.log('[seed] Created sample travel route');
 }

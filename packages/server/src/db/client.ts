@@ -22,6 +22,8 @@ export function getPool() {
       connectionLimit: 10,
       connectTimeout: 10000,
       enableKeepAlive: true,
+      /** 与业务时区一致（中国 UTC+8），避免 TIMESTAMP 读写差 8 小时 */
+      timezone: process.env.DB_TIMEZONE || '+08:00',
     });
   }
   return pool;

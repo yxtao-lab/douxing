@@ -281,8 +281,16 @@ LLM_MODEL=你的模型名称
 - `GET /api/routes/llm-providers` — 可选模型列表
 - `GET /api/routes/llm-status` — 检测各模型是否可用
 - `POST /api/routes/generate` — 生成路线（`provider` 可选）
-- `GET /api/routes` — 我的路线；`?all=1` 管理员查看全部
-- `GET /api/routes/:id` — 路线详情
+- `GET /api/routes` — 路线列表（`scope=mine|plaza|favorites`、`status`、`sort`）；`?all=1` 管理员查看全部
+- `GET /api/routes/plaza` — 广场公开路线（`is_public=1`）
+- `GET /api/routes/hot` — 同广场（兼容旧路径）
+- `GET /api/routes/:id` — 路线详情（自动 +1 浏览量）
+- `PUT /api/routes/:id` — 编辑草稿（仅 `status=草稿`）
+- `POST /api/routes/:id/like` — 点赞/取消点赞
+- `POST /api/routes/:id/favorite` — 收藏/取消收藏
+- `POST /api/routes/:id/share` — 公开/取消公开到广场（`{ "isPublic": true }`，需已发布）
+- `GET /api/routes/:id/comments` — 评论列表
+- `POST /api/routes/:id/comments` — 发表评论（仅广场公开路线）
 - `POST /api/routes/:id/publish` — 发布路线
 - `GET /api/attractions` — 景点列表（`city` / `cityCode` / `keyword` / `tags`）
 - `GET /api/attractions/cities` — 有景点的城市汇总

@@ -10,6 +10,9 @@
           <th>天数</th>
           <th>预算</th>
           <th>状态</th>
+          <th>浏览</th>
+          <th>点赞</th>
+          <th>收藏</th>
           <th>创建者</th>
         </tr>
       </thead>
@@ -20,6 +23,9 @@
           <td>{{ r.days }}</td>
           <td>{{ r.budgetRange || '-' }}</td>
           <td>{{ statusLabel(r.status) }}</td>
+          <td>{{ r.viewCount ?? 0 }}</td>
+          <td>{{ r.likeCount ?? 0 }}</td>
+          <td>{{ r.collectCount ?? 0 }}</td>
           <td>{{ r.creatorId }}</td>
         </tr>
       </tbody>

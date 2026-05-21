@@ -57,6 +57,7 @@ export interface RouteDetailPayload {
   matchedCity?: string;
   generationSource?: 'llm' | 'template';
   llmProvider?: string;
+  sourcePrompt?: string;
 }
 
 export interface AttractionInfo {
@@ -96,6 +97,20 @@ export interface TravelRouteInfo {
   routeDetail: Record<string, unknown> | null;
   creatorId: number;
   status: number;
+  viewCount?: number;
+  likeCount?: number;
+  collectCount?: number;
+  commentCount?: number;
+  /** 是否已公开到广场 */
+  isPublic?: boolean;
+  /** 创建者昵称（广场列表展示） */
+  creatorNickname?: string | null;
+  /** 创建者头像 */
+  creatorAvatar?: string | null;
+  /** 当前用户是否已点赞（需登录） */
+  isLiked?: boolean;
+  /** 当前用户是否已收藏（需登录） */
+  isFavorited?: boolean;
   isAiGenerated?: boolean;
   unlockPrice?: number;
   isUnlocked?: boolean;
@@ -103,6 +118,57 @@ export interface TravelRouteInfo {
   llmProvider?: 'deepseek' | 'lmstudio';
   /** AI 生成时用户输入的原始需求 */
   sourcePrompt?: string | null;
+}
+
+/** 路线列表查询（GET /routes） */
+export type RouteListScope = 'mine' | 'hot' | 'favorites' | 'plaza';
+
+export type RouteListSort = 'recent' | 'hot' | 'views';
+
+export interface RouteListQuery {
+  scope?: RouteListScope;
+  status?: number;
+  sort?: RouteListSort;
+  limit?: number;
+}
+
+/** 草稿路线编辑（PUT /routes/:id，仅 status=草稿） */
+export interface UpdateRouteDraftRequest {
+  name?: string;
+  description?: string | null;
+  budgetRange?: string | null;
+  days?: number;
+  interestTags?: string[];
+  routeDetail?: RouteDetailPayload;
+}
+
+export interface RouteLikeResult {
+  liked: boolean;
+  likeCount: number;
+}
+
+export interface RouteFavoriteResult {
+  favorited: boolean;
+  collectCount: number;
+}
+
+/** 公开分享到广场 */
+export interface SetRoutePublicShareRequest {
+  isPublic: boolean;
+}
+
+export interface RouteCommentInfo {
+  id: number;
+  routeId: number;
+  userId: number;
+  userNickname: string;
+  userAvatar: string | null;
+  content: string;
+  createdAt: string;
+}
+
+export interface CreateRouteCommentRequest {
+  content: string;
 }
 
 export type LlmProviderChoice = 'auto' | 'deepseek' | 'lmstudio';

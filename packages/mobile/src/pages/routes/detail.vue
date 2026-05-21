@@ -5,6 +5,39 @@
       <text class="title">{{ route.name }}</text>
       <text class="meta">{{ route.days }}天 · {{ route.budgetRange }} · {{ tags }}</text>
       <text class="desc">{{ route.description }}</text>
+      <view class="stats-row">
+        <text class="stat">浏览 {{ route.viewCount ?? 0 }}</text>
+        <text class="stat">点赞 {{ route.likeCount ?? 0 }}</text>
+        <text class="stat">收藏 {{ route.collectCount ?? 0 }}</text>
+        <text class="stat">评论 {{ route.commentCount ?? 0 }}</text>
+      </view>
+      <text v-if="route.creatorNickname && !isOwner" class="author">分享者 @{{ route.creatorNickname }}</text>
+    </view>
+
+    <view v-if="showShareSetting" class="card share-card">
+      <view class="share-row">
+        <view>
+          <text class="share-title">公开分享到广场</text>
+          <text class="share-hint">开启后所有人可浏览、点赞、收藏与评论</text>
+        </view>
+        <switch :checked="route.isPublic" :disabled="sharing" @change="handleShareToggle" color="#1677ff" />
+      </view>
+    </view>
+
+    <view v-if="showInteraction" class="card interact-card">
+      <button class="btn-interact" :class="{ active: route.isLiked }" @click="handleLike">
+        {{ route.isLiked ? '已赞' : '点赞' }}
+      </button>
+      <button class="btn-interact" :class="{ active: route.isFavorited }" @click="handleFavorite">
+        {{ route.isFavorited ? '已藏' : '收藏' }}
+      </button>
+    </view>
+
+    <view v-if="isDraft" class="card edit-card">
+      <text class="edit-title">编辑草稿</text>
+      <input v-model="editName" class="edit-input" placeholder="路线名称" />
+      <textarea v-model="editDesc" class="edit-textarea" placeholder="路线简介" />
+      <button class="btn-save-draft" :loading="savingDraft" @click="handleSaveDraft">保存草稿</button>
     </view>
 
     <view class="card" v-if="!isUnlocked">
@@ -39,6 +72,22 @@
       </button>
     </view>
 
+    <view v-if="showComments" class="card comments-card">
+      <text class="comments-title">评论</text>
+      <view v-if="comments.length === 0" class="comments-empty">暂无评论，来说两句吧</view>
+      <view v-for="c in comments" :key="c.id" class="comment-item">
+        <text class="comment-user">{{ c.userNickname }}</text>
+        <text class="comment-content">{{ c.content }}</text>
+      </view>
+      <textarea
+        v-model="commentText"
+        class="comment-input"
+        placeholder="写下你的看法…"
+        :maxlength="500"
+      />
+      <button class="btn-comment" :loading="postingComment" @click="handlePostComment">发表评论</button>
+    </view>
+
     <view class="actions">
       <button v-if="route.status !== publishedStatus" class="btn-outline" @click="handlePublish">发布路线</button>
     </view>
@@ -48,20 +97,54 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import type { RouteDayAttraction, TravelRouteInfo } from '@douxing/shared';
-import { fetchRouteDetail, publishRoute, regenerateRoute } from '@/api/routes';
+import type { RouteDayAttraction, TravelRouteInfo, RouteCommentInfo } from '@douxing/shared';
+import {
+  fetchRouteDetail,
+  publishRoute,
+  regenerateRoute,
+  updateRouteDraft,
+  toggleRouteLike,
+  toggleRouteFavorite,
+  setRoutePublicShare,
+  fetchRouteComments,
+  createRouteComment,
+} from '@/api/routes';
 import { createUnlockOrder, payOrder } from '@/api/orders';
 import { createCheckIn } from '@/api/checkins';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
+import { getStoredUser } from '@/utils/request';
 
 const route = ref<TravelRouteInfo | null>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
 const regeneratePrompt = ref('');
+const editName = ref('');
+const editDesc = ref('');
+const savingDraft = ref(false);
+const sharing = ref(false);
+const comments = ref<RouteCommentInfo[]>([]);
+const commentText = ref('');
+const postingComment = ref(false);
 const aiPlanning = computed(() => aiPlanLoadingState.active);
 let routeId = 0;
+
+const currentUserId = computed(() => getStoredUser()?.id ?? 0);
+
+const isOwner = computed(
+  () => route.value != null && route.value.creatorId === currentUserId.value,
+);
+
+const isDraft = computed(() => route.value?.status === RouteStatus.DRAFT);
+
+const showShareSetting = computed(
+  () => isOwner.value && route.value?.status === RouteStatus.PUBLISHED,
+);
+
+const showInteraction = computed(() => route.value?.isPublic === true);
+
+const showComments = computed(() => route.value?.isPublic === true);
 
 const canRegenerate = computed(
   () =>
@@ -69,6 +152,7 @@ const canRegenerate = computed(
 );
 
 const isUnlocked = computed(() => {
+  if (route.value?.isPublic && !isOwner.value) return true;
   const detail = route.value?.routeDetail as Record<string, unknown> | null;
   return detail?.isUnlocked === true || (route.value?.unlockPrice ?? 0) === 0;
 });
@@ -89,16 +173,112 @@ const days = computed(() => {
   return detail?.days ?? [];
 });
 
+async function loadComments() {
+  if (!route.value?.isPublic) {
+    comments.value = [];
+    return;
+  }
+  try {
+    comments.value = await fetchRouteComments(routeId);
+  } catch {
+    comments.value = [];
+  }
+}
+
 async function loadDetail() {
   try {
     route.value = await fetchRouteDetail(routeId);
+    editName.value = route.value?.name ?? '';
+    editDesc.value = route.value?.description ?? '';
     if (route.value?.sourcePrompt) {
       regeneratePrompt.value = route.value.sourcePrompt;
     } else if (canRegenerate.value && !regeneratePrompt.value) {
       regeneratePrompt.value = route.value?.description ?? '';
     }
+    await loadComments();
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '加载失败', icon: 'none' });
+  }
+}
+
+async function handleShareToggle(e: { detail: { value: boolean } }) {
+  const next = e.detail.value;
+  sharing.value = true;
+  try {
+    route.value = await setRoutePublicShare(routeId, { isPublic: next });
+    uni.showToast({ title: next ? '已公开到广场' : '已取消公开', icon: 'success' });
+    await loadComments();
+  } catch (err) {
+    uni.showToast({ title: err instanceof Error ? err.message : '设置失败', icon: 'none' });
+    await loadDetail();
+  } finally {
+    sharing.value = false;
+  }
+}
+
+async function handlePostComment() {
+  const text = commentText.value.trim();
+  if (!text) {
+    uni.showToast({ title: '请输入评论', icon: 'none' });
+    return;
+  }
+  postingComment.value = true;
+  try {
+    const created = await createRouteComment(routeId, { content: text });
+    comments.value = [created, ...comments.value];
+    if (route.value) {
+      route.value.commentCount = (route.value.commentCount ?? 0) + 1;
+    }
+    commentText.value = '';
+    uni.showToast({ title: '评论成功', icon: 'success' });
+  } catch (err) {
+    uni.showToast({ title: err instanceof Error ? err.message : '评论失败', icon: 'none' });
+  } finally {
+    postingComment.value = false;
+  }
+}
+
+async function handleLike() {
+  try {
+    const result = await toggleRouteLike(routeId);
+    if (route.value) {
+      route.value.isLiked = result.liked;
+      route.value.likeCount = result.likeCount;
+    }
+  } catch (e) {
+    uni.showToast({ title: e instanceof Error ? e.message : '操作失败', icon: 'none' });
+  }
+}
+
+async function handleFavorite() {
+  try {
+    const result = await toggleRouteFavorite(routeId);
+    if (route.value) {
+      route.value.isFavorited = result.favorited;
+      route.value.collectCount = result.collectCount;
+    }
+  } catch (e) {
+    uni.showToast({ title: e instanceof Error ? e.message : '操作失败', icon: 'none' });
+  }
+}
+
+async function handleSaveDraft() {
+  const name = editName.value.trim();
+  if (!name) {
+    uni.showToast({ title: '请输入路线名称', icon: 'none' });
+    return;
+  }
+  savingDraft.value = true;
+  try {
+    route.value = await updateRouteDraft(routeId, {
+      name,
+      description: editDesc.value.trim() || null,
+    });
+    uni.showToast({ title: '草稿已保存', icon: 'success' });
+  } catch (e) {
+    uni.showToast({ title: e instanceof Error ? e.message : '保存失败', icon: 'none' });
+  } finally {
+    savingDraft.value = false;
   }
 }
 
@@ -148,7 +328,7 @@ async function handleUnlock() {
 async function handlePublish() {
   try {
     route.value = await publishRoute(routeId);
-    uni.showToast({ title: '已发布', icon: 'success' });
+    uni.showToast({ title: '已发布，可开启广场分享', icon: 'success' });
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : '发布失败', icon: 'none' });
   }
@@ -206,6 +386,131 @@ onLoad((query) => {
   margin-top: 16rpx;
   display: block;
   line-height: 1.5;
+}
+.stats-row {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 16rpx;
+  opacity: 0.9;
+}
+.stat {
+  font-size: 22rpx;
+}
+.author {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  opacity: 0.95;
+}
+.share-card {
+  border: 2rpx solid #e8f3ff;
+}
+.share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24rpx;
+}
+.share-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2937;
+  display: block;
+}
+.share-hint {
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-top: 8rpx;
+  display: block;
+}
+.interact-card {
+  display: flex;
+  gap: 24rpx;
+}
+.btn-interact {
+  flex: 1;
+  background: #f3f4f6;
+  color: #374151;
+  font-size: 28rpx;
+}
+.btn-interact.active {
+  background: #e8f3ff;
+  color: #1677ff;
+}
+.edit-card {
+  border: 2rpx dashed #d1d5db;
+}
+.edit-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 16rpx;
+}
+.edit-input {
+  width: 100%;
+  font-size: 28rpx;
+  padding: 16rpx;
+  background: #f9fafb;
+  border-radius: 8rpx;
+  margin-bottom: 16rpx;
+}
+.edit-textarea {
+  width: 100%;
+  min-height: 120rpx;
+  font-size: 26rpx;
+  padding: 16rpx;
+  background: #f9fafb;
+  border-radius: 8rpx;
+}
+.btn-save-draft {
+  margin-top: 20rpx;
+  background: #1677ff;
+  color: #fff;
+}
+.comments-card {
+  margin-bottom: 24rpx;
+}
+.comments-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 16rpx;
+}
+.comments-empty {
+  color: #9ca3af;
+  font-size: 24rpx;
+  margin-bottom: 16rpx;
+}
+.comment-item {
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #f3f4f6;
+}
+.comment-user {
+  font-size: 24rpx;
+  color: #1677ff;
+  display: block;
+}
+.comment-content {
+  font-size: 26rpx;
+  color: #374151;
+  margin-top: 8rpx;
+  display: block;
+  line-height: 1.5;
+}
+.comment-input {
+  width: 100%;
+  min-height: 120rpx;
+  margin-top: 16rpx;
+  font-size: 26rpx;
+  padding: 16rpx;
+  background: #f9fafb;
+  border-radius: 8rpx;
+  box-sizing: border-box;
+}
+.btn-comment {
+  margin-top: 16rpx;
+  background: #1677ff;
+  color: #fff;
 }
 .card {
   background: #fff;

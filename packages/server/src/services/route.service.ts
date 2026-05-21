@@ -2,34 +2,21 @@ import { eq, desc, and } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { RouteStatus } from '@douxing/shared';
-import type { TravelRouteInfo } from '@douxing/shared';
+import type { TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
 import {
   normalizeRouteDetailDays,
   cloneRouteDaysForSync,
 } from '../utils/route-detail.util.js';
+import { toRouteInfo } from '../utils/route-info.util.js';
+import {
+  enrichRoutesWithUserFlags,
+  enrichRoutesWithCreatorInfo,
+  incrementRouteViewCount,
+} from './route-interaction.service.js';
 
-function toRouteInfo(row: typeof travelRoutes.$inferSelect): TravelRouteInfo {
-  const detail = row.routeDetail as Record<string, unknown> | null;
-  return {
-    id: row.id,
-    name: row.name,
-    description: row.description,
-    budgetRange: row.budgetRange,
-    days: row.days,
-    interestTags: row.interestTags,
-    routeDetail: row.routeDetail,
-    creatorId: row.creatorId,
-    status: row.status,
-    isAiGenerated: detail?.isAiGenerated === true,
-    unlockPrice: detail?.unlockPrice as number | undefined,
-    isUnlocked: detail?.isUnlocked === true,
-    generationSource: detail?.generationSource as TravelRouteInfo['generationSource'],
-    llmProvider: detail?.llmProvider as TravelRouteInfo['llmProvider'],
-    sourcePrompt: (detail?.sourcePrompt as string | undefined) ?? null,
-  };
-}
+export { toRouteInfo };
 
 async function syncDraftToAttractionLibrary(
   draft: Awaited<ReturnType<typeof generateRoute>>,
@@ -88,7 +75,7 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
 
   const id = Number(result.insertId);
   const rows = await db.select().from(travelRoutes).where(eq(travelRoutes.id, id)).limit(1);
-  const route = toRouteInfo(rows[0]!);
+  const route = toRouteInfo(rows[0]!, { viewerId: userId });
   return {
     route,
     generationSource: draft.generationSource,
@@ -103,19 +90,109 @@ export async function listUserRoutes(userId: number) {
     .from(travelRoutes)
     .where(eq(travelRoutes.creatorId, userId))
     .orderBy(desc(travelRoutes.createdAt));
-  return rows.map(toRouteInfo);
+  const routes = rows.map((row) => toRouteInfo(row, { viewerId: userId }));
+  return enrichRoutesWithUserFlags(routes, userId);
 }
 
-export async function getRouteById(routeId: number, userId?: number) {
+export async function getRouteById(routeId: number, userId?: number, options?: { recordView?: boolean }) {
   const db = getDb();
   const rows = await db.select().from(travelRoutes).where(eq(travelRoutes.id, routeId)).limit(1);
   const row = rows[0];
   if (!row) return null;
-  if (userId && row.creatorId !== userId) {
-    const isPublished = row.status === RouteStatus.PUBLISHED;
-    if (!isPublished) return null;
+
+  if (userId) {
+    const isOwner = row.creatorId === userId;
+    if (!isOwner) {
+      const canView = row.status === RouteStatus.PUBLISHED && row.isPublic === 1;
+      if (!canView) return null;
+    }
   }
-  return toRouteInfo(row);
+
+  if (options?.recordView !== false) {
+    await incrementRouteViewCount(routeId);
+    row.viewCount = (row.viewCount ?? 0) + 1;
+  }
+
+  let [route] = userId
+    ? await enrichRoutesWithUserFlags([toRouteInfo(row, { viewerId: userId })], userId)
+    : [toRouteInfo(row)];
+
+  if (route && userId && row.creatorId !== userId) {
+    [route] = await enrichRoutesWithCreatorInfo([route]);
+  }
+
+  return route ?? null;
+}
+
+export async function setRoutePublicShare(routeId: number, userId: number, isPublic: boolean) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(travelRoutes)
+    .where(and(eq(travelRoutes.id, routeId), eq(travelRoutes.creatorId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+
+  if (isPublic && row.status !== RouteStatus.PUBLISHED) {
+    throw new Error('请先发布路线后再公开分享到广场');
+  }
+
+  await db
+    .update(travelRoutes)
+    .set({ isPublic: isPublic ? 1 : 0 })
+    .where(eq(travelRoutes.id, routeId));
+
+  return getRouteById(routeId, userId, { recordView: false });
+}
+
+export async function updateDraftRoute(
+  routeId: number,
+  userId: number,
+  input: UpdateRouteDraftRequest,
+) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(travelRoutes)
+    .where(and(eq(travelRoutes.id, routeId), eq(travelRoutes.creatorId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (row.status !== RouteStatus.DRAFT) {
+    throw new Error('仅草稿状态的路线可编辑');
+  }
+
+  const existingDetail = (row.routeDetail ?? {}) as Record<string, unknown>;
+  const patch: Partial<typeof travelRoutes.$inferInsert> = {};
+
+  if (input.name !== undefined) patch.name = input.name.trim();
+  if (input.description !== undefined) patch.description = input.description;
+  if (input.budgetRange !== undefined) patch.budgetRange = input.budgetRange;
+  if (input.days !== undefined) patch.days = input.days;
+  if (input.interestTags !== undefined) patch.interestTags = input.interestTags;
+
+  if (input.routeDetail !== undefined) {
+    patch.routeDetail = {
+      ...existingDetail,
+      days: input.routeDetail.days,
+      isAiGenerated: input.routeDetail.isAiGenerated ?? existingDetail.isAiGenerated,
+      unlockPrice: input.routeDetail.unlockPrice ?? existingDetail.unlockPrice,
+      isUnlocked: input.routeDetail.isUnlocked ?? existingDetail.isUnlocked,
+      matchedCity: input.routeDetail.matchedCity ?? existingDetail.matchedCity,
+      generationSource: input.routeDetail.generationSource ?? existingDetail.generationSource,
+      llmProvider: input.routeDetail.llmProvider ?? existingDetail.llmProvider,
+      sourcePrompt: input.routeDetail.sourcePrompt ?? existingDetail.sourcePrompt,
+      llmProviderChoice: existingDetail.llmProviderChoice,
+    };
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return getRouteById(routeId, userId, { recordView: false });
+  }
+
+  await db.update(travelRoutes).set(patch).where(eq(travelRoutes.id, routeId));
+  return getRouteById(routeId, userId, { recordView: false });
 }
 
 export async function publishRoute(routeId: number, userId: number) {
@@ -155,7 +232,7 @@ export async function unlockRoute(routeId: number, userId: number) {
 export async function listAllRoutesForAdmin() {
   const db = getDb();
   const rows = await db.select().from(travelRoutes).orderBy(desc(travelRoutes.createdAt));
-  return rows.map(toRouteInfo);
+  return rows.map((row) => toRouteInfo(row));
 }
 
 export async function regenerateRouteFromPrompt(

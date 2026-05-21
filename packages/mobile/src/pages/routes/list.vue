@@ -1,10 +1,40 @@
 <template>
   <view class="page tab-page">
+    <view class="tabs">
+      <text
+        v-for="tab in scopeTabs"
+        :key="tab.id"
+        class="tab"
+        :class="{ active: activeScope === tab.id }"
+        @click="switchScope(tab.id)"
+      >
+        {{ tab.label }}
+      </text>
+    </view>
+
+    <view v-if="activeScope === 'mine'" class="filters">
+      <text
+        v-for="f in statusFilters"
+        :key="f.value"
+        class="chip"
+        :class="{ active: statusFilter === f.value }"
+        @click="statusFilter = f.value"
+      >
+        {{ f.label }}
+      </text>
+    </view>
+
     <scroll-view scroll-y class="scroll" enable-back-to-top>
       <view class="list-inner">
         <view v-if="routes.length === 0" class="empty">
-          <text>暂无路线，去「规划」生成一条吧</text>
-          <button class="btn" @click="goPlan">去规划</button>
+          <text>{{ emptyText }}</text>
+          <text v-if="activeScope === 'mine' && currentUserLabel" class="empty-user">
+            当前账号：{{ currentUserLabel }}
+          </text>
+          <text v-if="activeScope === 'mine' && statusFilter !== undefined" class="empty-hint">
+            已筛选「{{ statusFilterLabel }}」，可点「全部」查看
+          </text>
+          <button v-if="activeScope === 'mine'" class="btn" @click="goPlan">去规划</button>
         </view>
         <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item.id)">
           <view class="card-head">
@@ -12,9 +42,18 @@
             <text class="tag" v-if="item.isAiGenerated">AI</text>
           </view>
           <text class="meta">{{ item.days }}天 · 预算 {{ item.budgetRange || '待定' }}</text>
+          <text v-if="activeScope === 'plaza' && item.creatorNickname" class="author">
+            @{{ item.creatorNickname }}
+          </text>
           <text class="desc">{{ item.description }}</text>
+          <view class="stats">
+            <text class="stat">👁 {{ item.viewCount ?? 0 }}</text>
+            <text class="stat">♥ {{ item.likeCount ?? 0 }}</text>
+            <text class="stat">★ {{ item.collectCount ?? 0 }}</text>
+            <text class="stat">💬 {{ item.commentCount ?? 0 }}</text>
+          </view>
           <view class="footer">
-            <text class="status">{{ statusText(item.status) }}</text>
+            <text class="status">{{ footerLabel(item) }}</text>
             <text class="arrow">查看 ›</text>
           </view>
         </view>
@@ -25,20 +64,54 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import type { TravelRouteInfo } from '@douxing/shared';
+import type { TravelRouteInfo, RouteListScope } from '@douxing/shared';
 import { fetchRoutes } from '@/api/routes';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
 const routes = ref<TravelRouteInfo[]>([]);
+const activeScope = ref<RouteListScope>('mine');
+const statusFilter = ref<number | undefined>(undefined);
+const currentUserLabel = ref('');
+const loadError = ref('');
+
+const scopeTabs = [
+  { id: 'mine' as RouteListScope, label: '我的' },
+  { id: 'plaza' as RouteListScope, label: '广场' },
+  { id: 'favorites' as RouteListScope, label: '收藏' },
+];
+
+const statusFilters = [
+  { label: '全部', value: undefined as number | undefined },
+  { label: '草稿', value: RouteStatus.DRAFT },
+  { label: '已发布', value: RouteStatus.PUBLISHED },
+];
+
+const statusFilterLabel = computed(() => {
+  if (statusFilter.value === RouteStatus.PUBLISHED) return '已发布';
+  if (statusFilter.value === RouteStatus.DRAFT) return '草稿';
+  return '全部';
+});
+
+const emptyText = computed(() => {
+  if (loadError.value) return loadError.value;
+  if (activeScope.value === 'plaza') return '广场还没有公开路线，发布并分享一条吧';
+  if (activeScope.value === 'favorites') return '还没有收藏，去热门看看吧';
+  return '暂无路线，去「规划」生成一条吧';
+});
 
 function statusText(status: number) {
   if (status === RouteStatus.PUBLISHED) return '已发布';
   if (status === RouteStatus.ARCHIVED) return '已归档';
   return '草稿';
+}
+
+function footerLabel(item: TravelRouteInfo) {
+  if (activeScope.value === 'plaza') return '公开分享';
+  return statusText(item.status);
 }
 
 function goDetail(id: number) {
@@ -49,17 +122,43 @@ function goPlan() {
   uni.switchTab({ url: '/pages/plan/plan' });
 }
 
+async function loadRoutes() {
+  loadError.value = '';
+  try {
+    routes.value = await fetchRoutes({
+      scope: activeScope.value,
+      status: activeScope.value === 'mine' ? statusFilter.value : undefined,
+      sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
+    });
+  } catch (e) {
+    routes.value = [];
+    const msg = e instanceof Error ? e.message : '加载失败';
+    loadError.value = msg;
+    uni.showToast({ title: msg, icon: 'none' });
+  }
+}
+
+function switchScope(scope: RouteListScope) {
+  activeScope.value = scope;
+  if (scope !== 'mine') {
+    statusFilter.value = undefined;
+  }
+  loadRoutes();
+}
+
 onShow(async () => {
   uni.hideTabBar({ animation: false });
-  if (!getStoredUser()) {
+  const user = getStoredUser();
+  if (!user) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
-  try {
-    routes.value = await fetchRoutes();
-  } catch {
-    routes.value = [];
-  }
+  currentUserLabel.value = user.nickname || user.username || `用户#${user.id}`;
+  await loadRoutes();
+});
+
+watch(statusFilter, () => {
+  if (activeScope.value === 'mine') loadRoutes();
 });
 </script>
 
@@ -73,6 +172,48 @@ onShow(async () => {
   overflow: hidden;
 }
 
+.tabs {
+  display: flex;
+  background: #fff;
+  padding: 16rpx 24rpx 0;
+  gap: 32rpx;
+  flex-shrink: 0;
+}
+
+.tab {
+  font-size: 28rpx;
+  color: #6b7280;
+  padding-bottom: 16rpx;
+  border-bottom: 4rpx solid transparent;
+}
+
+.tab.active {
+  color: #1677ff;
+  font-weight: 600;
+  border-bottom-color: #1677ff;
+}
+
+.filters {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.chip {
+  font-size: 24rpx;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 8rpx 20rpx;
+  border-radius: 24rpx;
+}
+
+.chip.active {
+  background: #e8f3ff;
+  color: #1677ff;
+}
+
 .scroll {
   flex: 1;
   height: 0;
@@ -81,7 +222,6 @@ onShow(async () => {
 
 .list-inner {
   padding: 24rpx;
-  /* 为底部固定 TabBar（约 100rpx）+ 安全区预留空间 */
   padding-bottom: calc(32rpx + 120rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
@@ -90,6 +230,14 @@ onShow(async () => {
   text-align: center;
   padding: 80rpx 0;
   color: #6b7280;
+}
+
+.empty-user,
+.empty-hint {
+  display: block;
+  font-size: 24rpx;
+  margin-top: 16rpx;
+  color: #9ca3af;
 }
 
 .btn {
@@ -138,6 +286,13 @@ onShow(async () => {
   margin-top: 8rpx;
 }
 
+.author {
+  display: block;
+  color: #1677ff;
+  font-size: 22rpx;
+  margin-top: 6rpx;
+}
+
 .desc {
   display: block;
   color: #374151;
@@ -146,6 +301,17 @@ onShow(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stats {
+  display: flex;
+  gap: 24rpx;
+  margin-top: 12rpx;
+}
+
+.stat {
+  font-size: 22rpx;
+  color: #9ca3af;
 }
 
 .footer {
