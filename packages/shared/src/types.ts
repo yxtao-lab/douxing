@@ -222,6 +222,27 @@ export interface OrderInfo {
   createdAt: string;
 }
 
+/** 支付渠道：mock 模拟 / wechat_jsapi 微信小程序 */
+export type OrderPaymentChannel = 'mock' | 'wechat_jsapi';
+
+/** 微信小程序调起支付参数 */
+export interface WechatJsapiPayParams {
+  timeStamp: string;
+  nonceStr: string;
+  package: string;
+  signType: 'RSA';
+  paySign: string;
+}
+
+/** POST /orders/:id/prepay 响应 */
+export interface OrderPrepayResult {
+  channel: OrderPaymentChannel;
+  orderId: number;
+  orderNo: string;
+  totalAmount: string;
+  wechat?: WechatJsapiPayParams;
+}
+
 export interface CheckInResult {
   checkIn: CheckInInfo;
   newAchievements: AchievementInfo[];

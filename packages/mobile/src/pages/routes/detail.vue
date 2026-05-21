@@ -43,7 +43,7 @@
     <view class="card" v-if="!isUnlocked">
       <text class="lock-tip">完整行程需解锁后查看</text>
       <text class="price">¥{{ unlockPrice }}</text>
-      <button class="btn-primary" :loading="paying" @click="handleUnlock">解锁路线（模拟支付）</button>
+      <button class="btn-primary" :loading="paying" @click="handleUnlock">{{ unlockPayLabel }}</button>
     </view>
 
     <view class="card" v-else>
@@ -109,7 +109,7 @@ import {
   fetchRouteComments,
   createRouteComment,
 } from '@/api/routes';
-import { createUnlockOrder, payOrder } from '@/api/orders';
+import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
 import { createCheckIn } from '@/api/checkins';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
@@ -119,6 +119,7 @@ import { getStoredUser } from '@/utils/request';
 const route = ref<TravelRouteInfo | null>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
+const unlockPayLabel = getUnlockPayButtonLabel();
 const regeneratePrompt = ref('');
 const editName = ref('');
 const editDesc = ref('');
@@ -314,12 +315,14 @@ async function handleRegenerate() {
 async function handleUnlock() {
   paying.value = true;
   try {
-    const order = await createUnlockOrder(routeId);
-    await payOrder(order.id);
+    await completeRouteUnlockPayment(routeId);
     uni.showToast({ title: '解锁成功', icon: 'success' });
     await loadDetail();
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '支付失败', icon: 'none' });
+    const msg = e instanceof Error ? e.message : '支付失败';
+    if (msg !== '已取消支付') {
+      uni.showToast({ title: msg, icon: 'none' });
+    }
   } finally {
     paying.value = false;
   }

@@ -3,13 +3,19 @@ import express from 'express';
 import cors from 'cors';
 import routes from './routes/index.js';
 import { uploadsDir } from './routes/users.js';
-import { APP_NAME } from '@douxing/shared';
+import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
+import { wechatPayNotifyHandler } from './routes/payments.js';
 
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
 
 app.use(cors());
+app.post(
+  `${API_PREFIX}/payments/wechat/notify`,
+  express.raw({ type: 'application/json' }),
+  wechatPayNotifyHandler,
+);
 app.use(express.json());
 app.use('/uploads/avatars', express.static(uploadsDir));
 app.use(routes);

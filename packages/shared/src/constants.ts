@@ -45,6 +45,12 @@ export const OrderType = {
   ROUTE: 'route',
 } as const;
 
+/** 支付渠道 */
+export const PaymentChannel = {
+  MOCK: 'mock',
+  WECHAT_JSAPI: 'wechat_jsapi',
+} as const;
+
 /** LLM 模型提供商（路线生成） */
 export const LlmProvider = {
   AUTO: 'auto',

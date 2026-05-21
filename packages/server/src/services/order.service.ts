@@ -33,7 +33,7 @@ function toOrderInfo(row: typeof orders.$inferSelect): OrderInfo {
   };
 }
 
-async function findUserOrder(orderId: number, userId: number) {
+export async function findUserOrder(orderId: number, userId: number) {
   const db = getDb();
   const rows = await db
     .select()
@@ -41,6 +41,60 @@ async function findUserOrder(orderId: number, userId: number) {
     .where(and(eq(orders.id, orderId), eq(orders.userId, userId)))
     .limit(1);
   return rows[0] ?? null;
+}
+
+export async function getOrderByOrderNo(orderNo: string) {
+  const db = getDb();
+  const rows = await db.select().from(orders).where(eq(orders.orderNo, orderNo)).limit(1);
+  return rows[0] ?? null;
+}
+
+export async function getOrderById(orderId: number, userId: number) {
+  const order = await findUserOrder(orderId, userId);
+  if (!order) return { error: '订单不存在' as const };
+  return { order: toOrderInfo(order) };
+}
+
+/** 支付成功后的履约（模拟支付 / 微信回调共用） */
+export async function fulfillOrderAfterPaid(orderId: number) {
+  const db = getDb();
+  const rows = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  const order = rows[0];
+  if (!order) return { error: '订单不存在' as const };
+
+  if (order.status === OrderStatus.COMPLETED) {
+    return { order: toOrderInfo(order) };
+  }
+  if (order.status === OrderStatus.CANCELLED) {
+    return { error: '订单已取消' as const };
+  }
+
+  if (order.status === OrderStatus.PENDING) {
+    const paid = await applyOrderStatusTransition(orderId, OrderStatus.PENDING, OrderStatus.PAID, {
+      paidAt: new Date(),
+    });
+    if (!paid.updated) {
+      const refreshed = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+      const cur = refreshed[0];
+      if (!cur || (cur.status !== OrderStatus.PAID && cur.status !== OrderStatus.COMPLETED)) {
+        return { error: '支付确认失败，订单状态已变更' as const };
+      }
+    }
+  }
+
+  const currentRows = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  const current = currentRows[0]!;
+
+  if (current.orderType === OrderType.ROUTE && current.status === OrderStatus.PAID) {
+    await unlockRoute(current.productId, current.userId);
+  }
+
+  if (shouldAutoCompleteAfterPay(current.orderType) && current.status === OrderStatus.PAID) {
+    await applyOrderStatusTransition(orderId, OrderStatus.PAID, OrderStatus.COMPLETED);
+  }
+
+  const updated = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
+  return { order: toOrderInfo(updated[0]!) };
 }
 
 export async function createRouteUnlockOrder(userId: number, routeId: number) {
@@ -103,24 +157,7 @@ export async function payOrder(orderId: number, userId: number) {
     return { error: '订单状态不可支付' as const };
   }
 
-  const paid = await applyOrderStatusTransition(orderId, OrderStatus.PENDING, OrderStatus.PAID, {
-    paidAt: new Date(),
-  });
-  if (!paid.updated) {
-    return { error: '支付失败，订单状态已变更' as const };
-  }
-
-  if (order.orderType === OrderType.ROUTE) {
-    await unlockRoute(order.productId, userId);
-  }
-
-  if (shouldAutoCompleteAfterPay(order.orderType)) {
-    await applyOrderStatusTransition(orderId, OrderStatus.PAID, OrderStatus.COMPLETED);
-  }
-
-  const db = getDb();
-  const updated = await db.select().from(orders).where(eq(orders.id, orderId)).limit(1);
-  return { order: toOrderInfo(updated[0]!) };
+  return fulfillOrderAfterPaid(orderId);
 }
 
 /** 用户取消待支付订单 */
