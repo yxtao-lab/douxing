@@ -9,6 +9,10 @@ export function payOrder(orderId: number) {
   return request<OrderInfo>(`/orders/${orderId}/pay`, { method: 'POST' });
 }
 
+export function cancelOrder(orderId: number) {
+  return request<OrderInfo>(`/orders/${orderId}/cancel`, { method: 'POST' });
+}
+
 export function fetchOrders() {
   return request<OrderInfo[]>('/orders');
 }

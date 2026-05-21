@@ -31,17 +31,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import type { OrderInfo } from '@douxing/shared';
-import { OrderStatus } from '@douxing/shared';
+import { getOrderStatusLabel } from '@douxing/shared';
 import { fetchAllOrders } from '@/api/orders';
 
 const orders = ref<OrderInfo[]>([]);
 
-function orderStatusLabel(status: number) {
-  if (status === OrderStatus.PAID) return '已支付';
-  if (status === OrderStatus.COMPLETED) return '已完成';
-  if (status === OrderStatus.CANCELLED) return '已取消';
-  return '待支付';
-}
+const orderStatusLabel = getOrderStatusLabel;
 
 onMounted(async () => {
   try {

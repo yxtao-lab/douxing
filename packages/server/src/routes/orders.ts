@@ -5,6 +5,7 @@ import { success, fail } from '../utils/response.js';
 import {
   createRouteUnlockOrder,
   payOrder,
+  cancelOrder,
   listUserOrders,
   listAllOrdersForAdmin,
 } from '../services/order.service.js';
@@ -40,6 +41,19 @@ router.post('/:id/pay', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[orders/pay]', err);
     return fail(res, '支付失败', 500, 500);
+  }
+});
+
+router.post('/:id/cancel', authMiddleware, async (req, res) => {
+  try {
+    const orderId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(orderId)) return fail(res, '无效的订单 ID');
+    const result = await cancelOrder(orderId, req.auth!.userId);
+    if ('error' in result) return fail(res, result.error ?? '取消失败');
+    success(res, result.order, '订单已取消');
+  } catch (err) {
+    console.error('[orders/cancel]', err);
+    return fail(res, '取消订单失败', 500, 500);
   }
 });
 

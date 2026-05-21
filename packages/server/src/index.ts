@@ -4,6 +4,7 @@ import cors from 'cors';
 import routes from './routes/index.js';
 import { uploadsDir } from './routes/users.js';
 import { APP_NAME } from '@douxing/shared';
+import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
@@ -18,5 +19,6 @@ app.get('/', (_req, res) => {
 });
 
 app.listen(port, () => {
+  startOrderTimeoutJob();
   console.log(`[server] ${APP_NAME} API listening on http://localhost:${port}`);
 });
