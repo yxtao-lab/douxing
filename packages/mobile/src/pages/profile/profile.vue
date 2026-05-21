@@ -33,6 +33,7 @@
       <view class="menu-item" v-if="user" @click="goEdit">编辑资料</view>
       <view class="menu-item" @click="goRoutes">我的路线</view>
       <view class="menu-item" @click="goCheckins">打卡记录</view>
+      <view class="menu-item" v-if="user" @click="goOrders">我的订单</view>
       <view class="menu-item" v-if="user" @click="handleLogout">退出登录</view>
     </view>
     <DouxingTabBar :current="3" />
@@ -81,6 +82,14 @@ function goRoutes() {
 
 function goCheckins() {
   uni.navigateTo({ url: '/pages/checkins/list' });
+}
+
+function goOrders() {
+  if (!user.value) {
+    goLogin();
+    return;
+  }
+  uni.navigateTo({ url: '/pages/orders/list' });
 }
 
 function handleLogout() {

@@ -61,12 +61,8 @@ async function pollOrderFulfilled(orderId: number): Promise<OrderInfo> {
   throw new Error('支付结果确认中，请稍后下拉刷新查看');
 }
 
-/**
- * 路线解锁完整支付：创建订单 → 预下单 → 调起支付（微信或模拟）
- */
-export async function completeRouteUnlockPayment(routeId: number): Promise<OrderInfo> {
-  const order = await createUnlockOrder(routeId);
-
+/** 已有待支付订单：预下单 → 调起支付（订单列表「继续支付」） */
+export async function continuePayForOrder(orderId: number): Promise<OrderInfo> {
   let wxCode: string | undefined;
   if (isMpWeixin()) {
     try {
@@ -76,10 +72,10 @@ export async function completeRouteUnlockPayment(routeId: number): Promise<Order
     }
   }
 
-  const prepay = await createOrderPrepay(order.id, wxCode ? { wxCode } : undefined);
+  const prepay = await createOrderPrepay(orderId, wxCode ? { wxCode } : undefined);
 
   if (prepay.channel === 'mock') {
-    return payOrder(order.id);
+    return payOrder(orderId);
   }
 
   if (!prepay.wechat) {
@@ -87,11 +83,25 @@ export async function completeRouteUnlockPayment(routeId: number): Promise<Order
   }
 
   await invokeWechatPayment(prepay.wechat);
-  return pollOrderFulfilled(order.id);
+  return pollOrderFulfilled(orderId);
+}
+
+/**
+ * 路线解锁完整支付：创建订单 → 预下单 → 调起支付（微信或模拟）
+ */
+export async function completeRouteUnlockPayment(routeId: number): Promise<OrderInfo> {
+  const order = await createUnlockOrder(routeId);
+  return continuePayForOrder(order.id);
 }
 
 /** 解锁按钮文案 */
 export function getUnlockPayButtonLabel(): string {
   if (isMpWeixin()) return '微信支付解锁';
   return '解锁路线（模拟支付）';
+}
+
+/** 继续支付按钮文案 */
+export function getContinuePayButtonLabel(): string {
+  if (isMpWeixin()) return '继续支付';
+  return '继续支付（模拟）';
 }

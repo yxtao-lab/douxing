@@ -19,6 +19,7 @@
 |------|------|
 | 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含时间轴进度） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 
 未完成能力与分步实施计划见 **ROADMAP**（对照详细设计文档 V2.0）。
