@@ -65,12 +65,17 @@ function buildAssistantReply(
     description: string | null;
     days: number;
     budgetRange: string | null;
+    routeDetail?: Record<string, unknown> | null;
   },
   intent?: TravelIntentSnapshot,
 ): string {
   const budget = route.budgetRange ? `，预算 ${route.budgetRange}` : '';
   const intentHint = intent ? `\n已理解需求：${formatIntentSummary(intent)}` : '';
-  return `已为您生成「${route.name}」：${route.description ?? ''}（${route.days} 天${budget}）${intentHint}`;
+  const detail = route.routeDetail ?? {};
+  const ragMatched = typeof detail.ragMatchedCount === 'number' ? detail.ragMatchedCount : 0;
+  const ragHint =
+    ragMatched > 0 ? `\n已引用内容库景点 ${ragMatched} 处` : '';
+  return `已为您生成「${route.name}」：${route.description ?? ''}（${route.days} 天${budget}）${intentHint}${ragHint}`;
 }
 
 function buildHistoryForLlm(messages: PlanSessionMessageInfo[]): PlanChatMessage[] {
@@ -118,6 +123,11 @@ async function getOwnedSession(sessionId: number, userId: number) {
   return rows[0] ?? null;
 }
 
+function readRagMatchedCount(route: { routeDetail?: Record<string, unknown> | null }): number {
+  const value = route.routeDetail?.ragMatchedCount;
+  return typeof value === 'number' ? value : 0;
+}
+
 function buildActionResult(
   sessionId: number,
   route: NonNullable<Awaited<ReturnType<typeof getRouteById>>>,
@@ -126,6 +136,7 @@ function buildActionResult(
     generationSource?: 'llm' | 'template';
     llmProvider?: string;
     intentSnapshot?: TravelIntentSnapshot | null;
+    ragMatchedCount?: number;
   },
 ): PlanSessionActionResult {
   return {
@@ -133,6 +144,7 @@ function buildActionResult(
     sessionId,
     assistantMessage,
     intentSnapshot: meta.intentSnapshot ?? null,
+    ragMatchedCount: meta.ragMatchedCount ?? 0,
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
   };
@@ -265,6 +277,7 @@ export async function createPlanSession(
     generationSource,
     llmProvider,
     intentSnapshot: resolvedIntent,
+    ragMatchedCount: readRagMatchedCount(route),
   });
 }
 
@@ -328,5 +341,6 @@ export async function appendPlanSessionMessage(
     generationSource,
     llmProvider,
     intentSnapshot: resolvedIntent,
+    ragMatchedCount: readRagMatchedCount(route),
   });
 }

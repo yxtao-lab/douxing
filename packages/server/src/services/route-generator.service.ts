@@ -1,12 +1,17 @@
 import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js';
 import type { LlmProviderChoice } from '../config/llm.js';
-import type { PlanChatMessage, TravelIntentSnapshot } from '@douxing/shared';
+import type { PlanChatMessage, TravelIntentSnapshot, RagAttractionCandidate } from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 import {
   buildIntentFromHistory,
   enforceRouteConstraints,
   parseTravelIntent,
 } from './travel-intent.service.js';
+import {
+  applyRagToRouteDraft,
+  buildRouteFromRagCatalog,
+  retrieveAttractionsForPlanning,
+} from './attraction-rag.service.js';
 
 export interface GenerateRouteInput {
   prompt: string;
@@ -18,6 +23,8 @@ export interface GenerateRouteInput {
   history?: PlanChatMessage[];
   /** C2：已解析的结构化意图（可选，未传则自动从对话抽取） */
   intent?: TravelIntentSnapshot;
+  /** C3：RAG 候选景点（可选，未传则自动检索） */
+  ragCandidates?: RagAttractionCandidate[];
 }
 
 export interface GeneratedRouteDraft {
@@ -30,6 +37,8 @@ export interface GeneratedRouteDraft {
   unlockPrice: number;
   matchedCity: string;
   isAiGenerated: boolean;
+  ragMatchedCount?: number;
+  ragCandidateCount?: number;
 }
 
 function detectTags(prompt: string): string[] {
@@ -43,6 +52,27 @@ function resolveIntent(input: GenerateRouteInput): TravelIntentSnapshot {
     days: input.days,
     budget: input.budget,
   });
+}
+
+async function resolveRagCandidates(
+  input: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+): Promise<RagAttractionCandidate[]> {
+  if (input.ragCandidates) return input.ragCandidates;
+  return retrieveAttractionsForPlanning({
+    city: intent.city,
+    themes: intent.themes,
+    prompt: input.prompt,
+    days: intent.days,
+  });
+}
+
+function withRagMeta<T extends GeneratedRouteDraft>(
+  draft: T,
+  ragMatchedCount: number,
+  ragCandidateCount: number,
+): T {
+  return { ...draft, ragMatchedCount, ragCandidateCount };
 }
 
 function scoreTemplate(template: RouteTemplate, city: string | null, days: number, tags: string[]): number {
@@ -65,18 +95,22 @@ export async function generateRoute(
   GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string; intent: TravelIntentSnapshot }
 > {
   const intent = resolveIntent(input);
+  const ragCandidates = await resolveRagCandidates(input, intent);
   const enrichedInput = {
     ...input,
     days: intent.days ?? input.days,
     budget: intent.budget ?? input.budget,
     intent,
+    ragCandidates,
   };
 
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
+      const constrained = enforceRouteConstraints(draft, intent);
+      const linked = applyRagToRouteDraft(constrained, ragCandidates);
       return {
-        ...enforceRouteConstraints(draft, intent),
+        ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
         generationSource: 'llm',
         llmProvider: draft.llmProvider,
         intent,
@@ -89,8 +123,11 @@ export async function generateRoute(
     }
   }
 
+  const templateDraft = generateRouteFromTemplate(enrichedInput, intent, ragCandidates);
+  const constrained = enforceRouteConstraints(templateDraft, intent);
+  const linked = applyRagToRouteDraft(constrained, ragCandidates);
   return {
-    ...enforceRouteConstraints(generateRouteFromTemplate(enrichedInput, intent), intent),
+    ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
     generationSource: 'template',
     intent,
   };
@@ -100,6 +137,7 @@ export async function generateRoute(
 export function generateRouteFromTemplate(
   input: GenerateRouteInput,
   intent?: TravelIntentSnapshot,
+  ragCandidates: RagAttractionCandidate[] = input.ragCandidates ?? [],
 ): GeneratedRouteDraft {
   const resolvedIntent = intent ?? resolveIntent(input);
   const historyUserText = (input.history ?? [])
@@ -108,6 +146,17 @@ export function generateRouteFromTemplate(
     .filter(Boolean)
     .join('；');
   const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
+
+  if (resolvedIntent.city && ragCandidates.length >= (resolvedIntent.days ?? 3)) {
+    const ragDraft = buildRouteFromRagCatalog(resolvedIntent, ragCandidates, prompt);
+    if (ragDraft) {
+      return {
+        ...ragDraft,
+        description: `${ragDraft.description}（内容库 RAG 组装）`,
+      };
+    }
+  }
+
   const city = resolvedIntent.city;
   const days = resolvedIntent.days ?? input.days ?? 3;
   const tags = resolvedIntent.themes.length > 0 ? resolvedIntent.themes : detectTags(prompt);

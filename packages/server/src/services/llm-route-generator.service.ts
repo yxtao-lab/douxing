@@ -18,6 +18,7 @@ export async function generateRouteFromLlm(
     provider: input.provider,
     history: input.history,
     intent,
+    ragCandidates: input.ragCandidates,
   });
 
   const draft: GeneratedRouteDraft = {

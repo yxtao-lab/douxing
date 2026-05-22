@@ -36,7 +36,7 @@
 
     <view v-if="intentSummary" class="intent-bar">
       <text class="intent-label">已理解需求</text>
-      <text class="intent-value">{{ intentSummary }}</text>
+      <text class="intent-value">{{ intentSummary }}{{ intentBarExtra }}</text>
     </view>
 
     <scroll-view
@@ -174,6 +174,13 @@ const intentSummary = computed(() => {
   return parts.join(' · ');
 });
 
+const ragMatchedCount = ref(0);
+
+const intentBarExtra = computed(() => {
+  if (ragMatchedCount.value <= 0) return '';
+  return ` · 库内景点 ${ragMatchedCount.value} 处`;
+});
+
 function selectProvider(opt: LlmProviderOption) {
   if (aiPlanLoadingState.active || sessionId.value) return;
   if (!opt.available) {
@@ -218,6 +225,7 @@ function resetSession() {
   sessionId.value = null;
   currentRouteId.value = null;
   intentSnapshot.value = null;
+  ragMatchedCount.value = 0;
   messages.value = [];
   inputText.value = '';
 }
@@ -232,6 +240,11 @@ async function loadSession(id: number) {
   sessionId.value = session.id;
   currentRouteId.value = session.routeId;
   intentSnapshot.value = session.intentSnapshot ?? null;
+  ragMatchedCount.value =
+    typeof (session.route?.routeDetail as Record<string, unknown> | undefined)?.ragMatchedCount ===
+    'number'
+      ? ((session.route?.routeDetail as Record<string, unknown>).ragMatchedCount as number)
+      : 0;
   messages.value = mapMessages(session.messages);
   scrollToBottom();
 }
@@ -311,6 +324,7 @@ async function handleSend() {
       sessionId.value = result.sessionId;
       currentRouteId.value = result.id;
       intentSnapshot.value = result.intentSnapshot ?? null;
+      ragMatchedCount.value = result.ragMatchedCount ?? 0;
       const session = await fetchPlanSession(result.sessionId);
       messages.value = mapMessages(session.messages);
       scrollToBottom();
@@ -321,6 +335,7 @@ async function handleSend() {
     const result = await appendPlanMessage(sessionId.value, { content: text });
     currentRouteId.value = result.id;
     intentSnapshot.value = result.intentSnapshot ?? null;
+    ragMatchedCount.value = result.ragMatchedCount ?? 0;
     const session = await fetchPlanSession(sessionId.value);
     messages.value = mapMessages(session.messages);
     scrollToBottom();

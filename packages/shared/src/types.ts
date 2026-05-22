@@ -58,6 +58,10 @@ export interface RouteDetailPayload {
   generationSource?: 'llm' | 'template';
   llmProvider?: string;
   sourcePrompt?: string;
+  /** C3：RAG 候选数量 */
+  ragCandidateCount?: number;
+  /** C3：已对齐内容库的 POI 数量 */
+  ragMatchedCount?: number;
 }
 
 export interface AttractionInfo {
@@ -212,6 +216,20 @@ export type RegenerateRouteRequest = GenerateRouteRequest;
 /** 规划对话消息角色 */
 export type PlanSessionMessageRole = 'user' | 'assistant';
 
+/** C3：RAG 检索得到的候选景点 */
+export interface RagAttractionCandidate {
+  id: number;
+  name: string;
+  category: string;
+  tags: string[];
+  description: string | null;
+  ticketPrice: number;
+  latitude: number | null;
+  longitude: number | null;
+  aliases: string[];
+  score: number;
+}
+
 /** C2：从用户描述中解析的结构化旅行意图 */
 export interface TravelIntentSnapshot {
   city: string | null;
@@ -276,6 +294,8 @@ export interface PlanSessionActionResult extends TravelRouteInfo {
   sessionId: number;
   assistantMessage: string;
   intentSnapshot?: TravelIntentSnapshot | null;
+  /** C3：本方案引用库内景点数 */
+  ragMatchedCount?: number;
   generationSource?: 'llm' | 'template';
   llmProvider?: 'deepseek' | 'lmstudio';
 }

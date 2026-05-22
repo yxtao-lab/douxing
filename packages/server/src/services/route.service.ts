@@ -51,6 +51,8 @@ function buildRouteDetailFromDraft(
     llmProvider: draft.llmProvider,
     sourcePrompt: options.sourcePrompt,
     llmProviderChoice: options.provider ?? 'auto',
+    ragCandidateCount: draft.ragCandidateCount ?? 0,
+    ragMatchedCount: draft.ragMatchedCount ?? 0,
   };
 }
 

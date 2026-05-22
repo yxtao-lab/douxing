@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PoiCategory } from '@douxing/shared';
-import type { PlanChatMessage, TravelIntentSnapshot } from '@douxing/shared';
+import type { PlanChatMessage, TravelIntentSnapshot, RagAttractionCandidate } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -12,6 +12,7 @@ import {
   getDeepseekConfig,
 } from '../config/llm.js';
 import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
+import { formatRagContextForLlm } from './attraction-rag.service.js';
 
 const poiTypeEnum = z.enum([
   PoiCategory.ATTRACTION,
@@ -126,10 +127,11 @@ JSON 结构：
 2. poiType 取值：attraction（景区/地标）、restaurant（具体餐厅名）、hotel（具体酒店名）、meal（笼统用餐如「午餐」不入库）、transport、other。
 3. 笼统「午餐」「晚餐」「自行用餐」「入住酒店」等必须用 poiType=meal 或 other，禁止虚构店名。
 4. poiType=attraction 时必须填写真实可参考的 latitude、longitude（中国境内 WGS84）。
-5. poiType=restaurant/hotel 时 name 必须是具体店名；鼓励填写 latitude、longitude。`;
+5. poiType=restaurant/hotel 时 name 必须是具体店名；鼓励填写 latitude、longitude。
+6. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。`;
 
 const MULTI_TURN_HINT = `
-6. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
+7. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
 
 function buildSystemPrompt(hasHistory: boolean): string {
   return hasHistory ? SYSTEM_PROMPT + MULTI_TURN_HINT : SYSTEM_PROMPT;
@@ -272,6 +274,7 @@ async function chatCompletionWithProvider(
     budget?: string;
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
+    ragCandidates?: RagAttractionCandidate[];
   },
 ): Promise<LlmRoutePayload> {
   const config = getProviderConfig(provider);
@@ -280,14 +283,21 @@ async function chatCompletionWithProvider(
   }
 
   const model = await resolveModelId(provider);
-  let userContent = userPrompt;
+  const blocks: string[] = [];
   if (options?.intent) {
     const constraintBlock = formatIntentConstraintsForLlm(options.intent);
-    if (constraintBlock) userContent = `${constraintBlock}\n\n用户需求：${userPrompt}`;
+    if (constraintBlock) blocks.push(constraintBlock);
   } else {
-    if (options?.days) userContent += `\n（期望天数：${options.days}天）`;
-    if (options?.budget) userContent += `\n（预算：${options.budget}）`;
+    if (options?.days) blocks.push(`（期望天数：${options.days}天）`);
+    if (options?.budget) blocks.push(`（预算：${options.budget}）`);
   }
+  if (options?.ragCandidates?.length) {
+    blocks.push(formatRagContextForLlm(options.ragCandidates));
+  }
+  const userContent =
+    blocks.length > 0
+      ? `${blocks.join('\n\n')}\n\n用户需求：${userPrompt}`
+      : userPrompt;
 
   const history = options?.history ?? [];
   const messages: ChatMessage[] = [
@@ -373,6 +383,7 @@ export async function chatCompletionForRoute(
     provider?: LlmProviderChoice;
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
+    ragCandidates?: RagAttractionCandidate[];
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);
