@@ -25,6 +25,12 @@ export const RouteStatus = {
   ARCHIVED: 2,
 } as const;
 
+/** 规划会话状态（plan_sessions.status） */
+export const PlanSessionStatus = {
+  ACTIVE: 0,
+  CLOSED: 1,
+} as const;
+
 /** 打卡状态（check_ins.status） */
 export const CheckInStatus = {
   PENDING: 0,

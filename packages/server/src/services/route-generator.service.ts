@@ -1,5 +1,6 @@
 import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js';
 import type { LlmProviderChoice } from '../config/llm.js';
+import type { PlanChatMessage } from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 
 export interface GenerateRouteInput {
@@ -8,6 +9,8 @@ export interface GenerateRouteInput {
   budget?: string;
   /** 模型提供商：auto | deepseek | lmstudio */
   provider?: LlmProviderChoice;
+  /** 多轮对话历史（不含当前 prompt） */
+  history?: PlanChatMessage[];
 }
 
 export interface GeneratedRouteDraft {
@@ -92,7 +95,12 @@ export async function generateRoute(
 
 /** 基于模板匹配（LLM 不可用时的降级方案） */
 export function generateRouteFromTemplate(input: GenerateRouteInput): GeneratedRouteDraft {
-  const prompt = input.prompt.trim();
+  const historyUserText = (input.history ?? [])
+    .filter((m) => m.role === 'user')
+    .map((m) => m.content.trim())
+    .filter(Boolean)
+    .join('；');
+  const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
   const city = detectCity(prompt);
   const days = input.days ?? detectDays(prompt);
   const tags = detectTags(prompt);

@@ -92,6 +92,13 @@
       "when": 1748592000000,
       "tag": "0012_achievement_definitions",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "5",
+      "when": 1748678400000,
+      "tag": "0013_plan_sessions",
+      "breakpoints": true
     }
   ]
 }

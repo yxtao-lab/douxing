@@ -31,6 +31,7 @@ export function fetchOrders() {
 export interface OrderPaymentConfig {
   mode: string;
   wechatConfigured: boolean;
+  routeUnlockPaymentRequired: boolean;
 }
 
 export function fetchOrderPaymentConfig() {

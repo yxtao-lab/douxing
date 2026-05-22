@@ -12,6 +12,7 @@ import {
 } from '../services/order.service.js';
 import { createOrderPrepay } from '../services/payment.service.js';
 import { getPaymentMode, isWechatPayConfigured } from '../config/payment.js';
+import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import { RoleCode } from '@douxing/shared';
 
@@ -42,6 +43,7 @@ router.get('/payment-config', authMiddleware, async (_req, res) => {
   success(res, {
     mode: getPaymentMode(),
     wechatConfigured: isWechatPayConfigured(),
+    routeUnlockPaymentRequired: isRouteUnlockPaymentRequired(),
   });
 });
 

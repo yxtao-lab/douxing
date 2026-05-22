@@ -8,6 +8,7 @@ import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 import { wechatPayNotifyHandler } from './routes/payments.js';
 import { getCheckinConfigSummary } from './config/checkin.js';
+import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
 
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
@@ -30,8 +31,12 @@ app.get('/', (_req, res) => {
 app.listen(port, () => {
   startOrderTimeoutJob();
   const checkinConfig = getCheckinConfigSummary();
+  const routeUnlockConfig = getRouteUnlockConfigSummary();
   console.log(`[server] ${APP_NAME} API listening on http://localhost:${port}`);
   console.log(
     `[checkin] 地理围栏 ${checkinConfig.geofenceEnabled ? '已启用' : '已关闭'}（CHECKIN_GEOFENCE_ENABLED=${checkinConfig.rawGeofenceEnv ?? '未设置，默认 true'}）`,
+  );
+  console.log(
+    `[route-unlock] 解锁支付 ${routeUnlockConfig.paymentRequired ? '已启用' : '已关闭'}（ROUTE_UNLOCK_PAYMENT_REQUIRED=${routeUnlockConfig.rawEnv ?? '未设置，默认 false'}）`,
   );
 });

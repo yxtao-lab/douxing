@@ -15,6 +15,7 @@ import {
   enrichRoutesWithCreatorInfo,
   incrementRouteViewCount,
 } from './route-interaction.service.js';
+import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 
 export { toRouteInfo };
 
@@ -44,7 +45,7 @@ function buildRouteDetailFromDraft(
     days: linkedDays.days,
     isAiGenerated: draft.isAiGenerated,
     unlockPrice: draft.unlockPrice,
-    isUnlocked: false,
+    isUnlocked: !isRouteUnlockPaymentRequired(),
     matchedCity: draft.matchedCity,
     generationSource: draft.generationSource,
     llmProvider: draft.llmProvider,
@@ -260,6 +261,7 @@ export async function regenerateRouteFromPrompt(
   const draft = await generateRoute({
     ...input,
     provider: input.provider ?? (existingDetail.llmProviderChoice as GenerateRouteInput['provider']),
+    history: input.history,
   });
   const linkedDays = await syncDraftToAttractionLibrary(draft, { stripAttractionIds: true });
   const detail = buildRouteDetailFromDraft(draft, linkedDays, {

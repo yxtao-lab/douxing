@@ -14,6 +14,7 @@ export async function generateRouteFromLlm(
     days: input.days,
     budget: input.budget,
     provider: input.provider,
+    history: input.history,
   });
 
   return {

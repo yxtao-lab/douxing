@@ -33,7 +33,7 @@
       </button>
     </view>
 
-    <view v-if="isDraft" class="card edit-card">
+    <view v-if="showDraftEdit" class="card edit-card">
       <text class="edit-title">编辑草稿</text>
       <input v-model="editName" class="edit-input" placeholder="路线名称" />
       <textarea v-model="editDesc" class="edit-textarea" placeholder="路线简介" />
@@ -60,7 +60,7 @@
 
     <view v-if="canRegenerate" class="card regenerate-card">
       <text class="regenerate-title">不满意？修改需求重新生成</text>
-      <text class="regenerate-hint">将覆盖当前草稿行程，解锁状态会重置</text>
+      <text class="regenerate-hint">{{ regenerateHint }}</text>
       <textarea
         v-model="regeneratePrompt"
         class="regenerate-input"
@@ -110,6 +110,7 @@ import {
   createRouteComment,
 } from '@/api/routes';
 import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
+import { fetchOrderPaymentConfig } from '@/api/orders';
 import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
@@ -120,6 +121,7 @@ import { getStoredUser } from '@/utils/request';
 const route = ref<TravelRouteInfo | null>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
+const routeUnlockPaymentRequired = ref(false);
 const unlockPayLabel = getUnlockPayButtonLabel();
 const regeneratePrompt = ref('');
 const editName = ref('');
@@ -140,6 +142,12 @@ const isOwner = computed(
 
 const isDraft = computed(() => route.value?.status === RouteStatus.DRAFT);
 
+const allowDraftEdit = ref(false);
+
+const showDraftEdit = computed(
+  () => isDraft.value && isOwner.value && allowDraftEdit.value,
+);
+
 const showShareSetting = computed(
   () => isOwner.value && route.value?.status === RouteStatus.PUBLISHED,
 );
@@ -155,9 +163,16 @@ const canRegenerate = computed(
 
 const isUnlocked = computed(() => {
   if (route.value?.isPublic && !isOwner.value) return true;
+  if (!routeUnlockPaymentRequired.value && isOwner.value) return true;
   const detail = route.value?.routeDetail as Record<string, unknown> | null;
   return detail?.isUnlocked === true || (route.value?.unlockPrice ?? 0) === 0;
 });
+
+const regenerateHint = computed(() =>
+  routeUnlockPaymentRequired.value
+    ? '将覆盖当前草稿行程，解锁状态会重置'
+    : '将覆盖当前草稿行程',
+);
 
 const unlockPrice = computed(() => {
   const detail = route.value?.routeDetail as Record<string, unknown> | null;
@@ -410,6 +425,16 @@ async function handleCheckIn(spot: RouteDayAttraction) {
 
 onLoad((query) => {
   routeId = parseInt(String(query?.id ?? '0'), 10);
+  allowDraftEdit.value = query?.edit === '1';
+  if (getStoredUser()) {
+    fetchOrderPaymentConfig()
+      .then((config) => {
+        routeUnlockPaymentRequired.value = config.routeUnlockPaymentRequired === true;
+      })
+      .catch(() => {
+        routeUnlockPaymentRequired.value = false;
+      });
+  }
   if (routeId) loadDetail();
 });
 </script>

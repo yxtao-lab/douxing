@@ -10,6 +10,7 @@ import {
 import type { OrderInfo } from '@douxing/shared';
 import { getRouteById, unlockRoute } from './route.service.js';
 import { applyOrderStatusTransition } from './order-transition.service.js';
+import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 import { randomBytes } from 'crypto';
 
 function generateOrderNo(): string {
@@ -98,6 +99,10 @@ export async function fulfillOrderAfterPaid(orderId: number) {
 }
 
 export async function createRouteUnlockOrder(userId: number, routeId: number) {
+  if (!isRouteUnlockPaymentRequired()) {
+    return { error: '当前无需支付即可查看路线' as const };
+  }
+
   const route = await getRouteById(routeId, userId);
   if (!route) return { error: '路线不存在' as const };
 

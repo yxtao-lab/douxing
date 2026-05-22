@@ -1,6 +1,7 @@
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { RouteStatus } from '@douxing/shared';
 import type { TravelRouteInfo } from '@douxing/shared';
+import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 
 export type RouteInfoViewerOptions = {
   viewerId?: number;
@@ -19,6 +20,8 @@ function buildRouteDetailForViewer(
 
   const detail = { ...raw };
   if (isPublicVisitor) {
+    detail.isUnlocked = true;
+  } else if (isOwner && !isRouteUnlockPaymentRequired()) {
     detail.isUnlocked = true;
   }
   if (!isOwner) {
@@ -52,7 +55,10 @@ export function toRouteInfo(
     isPublic: row.isPublic === 1,
     isAiGenerated: detailMeta?.isAiGenerated === true,
     unlockPrice: detailMeta?.unlockPrice as number | undefined,
-    isUnlocked: detailMeta?.isUnlocked === true,
+    isUnlocked:
+      !isRouteUnlockPaymentRequired() && options?.viewerId !== undefined && row.creatorId === options.viewerId
+        ? true
+        : detailMeta?.isUnlocked === true,
     generationSource: detailMeta?.generationSource as TravelRouteInfo['generationSource'],
     llmProvider: detailMeta?.llmProvider as TravelRouteInfo['llmProvider'],
     sourcePrompt:

@@ -36,7 +36,7 @@
           </text>
           <button v-if="activeScope === 'mine'" class="btn" @click="goPlan">去规划</button>
         </view>
-        <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item.id)">
+        <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item)">
           <view class="card-head">
             <text class="name">{{ item.name }}</text>
             <text class="tag" v-if="item.isAiGenerated">AI</text>
@@ -114,8 +114,12 @@ function footerLabel(item: TravelRouteInfo) {
   return statusText(item.status);
 }
 
-function goDetail(id: number) {
-  uni.navigateTo({ url: `/pages/routes/detail?id=${id}` });
+function goDetail(item: TravelRouteInfo) {
+  let url = `/pages/routes/detail?id=${item.id}`;
+  if (activeScope.value === 'mine' && item.status === RouteStatus.DRAFT) {
+    url += '&edit=1';
+  }
+  uni.navigateTo({ url });
 }
 
 function goPlan() {

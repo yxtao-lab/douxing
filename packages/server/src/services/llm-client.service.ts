@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { PoiCategory } from '@douxing/shared';
+import type { PlanChatMessage } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -125,6 +126,17 @@ JSON 结构：
 3. 笼统「午餐」「晚餐」「自行用餐」「入住酒店」等必须用 poiType=meal 或 other，禁止虚构店名。
 4. poiType=attraction 时必须填写真实可参考的 latitude、longitude（中国境内 WGS84）。
 5. poiType=restaurant/hotel 时 name 必须是具体店名；鼓励填写 latitude、longitude。`;
+
+const MULTI_TURN_HINT = `
+6. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
+
+function buildSystemPrompt(hasHistory: boolean): string {
+  return hasHistory ? SYSTEM_PROMPT + MULTI_TURN_HINT : SYSTEM_PROMPT;
+}
+
+function buildAssistantHistoryContent(message: PlanChatMessage): string {
+  return message.content;
+}
 
 function extractJsonObject(text: string): string {
   const trimmed = text.trim();
@@ -254,7 +266,7 @@ export async function checkLlmAvailability(): Promise<{
 async function chatCompletionWithProvider(
   provider: LlmProviderId,
   userPrompt: string,
-  options?: { days?: number; budget?: string },
+  options?: { days?: number; budget?: string; history?: PlanChatMessage[] },
 ): Promise<LlmRoutePayload> {
   const config = getProviderConfig(provider);
   if (!config.configured) {
@@ -266,8 +278,13 @@ async function chatCompletionWithProvider(
   if (options?.days) userContent += `\n（期望天数：${options.days}天）`;
   if (options?.budget) userContent += `\n（预算：${options.budget}）`;
 
+  const history = options?.history ?? [];
   const messages: ChatMessage[] = [
-    { role: 'system', content: SYSTEM_PROMPT },
+    { role: 'system', content: buildSystemPrompt(history.length > 0) },
+    ...history.map((item) => ({
+      role: item.role,
+      content: buildAssistantHistoryContent(item),
+    })),
     { role: 'user', content: userContent },
   ];
 
@@ -339,7 +356,12 @@ async function chatCompletionWithProvider(
 /** 按提供商链依次尝试生成路线 */
 export async function chatCompletionForRoute(
   userPrompt: string,
-  options?: { days?: number; budget?: string; provider?: LlmProviderChoice },
+  options?: {
+    days?: number;
+    budget?: string;
+    provider?: LlmProviderChoice;
+    history?: PlanChatMessage[];
+  },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);
   if (chain.length === 0) {

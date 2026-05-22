@@ -1,13 +1,17 @@
 <template>
   <view class="page tab-page">
     <view class="header">
-      <text class="title">AI 智能规划</text>
-      <text class="desc">支持 DeepSeek 云端或本地 LM Studio，也可自动选择</text>
+      <view class="header-top">
+        <text class="title">AI 智能规划</text>
+        <text v-if="sessionId" class="new-session" @click="resetSession">新建</text>
+      </view>
+      <text class="desc">多轮对话：生成后可追问调整，如「第三天改成西湖」</text>
       <view class="llm-status" :class="llmStatusClass">
         <text>{{ llmStatusText }}</text>
       </view>
     </view>
-    <view class="card">
+
+    <view v-if="!sessionId" class="card setup-card">
       <text class="label">选择模型</text>
       <view class="provider-row">
         <view
@@ -20,44 +24,103 @@
           <text class="provider-name">{{ opt.label }}</text>
         </view>
       </view>
-      <textarea
-        v-model="prompt"
-        class="input"
-        placeholder="例如：帮我规划一个3天2夜的杭州亲子游，预算5000"
-        :maxlength="200"
-      />
       <view class="chips">
         <text
           v-for="item in quickPrompts"
           :key="item"
           class="chip"
-          @click="prompt = item"
+          @click="inputText = item"
         >{{ item }}</text>
       </view>
-      <button class="btn-primary" :loading="aiPlanning" :disabled="aiPlanning" @click="handleGenerate">
-        生成路线
+    </view>
+
+    <scroll-view
+      v-if="messages.length > 0"
+      class="chat-scroll"
+      scroll-y
+      :scroll-into-view="scrollIntoView"
+      scroll-with-animation
+    >
+      <view
+        v-for="msg in messages"
+        :id="`msg-${msg.id}`"
+        :key="msg.id"
+        class="msg-row"
+        :class="msg.role"
+      >
+        <view class="bubble">
+          <text>{{ msg.content }}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view v-if="currentRouteId" class="route-bar">
+      <text class="route-tip">当前方案已更新</text>
+      <text class="route-link" @click="openRouteDetail">查看路线详情</text>
+    </view>
+
+    <view class="composer">
+      <textarea
+        v-model="inputText"
+        class="composer-input"
+        :placeholder="composerPlaceholder"
+        :maxlength="500"
+        :disabled="aiPlanning"
+        auto-height
+      />
+      <button
+        class="btn-send"
+        :loading="aiPlanning"
+        :disabled="aiPlanning || !inputText.trim()"
+        @click="handleSend"
+      >
+        发送
       </button>
     </view>
+
     <DouxingTabBar :current="1" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { onShow, onLoad } from '@dcloudio/uni-app';
-import { generateRoute, fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
+import { fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
+import {
+  appendPlanMessage,
+  createPlanSession,
+  fetchPlanSession,
+} from '@/api/plan-sessions';
 import { getStoredUser } from '@/utils/request';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
-import type { LlmProviderChoice, LlmProviderOption } from '@douxing/shared';
+import type {
+  LlmProviderChoice,
+  LlmProviderOption,
+  PlanSessionMessageInfo,
+} from '@douxing/shared';
 import { LlmProvider } from '@douxing/shared';
 
-const prompt = ref('');
+interface ChatMessage {
+  id: number | string;
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+const inputText = ref('');
+const sessionId = ref<number | null>(null);
+const currentRouteId = ref<number | null>(null);
+const messages = ref<ChatMessage[]>([]);
+const scrollIntoView = ref('');
 const aiPlanning = computed(() => aiPlanLoadingState.active);
 const provider = ref<LlmProviderChoice>(LlmProvider.AUTO);
 const providerOptions = ref<LlmProviderOption[]>([]);
 const llmAvailable = ref<boolean | null>(null);
 const statusDetail = ref('');
+
+const composerPlaceholder = computed(() =>
+  sessionId.value ? '继续追问或提出修改，如：预算降到3000' : '描述旅行需求，如：杭州3天亲子游，预算5000',
+);
 
 const llmStatusText = computed(() => {
   if (llmAvailable.value === null) return '正在检测 AI 服务…';
@@ -71,7 +134,7 @@ const llmStatusClass = computed(() => {
 });
 
 function selectProvider(opt: LlmProviderOption) {
-  if (aiPlanLoadingState.active) return;
+  if (aiPlanLoadingState.active || sessionId.value) return;
   if (!opt.available) {
     uni.showToast({ title: '该模型未配置', icon: 'none' });
     return;
@@ -90,6 +153,44 @@ function refreshStatusForProvider() {
   const opt = providerOptions.value.find((o) => o.id === p);
   llmAvailable.value = opt?.available ?? false;
   statusDetail.value = opt?.available ? opt.label : `${opt?.label ?? p} 未就绪`;
+}
+
+function mapMessages(list: PlanSessionMessageInfo[]): ChatMessage[] {
+  return list.map((item) => ({
+    id: item.id,
+    role: item.role,
+    content: item.content,
+  }));
+}
+
+function scrollToBottom() {
+  const last = messages.value[messages.value.length - 1];
+  if (!last) return;
+  scrollIntoView.value = '';
+  nextTick(() => {
+    scrollIntoView.value = `msg-${last.id}`;
+  });
+}
+
+function resetSession() {
+  if (aiPlanLoadingState.active) return;
+  sessionId.value = null;
+  currentRouteId.value = null;
+  messages.value = [];
+  inputText.value = '';
+}
+
+function openRouteDetail() {
+  if (!currentRouteId.value) return;
+  uni.navigateTo({ url: `/pages/routes/detail?id=${currentRouteId.value}` });
+}
+
+async function loadSession(id: number) {
+  const session = await fetchPlanSession(id);
+  sessionId.value = session.id;
+  currentRouteId.value = session.routeId;
+  messages.value = mapMessages(session.messages);
+  scrollToBottom();
 }
 
 onMounted(async () => {
@@ -116,10 +217,21 @@ onShow(() => {
   uni.hideTabBar({ animation: false });
 });
 
-onLoad((query) => {
+onLoad(async (query) => {
   const fromPrompt = query?.prompt;
   if (typeof fromPrompt === 'string' && fromPrompt.trim()) {
-    prompt.value = decodeURIComponent(fromPrompt.trim());
+    inputText.value = decodeURIComponent(fromPrompt.trim());
+  }
+  const rawSessionId = query?.sessionId;
+  if (typeof rawSessionId === 'string' && rawSessionId.trim()) {
+    const id = Number(rawSessionId);
+    if (!Number.isNaN(id) && getStoredUser()) {
+      try {
+        await loadSession(id);
+      } catch {
+        /* 忽略无效会话 */
+      }
+    }
   }
 });
 
@@ -129,54 +241,79 @@ const quickPrompts = [
   '成都美食两日游',
 ];
 
-async function handleGenerate() {
+async function handleSend() {
   if (aiPlanLoadingState.active) return;
   if (!getStoredUser()) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
-  if (!prompt.value.trim()) {
-    uni.showToast({ title: '请输入旅行需求', icon: 'none' });
+  const text = inputText.value.trim();
+  if (!text) {
+    uni.showToast({ title: '请输入内容', icon: 'none' });
     return;
   }
+
+  const pendingId = `pending-${Date.now()}`;
+  messages.value.push({ id: pendingId, role: 'user', content: text });
+  inputText.value = '';
+  scrollToBottom();
+
   try {
-    const route = await generateRoute({
-      prompt: prompt.value.trim(),
-      provider: provider.value,
-    });
-    let tip = '已生成（模板模式）';
-    if (route.generationSource === 'llm') {
-      tip =
-        route.llmProvider === 'deepseek'
-          ? 'DeepSeek 生成成功'
-          : route.llmProvider === 'lmstudio'
-            ? '本地模型生成成功'
-            : 'AI 生成成功';
+    if (!sessionId.value) {
+      const result = await createPlanSession({
+        prompt: text,
+        provider: provider.value,
+      });
+      sessionId.value = result.sessionId;
+      currentRouteId.value = result.id;
+      const session = await fetchPlanSession(result.sessionId);
+      messages.value = mapMessages(session.messages);
+      scrollToBottom();
+      uni.showToast({ title: '方案已生成', icon: 'success' });
+      return;
     }
-    uni.showToast({ title: tip, icon: 'success' });
-    uni.navigateTo({ url: `/pages/routes/detail?id=${route.id}` });
+
+    const result = await appendPlanMessage(sessionId.value, { content: text });
+    currentRouteId.value = result.id;
+    const session = await fetchPlanSession(sessionId.value);
+    messages.value = mapMessages(session.messages);
+    scrollToBottom();
+    uni.showToast({ title: '方案已更新', icon: 'success' });
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '生成失败';
+    messages.value = messages.value.filter((m) => m.id !== pendingId);
+    const msg = e instanceof Error ? e.message : '发送失败';
     if (msg !== AI_PLAN_CANCELLED_MESSAGE) {
       uni.showToast({ title: msg, icon: 'none' });
     }
+    inputText.value = text;
   }
 }
 </script>
 
 <style scoped>
 .page {
-  padding: 32rpx;
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  padding: 32rpx 32rpx 120rpx;
   background: #f5f7fa;
+  box-sizing: border-box;
 }
 .header {
-  margin-bottom: 32rpx;
+  margin-bottom: 24rpx;
+}
+.header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 .title {
   font-size: 40rpx;
   font-weight: 600;
-  display: block;
+}
+.new-session {
+  font-size: 26rpx;
+  color: #1677ff;
 }
 .desc {
   color: #6b7280;
@@ -206,8 +343,9 @@ async function handleGenerate() {
 .card {
   background: #fff;
   border-radius: 16rpx;
-  padding: 32rpx;
+  padding: 24rpx;
   box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  margin-bottom: 24rpx;
 }
 .label {
   font-size: 26rpx;
@@ -218,11 +356,11 @@ async function handleGenerate() {
 .provider-row {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
-  margin-bottom: 24rpx;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
 }
 .provider-item {
-  padding: 20rpx 24rpx;
+  padding: 16rpx 20rpx;
   border: 2rpx solid #e5e7eb;
   border-radius: 12rpx;
   background: #fafafa;
@@ -238,17 +376,10 @@ async function handleGenerate() {
   font-size: 26rpx;
   color: #1f2937;
 }
-.input {
-  width: 100%;
-  min-height: 200rpx;
-  font-size: 28rpx;
-  line-height: 1.6;
-}
 .chips {
   display: flex;
   flex-wrap: wrap;
   gap: 16rpx;
-  margin: 24rpx 0;
 }
 .chip {
   background: #e8f3ff;
@@ -257,9 +388,79 @@ async function handleGenerate() {
   border-radius: 999rpx;
   font-size: 24rpx;
 }
-.btn-primary {
+.chat-scroll {
+  flex: 1;
+  max-height: 52vh;
+  margin-bottom: 16rpx;
+}
+.msg-row {
+  display: flex;
+  margin-bottom: 20rpx;
+}
+.msg-row.user {
+  justify-content: flex-end;
+}
+.msg-row.assistant {
+  justify-content: flex-start;
+}
+.bubble {
+  max-width: 78%;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+.msg-row.user .bubble {
+  background: #1677ff;
+  color: #fff;
+  border-bottom-right-radius: 4rpx;
+}
+.msg-row.assistant .bubble {
+  background: #fff;
+  color: #1f2937;
+  border-bottom-left-radius: 4rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+.route-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+.route-tip {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+.route-link {
+  font-size: 26rpx;
+  color: #1677ff;
+}
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 16rpx;
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 16rpx;
+  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+}
+.composer-input {
+  flex: 1;
+  min-height: 72rpx;
+  max-height: 200rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+.btn-send {
+  flex-shrink: 0;
+  min-width: 120rpx;
   background: #1677ff;
   color: #fff;
   border-radius: 12rpx;
+  font-size: 28rpx;
+  margin: 0;
 }
 </style>

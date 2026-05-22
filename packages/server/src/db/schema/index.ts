@@ -13,3 +13,4 @@ export * from './achievements.js';
 export * from './achievement-definitions.js';
 export * from './badges.js';
 export * from './user-badges.js';
+export * from './plan-sessions.js';

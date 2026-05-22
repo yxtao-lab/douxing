@@ -22,6 +22,7 @@ import { getAllProvidersStatus, listProviderOptions } from '../services/llm-clie
 import { isLlmEnabled } from '../config/llm.js';
 import { RoleCode } from '@douxing/shared';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
+import planSessionsRouter from './plan-sessions.js';
 
 const router = Router();
 
@@ -97,6 +98,8 @@ router.get('/llm-status', async (_req, res) => {
     return fail(res, '检测 LLM 状态失败', 500, 500);
   }
 });
+
+router.use('/plan-sessions', planSessionsRouter);
 
 router.post('/generate', authMiddleware, async (req, res) => {
   try {

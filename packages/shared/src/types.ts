@@ -209,6 +209,63 @@ export interface GenerateRouteRequest {
 /** 修改 prompt 后重新生成（与 GenerateRouteRequest 字段一致） */
 export type RegenerateRouteRequest = GenerateRouteRequest;
 
+/** 规划对话消息角色 */
+export type PlanSessionMessageRole = 'user' | 'assistant';
+
+/** 传给 LLM 的对话历史条目 */
+export interface PlanChatMessage {
+  role: PlanSessionMessageRole;
+  content: string;
+}
+
+/** 规划会话消息 */
+export interface PlanSessionMessageInfo {
+  id: number;
+  role: PlanSessionMessageRole;
+  content: string;
+  routeSnapshot?: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/** 规划会话摘要（列表） */
+export interface PlanSessionSummary {
+  id: number;
+  routeId: number | null;
+  provider: LlmProviderChoice | null;
+  status: number;
+  title: string | null;
+  messageCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 规划会话详情 */
+export interface PlanSessionInfo extends PlanSessionSummary {
+  messages: PlanSessionMessageInfo[];
+  route?: TravelRouteInfo | null;
+}
+
+/** 创建规划会话（首条需求） */
+export interface CreatePlanSessionRequest {
+  prompt: string;
+  days?: number;
+  budget?: string;
+  provider?: LlmProviderChoice;
+}
+
+/** 追问 / 调整方案 */
+export interface AppendPlanMessageRequest {
+  content: string;
+}
+
+/** 规划会话操作结果（含路线与助手回复） */
+export interface PlanSessionActionResult extends TravelRouteInfo {
+  sessionId: number;
+  assistantMessage: string;
+  generationSource?: 'llm' | 'template';
+  llmProvider?: 'deepseek' | 'lmstudio';
+}
+
 export interface OrderInfo {
   id: number;
   orderNo: string;
