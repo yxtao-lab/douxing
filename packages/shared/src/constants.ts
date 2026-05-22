@@ -124,11 +124,35 @@ export const ATTRACTION_MATCH_MERGE_THRESHOLD = 0.85;
 /** LLM 来源景点票价可覆盖的天数阈值 */
 export const ATTRACTION_LLM_PRICE_STALE_DAYS = 90;
 
-/** 成就类型 */
+/** 成就类型（achievement_code） */
 export const AchievementType = {
   FIRST_CHECKIN: 'first_checkin',
   EXPLORER: 'explorer',
+  VETERAN_TRAVELER: 'veteran_traveler',
+  CITY_WANDERER: 'city_wanderer',
+  CITY_CONQUEROR: 'city_conqueror',
   ROUTE_MASTER: 'route_master',
+  PHOTO_STORY: 'photo_story',
+  STREAK_WEEK: 'streak_week',
+} as const;
+
+/** 成就分类 */
+export const AchievementCategory = {
+  EXPLORE: 'explore',
+  CHALLENGE: 'challenge',
+  SOCIAL: 'social',
+  CONSUME: 'consume',
+} as const;
+
+/** 成就解锁条件类型 */
+export const AchievementConditionType = {
+  CITY_CHECKIN: 'city_checkin',
+  TOTAL_CHECKINS: 'total_checkins',
+  DISTINCT_CITIES: 'distinct_cities',
+  PHOTO_CHECKIN: 'photo_checkin',
+  ROUTE_CHECKINS: 'route_checkins',
+  CONSECUTIVE_DAYS: 'consecutive_days',
+  DAILY_CHECKINS: 'daily_checkins',
 } as const;
 
 /** 徽章分类 */
@@ -179,3 +203,21 @@ export const CHECKIN_MAX_SPEED_KMH = 300;
 
 /** 速度检测最小时间间隔（秒），低于此间隔不检测 */
 export const CHECKIN_SPEED_MIN_INTERVAL_SEC = 30;
+
+/** 排行榜周期 */
+export const LeaderboardPeriod = {
+  WEEK: 'week',
+  MONTH: 'month',
+} as const;
+
+/** 排行榜指标 */
+export const LeaderboardMetric = {
+  CHECKINS: 'checkins',
+  POINTS: 'points',
+} as const;
+
+/** 排行榜默认返回条数 */
+export const LEADERBOARD_DEFAULT_LIMIT = 50;
+
+/** 排行榜最大返回条数 */
+export const LEADERBOARD_MAX_LIMIT = 100;

@@ -300,9 +300,12 @@ LLM_MODEL=你的模型名称
 - `POST /api/attractions/admin/:id/approve` — 审核通过（admin）
 - `POST /api/checkins` — 打卡（可传 `attractionId`）
 - `GET /api/checkins` — 打卡列表
-- `GET /api/achievements` — 我的成就
+- `GET /api/achievements` — 已解锁成就（兼容）
+- `GET /api/achievements/catalog` — 成就图鉴（含进度）
+- `GET /api/achievements/mine` — 已解锁成就
 - `GET /api/badges` — 徽章图鉴（含解锁状态与进度）
 - `GET /api/badges/mine` — 已解锁徽章
+- `GET /api/leaderboard` — 打卡排行榜（`period=week|month`、`metric=checkins|points`）
 - `POST /api/orders` — 创建解锁订单
 - `POST /api/orders/:id/pay` — 模拟支付
 
@@ -319,7 +322,8 @@ LLM_MODEL=你的模型名称
 | `travel_routes` | 路线 | id、name、description、budget_range、days、interest_tags(JSON)、route_detail(JSON)、creator_id、status |
 | `attractions` | 景点基础库 | id、name、city、city_code、latitude、longitude、tags(JSON)、ticket_price、aliases |
 | `check_ins` | 打卡记录 | id、user_id、route_id、attraction_id、location(JSON)、checked_at、status、remark |
-| `achievements` | 成就 | id、user_id、achievement_type、unlocked_at、description |
+| `achievements` | 用户成就 | user_id、achievement_type、unlocked_at |
+| `achievement_definitions` | 成就配置 | achievement_code、category、condition_type、condition_value |
 | `badges` | 徽章定义 | badge_code、name、category、condition_type、condition_value、rarity |
 | `user_badges` | 用户徽章 | user_id、badge_id、unlock_time、progress |
 

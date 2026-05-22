@@ -276,9 +276,39 @@ export interface CheckInInfo {
 export interface AchievementInfo {
   id: number;
   userId: number;
+  /** 成就编码，与 achievement_definitions.achievement_code 对应 */
   achievementType: string;
-  unlockedAt: string;
+  achievementCode: string;
+  name: string;
   description: string | null;
+  category: string;
+  iconUrl: string | null;
+  pointsReward: number;
+  unlockedAt: string;
+}
+
+export interface AchievementDefinitionInfo {
+  id: number;
+  achievementCode: string;
+  name: string;
+  description: string | null;
+  category: string;
+  conditionType: string;
+  conditionValue: Record<string, unknown> | null;
+  iconUrl: string | null;
+  pointsReward: number;
+  sortOrder: number;
+}
+
+export interface AchievementProgress {
+  current: number;
+  target: number;
+}
+
+export interface AchievementCatalogItem extends AchievementDefinitionInfo {
+  unlocked: boolean;
+  unlockTime?: string | null;
+  progress?: AchievementProgress | null;
 }
 
 export interface BadgeInfo {
@@ -313,4 +343,26 @@ export interface UserBadgeInfo {
   unlockTime: string;
   isDisplayed: boolean;
   progress: Record<string, unknown> | null;
+}
+
+export interface LeaderboardEntry {
+  rank: number;
+  userId: number;
+  nickname: string;
+  avatar: string | null;
+  checkinCount: number;
+  totalPoints: number;
+  /** 当前榜单主指标值 */
+  value: number;
+  isMe?: boolean;
+}
+
+export interface LeaderboardResult {
+  period: string;
+  metric: string;
+  periodStart: string;
+  periodEnd: string;
+  entries: LeaderboardEntry[];
+  myRank: number | null;
+  myValue: number | null;
 }

@@ -7,6 +7,7 @@ import checkinsRouter from './checkins.js';
 import ordersRouter from './orders.js';
 import achievementsRouter from './achievements.js';
 import badgesRouter from './badges.js';
+import leaderboardRouter from './leaderboard.js';
 import usersRouter from './users.js';
 import attractionsRouter from './attractions.js';
 
@@ -21,5 +22,6 @@ router.use(`${API_PREFIX}/checkins`, checkinsRouter);
 router.use(`${API_PREFIX}/orders`, ordersRouter);
 router.use(`${API_PREFIX}/achievements`, achievementsRouter);
 router.use(`${API_PREFIX}/badges`, badgesRouter);
+router.use(`${API_PREFIX}/leaderboard`, leaderboardRouter);
 
 export default router;

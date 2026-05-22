@@ -12,32 +12,47 @@
       </view>
       <text class="edit-arrow">›</text>
     </view>
-    <view class="user-card" v-else>
-      <text>未登录</text>
-      <button class="btn" @click="goLogin">登录 / 注册</button>
+    <view class="user-card guest-card" v-else>
+      <view class="guest-info">
+        <text class="guest-title">登录兜行</text>
+        <text class="guest-desc">解锁打卡、成就与排行榜</text>
+      </view>
+      <button class="btn-login" @click="goLogin">登录 / 注册</button>
     </view>
 
     <view class="section">
-      <text class="section-title">我的成就</text>
-      <view v-if="achievements.length === 0" class="empty">打卡解锁成就</view>
-      <view v-for="item in achievements" :key="item.id" class="achievement">
-        <text class="badge">🏅</text>
-        <view>
-          <text class="a-title">{{ achievementLabel(item.achievementType) }}</text>
-          <text class="a-desc">{{ item.description }}</text>
+      <text class="section-title">个性化</text>
+      <view class="grid-card">
+        <view
+          v-for="item in travelGridItems"
+          :key="item.key"
+          class="grid-item"
+          @click="handleGridTap(item)"
+        >
+          <view class="grid-icon-wrap" :style="{ background: item.bg }">
+            <text class="grid-icon">{{ item.icon }}</text>
+          </view>
+          <text class="grid-label">{{ item.label }}</text>
         </view>
       </view>
     </view>
 
-    <view class="menu">
-      <view class="menu-item" v-if="user" @click="goEdit">编辑资料</view>
-      <view class="menu-item" @click="goRoutes">我的路线</view>
-      <view class="menu-item" v-if="user" @click="goBadges">我的徽章</view>
-      <view class="menu-item" @click="goCheckins">打卡记录</view>
-      <view class="menu-item" @click="goCheckinMap">打卡地图</view>
-      <view class="menu-item" v-if="user" @click="goOrders">我的订单</view>
-      <view class="menu-item" v-if="user" @click="handleLogout">退出登录</view>
+    <view class="section">
+      <text class="section-title">账号与服务</text>
+      <view class="action-card">
+        <button
+          v-for="action in userActions"
+          :key="action.key"
+          class="action-btn"
+          :class="action.variant"
+          @click="handleActionTap(action)"
+        >
+          {{ action.label }}
+        </button>
+        <button v-if="user" class="action-btn danger" @click="handleLogout">退出登录</button>
+      </view>
     </view>
+
     <DouxingTabBar :current="3" />
   </view>
 </template>
@@ -45,25 +60,68 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import type { UserInfo, AchievementInfo } from '@douxing/shared';
-import { AchievementType } from '@douxing/shared';
-import { fetchAchievements } from '@/api/achievements';
+import type { UserInfo } from '@douxing/shared';
 import { fetchCurrentUser } from '@/api/user';
 import { getStoredUser, setAuth } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 
+interface GridItem {
+  key: string;
+  icon: string;
+  label: string;
+  bg: string;
+  needLogin?: boolean;
+  action: () => void;
+}
+
+interface UserAction {
+  key: string;
+  label: string;
+  variant?: 'primary' | 'default';
+  needLogin?: boolean;
+  action: () => void;
+}
+
 const user = ref<UserInfo | null>(getStoredUser());
-const achievements = ref<AchievementInfo[]>([]);
 
 const avatarText = computed(() => (user.value?.nickname || user.value?.username || '?').slice(0, 1));
 
-function achievementLabel(type: string) {
-  const map: Record<string, string> = {
-    [AchievementType.FIRST_CHECKIN]: '初行者',
-    [AchievementType.EXPLORER]: '探索达人',
-    [AchievementType.ROUTE_MASTER]: '路线大师',
-  };
-  return map[type] ?? type;
+const travelGridItems: GridItem[] = [
+  { key: 'checkins', icon: '📍', label: '打卡记录', bg: '#e6f4ff', action: goCheckins },
+  { key: 'map', icon: '🗺️', label: '打卡地图', bg: '#f0fdf4', needLogin: true, action: goCheckinMap },
+  { key: 'achievements', icon: '🏅', label: '我的成就', bg: '#fff7e6', needLogin: true, action: goAchievements },
+  { key: 'badges', icon: '🎖️', label: '我的徽章', bg: '#f9f0ff', needLogin: true, action: goBadges },
+  { key: 'leaderboard', icon: '🏆', label: '排行榜', bg: '#fff1f0', needLogin: true, action: goLeaderboard },
+];
+
+const userActions: UserAction[] = [
+  { key: 'edit', label: '编辑资料', variant: 'primary', needLogin: true, action: goEdit },
+  { key: 'routes', label: '我的路线', action: goRoutes },
+  { key: 'orders', label: '我的订单', needLogin: true, action: goOrders },
+];
+
+function requireLogin(then: () => void) {
+  if (!user.value) {
+    goLogin();
+    return;
+  }
+  then();
+}
+
+function handleGridTap(item: GridItem) {
+  if (item.needLogin) {
+    requireLogin(item.action);
+    return;
+  }
+  item.action();
+}
+
+function handleActionTap(action: UserAction) {
+  if (action.needLogin) {
+    requireLogin(action.action);
+    return;
+  }
+  action.action();
 }
 
 function goLogin() {
@@ -71,10 +129,6 @@ function goLogin() {
 }
 
 function goEdit() {
-  if (!user.value) {
-    goLogin();
-    return;
-  }
   uni.navigateTo({ url: '/pages/profile/edit' });
 }
 
@@ -87,26 +141,22 @@ function goCheckins() {
 }
 
 function goBadges() {
-  if (!user.value) {
-    goLogin();
-    return;
-  }
   uni.navigateTo({ url: '/pages/badges/index' });
 }
 
+function goAchievements() {
+  uni.navigateTo({ url: '/pages/achievements/index' });
+}
+
+function goLeaderboard() {
+  uni.navigateTo({ url: '/pages/leaderboard/index' });
+}
+
 function goCheckinMap() {
-  if (!user.value) {
-    goLogin();
-    return;
-  }
   uni.navigateTo({ url: '/pages/checkins/map' });
 }
 
 function goOrders() {
-  if (!user.value) {
-    goLogin();
-    return;
-  }
   uni.navigateTo({ url: '/pages/orders/list' });
 }
 
@@ -114,7 +164,6 @@ function handleLogout() {
   uni.removeStorageSync('douxing_token');
   uni.removeStorageSync('douxing_user');
   user.value = null;
-  achievements.value = [];
   uni.showToast({ title: '已退出', icon: 'none' });
 }
 
@@ -130,11 +179,6 @@ onShow(async () => {
   } catch {
     /* 离线时沿用本地缓存 */
   }
-  try {
-    achievements.value = await fetchAchievements();
-  } catch {
-    achievements.value = [];
-  }
 });
 </script>
 
@@ -142,6 +186,7 @@ onShow(async () => {
 .page {
   min-height: 100vh;
   background: #f5f7fa;
+  padding-bottom: 24rpx;
 }
 .user-card {
   background: #fff;
@@ -149,6 +194,25 @@ onShow(async () => {
   display: flex;
   align-items: center;
   gap: 24rpx;
+}
+.guest-card {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 28rpx;
+}
+.guest-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.guest-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  color: #111827;
+}
+.guest-desc {
+  font-size: 24rpx;
+  color: #6b7280;
 }
 .avatar,
 .avatar-img {
@@ -192,53 +256,93 @@ onShow(async () => {
   font-size: 24rpx;
 }
 .section {
-  margin: 24rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 28rpx;
+  margin: 24rpx 24rpx 0;
 }
 .section-title {
-  font-weight: 600;
-  font-size: 30rpx;
   display: block;
-  margin-bottom: 20rpx;
-}
-.empty {
-  color: #9ca3af;
-  font-size: 26rpx;
-}
-.achievement {
-  display: flex;
-  gap: 16rpx;
-  padding: 16rpx 0;
-  border-top: 1rpx solid #f3f4f6;
-}
-.badge {
-  font-size: 40rpx;
-}
-.a-title {
   font-size: 28rpx;
-  font-weight: 500;
-  display: block;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 16rpx;
+  padding-left: 4rpx;
 }
-.a-desc {
-  color: #6b7280;
-  font-size: 24rpx;
-}
-.menu {
-  margin: 24rpx;
+.grid-card {
   background: #fff;
   border-radius: 16rpx;
-  overflow: hidden;
+  padding: 24rpx 8rpx 8rpx;
+  display: flex;
+  flex-wrap: wrap;
 }
-.menu-item {
-  padding: 32rpx;
-  border-bottom: 1rpx solid #f3f4f6;
+.grid-item {
+  width: 33.33%;
+  box-sizing: border-box;
+  padding: 16rpx 8rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12rpx;
+}
+.grid-item:active {
+  opacity: 0.75;
+}
+.grid-icon-wrap {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.grid-icon {
+  font-size: 44rpx;
+  line-height: 1;
+}
+.grid-label {
+  font-size: 24rpx;
+  color: #374151;
+  text-align: center;
+}
+.action-card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+.action-btn {
+  width: 100%;
+  height: 88rpx;
+  line-height: 88rpx;
+  border-radius: 16rpx;
   font-size: 30rpx;
+  font-weight: 500;
+  border: none;
+  background: #f3f4f6;
+  color: #374151;
 }
-.btn {
-  margin-top: 16rpx;
+.action-btn::after {
+  border: none;
+}
+.action-btn.primary {
   background: #1677ff;
   color: #fff;
+}
+.action-btn.danger {
+  background: #fff;
+  color: #ef4444;
+  border: 1rpx solid #fecaca;
+}
+.btn-login {
+  background: #1677ff;
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  height: 88rpx;
+  line-height: 88rpx;
+  border: none;
+}
+.btn-login::after {
+  border: none;
 }
 </style>

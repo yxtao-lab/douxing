@@ -1,11 +1,11 @@
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { badges } from '../db/schema/badges.js';
 import { userBadges } from '../db/schema/user-badges.js';
-import { checkIns } from '../db/schema/check-ins.js';
 import { BadgeConditionType } from '@douxing/shared';
 import type { BadgeCatalogItem, BadgeInfo, BadgeProgress, UserBadgeInfo } from '@douxing/shared';
 import { BADGE_SEEDS } from '../data/badge-seeds.js';
+import { gatherUserCheckinStats, type UserCheckinStats } from './checkin-stats.service.js';
 
 function toBadgeInfo(row: typeof badges.$inferSelect): BadgeInfo {
   return {
@@ -34,68 +34,6 @@ function toUserBadgeInfo(
     unlockTime: userBadgeRow.unlockTime.toISOString(),
     isDisplayed: userBadgeRow.isDisplayed,
     progress: userBadgeRow.progress ?? null,
-  };
-}
-
-interface UserCheckinStats {
-  totalCheckins: number;
-  distinctCities: number;
-  cityCounts: Map<string, number>;
-  hasPhotoCheckin: boolean;
-  maxRouteCheckins: number;
-}
-
-async function gatherUserCheckinStats(userId: number): Promise<UserCheckinStats> {
-  const db = getDb();
-
-  const countRows = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(checkIns)
-    .where(eq(checkIns.userId, userId));
-  const totalCheckins = Number(countRows[0]?.count ?? 0);
-
-  const cityRows = await db
-    .select({
-      cityCode: checkIns.cityCode,
-      count: sql<number>`count(*)`,
-    })
-    .from(checkIns)
-    .where(eq(checkIns.userId, userId))
-    .groupBy(checkIns.cityCode);
-
-  const cityCounts = new Map<string, number>();
-  for (const row of cityRows) {
-    cityCounts.set(row.cityCode, Number(row.count));
-  }
-
-  const photoRows = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(checkIns)
-    .where(
-      and(
-        eq(checkIns.userId, userId),
-        sql`${checkIns.photos} IS NOT NULL AND JSON_LENGTH(${checkIns.photos}) > 0`,
-      ),
-    );
-  const hasPhotoCheckin = Number(photoRows[0]?.count ?? 0) > 0;
-
-  const routeRows = await db
-    .select({
-      routeId: checkIns.routeId,
-      count: sql<number>`count(*)`,
-    })
-    .from(checkIns)
-    .where(eq(checkIns.userId, userId))
-    .groupBy(checkIns.routeId);
-
-  const maxRouteCheckins = routeRows.reduce((max, row) => Math.max(max, Number(row.count)), 0);
-
-  return {
-    totalCheckins,
-    distinctCities: cityCounts.size,
-    cityCounts,
-    hasPhotoCheckin,
-    maxRouteCheckins,
   };
 }
 
