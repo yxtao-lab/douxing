@@ -81,6 +81,7 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
     route,
     generationSource: draft.generationSource,
     llmProvider: draft.llmProvider,
+    intent: draft.intent,
   };
 }
 
@@ -287,5 +288,6 @@ export async function regenerateRouteFromPrompt(
     route,
     generationSource: draft.generationSource,
     llmProvider: draft.llmProvider,
+    intent: draft.intent,
   };
 }

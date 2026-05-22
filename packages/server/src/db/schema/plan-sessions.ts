@@ -28,6 +28,7 @@ export const planSessions = mysqlTable('plan_sessions', {
   provider: varchar('provider', { length: 16 }),
   status: tinyint('status').notNull().default(PlanSessionStatus.ACTIVE),
   title: varchar('title', { length: 128 }),
+  intentSnapshot: json('intent_snapshot').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });

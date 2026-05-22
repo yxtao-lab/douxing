@@ -212,6 +212,18 @@ export type RegenerateRouteRequest = GenerateRouteRequest;
 /** 规划对话消息角色 */
 export type PlanSessionMessageRole = 'user' | 'assistant';
 
+/** C2：从用户描述中解析的结构化旅行意图 */
+export interface TravelIntentSnapshot {
+  city: string | null;
+  days: number | null;
+  /** 预算描述，如 "5000" 或 "2000-4000" */
+  budget: string | null;
+  budgetMin: number | null;
+  budgetMax: number | null;
+  themes: string[];
+  confidence: 'low' | 'medium' | 'high';
+}
+
 /** 传给 LLM 的对话历史条目 */
 export interface PlanChatMessage {
   role: PlanSessionMessageRole;
@@ -235,6 +247,7 @@ export interface PlanSessionSummary {
   status: number;
   title: string | null;
   messageCount: number;
+  intentSnapshot?: TravelIntentSnapshot | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -262,6 +275,7 @@ export interface AppendPlanMessageRequest {
 export interface PlanSessionActionResult extends TravelRouteInfo {
   sessionId: number;
   assistantMessage: string;
+  intentSnapshot?: TravelIntentSnapshot | null;
   generationSource?: 'llm' | 'template';
   llmProvider?: 'deepseek' | 'lmstudio';
 }

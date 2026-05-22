@@ -1,7 +1,12 @@
 import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js';
 import type { LlmProviderChoice } from '../config/llm.js';
-import type { PlanChatMessage } from '@douxing/shared';
+import type { PlanChatMessage, TravelIntentSnapshot } from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
+import {
+  buildIntentFromHistory,
+  enforceRouteConstraints,
+  parseTravelIntent,
+} from './travel-intent.service.js';
 
 export interface GenerateRouteInput {
   prompt: string;
@@ -11,6 +16,8 @@ export interface GenerateRouteInput {
   provider?: LlmProviderChoice;
   /** 多轮对话历史（不含当前 prompt） */
   history?: PlanChatMessage[];
+  /** C2：已解析的结构化意图（可选，未传则自动从对话抽取） */
+  intent?: TravelIntentSnapshot;
 }
 
 export interface GeneratedRouteDraft {
@@ -25,34 +32,17 @@ export interface GeneratedRouteDraft {
   isAiGenerated: boolean;
 }
 
-function detectCity(prompt: string): string | null {
-  const cities = ['杭州', '上海', '北京', '成都', '西安', '广州', '深圳', '厦门'];
-  return cities.find((c) => prompt.includes(c)) ?? null;
-}
-
-function detectDays(prompt: string, fallback?: number): number {
-  const match = prompt.match(/(\d+)\s*天/);
-  if (match) return Math.min(Math.max(parseInt(match[1], 10), 1), 7);
-  if (fallback) return fallback;
-  return 3;
-}
-
 function detectTags(prompt: string): string[] {
-  const tagMap: Record<string, string> = {
-    亲子: '亲子',
-    情侣: '浪漫',
-    美食: '美食',
-    文化: '文化',
-    户外: '户外',
-    摄影: '摄影',
-    穷游: '经济',
-    豪华: '奢华',
-  };
-  const tags: string[] = [];
-  for (const [key, tag] of Object.entries(tagMap)) {
-    if (prompt.includes(key)) tags.push(tag);
-  }
-  return tags.length > 0 ? tags : ['休闲'];
+  const themes = parseTravelIntent(prompt).themes;
+  return themes.length > 0 ? themes : ['休闲'];
+}
+
+function resolveIntent(input: GenerateRouteInput): TravelIntentSnapshot {
+  if (input.intent) return input.intent;
+  return buildIntentFromHistory(input.history, input.prompt, {
+    days: input.days,
+    budget: input.budget,
+  });
 }
 
 function scoreTemplate(template: RouteTemplate, city: string | null, days: number, tags: string[]): number {
@@ -72,15 +62,24 @@ export type GenerationSource = 'llm' | 'template';
 export async function generateRoute(
   input: GenerateRouteInput,
 ): Promise<
-  GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string }
+  GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string; intent: TravelIntentSnapshot }
 > {
+  const intent = resolveIntent(input);
+  const enrichedInput = {
+    ...input,
+    days: intent.days ?? input.days,
+    budget: intent.budget ?? input.budget,
+    intent,
+  };
+
   if (canUseLlm()) {
     try {
-      const draft = await generateRouteFromLlm(input);
+      const draft = await generateRouteFromLlm(enrichedInput);
       return {
-        ...draft,
+        ...enforceRouteConstraints(draft, intent),
         generationSource: 'llm',
         llmProvider: draft.llmProvider,
+        intent,
       };
     } catch (err) {
       console.warn(
@@ -90,21 +89,29 @@ export async function generateRoute(
     }
   }
 
-  return { ...generateRouteFromTemplate(input), generationSource: 'template' };
+  return {
+    ...enforceRouteConstraints(generateRouteFromTemplate(enrichedInput, intent), intent),
+    generationSource: 'template',
+    intent,
+  };
 }
 
 /** 基于模板匹配（LLM 不可用时的降级方案） */
-export function generateRouteFromTemplate(input: GenerateRouteInput): GeneratedRouteDraft {
+export function generateRouteFromTemplate(
+  input: GenerateRouteInput,
+  intent?: TravelIntentSnapshot,
+): GeneratedRouteDraft {
+  const resolvedIntent = intent ?? resolveIntent(input);
   const historyUserText = (input.history ?? [])
     .filter((m) => m.role === 'user')
     .map((m) => m.content.trim())
     .filter(Boolean)
     .join('；');
   const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
-  const city = detectCity(prompt);
-  const days = input.days ?? detectDays(prompt);
-  const tags = detectTags(prompt);
-  const budget = input.budget ?? '';
+  const city = resolvedIntent.city;
+  const days = resolvedIntent.days ?? input.days ?? 3;
+  const tags = resolvedIntent.themes.length > 0 ? resolvedIntent.themes : detectTags(prompt);
+  const budget = resolvedIntent.budget ?? input.budget ?? '';
 
   let best = ROUTE_TEMPLATES[0];
   let bestScore = -1;
@@ -133,7 +140,7 @@ export function generateRouteFromTemplate(input: GenerateRouteInput): GeneratedR
     name,
     description: `${best.description}（根据「${prompt.slice(0, 50)}${prompt.length > 50 ? '…' : ''}」智能匹配）`,
     budgetRange,
-    days: best.days,
+    days,
     interestTags: [...new Set([...best.interestTags, ...tags])],
     routeDetail,
     unlockPrice: best.unlockPrice,

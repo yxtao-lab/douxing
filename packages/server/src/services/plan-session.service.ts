@@ -6,6 +6,7 @@ import type {
   PlanSessionMessageInfo,
   PlanSessionSummary,
   CreatePlanSessionRequest,
+  TravelIntentSnapshot,
 } from '@douxing/shared';
 import { PlanSessionStatus } from '@douxing/shared';
 import { getDb } from '../db/client.js';
@@ -20,6 +21,10 @@ import {
   getRouteById,
 } from './route.service.js';
 import type { GenerateRouteInput } from './route-generator.service.js';
+import {
+  buildIntentFromHistory,
+  formatIntentSummary,
+} from './travel-intent.service.js';
 
 const SESSION_TITLE_MAX = 40;
 
@@ -54,14 +59,18 @@ function buildRouteSnapshot(payload: {
   };
 }
 
-function buildAssistantReply(route: {
-  name: string;
-  description: string | null;
-  days: number;
-  budgetRange: string | null;
-}): string {
+function buildAssistantReply(
+  route: {
+    name: string;
+    description: string | null;
+    days: number;
+    budgetRange: string | null;
+  },
+  intent?: TravelIntentSnapshot,
+): string {
   const budget = route.budgetRange ? `，预算 ${route.budgetRange}` : '';
-  return `已为您生成「${route.name}」：${route.description ?? ''}（${route.days} 天${budget}）`;
+  const intentHint = intent ? `\n已理解需求：${formatIntentSummary(intent)}` : '';
+  return `已为您生成「${route.name}」：${route.description ?? ''}（${route.days} 天${budget}）${intentHint}`;
 }
 
 function buildHistoryForLlm(messages: PlanSessionMessageInfo[]): PlanChatMessage[] {
@@ -113,12 +122,17 @@ function buildActionResult(
   sessionId: number,
   route: NonNullable<Awaited<ReturnType<typeof getRouteById>>>,
   assistantMessage: string,
-  meta: { generationSource?: 'llm' | 'template'; llmProvider?: string },
+  meta: {
+    generationSource?: 'llm' | 'template';
+    llmProvider?: string;
+    intentSnapshot?: TravelIntentSnapshot | null;
+  },
 ): PlanSessionActionResult {
   return {
     ...route,
     sessionId,
     assistantMessage,
+    intentSnapshot: meta.intentSnapshot ?? null,
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
   };
@@ -149,6 +163,7 @@ export async function listPlanSessions(
       provider: planSessions.provider,
       status: planSessions.status,
       title: planSessions.title,
+      intentSnapshot: planSessions.intentSnapshot,
       createdAt: planSessions.createdAt,
       updatedAt: planSessions.updatedAt,
       messageCount: sql<number>`count(${planSessionMessages.id})`.mapWith(Number),
@@ -167,6 +182,7 @@ export async function listPlanSessions(
     status: row.status,
     title: row.title,
     messageCount: row.messageCount,
+    intentSnapshot: (row.intentSnapshot as TravelIntentSnapshot | null) ?? null,
     createdAt: toIso(row.createdAt),
     updatedAt: toIso(row.updatedAt),
   }));
@@ -189,6 +205,7 @@ export async function getPlanSessionDetail(
     status: session.status,
     title: session.title,
     messageCount: messages.length,
+    intentSnapshot: (session.intentSnapshot as TravelIntentSnapshot | null) ?? null,
     createdAt: toIso(session.createdAt),
     updatedAt: toIso(session.updatedAt),
     messages,
@@ -205,15 +222,22 @@ export async function createPlanSession(
     throw new Error('请描述您的旅行需求');
   }
 
+  const intent = buildIntentFromHistory(undefined, prompt, {
+    days: input.days,
+    budget: input.budget,
+  });
+
   const generateInput: GenerateRouteInput = {
     prompt,
     days: input.days,
     budget: input.budget,
     provider: input.provider,
+    intent,
   };
 
-  const { route, generationSource, llmProvider } = await createRouteFromPrompt(userId, generateInput);
-  const assistantMessage = buildAssistantReply(route);
+  const { route, generationSource, llmProvider, intent: resolvedIntent } =
+    await createRouteFromPrompt(userId, generateInput);
+  const assistantMessage = buildAssistantReply(route, resolvedIntent);
   const snapshot = snapshotFromRoute(route);
 
   const db = getDb();
@@ -223,6 +247,7 @@ export async function createPlanSession(
     provider: input.provider ?? 'auto',
     status: PlanSessionStatus.ACTIVE,
     title: truncateTitle(prompt),
+    intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
   });
   const sessionId = Number(sessionResult.insertId);
 
@@ -239,6 +264,7 @@ export async function createPlanSession(
   return buildActionResult(sessionId, route, assistantMessage, {
     generationSource,
     llmProvider,
+    intentSnapshot: resolvedIntent,
   });
 }
 
@@ -263,18 +289,24 @@ export async function appendPlanSessionMessage(
 
   const previousMessages = await loadSessionMessages(sessionId);
   const history = buildHistoryForLlm(previousMessages);
+  const userHistory: PlanChatMessage[] = previousMessages
+    .filter((m) => m.role === 'user')
+    .map((m) => ({ role: 'user', content: m.content }));
+
+  const intent = buildIntentFromHistory(userHistory, text);
 
   const generateInput: GenerateRouteInput = {
     prompt: text,
     provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
     history,
+    intent,
   };
 
   const result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
   if (!result) return null;
 
-  const { route, generationSource, llmProvider } = result;
-  const assistantMessage = buildAssistantReply(route);
+  const { route, generationSource, llmProvider, intent: resolvedIntent } = result;
+  const assistantMessage = buildAssistantReply(route, resolvedIntent);
   const snapshot = snapshotFromRoute(route);
 
   const db = getDb();
@@ -289,11 +321,12 @@ export async function appendPlanSessionMessage(
   ]);
   await db
     .update(planSessions)
-    .set({ updatedAt: new Date() })
+    .set({ updatedAt: new Date(), intentSnapshot: resolvedIntent as unknown as Record<string, unknown> })
     .where(eq(planSessions.id, sessionId));
 
   return buildActionResult(sessionId, route, assistantMessage, {
     generationSource,
     llmProvider,
+    intentSnapshot: resolvedIntent,
   });
 }

@@ -1,6 +1,7 @@
 import type { LlmProviderChoice } from '../config/llm.js';
 import type { GenerateRouteInput, GeneratedRouteDraft } from './route-generator.service.js';
 import { chatCompletionForRoute } from './llm-client.service.js';
+import { enforceRouteConstraints } from './travel-intent.service.js';
 import { isLlmEnabled, hasDeepseekApiKey, resolveProviderChain } from '../config/llm.js';
 
 export type GenerationSource = 'llm' | 'template';
@@ -10,14 +11,16 @@ export type LlmProviderUsed = 'deepseek' | 'lmstudio';
 export async function generateRouteFromLlm(
   input: GenerateRouteInput,
 ): Promise<GeneratedRouteDraft & { llmProvider: LlmProviderUsed }> {
+  const intent = input.intent!;
   const { payload, provider } = await chatCompletionForRoute(input.prompt.trim(), {
-    days: input.days,
-    budget: input.budget,
+    days: intent.days ?? input.days,
+    budget: intent.budget ?? input.budget,
     provider: input.provider,
     history: input.history,
+    intent,
   });
 
-  return {
+  const draft: GeneratedRouteDraft = {
     name: payload.name,
     description: payload.description,
     budgetRange: payload.budgetRange,
@@ -33,6 +36,10 @@ export async function generateRouteFromLlm(
     unlockPrice: payload.unlockPrice,
     matchedCity: payload.matchedCity,
     isAiGenerated: true,
+  };
+
+  return {
+    ...enforceRouteConstraints(draft, intent),
     llmProvider: provider,
   };
 }

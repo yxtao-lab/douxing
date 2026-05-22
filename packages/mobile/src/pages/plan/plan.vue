@@ -34,6 +34,11 @@
       </view>
     </view>
 
+    <view v-if="intentSummary" class="intent-bar">
+      <text class="intent-label">已理解需求</text>
+      <text class="intent-value">{{ intentSummary }}</text>
+    </view>
+
     <scroll-view
       v-if="messages.length > 0"
       class="chat-scroll"
@@ -46,10 +51,27 @@
         :id="`msg-${msg.id}`"
         :key="msg.id"
         class="msg-row"
-        :class="msg.role"
       >
-        <view class="bubble">
-          <text>{{ msg.content }}</text>
+        <view class="msg-avatar-slot">
+          <view v-if="msg.role === 'assistant'" class="msg-avatar assistant-avatar">
+            <text class="iconfont icon-plan assistant-icon" />
+          </view>
+        </view>
+        <view class="msg-content" :class="msg.role">
+          <view class="bubble">
+            <text>{{ msg.content }}</text>
+          </view>
+        </view>
+        <view class="msg-avatar-slot">
+          <view v-if="msg.role === 'user'" class="msg-avatar">
+            <image
+              v-if="user?.avatar"
+              class="msg-avatar-img"
+              :src="user.avatar"
+              mode="aspectFill"
+            />
+            <text v-else class="msg-avatar-text">{{ userAvatarText }}</text>
+          </view>
         </view>
       </view>
     </scroll-view>
@@ -98,6 +120,8 @@ import type {
   LlmProviderChoice,
   LlmProviderOption,
   PlanSessionMessageInfo,
+  TravelIntentSnapshot,
+  UserInfo,
 } from '@douxing/shared';
 import { LlmProvider } from '@douxing/shared';
 
@@ -108,8 +132,10 @@ interface ChatMessage {
 }
 
 const inputText = ref('');
+const user = ref<UserInfo | null>(getStoredUser());
 const sessionId = ref<number | null>(null);
 const currentRouteId = ref<number | null>(null);
+const intentSnapshot = ref<TravelIntentSnapshot | null>(null);
 const messages = ref<ChatMessage[]>([]);
 const scrollIntoView = ref('');
 const aiPlanning = computed(() => aiPlanLoadingState.active);
@@ -117,6 +143,10 @@ const provider = ref<LlmProviderChoice>(LlmProvider.AUTO);
 const providerOptions = ref<LlmProviderOption[]>([]);
 const llmAvailable = ref<boolean | null>(null);
 const statusDetail = ref('');
+
+const userAvatarText = computed(() =>
+  (user.value?.nickname || user.value?.username || '我').slice(0, 1),
+);
 
 const composerPlaceholder = computed(() =>
   sessionId.value ? '继续追问或提出修改，如：预算降到3000' : '描述旅行需求，如：杭州3天亲子游，预算5000',
@@ -131,6 +161,17 @@ const llmStatusText = computed(() => {
 const llmStatusClass = computed(() => {
   if (llmAvailable.value === null) return 'pending';
   return llmAvailable.value ? 'ok' : 'warn';
+});
+
+const intentSummary = computed(() => {
+  const intent = intentSnapshot.value;
+  if (!intent) return '';
+  const parts: string[] = [];
+  if (intent.city) parts.push(intent.city);
+  if (intent.days != null) parts.push(`${intent.days}天`);
+  if (intent.budget) parts.push(`预算${intent.budget}`);
+  if (intent.themes.length > 0) parts.push(intent.themes.join('·'));
+  return parts.join(' · ');
 });
 
 function selectProvider(opt: LlmProviderOption) {
@@ -176,6 +217,7 @@ function resetSession() {
   if (aiPlanLoadingState.active) return;
   sessionId.value = null;
   currentRouteId.value = null;
+  intentSnapshot.value = null;
   messages.value = [];
   inputText.value = '';
 }
@@ -189,6 +231,7 @@ async function loadSession(id: number) {
   const session = await fetchPlanSession(id);
   sessionId.value = session.id;
   currentRouteId.value = session.routeId;
+  intentSnapshot.value = session.intentSnapshot ?? null;
   messages.value = mapMessages(session.messages);
   scrollToBottom();
 }
@@ -215,6 +258,7 @@ onMounted(async () => {
 
 onShow(() => {
   uni.hideTabBar({ animation: false });
+  user.value = getStoredUser();
 });
 
 onLoad(async (query) => {
@@ -266,6 +310,7 @@ async function handleSend() {
       });
       sessionId.value = result.sessionId;
       currentRouteId.value = result.id;
+      intentSnapshot.value = result.intentSnapshot ?? null;
       const session = await fetchPlanSession(result.sessionId);
       messages.value = mapMessages(session.messages);
       scrollToBottom();
@@ -275,6 +320,7 @@ async function handleSend() {
 
     const result = await appendPlanMessage(sessionId.value, { content: text });
     currentRouteId.value = result.id;
+    intentSnapshot.value = result.intentSnapshot ?? null;
     const session = await fetchPlanSession(sessionId.value);
     messages.value = mapMessages(session.messages);
     scrollToBottom();
@@ -388,6 +434,25 @@ async function handleSend() {
   border-radius: 999rpx;
   font-size: 24rpx;
 }
+.intent-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  background: #fff;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 16rpx;
+  border-left: 6rpx solid #1677ff;
+}
+.intent-label {
+  font-size: 22rpx;
+  color: #6b7280;
+}
+.intent-value {
+  font-size: 26rpx;
+  color: #1f2937;
+  font-weight: 500;
+}
 .chat-scroll {
   flex: 1;
   max-height: 52vh;
@@ -395,27 +460,70 @@ async function handleSend() {
 }
 .msg-row {
   display: flex;
-  margin-bottom: 20rpx;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+  width: 100%;
+  box-sizing: border-box;
 }
-.msg-row.user {
+.msg-avatar-slot {
+  width: 72rpx;
+  flex-shrink: 0;
+}
+.msg-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
+.msg-content.user {
   justify-content: flex-end;
 }
-.msg-row.assistant {
+.msg-content.assistant {
   justify-content: flex-start;
 }
+.msg-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #1677ff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.msg-avatar-img {
+  width: 100%;
+  height: 100%;
+}
+.msg-avatar-text {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 600;
+  line-height: 1;
+}
+.assistant-avatar {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+}
+.assistant-icon {
+  color: #fff;
+  font-size: 36rpx;
+}
 .bubble {
-  max-width: 78%;
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 20rpx 24rpx;
   border-radius: 16rpx;
   font-size: 28rpx;
   line-height: 1.6;
+  word-break: break-word;
 }
-.msg-row.user .bubble {
+.msg-content.user .bubble {
   background: #1677ff;
   color: #fff;
   border-bottom-right-radius: 4rpx;
 }
-.msg-row.assistant .bubble {
+.msg-content.assistant .bubble {
   background: #fff;
   color: #1f2937;
   border-bottom-left-radius: 4rpx;

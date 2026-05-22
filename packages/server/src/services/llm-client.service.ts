@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { PoiCategory } from '@douxing/shared';
-import type { PlanChatMessage } from '@douxing/shared';
+import type { PlanChatMessage, TravelIntentSnapshot } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -11,6 +11,7 @@ import {
   getLmStudioConfig,
   getDeepseekConfig,
 } from '../config/llm.js';
+import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
 
 const poiTypeEnum = z.enum([
   PoiCategory.ATTRACTION,
@@ -266,7 +267,12 @@ export async function checkLlmAvailability(): Promise<{
 async function chatCompletionWithProvider(
   provider: LlmProviderId,
   userPrompt: string,
-  options?: { days?: number; budget?: string; history?: PlanChatMessage[] },
+  options?: {
+    days?: number;
+    budget?: string;
+    history?: PlanChatMessage[];
+    intent?: TravelIntentSnapshot;
+  },
 ): Promise<LlmRoutePayload> {
   const config = getProviderConfig(provider);
   if (!config.configured) {
@@ -275,8 +281,13 @@ async function chatCompletionWithProvider(
 
   const model = await resolveModelId(provider);
   let userContent = userPrompt;
-  if (options?.days) userContent += `\n（期望天数：${options.days}天）`;
-  if (options?.budget) userContent += `\n（预算：${options.budget}）`;
+  if (options?.intent) {
+    const constraintBlock = formatIntentConstraintsForLlm(options.intent);
+    if (constraintBlock) userContent = `${constraintBlock}\n\n用户需求：${userPrompt}`;
+  } else {
+    if (options?.days) userContent += `\n（期望天数：${options.days}天）`;
+    if (options?.budget) userContent += `\n（预算：${options.budget}）`;
+  }
 
   const history = options?.history ?? [];
   const messages: ChatMessage[] = [
@@ -361,6 +372,7 @@ export async function chatCompletionForRoute(
     budget?: string;
     provider?: LlmProviderChoice;
     history?: PlanChatMessage[];
+    intent?: TravelIntentSnapshot;
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);
