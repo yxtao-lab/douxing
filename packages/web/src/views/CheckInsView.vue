@@ -1,6 +1,9 @@
 <template>
   <div class="checkins-page">
-    <h2>打卡记录</h2>
+    <div class="page-head">
+      <h2>打卡记录</h2>
+      <router-link class="map-link" to="/checkins/map">地图视图 ›</router-link>
+    </div>
     <table class="table" v-if="list.length">
       <thead>
         <tr>
@@ -48,6 +51,20 @@ onMounted(async () => {
 <style scoped>
 .checkins-page {
   max-width: 960px;
+}
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.page-head h2 {
+  margin: 0;
+}
+.map-link {
+  color: #1677ff;
+  text-decoration: none;
+  font-size: 14px;
 }
 .table {
   width: 100%;

@@ -10,3 +10,5 @@ export * from './route-comments.js';
 export * from './check-ins.js';
 export * from './orders.js';
 export * from './achievements.js';
+export * from './badges.js';
+export * from './user-badges.js';

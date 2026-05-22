@@ -71,6 +71,20 @@
       "when": 1748332800000,
       "tag": "0009_checkin_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "5",
+      "when": 1748419200000,
+      "tag": "0010_checkin_geofence",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "5",
+      "when": 1748505600000,
+      "tag": "0011_badges",
+      "breakpoints": true
     }
   ]
 }

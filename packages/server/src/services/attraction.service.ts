@@ -104,6 +104,22 @@ export async function getAttractionById(id: number) {
   return rows[0] ? toAttractionInfo(rows[0]) : null;
 }
 
+/** 打卡等业务使用：允许已发布与待审核景点，排除已禁用 */
+export async function getAttractionForCheckIn(id: number) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(
+      and(
+        eq(attractions.id, id),
+        inArray(attractions.status, [AttractionStatus.ACTIVE, AttractionStatus.PENDING]),
+      ),
+    )
+    .limit(1);
+  return rows[0] ? toAttractionInfo(rows[0]) : null;
+}
+
 export async function getAttractionsByIds(ids: number[]) {
   if (ids.length === 0) return [];
   const db = getDb();

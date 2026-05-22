@@ -2,11 +2,13 @@
   <div class="home-page">
     <section class="welcome-card">
       <h2>欢迎，{{ userStore.user?.nickname || userStore.user?.username }}</h2>
-      <p>兜行 Web 管理端 MVP：路线、订单、打卡数据一览。</p>
+      <p>兜行 Web 管理端 MVP：路线、订单、打卡、景点审核。</p>
       <div class="quick-links">
         <router-link to="/routes">路线管理</router-link>
         <router-link to="/orders">订单管理</router-link>
         <router-link to="/checkins">打卡记录</router-link>
+        <router-link to="/checkins/map">打卡地图</router-link>
+        <router-link to="/attractions/pending">待审核景点</router-link>
       </div>
       <ul class="info-list">
         <li><strong>角色：</strong>{{ userStore.user?.roles?.join('、') || '-' }}</li>

@@ -37,9 +37,21 @@
       }
     },
     {
+      "path": "pages/badges/index",
+      "style": {
+        "navigationBarTitleText": "我的徽章"
+      }
+    },
+    {
       "path": "pages/checkins/list",
       "style": {
         "navigationBarTitleText": "打卡记录"
+      }
+    },
+    {
+      "path": "pages/checkins/map",
+      "style": {
+        "navigationBarTitleText": "打卡地图"
       }
     },
     {

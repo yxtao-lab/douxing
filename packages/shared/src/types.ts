@@ -246,6 +246,7 @@ export interface OrderPrepayResult {
 export interface CheckInResult {
   checkIn: CheckInInfo;
   newAchievements: AchievementInfo[];
+  newBadges: UserBadgeInfo[];
 }
 
 export interface CheckInInfo {
@@ -264,6 +265,9 @@ export interface CheckInInfo {
   city?: string | null;
   photos: string[];
   pointsEarned: number;
+  gpsAccuracy?: number | null;
+  /** 打卡时与目标景点的距离（米），仅围栏校验通过时有值 */
+  distanceMeters?: number | null;
   checkedAt: string;
   status: number;
   remark: string | null;
@@ -275,4 +279,38 @@ export interface AchievementInfo {
   achievementType: string;
   unlockedAt: string;
   description: string | null;
+}
+
+export interface BadgeInfo {
+  id: number;
+  badgeCode: string;
+  name: string;
+  description: string | null;
+  category: string;
+  conditionType: string;
+  conditionValue: Record<string, unknown> | null;
+  iconUrl: string | null;
+  rarity: string;
+  pointsReward: number;
+}
+
+export interface BadgeProgress {
+  current: number;
+  target: number;
+}
+
+export interface BadgeCatalogItem extends BadgeInfo {
+  unlocked: boolean;
+  unlockTime?: string | null;
+  progress?: BadgeProgress | null;
+}
+
+export interface UserBadgeInfo {
+  id: number;
+  userId: number;
+  badgeId: number;
+  badge: BadgeInfo;
+  unlockTime: string;
+  isDisplayed: boolean;
+  progress: Record<string, unknown> | null;
 }

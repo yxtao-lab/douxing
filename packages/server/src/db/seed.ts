@@ -5,6 +5,7 @@ import { ensureDatabase } from './ensure-database.js';
 import { getDb } from './client.js';
 import { users, roles, userRoles, systemConfig, travelRoutes } from './schema/index.js';
 import { seedAttractions, syncAttractionsFromRouteDetail } from '../services/attraction.service.js';
+import { seedBadges } from '../services/badge.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType } from '@douxing/shared';
 
@@ -163,6 +164,7 @@ async function main() {
   await seedAdminUser();
   const demoUserId = await seedDemoUser();
   await seedAttractions();
+  await seedBadges();
   await seedSampleRoutes(demoUserId);
   await seedSystemConfig();
   console.log('[seed] Done');

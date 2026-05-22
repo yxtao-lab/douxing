@@ -131,6 +131,31 @@ export const AchievementType = {
   ROUTE_MASTER: 'route_master',
 } as const;
 
+/** 徽章分类 */
+export const BadgeCategory = {
+  CITY: 'city',
+  ACHIEVEMENT: 'achievement',
+  SPECIAL: 'special',
+  LEVEL: 'level',
+} as const;
+
+/** 徽章稀有度 */
+export const BadgeRarity = {
+  COMMON: 'common',
+  RARE: 'rare',
+  EPIC: 'epic',
+  LEGENDARY: 'legendary',
+} as const;
+
+/** 徽章解锁条件类型 */
+export const BadgeConditionType = {
+  CITY_CHECKIN: 'city_checkin',
+  TOTAL_CHECKINS: 'total_checkins',
+  DISTINCT_CITIES: 'distinct_cities',
+  PHOTO_CHECKIN: 'photo_checkin',
+  ROUTE_CHECKINS: 'route_checkins',
+} as const;
+
 /** 打卡基础积分 */
 export const CHECKIN_BASE_POINTS = 10;
 
@@ -142,3 +167,15 @@ export const CHECKIN_FIRST_ATTRACTION_BONUS = 10;
 
 /** 单条打卡最多上传照片数 */
 export const CHECKIN_MAX_PHOTOS = 3;
+
+/** 地理围栏有效打卡半径（米） */
+export const CHECKIN_GEOFENCE_RADIUS_M = 500;
+
+/** GPS 精度上限（米），超过则拒绝打卡 */
+export const CHECKIN_GPS_MAX_ACCURACY_M = 100;
+
+/** 相邻两次打卡最大合理速度（km/h），用于简单防作弊 */
+export const CHECKIN_MAX_SPEED_KMH = 300;
+
+/** 速度检测最小时间间隔（秒），低于此间隔不检测 */
+export const CHECKIN_SPEED_MIN_INTERVAL_SEC = 30;

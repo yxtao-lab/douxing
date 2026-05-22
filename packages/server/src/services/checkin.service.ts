@@ -11,11 +11,18 @@ import {
 } from '@douxing/shared';
 import type { CheckInInfo } from '@douxing/shared';
 import { evaluateAchievements } from './achievement.service.js';
-import { getAttractionById } from './attraction.service.js';
+import { evaluateBadges } from './badge.service.js';
+import { getAttractionForCheckIn } from './attraction.service.js';
+import {
+  assertNotCheckedInToday,
+  validateCheckInGeofence,
+} from './checkin-geofence.service.js';
+import { CheckinValidationError } from '../utils/checkin-errors.js';
 
 function toCheckInInfo(
   row: typeof checkIns.$inferSelect,
   cityMap?: Map<string, string>,
+  distanceMeters?: number | null,
 ): CheckInInfo {
   return {
     id: row.id,
@@ -27,6 +34,8 @@ function toCheckInInfo(
     city: cityMap?.get(row.cityCode) ?? null,
     photos: row.photos ?? [],
     pointsEarned: row.pointsEarned,
+    gpsAccuracy: row.gpsAccuracy ?? null,
+    distanceMeters: distanceMeters ?? null,
     checkedAt: row.checkedAt.toISOString(),
     status: row.status,
     remark: row.remark,
@@ -69,9 +78,9 @@ async function resolveCityCodeFromCityName(cityName: string) {
 
 async function resolveCityCode(attractionId?: number, cityCode?: string, cityName?: string) {
   if (attractionId) {
-    const attraction = await getAttractionById(attractionId);
+    const attraction = await getAttractionForCheckIn(attractionId);
     if (!attraction) {
-      throw new Error('关联景点不存在');
+      throw new CheckinValidationError('关联景点不存在或已禁用');
     }
     return attraction.cityCode;
   }
@@ -82,7 +91,7 @@ async function resolveCityCode(attractionId?: number, cityCode?: string, cityNam
     const resolved = await resolveCityCodeFromCityName(cityName.trim());
     if (resolved) return resolved;
   }
-  throw new Error('请提供城市编码或关联景点');
+  throw new CheckinValidationError('请提供城市编码或关联景点');
 }
 
 async function isFirstCheckInAtAttraction(userId: number, attractionId?: number) {
@@ -110,10 +119,29 @@ export async function createCheckIn(
     attractionId?: number;
     cityCode?: string;
     cityName?: string;
+    targetLatitude?: number;
+    targetLongitude?: number;
+    gpsAccuracy?: number;
     photos?: string[];
     remark?: string;
   },
 ) {
+  if (data.location.latitude == null || data.location.longitude == null) {
+    throw new CheckinValidationError('请上报当前 GPS 位置');
+  }
+
+  await assertNotCheckedInToday(userId, data.attractionId);
+
+  const distanceMeters = await validateCheckInGeofence({
+    userId,
+    userLatitude: data.location.latitude,
+    userLongitude: data.location.longitude,
+    gpsAccuracy: data.gpsAccuracy,
+    attractionId: data.attractionId,
+    targetLatitude: data.targetLatitude,
+    targetLongitude: data.targetLongitude,
+  });
+
   const photos = (data.photos ?? []).slice(0, CHECKIN_MAX_PHOTOS);
   const cityCode = await resolveCityCode(data.attractionId, data.cityCode, data.cityName);
   const isFirstAtAttraction = await isFirstCheckInAtAttraction(userId, data.attractionId);
@@ -128,6 +156,7 @@ export async function createCheckIn(
     cityCode,
     photos: photos.length > 0 ? photos : null,
     pointsEarned,
+    gpsAccuracy: data.gpsAccuracy != null ? Math.round(data.gpsAccuracy) : null,
     remark: data.remark ?? null,
     status: CheckInStatus.APPROVED,
   });
@@ -135,10 +164,11 @@ export async function createCheckIn(
   const id = Number(result.insertId);
   const rows = await db.select().from(checkIns).where(eq(checkIns.id, id)).limit(1);
   const cityMap = await buildCityMap([cityCode]);
-  const checkIn = toCheckInInfo(rows[0]!, cityMap);
+  const checkIn = toCheckInInfo(rows[0]!, cityMap, distanceMeters);
 
   const newAchievements = await evaluateAchievements(userId);
-  return { checkIn, newAchievements };
+  const newBadges = await evaluateBadges(userId);
+  return { checkIn, newAchievements, newBadges };
 }
 
 export async function listUserCheckIns(userId: number) {
@@ -161,8 +191,9 @@ export async function listRouteCheckIns(routeId: number, userId: number) {
   return mapRowsToCheckInInfo(rows);
 }
 
-export async function listAllCheckInsForAdmin() {
+export async function listAllCheckInsForAdmin(limit = 500) {
   const db = getDb();
-  const rows = await db.select().from(checkIns).orderBy(desc(checkIns.checkedAt)).limit(100);
+  const safeLimit = Math.min(Math.max(limit, 1), 1000);
+  const rows = await db.select().from(checkIns).orderBy(desc(checkIns.checkedAt)).limit(safeLimit);
   return mapRowsToCheckInInfo(rows);
 }

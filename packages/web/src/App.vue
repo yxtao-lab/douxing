@@ -10,6 +10,8 @@
         <router-link to="/routes">路线</router-link>
         <router-link to="/orders">订单</router-link>
         <router-link to="/checkins">打卡</router-link>
+        <router-link to="/checkins/map">打卡地图</router-link>
+        <router-link to="/attractions/pending">景点审核</router-link>
         <a href="#" @click.prevent="handleLogout">退出</a>
       </nav>
     </header>

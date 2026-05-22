@@ -9,7 +9,15 @@ export function createCheckIn(data: {
   attractionId?: number;
   cityCode?: string;
   cityName?: string;
-  location: { placeName: string; address?: string; latitude?: number; longitude?: number };
+  targetLatitude?: number;
+  targetLongitude?: number;
+  gpsAccuracy?: number;
+  location: {
+    placeName: string;
+    address?: string;
+    latitude: number;
+    longitude: number;
+  };
   photos?: string[];
   remark?: string;
 }) {

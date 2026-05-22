@@ -111,6 +111,7 @@ import {
 } from '@/api/routes';
 import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
 import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
+import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
@@ -348,8 +349,12 @@ async function handleCheckIn(spot: RouteDayAttraction) {
       itemList: ['直接打卡', '添加照片打卡'],
       success: async (res) => {
         try {
+          uni.showLoading({ title: '定位中...' });
+          const gps = await getCurrentLocation();
+
           let photos: string[] | undefined;
           if (res.tapIndex === 1) {
+            uni.showLoading({ title: '上传中...' });
             const choose = await new Promise<UniApp.ChooseImageSuccessCallbackResult>((resolve, reject) => {
               uni.chooseImage({
                 count: 1,
@@ -361,23 +366,34 @@ async function handleCheckIn(spot: RouteDayAttraction) {
             });
             const filePath = choose.tempFilePaths[0];
             if (filePath) {
-              uni.showLoading({ title: '上传中...' });
               const url = await uploadCheckInPhoto(filePath);
               photos = [url];
             }
           }
 
+          uni.showLoading({ title: '打卡中...' });
           const result = await createCheckIn({
             routeId,
             attractionId: spot.attractionId,
             cityName: matchedCity.value,
-            location: { placeName: spot.name, address: spot.name },
+            targetLatitude: spot.latitude,
+            targetLongitude: spot.longitude,
+            gpsAccuracy: gps.accuracy,
+            location: {
+              placeName: spot.name,
+              address: spot.name,
+              latitude: gps.latitude,
+              longitude: gps.longitude,
+            },
             photos,
           });
 
           let msg = `打卡成功 +${result.checkIn.pointsEarned} 积分`;
           if (result.newAchievements.length > 0) {
             msg += `，解锁成就 ${result.newAchievements.length} 个`;
+          }
+          if (result.newBadges?.length > 0) {
+            msg += `，解锁徽章 ${result.newBadges.length} 个`;
           }
           uni.showToast({ title: msg, icon: 'success' });
         } catch (e) {

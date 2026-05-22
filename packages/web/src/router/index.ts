@@ -29,6 +29,18 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/checkins/map',
+      name: 'checkins-map',
+      component: () => import('@/views/CheckInsMapView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/attractions/pending',
+      name: 'attractions-pending',
+      component: () => import('@/views/AttractionsPendingView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),

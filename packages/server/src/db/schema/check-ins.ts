@@ -26,6 +26,7 @@ export const checkIns = mysqlTable(
     cityCode: varchar('city_code', { length: 32 }).notNull(),
     photos: json('photos').$type<string[]>(),
     pointsEarned: int('points_earned').notNull().default(0),
+    gpsAccuracy: int('gps_accuracy'),
     checkedAt: timestamp('checked_at').notNull().defaultNow(),
     status: tinyint('status').notNull().default(0),
     remark: varchar('remark', { length: 512 }),

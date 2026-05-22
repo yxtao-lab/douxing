@@ -14,6 +14,7 @@ import {
 } from '../services/checkin.service.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import { RoleCode, CHECKIN_MAX_PHOTOS } from '@douxing/shared';
+import { isCheckinValidationError } from '../utils/checkin-errors.js';
 
 const router = Router();
 
@@ -63,11 +64,14 @@ const checkInSchema = z.object({
   cityCode: z.string().min(1).max(32).optional(),
   cityName: z.string().min(1).max(64).optional(),
   location: z.object({
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
+    latitude: z.number().min(-90).max(90),
+    longitude: z.number().min(-180).max(180),
     address: z.string().optional(),
     placeName: z.string().min(1, '请填写打卡地点'),
   }),
+  targetLatitude: z.number().min(-90).max(90).optional(),
+  targetLongitude: z.number().min(-180).max(180).optional(),
+  gpsAccuracy: z.number().positive().max(500).optional(),
   photos: z.array(z.string().url().max(512)).max(CHECKIN_MAX_PHOTOS).optional(),
   remark: z.string().max(512).optional(),
 });
@@ -101,13 +105,12 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const { checkIn, newAchievements } = await createCheckIn(req.auth!.userId, parsed.data);
-    success(res, { checkIn, newAchievements }, '打卡成功');
+    const { checkIn, newAchievements, newBadges } = await createCheckIn(req.auth!.userId, parsed.data);
+    success(res, { checkIn, newAchievements, newBadges }, '打卡成功');
   } catch (err) {
     const message = err instanceof Error ? err.message : '打卡失败';
     console.error('[checkins/create]', err);
-    const isClientError =
-      message === '关联景点不存在' || message === '请提供城市编码或关联景点';
+    const isClientError = isCheckinValidationError(err);
     return fail(res, message, 1, isClientError ? 400 : 500);
   }
 });
@@ -116,7 +119,9 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const list = await listAllCheckInsForAdmin();
+      const limitRaw = req.query.limit ? parseInt(String(req.query.limit), 10) : 500;
+      const limit = Number.isNaN(limitRaw) ? 500 : limitRaw;
+      const list = await listAllCheckInsForAdmin(limit);
       return success(res, list);
     }
     const routeId = req.query.routeId ? parseInt(String(req.query.routeId), 10) : null;
