@@ -7,11 +7,14 @@
  *   pnpm deploy:server --skip-docker
  *   pnpm deploy:server --skip-build   # 仅重启 PM2（代码已构建）
  *   pnpm deploy:server --nginx DOMAIN=api.example.com
- *   pnpm deploy:server --nginx api.example.com --ssl-cert /path/fullchain.pem --ssl-key /path/privkey.pem
- *   pnpm deploy:server --use-tsx       # 低内存：跳过 server tsc，PM2 用 tsx 跑源码
+ *   pnpm deploy:server --nginx api.yxtao.site --skip-docker --skip-build
+ *   pnpm deploy:server --nginx-only api.yxtao.site   # 仅生成 Nginx 配置
+ *   pnpm deploy:server --use-tsx       # 低内存：跳过 server tsc
+ *   pnpm deploy:server --force-build   # 强制 tsc（2G 机可能卡住）
  */
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, copyFileSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import os from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -37,10 +40,18 @@ loadEnvFile();
 const args = process.argv.slice(2);
 const skipDocker = args.includes('--skip-docker');
 const skipBuild = args.includes('--skip-build');
-const useTsx = args.includes('--use-tsx');
+const useTsxFlag = args.includes('--use-tsx');
+const forceBuild = args.includes('--force-build');
+const nginxOnly = args.includes('--nginx-only');
 const checkOnly = args.includes('--check');
 const nginxIdx = args.indexOf('--nginx');
-const nginxDomain = nginxIdx !== -1 ? args[nginxIdx + 1] : null;
+const nginxOnlyIdx = args.indexOf('--nginx-only');
+const nginxDomain =
+  nginxIdx !== -1
+    ? args[nginxIdx + 1]
+    : nginxOnlyIdx !== -1
+      ? args[nginxOnlyIdx + 1]
+      : null;
 const sslCertIdx = args.indexOf('--ssl-cert');
 const sslCertPath = sslCertIdx !== -1 ? args[sslCertIdx + 1] : null;
 const sslKeyIdx = args.indexOf('--ssl-key');
@@ -139,6 +150,22 @@ function getCmdVersion(cmd) {
 
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** 2G/4G 轻量机 tsc 易卡死，自动走 tsx */
+function resolveUseTsx() {
+  if (forceBuild) return false;
+  if (useTsxFlag) return true;
+  if (process.env.SERVER_RUNTIME === 'tsx') return true;
+  const totalMb = Math.round(os.totalmem() / 1024 / 1024);
+  if (totalMb > 0 && totalMb <= 4096) {
+    console.log(
+      `[deploy:server] 检测到内存约 ${totalMb}MB，自动启用 tsx 模式（跳过 server tsc，避免卡住）`,
+    );
+    console.log('[deploy:server] 若必须编译 dist：加 --force-build（可能很慢）');
+    return true;
+  }
+  return false;
 }
 
 async function waitForMysql(maxAttempts = 30) {
@@ -302,6 +329,19 @@ async function main() {
     return;
   }
 
+  if (nginxOnly) {
+    if (!nginxDomain || nginxDomain.startsWith('-')) {
+      console.error('[deploy:server] 用法: pnpm deploy:server --nginx-only api.yxtao.site');
+      process.exit(1);
+    }
+    ensureEnvFile();
+    loadEnvFile();
+    renderNginxConfig(nginxDomain, sslCertPath, sslKeyPath);
+    return;
+  }
+
+  const useTsx = resolveUseTsx();
+
   console.log('========================================');
   console.log('  兜行 · 生产服务器部署');
   console.log('========================================');
@@ -408,8 +448,9 @@ async function main() {
   if (!nginxDomain) {
     console.log('');
     console.log('  尚未配置 Nginx，请执行：');
-    console.log('    pnpm deploy:server --nginx api.你的域名.com');
-    console.log('  或参阅 docs/deploy-production.md');
+    console.log('    pnpm deploy:server --nginx-only api.你的域名.com');
+    console.log('    或: pnpm deploy:server --nginx api.你的域名.com --skip-docker --skip-build');
+    console.log('  参阅 docs/启动与部署流程.md');
   }
   console.log('========================================\n');
 }

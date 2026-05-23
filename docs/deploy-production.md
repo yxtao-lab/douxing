@@ -352,9 +352,17 @@ sudo certbot --nginx -d api.yxtao.site
 
 ### pnpm build:server / tsc 卡住不动
 
-轻量机（2G 内存）编译 TypeScript 可能极慢或像死机。
+轻量机（2G 内存）编译 TypeScript 可能极慢或像死机；**内存 ≤4G 时 `deploy:server` 已自动启用 tsx**。
 
-**方案 A（推荐，免编译）：**
+**若 tsc 已卡住：** `Ctrl+C` 后：
+
+```bash
+pnpm deploy:server --skip-docker --use-tsx
+# 仅生成 Nginx、不跑 tsc：
+pnpm deploy:server --nginx-only api.yxtao.site
+```
+
+**方案 A（推荐，免 server 编译）：**
 
 ```bash
 # Ctrl+C 停掉当前 build 后执行

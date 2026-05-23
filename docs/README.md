@@ -2,7 +2,9 @@
 
 | 文档 | 说明 |
 |------|------|
-| [详细设计文档.md](./详细设计文档.md) | 《兜行平台最终详细设计文档》V2.0 完整 Markdown 版 |
+| [启动与部署流程.md](./启动与部署流程.md) | **开发/测试/生产启动命令、打包与部署流程总览** |
+| [env-environments.md](./env-environments.md) | 三套环境变量与打包 env 说明 |
+| [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划 |
 | [开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) | 开发思考过程、亮点与重难点（覆盖 M0/A/B/C 已验收步骤；文首有阶段速查表） |
 | [amap-geocoding.md](./amap-geocoding.md) | 高德 POI 搜索 / 地理编码接入与配置 |
