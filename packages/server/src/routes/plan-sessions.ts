@@ -7,6 +7,7 @@ import {
   createPlanSession,
   getPlanSessionDetail,
   listPlanSessions,
+  selectPlanSessionCandidate,
 } from '../services/plan-session.service.js';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 
@@ -25,24 +26,15 @@ const appendMessageSchema = z.object({
   content: z.string().min(1, '请输入追问或修改意见').max(500),
 });
 
+const selectCandidateSchema = z.object({
+  routeId: z.number().int().positive(),
+});
+
 const listQuerySchema = z.object({
   limit: optionalQueryInt(1, 50),
 });
 
-function buildGenerationMessage(
-  generationSource?: 'llm' | 'template',
-  llmProvider?: string,
-  isFollowUp = false,
-): string {
-  const prefix = isFollowUp ? '路线已更新' : '路线已生成';
-  if (generationSource !== 'llm') {
-    return `${prefix}（模板模式）`;
-  }
-  if (llmProvider === 'deepseek') return `${prefix}（DeepSeek）`;
-  if (llmProvider === 'lmstudio') return `${prefix}（本地模型）`;
-  return `${prefix}（AI）`;
-}
-
+import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
@@ -62,8 +54,12 @@ router.post('/', authMiddleware, async (req, res) => {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
     const result = await createPlanSession(req.auth!.userId, parsed.data);
-    const message = buildGenerationMessage(result.generationSource, result.llmProvider);
-    success(res, result, message);
+    const message = buildRouteGenerationMessage(result.generationSource, result.llmProvider);
+    const suffix =
+      result.candidates && result.candidates.length > 1
+        ? `，共 ${result.candidates.length} 套候选`
+        : '';
+    success(res, result, message + suffix);
   } catch (err) {
     console.error('[plan-sessions/create]', err);
     return fail(res, '创建规划会话失败', 500, 500);
@@ -83,6 +79,33 @@ router.get('/:sessionId', authMiddleware, async (req, res) => {
   }
 });
 
+router.post('/:sessionId/select-candidate', authMiddleware, async (req, res) => {
+  try {
+    const sessionId = parseInt(String(req.params.sessionId), 10);
+    if (Number.isNaN(sessionId)) return fail(res, '无效的会话 ID');
+    const parsed = selectCandidateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const result = await selectPlanSessionCandidate(
+      sessionId,
+      req.auth!.userId,
+      parsed.data.routeId,
+    );
+    if (!result) return fail(res, '会话不存在', 404, 404);
+    success(res, result, '已切换方案');
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('会话')) {
+      return fail(res, err.message);
+    }
+    if (err instanceof Error && err.message.includes('候选')) {
+      return fail(res, err.message);
+    }
+    console.error('[plan-sessions/select-candidate]', err);
+    return fail(res, '切换方案失败', 500, 500);
+  }
+});
+
 router.post('/:sessionId/messages', authMiddleware, async (req, res) => {
   try {
     const sessionId = parseInt(String(req.params.sessionId), 10);
@@ -97,7 +120,7 @@ router.post('/:sessionId/messages', authMiddleware, async (req, res) => {
       parsed.data.content,
     );
     if (!result) return fail(res, '会话不存在', 404, 404);
-    const message = buildGenerationMessage(result.generationSource, result.llmProvider, true);
+    const message = buildRouteGenerationMessage(result.generationSource, result.llmProvider, true);
     success(res, result, message);
   } catch (err) {
     if (err instanceof Error) {

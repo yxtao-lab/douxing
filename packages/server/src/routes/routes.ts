@@ -19,7 +19,9 @@ import {
 import { listRouteComments, createRouteComment } from '../services/route-comment.service.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import { getAllProvidersStatus, listProviderOptions } from '../services/llm-client.service.js';
+import { checkAiServiceStatus } from '../services/ai-service-client.service.js';
 import { isLlmEnabled } from '../config/llm.js';
+import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
 import { RoleCode } from '@douxing/shared';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import planSessionsRouter from './plan-sessions.js';
@@ -83,15 +85,21 @@ router.get('/llm-status', async (_req, res) => {
       });
     }
     const status = await getAllProvidersStatus();
+    const aiService = await checkAiServiceStatus();
     const ready = status.providers.find((p) => p.available);
     success(res, {
       enabled: status.enabled,
-      available: Boolean(ready),
+      available: Boolean(ready) || aiService.available,
       model: ready?.model,
       defaultProvider: status.defaultProvider,
       deepseekConfigured: status.deepseekConfigured,
       providers: status.providers,
-      error: ready ? undefined : status.providers.map((p) => p.error).filter(Boolean).join('; '),
+      aiService,
+      error: ready || aiService.available
+        ? undefined
+        : [status.providers.map((p) => p.error).filter(Boolean).join('; '), aiService.error]
+            .filter(Boolean)
+            .join('; '),
     });
   } catch (err) {
     console.error('[routes/llm-status]', err);
@@ -111,15 +119,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
       req.auth!.userId,
       parsed.data,
     );
-    let message = '路线已生成（模板模式）';
-    if (generationSource === 'llm') {
-      message =
-        llmProvider === 'deepseek'
-          ? '路线已由 DeepSeek 生成'
-          : llmProvider === 'lmstudio'
-            ? '路线已由本地模型生成'
-            : '路线已由 AI 生成';
-    }
+    let message = buildRouteGenerationMessage(generationSource, llmProvider);
     success(res, { ...route, generationSource, llmProvider }, message);
   } catch (err) {
     console.error('[routes/generate]', err);
@@ -199,15 +199,7 @@ router.post('/:id/regenerate', authMiddleware, async (req, res) => {
     const result = await regenerateRouteFromPrompt(routeId, req.auth!.userId, parsed.data);
     if (!result) return fail(res, '路线不存在', 404, 404);
     const { route, generationSource, llmProvider } = result;
-    let message = '路线已重新生成（模板模式）';
-    if (generationSource === 'llm') {
-      message =
-        llmProvider === 'deepseek'
-          ? '路线已由 DeepSeek 重新生成'
-          : llmProvider === 'lmstudio'
-            ? '路线已由本地模型重新生成'
-            : '路线已由 AI 重新生成';
-    }
+    const message = buildRouteGenerationMessage(generationSource, llmProvider, true);
     success(res, { ...route, generationSource, llmProvider }, message);
   } catch (err) {
     if (err instanceof Error && err.message.includes('支持重新生成')) {

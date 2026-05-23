@@ -316,11 +316,13 @@ async function handleRegenerate() {
     let tip = '已重新生成（模板模式）';
     if (result.generationSource === 'llm') {
       tip =
-        result.llmProvider === 'deepseek'
-          ? 'DeepSeek 重新生成成功'
-          : result.llmProvider === 'lmstudio'
-            ? '本地模型重新生成成功'
-            : 'AI 重新生成成功';
+        result.llmProvider === 'ai-service'
+          ? 'Python AI 服务重新生成成功'
+          : result.llmProvider === 'deepseek'
+            ? 'DeepSeek 重新生成成功'
+            : result.llmProvider === 'lmstudio'
+              ? '本地模型重新生成成功'
+              : 'AI 重新生成成功';
     }
     uni.showToast({ title: tip, icon: 'success' });
     route.value = result;

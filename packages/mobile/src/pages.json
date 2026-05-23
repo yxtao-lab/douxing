@@ -9,7 +9,8 @@
     {
       "path": "pages/plan/plan",
       "style": {
-        "navigationBarTitleText": "智能规划"
+        "navigationBarTitleText": "智能规划",
+        "disableScroll": true
       }
     },
     {

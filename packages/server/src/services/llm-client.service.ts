@@ -275,6 +275,7 @@ async function chatCompletionWithProvider(
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
+    variantHint?: string;
   },
 ): Promise<LlmRoutePayload> {
   const config = getProviderConfig(provider);
@@ -293,6 +294,9 @@ async function chatCompletionWithProvider(
   }
   if (options?.ragCandidates?.length) {
     blocks.push(formatRagContextForLlm(options.ragCandidates));
+  }
+  if (options?.variantHint?.trim()) {
+    blocks.push(`【本方案风格 — 与其他候选路线需有明显差异】\n${options.variantHint.trim()}`);
   }
   const userContent =
     blocks.length > 0
@@ -384,6 +388,7 @@ export async function chatCompletionForRoute(
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
+    variantHint?: string;
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);

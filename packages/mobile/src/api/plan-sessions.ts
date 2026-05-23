@@ -4,6 +4,7 @@ import type {
   PlanSessionActionResult,
   PlanSessionInfo,
   PlanSessionSummary,
+  SelectPlanCandidateRequest,
 } from '@douxing/shared';
 import { request, requestAiPlan } from '@/utils/request';
 
@@ -19,7 +20,7 @@ export function createPlanSession(data: CreatePlanSessionRequest) {
   return requestAiPlan<PlanSessionActionResult>('/routes/plan-sessions', {
     method: 'POST',
     data,
-    loadingMessage: 'AI 正在规划路线…',
+    loadingMessage: 'AI 正在生成多套方案…',
   });
 }
 
@@ -28,5 +29,12 @@ export function appendPlanMessage(sessionId: number, data: AppendPlanMessageRequ
     method: 'POST',
     data,
     loadingMessage: 'AI 正在调整方案…',
+  });
+}
+
+export function selectPlanCandidate(sessionId: number, data: SelectPlanCandidateRequest) {
+  return request<PlanSessionActionResult>(`/routes/plan-sessions/${sessionId}/select-candidate`, {
+    method: 'POST',
+    data,
   });
 }

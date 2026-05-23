@@ -13,6 +13,8 @@ export interface UserInfo {
   email: string | null;
   /** 用户兴趣偏好标签 */
   interestTags: string[] | null;
+  /** 会员等级，见 MemberLevel */
+  memberLevel: number;
   status: number;
   roles: string[];
 }
@@ -119,7 +121,7 @@ export interface TravelRouteInfo {
   unlockPrice?: number;
   isUnlocked?: boolean;
   generationSource?: 'llm' | 'template';
-  llmProvider?: 'deepseek' | 'lmstudio';
+  llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
   /** AI 生成时用户输入的原始需求 */
   sourcePrompt?: string | null;
 }
@@ -274,6 +276,7 @@ export interface PlanSessionSummary {
 export interface PlanSessionInfo extends PlanSessionSummary {
   messages: PlanSessionMessageInfo[];
   route?: TravelRouteInfo | null;
+  candidates?: PlanRouteCandidate[];
 }
 
 /** 创建规划会话（首条需求） */
@@ -289,6 +292,22 @@ export interface AppendPlanMessageRequest {
   content: string;
 }
 
+/** C4：规划会话候选路线 */
+export interface PlanRouteCandidate {
+  id: number;
+  routeId: number;
+  label: string;
+  variantKey: string | null;
+  sortOrder: number;
+  isSelected: boolean;
+  route?: TravelRouteInfo | null;
+}
+
+/** 选择候选方案 */
+export interface SelectPlanCandidateRequest {
+  routeId: number;
+}
+
 /** 规划会话操作结果（含路线与助手回复） */
 export interface PlanSessionActionResult extends TravelRouteInfo {
   sessionId: number;
@@ -296,8 +315,14 @@ export interface PlanSessionActionResult extends TravelRouteInfo {
   intentSnapshot?: TravelIntentSnapshot | null;
   /** C3：本方案引用库内景点数 */
   ragMatchedCount?: number;
+  /** C4：候选方案列表（数量随会员等级，默认 2 套） */
+  candidates?: PlanRouteCandidate[];
+  /** 当前会员等级可生成的候选方案数 */
+  memberPlanCandidateCount?: number;
+  memberLevel?: number;
+  memberLevelLabel?: string;
   generationSource?: 'llm' | 'template';
-  llmProvider?: 'deepseek' | 'lmstudio';
+  llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
 }
 
 export interface OrderInfo {

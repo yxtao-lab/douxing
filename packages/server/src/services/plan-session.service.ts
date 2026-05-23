@@ -13,6 +13,7 @@ import { getDb } from '../db/client.js';
 import {
   planSessions,
   planSessionMessages,
+  planSessionCandidates,
   type PlanRouteSnapshot,
 } from '../db/schema/plan-sessions.js';
 import {
@@ -25,6 +26,12 @@ import {
   buildIntentFromHistory,
   formatIntentSummary,
 } from './travel-intent.service.js';
+import {
+  buildPlanRouteVariants,
+} from '../config/plan-route-variants.js';
+import { getPlanCandidateCountForUser, getUserMemberLevel } from './membership.service.js';
+import { getMemberLevelLabel } from '@douxing/shared';
+import type { PlanRouteCandidate } from '@douxing/shared';
 
 const SESSION_TITLE_MAX = 40;
 
@@ -57,6 +64,15 @@ function buildRouteSnapshot(payload: {
     matchedCity: payload.matchedCity,
     routeDetail: payload.routeDetail,
   };
+}
+
+function buildMultiCandidateAssistantReply(
+  count: number,
+  selectedName: string,
+  intent?: TravelIntentSnapshot,
+): string {
+  const intentHint = intent ? `\n已理解需求：${formatIntentSummary(intent)}` : '';
+  return `已为您生成 ${count} 套候选方案，请在下方选择。当前默认选中「${selectedName}」。${intentHint}`;
 }
 
 function buildAssistantReply(
@@ -137,6 +153,10 @@ function buildActionResult(
     llmProvider?: string;
     intentSnapshot?: TravelIntentSnapshot | null;
     ragMatchedCount?: number;
+    candidates?: PlanRouteCandidate[];
+    memberPlanCandidateCount?: number;
+    memberLevel?: number;
+    memberLevelLabel?: string;
   },
 ): PlanSessionActionResult {
   return {
@@ -145,6 +165,10 @@ function buildActionResult(
     assistantMessage,
     intentSnapshot: meta.intentSnapshot ?? null,
     ragMatchedCount: meta.ragMatchedCount ?? 0,
+    candidates: meta.candidates,
+    memberPlanCandidateCount: meta.memberPlanCandidateCount,
+    memberLevel: meta.memberLevel,
+    memberLevelLabel: meta.memberLevelLabel,
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
   };
@@ -161,6 +185,100 @@ function snapshotFromRoute(route: NonNullable<Awaited<ReturnType<typeof getRoute
     matchedCity: (detail.matchedCity as string) ?? '',
     routeDetail: { days: detail.days ?? [] },
   });
+}
+
+async function loadSessionCandidates(
+  sessionId: number,
+  userId: number,
+): Promise<PlanRouteCandidate[]> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(planSessionCandidates)
+    .where(eq(planSessionCandidates.sessionId, sessionId))
+    .orderBy(planSessionCandidates.sortOrder);
+
+  const candidates: PlanRouteCandidate[] = [];
+  for (const row of rows) {
+    const route = await getRouteById(row.routeId, userId);
+    candidates.push({
+      id: row.id,
+      routeId: row.routeId,
+      label: row.label,
+      variantKey: row.variantKey,
+      sortOrder: row.sortOrder,
+      isSelected: row.isSelected === 1,
+      route,
+    });
+  }
+  return candidates;
+}
+
+interface GeneratedCandidateRow {
+  route: NonNullable<Awaited<ReturnType<typeof getRouteById>>>;
+  generationSource: 'llm' | 'template';
+  llmProvider?: string;
+  label: string;
+  variantKey: string;
+  sortOrder: number;
+}
+
+async function generateSessionCandidates(
+  userId: number,
+  baseInput: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+): Promise<{ rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number }> {
+  const memberLevel = await getUserMemberLevel(userId);
+  const candidateCount = await getPlanCandidateCountForUser(userId);
+  const variants = buildPlanRouteVariants(intent, candidateCount);
+  const results: GeneratedCandidateRow[] = [];
+
+  for (let i = 0; i < variants.length; i++) {
+    const variant = variants[i]!;
+    try {
+      const { route, generationSource, llmProvider } = await createRouteFromPrompt(userId, {
+        ...baseInput,
+        variantKey: variant.key,
+        variantHint: variant.hint,
+        ragVariantIndex: i,
+      });
+      results.push({
+        route,
+        generationSource,
+        llmProvider,
+        label: variant.label,
+        variantKey: variant.key,
+        sortOrder: i,
+      });
+    } catch (err) {
+      console.warn(
+        `[plan-session] 候选方案 ${variant.key} 生成失败:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  return { rows: results, candidateCount, memberLevel };
+}
+
+async function persistSessionCandidates(
+  sessionId: number,
+  rows: GeneratedCandidateRow[],
+  selectedRouteId: number,
+) {
+  const db = getDb();
+  if (rows.length === 0) return;
+
+  await db.insert(planSessionCandidates).values(
+    rows.map((row) => ({
+      sessionId,
+      routeId: row.route.id,
+      label: row.label,
+      variantKey: row.variantKey,
+      sortOrder: row.sortOrder,
+      isSelected: row.route.id === selectedRouteId ? 1 : 0,
+    })),
+  );
 }
 
 export async function listPlanSessions(
@@ -209,6 +327,7 @@ export async function getPlanSessionDetail(
 
   const messages = await loadSessionMessages(sessionId);
   const route = session.routeId ? await getRouteById(session.routeId, userId) : null;
+  const candidates = await loadSessionCandidates(sessionId, userId);
 
   return {
     id: session.id,
@@ -222,6 +341,7 @@ export async function getPlanSessionDetail(
     updatedAt: toIso(session.updatedAt),
     messages,
     route,
+    candidates,
   };
 }
 
@@ -247,21 +367,37 @@ export async function createPlanSession(
     intent,
   };
 
-  const { route, generationSource, llmProvider, intent: resolvedIntent } =
-    await createRouteFromPrompt(userId, generateInput);
-  const assistantMessage = buildAssistantReply(route, resolvedIntent);
-  const snapshot = snapshotFromRoute(route);
+  const generatedPack = await generateSessionCandidates(userId, generateInput, intent);
+  const generated = generatedPack.rows;
+  if (generated.length === 0) {
+    throw new Error('生成路线失败，请稍后重试');
+  }
+
+  const primary = generated[0]!;
+  const resolvedIntent = intent;
+  const memberLevel = generatedPack.memberLevel;
+  const memberPlanCandidateCount = generatedPack.candidateCount;
+  const memberLevelLabel = getMemberLevelLabel(memberLevel);
+  const assistantMessage =
+    generated.length > 1
+      ? buildMultiCandidateAssistantReply(generated.length, primary.route.name, resolvedIntent)
+      : buildAssistantReply(primary.route, resolvedIntent);
+  const snapshot = snapshotFromRoute(primary.route);
 
   const db = getDb();
   const [sessionResult] = await db.insert(planSessions).values({
     userId,
-    routeId: route.id,
+    routeId: primary.route.id,
     provider: input.provider ?? 'auto',
     status: PlanSessionStatus.ACTIVE,
     title: truncateTitle(prompt),
     intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
   });
   const sessionId = Number(sessionResult.insertId);
+
+  if (generated.length > 1) {
+    await persistSessionCandidates(sessionId, generated, primary.route.id);
+  }
 
   await db.insert(planSessionMessages).values([
     { sessionId, role: 'user', content: prompt },
@@ -273,11 +409,67 @@ export async function createPlanSession(
     },
   ]);
 
-  return buildActionResult(sessionId, route, assistantMessage, {
-    generationSource,
-    llmProvider,
+  const candidates =
+    generated.length > 1 ? await loadSessionCandidates(sessionId, userId) : undefined;
+
+  return buildActionResult(sessionId, primary.route, assistantMessage, {
+    generationSource: primary.generationSource,
+    llmProvider: primary.llmProvider,
     intentSnapshot: resolvedIntent,
+    ragMatchedCount: readRagMatchedCount(primary.route),
+    candidates,
+    memberPlanCandidateCount,
+    memberLevel,
+    memberLevelLabel,
+  });
+}
+
+export async function selectPlanSessionCandidate(
+  sessionId: number,
+  userId: number,
+  routeId: number,
+): Promise<PlanSessionActionResult | null> {
+  const session = await getOwnedSession(sessionId, userId);
+  if (!session) return null;
+  if (session.status !== PlanSessionStatus.ACTIVE) {
+    throw new Error('该会话已结束，请新建规划');
+  }
+
+  const candidates = await loadSessionCandidates(sessionId, userId);
+  const picked = candidates.find((c) => c.routeId === routeId);
+  if (!picked) {
+    throw new Error('无效的候选方案');
+  }
+
+  const db = getDb();
+  await db
+    .update(planSessionCandidates)
+    .set({ isSelected: 0 })
+    .where(eq(planSessionCandidates.sessionId, sessionId));
+  await db
+    .update(planSessionCandidates)
+    .set({ isSelected: 1 })
+    .where(
+      and(
+        eq(planSessionCandidates.sessionId, sessionId),
+        eq(planSessionCandidates.routeId, routeId),
+      ),
+    );
+  await db
+    .update(planSessions)
+    .set({ routeId, updatedAt: new Date() })
+    .where(eq(planSessions.id, sessionId));
+
+  const route = await getRouteById(routeId, userId);
+  if (!route) return null;
+
+  const refreshedCandidates = await loadSessionCandidates(sessionId, userId);
+  const assistantMessage = `已切换为「${picked.label}」：${route.name}`;
+
+  return buildActionResult(sessionId, route, assistantMessage, {
+    intentSnapshot: (session.intentSnapshot as TravelIntentSnapshot | null) ?? null,
     ragMatchedCount: readRagMatchedCount(route),
+    candidates: refreshedCandidates,
   });
 }
 
@@ -321,6 +513,7 @@ export async function appendPlanSessionMessage(
   const { route, generationSource, llmProvider, intent: resolvedIntent } = result;
   const assistantMessage = buildAssistantReply(route, resolvedIntent);
   const snapshot = snapshotFromRoute(route);
+  const refreshedCandidates = await loadSessionCandidates(sessionId, userId);
 
   const db = getDb();
   await db.insert(planSessionMessages).values([
@@ -342,5 +535,6 @@ export async function appendPlanSessionMessage(
     llmProvider,
     intentSnapshot: resolvedIntent,
     ragMatchedCount: readRagMatchedCount(route),
+    candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
   });
 }

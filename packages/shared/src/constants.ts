@@ -18,6 +18,14 @@ export const UserType = {
   CREATOR: 2,
 } as const;
 
+/** 会员等级（users.member_level） */
+export const MemberLevel = {
+  FREE: 0,
+  SILVER: 1,
+  GOLD: 2,
+  VIP: 3,
+} as const;
+
 /** 路线状态（travel_routes.status） */
 export const RouteStatus = {
   DRAFT: 0,

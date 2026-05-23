@@ -45,5 +45,22 @@ export const planSessionMessages = mysqlTable('plan_session_messages', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
 });
 
+/** C4：规划会话候选路线 */
+export const planSessionCandidates = mysqlTable('plan_session_candidates', {
+  id: int('id').primaryKey().autoincrement(),
+  sessionId: int('session_id')
+    .notNull()
+    .references(() => planSessions.id, { onDelete: 'cascade' }),
+  routeId: int('route_id')
+    .notNull()
+    .references(() => travelRoutes.id, { onDelete: 'cascade' }),
+  label: varchar('label', { length: 64 }).notNull(),
+  variantKey: varchar('variant_key', { length: 32 }),
+  sortOrder: tinyint('sort_order').notNull().default(0),
+  isSelected: tinyint('is_selected').notNull().default(0),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export type PlanSession = typeof planSessions.$inferSelect;
 export type PlanSessionMessage = typeof planSessionMessages.$inferSelect;
+export type PlanSessionCandidate = typeof planSessionCandidates.$inferSelect;

@@ -3,6 +3,10 @@ import type { LlmProviderChoice } from '../config/llm.js';
 import type { PlanChatMessage, TravelIntentSnapshot, RagAttractionCandidate } from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 import {
+  canUseAiServiceForRoute,
+  generateRouteFromAiService,
+} from './ai-service-route-generator.service.js';
+import {
   buildIntentFromHistory,
   enforceRouteConstraints,
   parseTravelIntent,
@@ -25,6 +29,11 @@ export interface GenerateRouteInput {
   intent?: TravelIntentSnapshot;
   /** C3：RAG 候选景点（可选，未传则自动检索） */
   ragCandidates?: RagAttractionCandidate[];
+  /** C4：方案变体提示（经典/文化/休闲等） */
+  variantHint?: string;
+  variantKey?: string;
+  /** C4：RAG 组装时轮换候选起点 */
+  ragVariantIndex?: number;
 }
 
 export interface GeneratedRouteDraft {
@@ -104,6 +113,25 @@ export async function generateRoute(
     ragCandidates,
   };
 
+  if (canUseAiServiceForRoute()) {
+    try {
+      const draft = await generateRouteFromAiService(enrichedInput);
+      const constrained = enforceRouteConstraints(draft, intent);
+      const linked = applyRagToRouteDraft(constrained, ragCandidates);
+      return {
+        ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
+        generationSource: 'llm',
+        llmProvider: draft.llmProvider,
+        intent,
+      };
+    } catch (err) {
+      console.warn(
+        '[route-generator] Python AI 微服务失败，回退 Node LLM:',
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
@@ -148,7 +176,13 @@ export function generateRouteFromTemplate(
   const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
 
   if (resolvedIntent.city && ragCandidates.length >= (resolvedIntent.days ?? 3)) {
-    const ragDraft = buildRouteFromRagCatalog(resolvedIntent, ragCandidates, prompt);
+    const ragDraft = buildRouteFromRagCatalog(
+      resolvedIntent,
+      ragCandidates,
+      prompt,
+      input.ragVariantIndex ?? 0,
+      input.variantKey,
+    );
     if (ragDraft) {
       return {
         ...ragDraft,

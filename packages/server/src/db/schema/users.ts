@@ -14,6 +14,8 @@ export const users = mysqlTable('users', {
   avatar: varchar('avatar', { length: 512 }),
   /** 用户兴趣偏好标签 */
   interestTags: json('interest_tags').$type<string[]>(),
+  /** 会员等级，见 @douxing/shared MemberLevel */
+  memberLevel: tinyint('member_level').notNull().default(0),
   status: tinyint('status').notNull().default(1),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

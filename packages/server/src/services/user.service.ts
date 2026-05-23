@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { users, roles, userRoles } from '../db/schema/index.js';
 import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
-import { USER_INTEREST_MAX, USER_INTEREST_PRESETS } from '@douxing/shared';
+import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel } from '@douxing/shared';
 
 const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
 
@@ -35,6 +35,7 @@ function mapUserRow(
     phone: user.phone,
     email: user.email,
     interestTags: user.interestTags ?? null,
+    memberLevel: normalizeMemberLevel(user.memberLevel),
     status: user.status,
     roles: roleCodes,
   };

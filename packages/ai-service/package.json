@@ -1,0 +1,10 @@
+{
+  "name": "@douxing/ai-service",
+  "version": "1.0.0",
+  "private": true,
+  "description": "兜行 Python AI 微服务（FastAPI + LangChain）",
+  "scripts": {
+    "dev": "node ../../scripts/run-ai-service.mjs",
+    "start": "node ../../scripts/run-ai-service.mjs"
+  }
+}

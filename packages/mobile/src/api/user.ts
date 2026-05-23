@@ -1,4 +1,4 @@
-import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
+import type { UserInfo, UpdateUserProfileRequest, MembershipInfo } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
 import { getApiBaseUrl } from '@/utils/api-base';
 
@@ -6,6 +6,10 @@ const TOKEN_KEY = 'douxing_token';
 
 export function fetchCurrentUser() {
   return request<UserInfo>('/users/me');
+}
+
+export function fetchMembershipInfo() {
+  return request<MembershipInfo>('/users/me/membership');
 }
 
 export async function updateUserProfile(data: UpdateUserProfileRequest) {

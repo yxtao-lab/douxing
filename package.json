@@ -13,6 +13,8 @@
     "dev:app-android": "pnpm --filter @douxing/mobile dev:app-android",
     "dev:app-ios": "pnpm --filter @douxing/mobile dev:app-ios",
     "dev:server": "pnpm --filter @douxing/server dev",
+    "dev:ai-service": "node scripts/run-ai-service.mjs",
+    "dev:with-ai": "concurrently -k -n api,ai,web,mobile,mp -c blue,cyan,green,magenta,yellow \"pnpm dev:server\" \"pnpm dev:ai-service\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\"",
     "build": "pnpm run -r build",
     "build:only": "node scripts/run-build.mjs",
     "build:web": "pnpm --filter @douxing/web build",

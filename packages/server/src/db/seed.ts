@@ -8,7 +8,7 @@ import { seedAttractions, syncAttractionsFromRouteDetail } from '../services/att
 import { seedBadges } from '../services/badge.service.js';
 import { seedAchievementDefinitions } from '../services/achievement.service.js';
 import { RouteStatus } from '@douxing/shared';
-import { RoleCode, UserType } from '@douxing/shared';
+import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
 
 async function seedRoles() {
   const db = getDb();
@@ -43,6 +43,7 @@ async function seedAdminUser() {
     nickname: '系统管理员',
     email: 'admin@douxing.com',
     userType: UserType.NORMAL,
+    memberLevel: MemberLevel.VIP,
     status: 1,
   });
 
@@ -73,6 +74,7 @@ async function seedDemoUser() {
     nickname: '体验用户',
     email: 'demo@douxing.com',
     userType: UserType.NORMAL,
+    memberLevel: MemberLevel.SILVER,
     status: 1,
   });
 

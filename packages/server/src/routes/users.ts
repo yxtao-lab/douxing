@@ -7,6 +7,7 @@ import multer from 'multer';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail } from '../utils/response.js';
 import { getUserWithRoles, updateUserProfile, setUserAvatar } from '../services/user.service.js';
+import { getMembershipInfoForUser } from '../services/membership.service.js';
 import { USER_INTEREST_MAX } from '@douxing/shared';
 
 const router = Router();
@@ -68,6 +69,19 @@ router.get('/me', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[users/me GET]', err);
     return fail(res, '获取资料失败', 500, 500);
+  }
+});
+
+router.get('/me/membership', authMiddleware, async (req, res) => {
+  try {
+    const membership = await getMembershipInfoForUser(req.auth!.userId);
+    if (!membership) {
+      return fail(res, '用户不存在', 404, 404);
+    }
+    success(res, membership);
+  } catch (err) {
+    console.error('[users/me/membership]', err);
+    return fail(res, '获取会员信息失败', 500, 500);
   }
 });
 

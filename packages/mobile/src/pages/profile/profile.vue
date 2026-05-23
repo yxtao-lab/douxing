@@ -4,8 +4,11 @@
       <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
       <view v-else class="avatar">{{ avatarText }}</view>
       <view class="info">
-        <text class="name">{{ user.nickname || user.username }}</text>
-        <text class="sub">@{{ user.username }}</text>
+        <view class="name-row">
+          <text class="name">{{ user.nickname || user.username }}</text>
+          <text class="member-badge" :class="memberBadgeClass">{{ memberLevelLabel }}</text>
+        </view>
+        <text class="sub">@{{ user.username }} · 可生成 {{ planCandidateCount }} 套方案</text>
         <view v-if="user.interestTags?.length" class="tag-row">
           <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ tag }}</text>
         </view>
@@ -61,6 +64,7 @@
 import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { UserInfo } from '@douxing/shared';
+import { getMemberLevelLabel, getPlanCandidateCountByMemberLevel } from '@douxing/shared';
 import { fetchCurrentUser } from '@/api/user';
 import { getStoredUser, setAuth } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
@@ -85,6 +89,22 @@ interface UserAction {
 const user = ref<UserInfo | null>(getStoredUser());
 
 const avatarText = computed(() => (user.value?.nickname || user.value?.username || '?').slice(0, 1));
+
+const memberLevelLabel = computed(() =>
+  getMemberLevelLabel(user.value?.memberLevel),
+);
+
+const planCandidateCount = computed(() =>
+  getPlanCandidateCountByMemberLevel(user.value?.memberLevel),
+);
+
+const memberBadgeClass = computed(() => {
+  const level = user.value?.memberLevel ?? 0;
+  if (level >= 3) return 'vip';
+  if (level >= 2) return 'gold';
+  if (level >= 1) return 'silver';
+  return 'free';
+});
 
 const travelGridItems: GridItem[] = [
   { key: 'checkins', icon: '📍', label: '打卡记录', bg: '#e6f4ff', action: goCheckins },
@@ -246,14 +266,46 @@ onShow(async () => {
   padding: 4rpx 16rpx;
   border-radius: 999rpx;
 }
+.info {
+  flex: 1;
+  min-width: 0;
+}
+.name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
 .name {
   font-size: 34rpx;
   font-weight: 600;
-  display: block;
+}
+.member-badge {
+  font-size: 20rpx;
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+}
+.member-badge.free {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+.member-badge.silver {
+  color: #475569;
+  background: #e2e8f0;
+}
+.member-badge.gold {
+  color: #b45309;
+  background: #fef3c7;
+}
+.member-badge.vip {
+  color: #7c3aed;
+  background: #ede9fe;
 }
 .sub {
   color: #6b7280;
   font-size: 24rpx;
+  margin-top: 8rpx;
+  display: block;
 }
 .section {
   margin: 24rpx 24rpx 0;
