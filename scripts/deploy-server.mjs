@@ -43,6 +43,7 @@ const skipBuild = args.includes('--skip-build');
 const useTsxFlag = args.includes('--use-tsx');
 const forceBuild = args.includes('--force-build');
 const nginxOnly = args.includes('--nginx-only');
+const skipNginx = args.includes('--skip-nginx');
 const checkOnly = args.includes('--check');
 const nginxIdx = args.indexOf('--nginx');
 const nginxOnlyIdx = args.indexOf('--nginx-only');
@@ -232,6 +233,42 @@ function ensureEnvFile() {
   }
 }
 
+function resolveNginxDomain() {
+  if (nginxDomain && !nginxDomain.startsWith('-')) return nginxDomain;
+  if (process.env.NGINX_DOMAIN?.trim()) return process.env.NGINX_DOMAIN.trim();
+  try {
+    const base = process.env.API_PUBLIC_BASE_URL?.trim();
+    if (base) return new URL(base).hostname;
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+function shouldAutoSetupNginx() {
+  if (skipNginx) return false;
+  if (process.env.NGINX_AUTO_SETUP === 'false') return false;
+  return Boolean(resolveNginxDomain() && getCmdVersion('nginx -v'));
+}
+
+function setupNginxAuto(domain) {
+  console.log(`\n[deploy:server] Nginx 自动配置: ${domain}`);
+  const script = resolve(root, 'scripts/install-nginx-auto.sh');
+  if (!existsSync(script)) {
+    renderNginxConfig(domain, sslCertPath, sslKeyPath);
+    return;
+  }
+  const email = process.env.NGINX_CERTBOT_EMAIL || '';
+  const sudoCmd = `sudo bash scripts/install-nginx-auto.sh ${domain}${email ? ` ${email}` : ''}`;
+  try {
+    run(sudoCmd);
+  } catch {
+    console.warn('[deploy:server] Nginx 自动安装需要 root 权限');
+    console.warn(`  请执行: ${sudoCmd}`);
+    renderNginxConfig(domain, sslCertPath, sslKeyPath);
+  }
+}
+
 function renderNginxConfig(domain, sslCert, sslKey) {
   const useSsl = Boolean(sslCert && sslKey);
   const templatePath = resolve(
@@ -336,7 +373,7 @@ async function main() {
     }
     ensureEnvFile();
     loadEnvFile();
-    renderNginxConfig(nginxDomain, sslCertPath, sslKeyPath);
+    setupNginxAuto(nginxDomain);
     return;
   }
 
@@ -435,7 +472,9 @@ async function main() {
       console.error('[deploy:server] --ssl-cert 与 --ssl-key 需同时指定');
       process.exit(1);
     }
-    renderNginxConfig(nginxDomain, sslCertPath, sslKeyPath);
+    setupNginxAuto(nginxDomain);
+  } else if (shouldAutoSetupNginx()) {
+    setupNginxAuto(resolveNginxDomain());
   }
 
   const baseUrl = process.env.API_PUBLIC_BASE_URL?.replace(/\/$/, '');
@@ -445,12 +484,9 @@ async function main() {
   console.log(`  健康检查: ${baseUrl}/api/health`);
   console.log(`  PM2 状态: ${pm2} status`);
   console.log(`  查看日志: ${pm2} logs douxing-api`);
-  if (!nginxDomain) {
+  if (skipNginx || !resolveNginxDomain()) {
     console.log('');
-    console.log('  尚未配置 Nginx，请执行：');
-    console.log('    pnpm deploy:server --nginx-only api.你的域名.com');
-    console.log('    或: pnpm deploy:server --nginx api.你的域名.com --skip-docker --skip-build');
-    console.log('  参阅 docs/启动与部署流程.md');
+    console.log('  跳过 Nginx：未设置 API_PUBLIC_BASE_URL 或使用了 --skip-nginx');
   }
   console.log('========================================\n');
 }

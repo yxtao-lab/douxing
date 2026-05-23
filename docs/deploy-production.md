@@ -222,7 +222,20 @@ pnpm exec pm2 save
 
 ## 8. Nginx + HTTPS
 
-### 8.1 生成站点配置
+> **推荐**：在 `.env` 配置 `API_PUBLIC_BASE_URL`、`NGINX_CERTBOT_EMAIL` 后，`pnpm deploy:server` 会**自动配置 Nginx**；HTTPS 已通则跳过，无需每次手动操作。
+
+```env
+API_PUBLIC_BASE_URL=https://api.yxtao.site
+NGINX_AUTO_SETUP=true
+NGINX_CERTBOT_EMAIL=你的邮箱@example.com
+```
+
+```bash
+pnpm deploy:server --skip-docker --use-tsx
+# 跳过 Nginx：加 --skip-nginx
+```
+
+### 8.1 手动生成站点配置（可选）
 
 ```bash
 pnpm deploy:server --nginx api.yxtao.site --skip-docker --skip-build
