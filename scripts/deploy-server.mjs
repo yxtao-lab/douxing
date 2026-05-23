@@ -54,6 +54,75 @@ function tryRun(cmd) {
   }
 }
 
+/** 返回可用的 compose 命令前缀：docker compose 或 docker-compose */
+function resolveDockerComposePrefix() {
+  if (tryRun('docker compose version')) return 'docker compose';
+  if (tryRun('docker-compose version')) return 'docker-compose';
+  return null;
+}
+
+function ensureDockerReady() {
+  const dockerVer = getCmdVersion('docker -v');
+  if (!dockerVer) {
+    throw new Error(
+      '未检测到 Docker。请先执行: sudo bash scripts/setup-opencloudos9.sh',
+    );
+  }
+
+  if (!tryRun('docker info')) {
+    throw new Error(
+      'Docker 守护进程未运行。请执行: sudo systemctl enable --now docker',
+    );
+  }
+
+  const composePrefix = resolveDockerComposePrefix();
+  if (!composePrefix) {
+    throw new Error(
+      [
+        '未检测到 docker compose 插件（OpenCloudOS 常见）。请任选一种方式安装：',
+        '',
+        '  sudo dnf install -y docker-compose-plugin',
+        '  sudo systemctl restart docker',
+        '',
+        '或手动安装插件：',
+        '  sudo mkdir -p /usr/libexec/docker/cli-plugins',
+        '  sudo curl -SL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 \\',
+        '    -o /usr/libexec/docker/cli-plugins/docker-compose',
+        '  sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose',
+        '',
+        '验证: docker compose version',
+      ].join('\n'),
+    );
+  }
+
+  console.log(`[deploy:server] Docker: ${dockerVer}`);
+  console.log(`[deploy:server] Compose: ${getCmdVersion(`${composePrefix} version`)}`);
+  return composePrefix;
+}
+
+/** 优先使用项目内 pm2（pnpm install 后可用），其次全局 pm2 */
+function resolvePm2Prefix() {
+  if (tryRun('pnpm exec pm2 -v')) return 'pnpm exec pm2';
+  if (tryRun('pm2 -v')) return 'pm2';
+  if (tryRun('npx pm2 -v')) return 'npx pm2';
+  return null;
+}
+
+function ensurePm2Ready() {
+  const pm2Prefix = resolvePm2Prefix();
+  if (!pm2Prefix) {
+    throw new Error(
+      [
+        '未检测到 PM2。部署脚本会在 pnpm install 后自动使用项目内 pm2；',
+        '若仍失败，请执行: pnpm install && pnpm deploy:server --skip-docker --skip-build',
+        '或全局安装: sudo npm install -g pm2',
+      ].join('\n'),
+    );
+  }
+  console.log(`[deploy:server] PM2: ${getCmdVersion(`${pm2Prefix} -v`)} (${pm2Prefix})`);
+  return pm2Prefix;
+}
+
 function getCmdVersion(cmd) {
   try {
     return execSync(cmd, { encoding: 'utf8', stdio: 'pipe' }).trim().split('\n')[0];
@@ -164,11 +233,30 @@ function checkEnvironment() {
     ['node', 'node -v'],
     ['pnpm', 'pnpm -v'],
     ['docker', 'docker -v'],
-    ['pm2', 'pm2 -v'],
   ];
   for (const [name, cmd] of tools) {
     const ver = getCmdVersion(cmd);
     console.log(ver ? `  ✓ ${name}: ${ver}` : `  ✗ ${name}: 未安装`);
+  }
+
+  const pm2Prefix = resolvePm2Prefix();
+  console.log(
+    pm2Prefix
+      ? `  ✓ pm2: ${getCmdVersion(`${pm2Prefix} -v`)} (${pm2Prefix})`
+      : `  ✗ pm2: 未安装（pnpm install 后可用，或 npm i -g pm2）`,
+  );
+
+  const composePrefix = resolveDockerComposePrefix();
+  console.log(
+    composePrefix
+      ? `  ✓ compose: ${getCmdVersion(`${composePrefix} version`)}`
+      : `  ✗ compose: 未安装（需 docker-compose-plugin）`,
+  );
+
+  if (tryRun('docker info')) {
+    console.log('  ✓ docker daemon: 运行中');
+  } else if (getCmdVersion('docker -v')) {
+    console.log('  ✗ docker daemon: 未运行（systemctl start docker）');
   }
 
   const nginxVer = getCmdVersion('nginx -v');
@@ -214,8 +302,9 @@ async function main() {
   mkdirSync(resolve(root, 'logs'), { recursive: true });
 
   if (!skipDocker) {
+    const composePrefix = ensureDockerReady();
     console.log('\n[deploy:server] 启动生产 Docker（MySQL + Redis）...');
-    run('docker compose -f deploy/docker-compose.prod.yml up -d');
+    run(`${composePrefix} -f deploy/docker-compose.prod.yml up -d`);
     await waitForMysql();
   } else {
     console.log('[deploy:server] 跳过 Docker（--skip-docker）');
@@ -248,12 +337,13 @@ async function main() {
   }
 
   console.log('\n[deploy:server] 启动 / 重载 PM2...');
-  if (tryRun('pm2 describe douxing-api')) {
-    run('pm2 reload deploy/ecosystem.config.cjs --update-env');
+  const pm2 = ensurePm2Ready();
+  if (tryRun(`${pm2} describe douxing-api`)) {
+    run(`${pm2} reload deploy/ecosystem.config.cjs --update-env`);
   } else {
-    run('pm2 start deploy/ecosystem.config.cjs');
+    run(`${pm2} start deploy/ecosystem.config.cjs`);
   }
-  run('pm2 save');
+  run(`${pm2} save`);
 
   if (nginxDomain) {
     renderNginxConfig(nginxDomain);
@@ -264,8 +354,8 @@ async function main() {
   console.log('  部署完成');
   console.log('========================================');
   console.log(`  健康检查: ${baseUrl}/api/health`);
-  console.log(`  PM2 状态: pm2 status`);
-  console.log(`  查看日志: pm2 logs douxing-api`);
+  console.log(`  PM2 状态: ${pm2} status`);
+  console.log(`  查看日志: ${pm2} logs douxing-api`);
   if (!nginxDomain) {
     console.log('');
     console.log('  尚未配置 Nginx，请执行：');

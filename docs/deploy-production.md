@@ -68,6 +68,7 @@ corepack prepare pnpm@9.15.0 --activate
 # Docker（版本须 > 20.10.9，OpenCloudOS 官方要求）
 curl -fsSL https://get.docker.com | sudo sh
 sudo systemctl enable --now docker
+sudo dnf install -y docker-compose-plugin || true
 sudo usermod -aG docker $USER
 # 重新登录 SSH
 
@@ -299,6 +300,49 @@ pm2 save
 ---
 
 ## 11. 常见问题
+
+### Docker compose 命令不存在
+
+报错含 `Run 'docker --help'` 或 `unknown command "compose"`：
+
+```bash
+sudo dnf install -y docker-compose-plugin
+sudo systemctl restart docker
+docker compose version   # 应输出版本号
+
+# 若 dnf 找不到包，手动安装：
+sudo mkdir -p /usr/libexec/docker/cli-plugins
+sudo curl -SL https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-x86_64 \
+  -o /usr/libexec/docker/cli-plugins/docker-compose
+sudo chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+docker compose version
+```
+
+Docker 守护进程未运行：
+
+```bash
+sudo systemctl enable --now docker
+docker info
+```
+
+### pm2: command not found
+
+Docker 和构建已成功时，只需补装 PM2 并重启进程：
+
+```bash
+# 方式 A：使用项目内 pm2（推荐，需先拉取最新代码）
+pnpm install
+pnpm exec pm2 -v
+
+# 方式 B：全局安装
+sudo npm install -g pm2
+pm2 -v
+
+# 跳过 Docker，只启动 API
+pnpm deploy:server --skip-docker --skip-build
+```
+
+日常运维同样可用 `pnpm exec pm2 logs douxing-api`。
 
 ### 小程序「网络请求失败」
 

@@ -36,13 +36,29 @@ fi
 sudo -u "$DEPLOY_USER" bash -lc 'corepack enable && corepack prepare pnpm@9.15.0 --activate'
 echo "  pnpm: $(sudo -u "$DEPLOY_USER" pnpm -v)"
 
-echo "[5/7] 安装 Docker..."
+echo "[5/7] 安装 Docker + Compose 插件..."
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
 fi
 systemctl enable --now docker
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "  安装 docker-compose-plugin..."
+  if dnf install -y docker-compose-plugin 2>/dev/null; then
+    systemctl restart docker
+  else
+    mkdir -p /usr/libexec/docker/cli-plugins
+    ARCH="$(uname -m)"
+    curl -fsSL "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-linux-${ARCH}" \
+      -o /usr/libexec/docker/cli-plugins/docker-compose
+    chmod +x /usr/libexec/docker/cli-plugins/docker-compose
+    systemctl restart docker
+  fi
+fi
+
 usermod -aG docker "$DEPLOY_USER" 2>/dev/null || true
 echo "  Docker: $(docker -v)"
+echo "  Compose: $(docker compose version 2>/dev/null || docker-compose version 2>/dev/null || echo '未安装')"
 
 echo "[6/7] 安装 Nginx、Certbot、Python..."
 # EPEL 提供 certbot；OpenCloudOS 9 与 RHEL 9 兼容
