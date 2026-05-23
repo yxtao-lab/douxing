@@ -1,33 +1,64 @@
 /**
  * PM2 进程配置（生产环境）
- * 用法（项目根目录）：
- *   pm2 start deploy/ecosystem.config.cjs
- *   pm2 save && pm2 startup
+ *
+ * 默认：node packages/server/dist/index.js（需 pnpm build:server）
+ * 低内存机器：SERVER_RUNTIME=tsx 或 dist 不存在时自动用 tsx 直跑源码（免 tsc）
+ *
+ *   SERVER_RUNTIME=tsx pm2 start deploy/ecosystem.config.cjs
  */
+const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
 const aiEnabled = process.env.AI_SERVICE_ENABLED === 'true';
+const serverDist = path.join(root, 'packages/server/dist/index.js');
+const useTsx = process.env.SERVER_RUNTIME === 'tsx' || !fs.existsSync(serverDist);
+
+function findTsxCli() {
+  const candidates = [
+    path.join(root, 'node_modules/tsx/dist/cli.mjs'),
+    path.join(root, 'packages/server/node_modules/tsx/dist/cli.mjs'),
+  ];
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return 'tsx';
+}
+
+/** @type {import('pm2').StartOptions} */
+const apiApp = useTsx
+  ? {
+      name: 'douxing-api',
+      cwd: root,
+      script: findTsxCli(),
+      args: 'packages/server/src/index.ts',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_memory_restart: '768M',
+      env: { NODE_ENV: 'production', SERVER_RUNTIME: 'tsx' },
+      error_file: path.join(root, 'logs/pm2-api-error.log'),
+      out_file: path.join(root, 'logs/pm2-api-out.log'),
+      merge_logs: true,
+      time: true,
+    }
+  : {
+      name: 'douxing-api',
+      cwd: root,
+      script: 'packages/server/dist/index.js',
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_memory_restart: '512M',
+      env: { NODE_ENV: 'production' },
+      error_file: path.join(root, 'logs/pm2-api-error.log'),
+      out_file: path.join(root, 'logs/pm2-api-out.log'),
+      merge_logs: true,
+      time: true,
+    };
 
 /** @type {import('pm2').StartOptions[]} */
-const apps = [
-  {
-    name: 'douxing-api',
-    cwd: root,
-    script: 'packages/server/dist/index.js',
-    instances: 1,
-    exec_mode: 'fork',
-    autorestart: true,
-    max_memory_restart: '512M',
-    env: {
-      NODE_ENV: 'production',
-    },
-    error_file: path.join(root, 'logs/pm2-api-error.log'),
-    out_file: path.join(root, 'logs/pm2-api-out.log'),
-    merge_logs: true,
-    time: true,
-  },
-];
+const apps = [apiApp];
 
 if (aiEnabled) {
   const venvPython =

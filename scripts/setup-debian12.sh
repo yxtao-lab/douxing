@@ -61,7 +61,19 @@ systemctl enable nginx
 echo "[7/8] 安装 PM2..."
 npm install -g pm2
 
-echo "[8/8] 配置 UFW 防火墙..."
+echo "[8/9] 配置 swap（2G，缓解编译内存不足）..."
+if ! swapon --show | grep -q '/swapfile'; then
+  fallocate -l 2G /swapfile 2>/dev/null || dd if=/dev/zero of=/swapfile bs=1M count=2048 status=none
+  chmod 600 /swapfile
+  mkswap /swapfile
+  swapon /swapfile
+  grep -q '/swapfile' /etc/fstab || echo '/swapfile none swap sw 0 0' >> /etc/fstab
+  echo "  swap: 2G 已启用"
+else
+  echo "  swap: 已存在"
+fi
+
+echo "[9/9] 配置 UFW 防火墙..."
 ufw allow OpenSSH 2>/dev/null || ufw allow 22/tcp || true
 ufw allow 80/tcp
 ufw allow 443/tcp

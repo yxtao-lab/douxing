@@ -41,6 +41,7 @@
     "bootstrap:dev": "node scripts/deploy.mjs --skip-build --dev",
     "deploy:server": "node scripts/deploy-server.mjs",
     "deploy:server:check": "node scripts/deploy-server.mjs --check",
+    "deploy:server:tsx": "node scripts/deploy-server.mjs --skip-docker --use-tsx",
     "setup:debian12": "bash scripts/setup-debian12.sh",
     "setup:ubuntu22": "bash scripts/setup-ubuntu22.sh",
     "setup:opencloudos9": "bash scripts/setup-opencloudos9.sh",

@@ -292,6 +292,32 @@ pnpm build:mp-weixin
 
 ## 11. 常见问题
 
+### pnpm build:server / tsc 卡住不动
+
+轻量机（2G 内存）编译 TypeScript 可能极慢或像死机。
+
+**方案 A（推荐，免编译）：**
+
+```bash
+# Ctrl+C 停掉当前 build 后执行
+pnpm deploy:server --skip-docker --use-tsx
+curl http://127.0.0.1:3000/api/health
+```
+
+`--use-tsx` 只构建小的 `@douxing/shared`，API 由 PM2 + tsx 直接跑源码。
+
+**方案 B：加 swap 再编译**
+
+```bash
+sudo bash scripts/add-swap.sh 2
+NODE_OPTIONS=--max-old-space-size=1024 pnpm build:server
+pnpm deploy:server --skip-docker
+```
+
+**方案 C：本地编译后上传**
+
+在开发机 `pnpm build:server`，将 `packages/server/dist` 与 `packages/shared/dist` rsync 到服务器。
+
 ### 本机 3000 连接失败
 
 ```bash

@@ -7,7 +7,7 @@
  *   pnpm deploy:server --skip-docker
  *   pnpm deploy:server --skip-build   # 仅重启 PM2（代码已构建）
  *   pnpm deploy:server --nginx DOMAIN=api.example.com
- *   pnpm deploy:server --check        # 检查环境与配置
+ *   pnpm deploy:server --use-tsx       # 低内存：跳过 server tsc，PM2 用 tsx 跑源码
  */
 import { execSync, spawnSync } from 'node:child_process';
 import { existsSync, copyFileSync, readFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -36,6 +36,7 @@ loadEnvFile();
 const args = process.argv.slice(2);
 const skipDocker = args.includes('--skip-docker');
 const skipBuild = args.includes('--skip-build');
+const useTsx = args.includes('--use-tsx');
 const checkOnly = args.includes('--check');
 const nginxIdx = args.indexOf('--nginx');
 const nginxDomain = nginxIdx !== -1 ? args[nginxIdx + 1] : null;
@@ -314,10 +315,19 @@ async function main() {
   }
 
   if (!skipBuild) {
-    run('pnpm build:server');
-    console.log('\n[deploy:server] 数据库迁移与种子...');
+    if (useTsx) {
+      console.log('\n[deploy:server] 低内存模式（--use-tsx）：只构建 shared，server 由 tsx 直跑');
+      run('pnpm --filter @douxing/shared build');
+      process.env.SERVER_RUNTIME = 'tsx';
+    } else {
+      run('pnpm build:server', {
+        env: { ...process.env, NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=1024' },
+      });
+    }
+    console.log('\n[deploy:server] 数据库迁移...');
     run('pnpm db:migrate');
-    // 生产环境通常不重复 seed；首次部署可手动 pnpm db:seed
+  } else if (useTsx) {
+    process.env.SERVER_RUNTIME = 'tsx';
   }
 
   if (process.env.AI_SERVICE_ENABLED === 'true') {
