@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.0  
-**更新日期**：2026-05-22  
+**文档版本**：3.2  
+**更新日期**：2026-05-23  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -27,10 +27,10 @@
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **整体阶段** | 阶段 C 已完成 | C1～C5 已验收 |
-| **当前焦点** | 阶段 D/E/G | 按产品目标选线 |
-| **下一步建议** | 阶段 D/E/G | 社交 / 商业 / 平台工程 |
-| **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
+| **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
+| **当前焦点** | 阶段 D/E + 小程序正式发版 | 社交 / 商业 / 微信审核上线 |
+| **下一步建议** | E2 真支付 · D2 搭子 · 小程序提审 | 见 [§7](#7-推荐实施顺序) |
+| **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
 
@@ -73,6 +73,7 @@ gantt
 | **A** | 2026-05-21 | [x] | 阶段 A 完成 | A1～A4 全部验收 | — |
 | **B** | 2026-05-22 | [x] | 阶段 B 完成 | B1～B6 打卡与游戏化 | — |
 | **C** | 2026-05-22 | [x] | 阶段 C 完成 | C1～C5 AI 规划深化 | — |
+| **G8** | 2026-05-23 | [x] | 生产部署公有化 | Debian 12 + PM2 + Docker + Nginx/Certbot 一键；tsx 低内存模式；发版文档 | 见 [§ G8](./开发记录-重难点与亮点.md#g8-生产部署与-api-公有化) |
 | **D** | — | [ ] | 阶段 D 完成 | D1～D5 社交 | 依赖 B 部分能力 |
 | **E** | — | [ ] | 阶段 E 完成 | E1～E7 商业闭环 | 依赖 A4 |
 | **F** | — | [ ] | 阶段 F 完成 | F1～F3 AR/VR | 可后置 |
@@ -101,6 +102,7 @@ gantt
 | v0.5.4 | 2026-05-22 | RAG 景点检索 | 城市+标签检索内容库；注入 LLM；生成后对齐 attractionId |
 | v0.5.5 | 2026-05-22 | 多方案生成 | 首条生成 3 套候选；横向卡片选择；追问收敛为单方案 |
 | v0.5.6 | 2026-05-22 | AI 微服务 | packages/ai-service FastAPI+LangChain；Node 优先调用、失败降级 |
+| v0.6.0 | 2026-05-23 | 生产部署 | Debian 12 指南；deploy-server + PM2；Nginx/Certbot 自动配置；tsx 低内存；三套 env 与发版流程文档 |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -111,6 +113,7 @@ gantt
 | 2026-05-22 | C3 | RAG 轻量景点检索（已完成） |
 | 2026-05-22 | C4 | 一次返回 2～3 套候选路线（已完成） |
 | 2026-05-22 | C5 | Python AI 微服务 FastAPI+LangChain（已完成） |
+| 2026-05-23 | G8 | 生产部署公有化（Debian 12 / Nginx / Certbot / 发版流程）（已完成） |
 
 > 计划日随实际进度调整；完成某步后请将上表「状态」改为 `[x]` 并填写实际完成日。
 
@@ -146,6 +149,7 @@ gantt
 | 2026-05-22 | C5 Python AI 微服务 | [§ C5](./开发记录-重难点与亮点.md#c5-python-ai-微服务) |
 | 2026-05-22 | C1+ 路线解锁支付开关 | [§ C1+](./开发记录-重难点与亮点.md#c1-路线解锁支付开关) |
 | 2026-05-22 | A3++ 草稿编辑入口分离 | [§ A3++](./开发记录-重难点与亮点.md#a3-草稿编辑入口分离) |
+| 2026-05-23 | G8 生产部署与 API 公有化 | [§ G8](./开发记录-重难点与亮点.md#g8-生产部署与-api-公有化) |
 
 新任务完成后：在独立文档按附录模板追加一章，并在此表增加一行索引。
 
@@ -169,6 +173,7 @@ gantt
 | 移动端 | 2026-05-20 | Tab：首页 / 规划 / 路线 / 我的；iconfont 底栏；登录注册（验证码 + 密码） |
 | 管理端 | 2026-05-19 | 路线、订单、打卡列表（admin） |
 | 多端脚本 | 2026-05-20 | `dev:only`、`deploy:app`、H5 / 微信小程序 / Android / iOS |
+| 生产部署 | 2026-05-23 | `deploy:server`、PM2、Docker MySQL+Redis、Nginx 反代、Certbot；`docs/启动与部署流程.md` |
 | 景点库 | 2026-05-20 | `attractions` 表 + 28 条种子；路线生成自动关联 `attractionId` |
 | 数据表 | 2026-05-22 | `users`、`travel_routes`、`plan_sessions`、`plan_session_messages`、`check_ins`、`achievements`、`badges`、`orders` 等 |
 
@@ -252,7 +257,7 @@ GET  /api/orders
 | §6 | AR/VR | — | AR 导航、讲解、全景、虚拟合影 |
 | §7 | 数据存储 | MySQL | Redis、ES、Milvus、Neo4j、OSS |
 | §8 | 安全合规 | JWT、RBAC；短信验证码登录 | 脱敏、审计、OAuth、等保；验证码 Redis 持久化（G1） |
-| §9 | 部署运维 | Docker MySQL、bootstrap 脚本 | K8s、Prometheus、ELK |
+| §9 | 部署运维 | Docker MySQL+Redis、PM2、Nginx HTTPS、deploy-server、Debian 12 指南 | K8s、Prometheus、ELK |
 | §11 | 测试 | — | 单元 / 集成 / E2E、压测 |
 | §12 | 接口规范 | 部分 REST | WebSocket、完整 v1 清单 |
 | §13 | 前沿技术 | — | Web3、联邦学习等 |
@@ -346,14 +351,14 @@ GET  /api/orders
 
 | 步 | 状态 | 计划完成 | 名称 | 设计文档 | 交付内容 | 验收标准 |
 |----|------|----------|------|----------|----------|----------|
-| G1 | [ ] | — | Redis 缓存 | §7.3 | 热门路线、会话、限流 | docker-compose 含 Redis |
+| G1 | [~] | — | Redis 缓存 | §7.3 | 热门路线、会话、限流 | docker-compose 含 Redis；生产 compose 已启用 |
 | G2 | [ ] | — | 对象存储 | §7 | MinIO/OSS 上传头像与打卡图 | 图片 URL 可访问 |
 | G3 | [ ] | — | 通知服务 | §2.2.3 | 站内消息 + 微信订阅消息 | 关键事件有通知 |
 | G4 | [ ] | — | 管理端数据分析 | 数据分析服务 | Dashboard 图表 | 用户/订单/打卡趋势 |
-| G5 | [ ] | — | 限流与网关 | §2.2.2 | Nginx 反代 + rate limit | 超限 429 |
-| G6 | [ ] | — | 安全合规 | §8 | 脱敏、审计日志、HTTPS 说明 | 敏感字段已脱敏 |
+| G5 | [~] | — | 限流与网关 | §2.2.2 | Nginx 反代 + rate limit | 超限 429 |
+| G6 | [~] | — | 安全合规 | §8 | 脱敏、审计日志、HTTPS 说明 | 敏感字段已脱敏 |
 | G7 | [ ] | — | 自动化测试 | §11 | API 集成测试 + 核心 E2E | CI `pnpm test` 通过 |
-| G8 | [~] | — | 生产部署 | §9 | Debian 12 指南 + setup-debian12、deploy-server | HTTPS `/api/health` 可访问 |
+| G8 | [x] | 2026-05-23 | 生产部署 | §9 | Debian 12 + deploy-server + Nginx/Certbot 自动 + tsx 低内存 + 发版文档 | `curl https://api.yxtao.site/api/health` |
 
 ---
 
@@ -366,7 +371,7 @@ GET  /api/orders
 | Sprint 5–6 | AI 增强 | **C + F** | C1～C5 已完成（2026-05-22）；M0 已含基础 LLM |
 | Sprint 3–4 | 社交功能 | **B + D** | B 已完成（2026-05-22）；D 未开始 |
 | Sprint 7–8 | 商业闭环 | **E** | 未开始 |
-| 基础设施 | 贯穿 | **G** | 未开始 |
+| 基础设施 | 贯穿 | **G（G8 已完成，G1/G5/G6 部分）** | G8 2026-05-23 |
 
 ---
 
@@ -380,7 +385,7 @@ GET  /api/orders
 | AI 对齐设计文档 | C2 → C3 → C4 → C5 |
 | 商业化变现 | A4 → E1 → E2 → E3 |
 | 社交差异化 | D1 → D2 → D3 → D5 |
-| 工程可上线 | G1 → G2 → G6 → G7 → G8 |
+| 工程可上线 | G8（已完成）→ G7 → G2 → E2 真支付 |
 
 ### 7.2 最小可行迭代（对齐时间节点）
 
@@ -391,8 +396,9 @@ GET  /api/orders
 | 迭代 2 | 2026-05-25 ～ 06-02 | A2 + A4 | 景点库 + 订单更可靠 |
 | 迭代 3 | 2026-06-03 ～ 06-14 | B4 + B5 + A3 | 徽章成就 + 路线互动 |
 | 迭代 4 | 2026-05-22 ～ 06-12 | C1～C5 | 对话式规划 + 约束 + RAG + 多方案 + Python AI 服务（已完成） |
-| 迭代 5 | 2026-07 起 | D2 + D3 | 搭子匹配 MVP |
-| 迭代 6 | 2026-07 起 | E2 + E3 | 真支付 + 盲盒 |
+| 迭代 7 | 2026-05-23 | G8 | **已完成** — 生产 API 公有化、HTTPS、发版流程 |
+| 迭代 8 | 2026-07 起 | D2 + D3 | 搭子匹配 MVP |
+| 迭代 9 | 2026-07 起 | E2 + E3 | 真支付 + 盲盒 |
 
 ---
 
@@ -432,7 +438,7 @@ GET  /api/orders
 | 后端 | Node + 独立 Python AI | Node Express + 可选 `packages/ai-service`；腾讯云短信 |
 | AI | Qwen + LangChain | **DeepSeek** + **LM Studio** + Python LangChain 微服务 + 模板降级 |
 | 数据库 | MySQL + Redis + Milvus + Neo4j | MySQL only |
-| 部署 | Docker + K8s | Docker MySQL + bootstrap / deploy 脚本 |
+| 部署 | Docker + K8s | Docker MySQL/Redis + PM2 + Nginx HTTPS + Debian 12 部署脚本 |
 
 ---
 
@@ -442,6 +448,9 @@ GET  /api/orders
 |------|------|
 | 项目说明 | [README.md](../README.md) |
 | 详细设计（Markdown） | [docs/详细设计文档.md](./详细设计文档.md) |
+| 启动与部署流程 | [docs/启动与部署流程.md](./启动与部署流程.md) |
+| 生产部署（Debian 12） | [docs/deploy-production.md](./deploy-production.md) |
+| 环境配置与打包 | [docs/env-environments.md](./env-environments.md) |
 | 开发记录（重难点与亮点） | [docs/开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) |
 | 微信小程序 | [scripts/mp-weixin.md](../scripts/mp-weixin.md) |
 | 原生 App 部署 | [scripts/app-native.md](../scripts/app-native.md) |
@@ -458,4 +467,4 @@ GET  /api/orders
 
 ---
 
-*文档版本 3.1 · 最后更新：2026-05-22*
+*文档版本 3.2 · 最后更新：2026-05-23*
