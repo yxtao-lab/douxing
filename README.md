@@ -156,6 +156,20 @@ pnpm build:server
 pnpm --filter @douxing/server start
 ```
 
+**生产环境公有化部署（腾讯云轻量 OpenCloudOS 9 + 域名 + HTTPS）：**
+
+详见 [docs/deploy-production.md](docs/deploy-production.md)
+
+```bash
+# 在 OpenCloudOS 9 服务器上（首次）
+sudo bash scripts/setup-opencloudos9.sh   # 安装 Node/Docker/Nginx/PM2
+cp deploy/env.production.example .env   # 编辑域名、密码、密钥
+pnpm deploy:server                      # Docker + 构建 + PM2
+pnpm deploy:server --nginx api.你的域名.com --skip-docker --skip-build
+sudo cp deploy/nginx/douxing-api.conf /etc/nginx/conf.d/douxing-api.conf
+sudo certbot --nginx -d api.你的域名.com
+```
+
 ### 原生 App（iOS / Android）一键部署
 
 ```bash

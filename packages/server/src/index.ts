@@ -13,6 +13,9 @@ import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
 
+// Nginx 反代后信任 X-Forwarded-*，保证 req.protocol / 公开 URL 正确
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.post(
   `${API_PREFIX}/payments/wechat/notify`,

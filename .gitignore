@@ -6,6 +6,8 @@ packages/mobile/project.private.config.json
 .unpackage
 .DS_Store
 *.log
+logs/
+deploy/nginx/douxing-api.conf
 .env
 .env.local
 .env.*.local
