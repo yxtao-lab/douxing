@@ -11,11 +11,16 @@
     "dev:app-ios": "uni -p app-ios",
     "build": "pnpm run build:h5 && pnpm run build:mp-weixin",
     "build:h5": "uni build",
+    "build:h5:staging": "uni build --mode staging",
     "build:mp-weixin": "uni build -p mp-weixin",
+    "build:mp-weixin:staging": "uni build -p mp-weixin --mode staging",
     "build:app": "uni build -p app",
     "build:app-android": "uni build -p app-android",
+    "build:app-android:staging": "uni build -p app-android --mode staging",
     "build:app-ios": "uni build -p app-ios",
+    "build:app-ios:staging": "uni build -p app-ios --mode staging",
     "build:app-all": "pnpm run build:app-android && pnpm run build:app-ios",
+    "build:app-all:staging": "pnpm run build:app-android:staging && pnpm run build:app-ios:staging",
     "lint": "vue-tsc --noEmit"
   },
   "dependencies": {

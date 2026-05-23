@@ -31,19 +31,29 @@ packages/mobile/dist/dev/mp-weixin
 - **详情 → 本地设置** → 勾选「不校验合法域名、web-view、TLS…」
 - 确保 `.env` 中 `VITE_API_BASE_URL=http://127.0.0.1:3000/api`
 
-## 2. 生产构建
+## 2. 生产 / 测试构建
+
+环境说明见 [docs/env-environments.md](../docs/env-environments.md)。
+
+**生产包（正式版，连 api.yxtao.site）：**
 
 ```bash
 pnpm build:mp-weixin
 ```
 
-产物目录：
+**测试包（体验版，连 api-test.yxtao.site）：**
+
+```bash
+pnpm build:mp-weixin:staging
+```
+
+产物目录均为：
 
 ```
 packages/mobile/dist/build/mp-weixin
 ```
 
-在微信开发者工具中导入该目录，点击 **上传**，再到 [微信公众平台](https://mp.weixin.qq.com/) 提交审核。
+在微信开发者工具中导入该目录，点击 **上传**，再到 [微信公众平台](https://mp.weixin.qq.com/) 提交审核或设为体验版。
 
 ## 3. 服务器与合法域名
 
@@ -53,7 +63,8 @@ packages/mobile/dist/build/mp-weixin
 |--------|------|
 | API 地址 | 必须为 **HTTPS** |
 | 公众平台 | 开发 → 开发管理 → 服务器域名 → **request 合法域名** |
-| `.env` 生产 | `VITE_API_BASE_URL=https://api.你的域名.com/api` |
+| `.env` 生产 | `VITE_API_BASE_URL=https://api.yxtao.site/api`（见 `.env.production`） |
+| `.env` 测试 | `VITE_API_BASE_URL=https://api-test.yxtao.site/api`（见 `.env.staging`） |
 
 后端需部署在已备案域名下，并配置 SSL 证书。
 

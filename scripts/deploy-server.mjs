@@ -115,7 +115,7 @@ function ensurePm2Ready() {
       [
         '未检测到 PM2。部署脚本会在 pnpm install 后自动使用项目内 pm2；',
         '若仍失败，请执行: pnpm install && pnpm deploy:server --skip-docker --skip-build',
-        '或全局安装: sudo npm install -g pm2',
+        '或全局安装: npm install -g pm2（已是 root 勿加 sudo；sudo 会找不到 npm）',
       ].join('\n'),
     );
   }
@@ -209,10 +209,12 @@ function renderNginxConfig(domain) {
   writeFileSync(outPath, content, 'utf8');
   console.log(`[deploy:server] 已生成 Nginx 配置: deploy/nginx/douxing-api.conf`);
   console.log('');
-  console.log('  OpenCloudOS 9 / RHEL（conf.d）：');
-  console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/conf.d/douxing-api.conf`);
+  console.log('  OpenCloudOS 9 / RHEL（推荐一键安装）：');
+  console.log(`    sudo bash scripts/install-nginx-conf.sh ${domain}`);
   console.log(`    sudo certbot --nginx -d ${domain}`);
-  console.log(`    sudo nginx -t && sudo systemctl reload nginx`);
+  console.log('');
+  console.log('  或手动复制到 include 目录（conf.d 或 default.d）：');
+  console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/default.d/douxing-api.conf`);
   console.log('');
   console.log('  Ubuntu / Debian（sites-available）：');
   console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/sites-available/douxing-api`);
@@ -344,6 +346,25 @@ async function main() {
     run(`${pm2} start deploy/ecosystem.config.cjs`);
   }
   run(`${pm2} save`);
+
+  const serverPort = process.env.SERVER_PORT || '3000';
+  console.log('\n[deploy:server] 等待 API 就绪...');
+  await sleep(2000);
+  let localOk = false;
+  for (let i = 1; i <= 10; i++) {
+    if (tryRun(`curl -sf http://127.0.0.1:${serverPort}/api/health`)) {
+      localOk = true;
+      console.log(`[deploy:server] 本机 API 正常: http://127.0.0.1:${serverPort}/api/health`);
+      break;
+    }
+    console.log(`[deploy:server] 等待 API... (${i}/10)`);
+    await sleep(1500);
+  }
+  if (!localOk) {
+    console.error('\n[deploy:server] 警告: 本机 API 未响应，请执行:');
+    console.error(`  bash scripts/diagnose-server.sh`);
+    console.error(`  ${pm2} logs douxing-api --lines 50`);
+  }
 
   if (nginxDomain) {
     renderNginxConfig(nginxDomain);

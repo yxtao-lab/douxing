@@ -5,6 +5,7 @@ import { travelRoutes } from '../db/schema/travel-routes.js';
 import { users } from '../db/schema/users.js';
 import { RouteStatus } from '@douxing/shared';
 import type { RouteCommentInfo } from '@douxing/shared';
+import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 async function canCommentOnRoute(routeId: number) {
   const db = getDb();
@@ -47,7 +48,7 @@ export async function listRouteComments(routeId: number, limit = 50): Promise<Ro
     routeId: r.routeId,
     userId: r.userId,
     userNickname: r.userNickname,
-    userAvatar: r.userAvatar,
+    userAvatar: rewritePublicAssetUrl(r.userAvatar),
     content: r.content,
     createdAt: r.createdAt.toISOString(),
   }));
@@ -98,7 +99,7 @@ export async function createRouteComment(routeId: number, userId: number, conten
     routeId: row.routeId,
     userId: row.userId,
     userNickname: row.userNickname,
-    userAvatar: row.userAvatar,
+    userAvatar: rewritePublicAssetUrl(row.userAvatar),
     content: row.content,
     createdAt: row.createdAt.toISOString(),
   } satisfies RouteCommentInfo;

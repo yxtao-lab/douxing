@@ -1,6 +1,6 @@
 import type { UserInfo, UpdateUserProfileRequest, MembershipInfo } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
-import { getApiBaseUrl } from '@/utils/api-base';
+import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
 
 const TOKEN_KEY = 'douxing_token';
 
@@ -25,6 +25,7 @@ export async function updateUserProfile(data: UpdateUserProfileRequest) {
 }
 
 export function uploadUserAvatar(filePath: string): Promise<UserInfo> {
+  assertRemoteApiBase('上传头像');
   const token = uni.getStorageSync(TOKEN_KEY) as string;
   const base = getApiBaseUrl();
   const url = `${base}/users/me/avatar`;

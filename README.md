@@ -373,13 +373,15 @@ AppID：`wx8bdbe398733ca0f0`（已写入 `packages/mobile/src/manifest.json`）
 | 开发 | `packages/mobile/dist/dev/mp-weixin` |
 | 发布 | `packages/mobile/dist/build/mp-weixin` |
 
-开发阶段在开发者工具中关闭「校验合法域名」；`.env` 中：
+开发阶段在开发者工具中关闭「校验合法域名」；本地 API 见 `.env.development`。
 
-```env
-VITE_API_BASE_URL=http://127.0.0.1:3000/api
+上线须在 [微信公众平台](https://mp.weixin.qq.com/) 配置 **request 合法域名**（HTTPS）。  
+**生产 / 测试打包与环境变量** 详见 [docs/env-environments.md](docs/env-environments.md)。
+
+```bash
+pnpm build:mp-weixin:staging   # 测试 → api-test.yxtao.site
+pnpm build:mp-weixin           # 生产 → api.yxtao.site
 ```
-
-上线须在 [微信公众平台](https://mp.weixin.qq.com/) 配置 **request 合法域名**（HTTPS），并修改 `VITE_API_BASE_URL` 为生产 API 地址。
 
 详细步骤见 [scripts/mp-weixin.md](scripts/mp-weixin.md)。
 

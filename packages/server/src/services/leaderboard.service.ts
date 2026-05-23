@@ -11,6 +11,7 @@ import {
   UserStatus,
 } from '@douxing/shared';
 import type { LeaderboardEntry, LeaderboardResult } from '@douxing/shared';
+import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 interface PeriodRange {
   period: string;
@@ -112,7 +113,7 @@ export async function getLeaderboard(options: {
     for (const user of userRows) {
       userMap.set(user.id, {
         nickname: user.nickname || user.username,
-        avatar: user.avatar,
+        avatar: rewritePublicAssetUrl(user.avatar),
       });
     }
   }
@@ -125,7 +126,7 @@ export async function getLeaderboard(options: {
       rank: index + 1,
       userId: row.userId,
       nickname: profile?.nickname ?? `用户${row.userId}`,
-      avatar: profile?.avatar ?? null,
+      avatar: rewritePublicAssetUrl(profile?.avatar ?? null),
       checkinCount,
       totalPoints,
       value: getMetricValue(checkinCount, totalPoints, metric),

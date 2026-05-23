@@ -18,6 +18,7 @@ import {
   validateCheckInGeofence,
 } from './checkin-geofence.service.js';
 import { CheckinValidationError } from '../utils/checkin-errors.js';
+import { rewritePublicAssetUrls, normalizeStoredAssetPaths } from '../utils/public-asset-url.util.js';
 
 function toCheckInInfo(
   row: typeof checkIns.$inferSelect,
@@ -32,7 +33,7 @@ function toCheckInInfo(
     location: row.location,
     cityCode: row.cityCode,
     city: cityMap?.get(row.cityCode) ?? null,
-    photos: row.photos ?? [],
+    photos: rewritePublicAssetUrls(row.photos ?? []),
     pointsEarned: row.pointsEarned,
     gpsAccuracy: row.gpsAccuracy ?? null,
     distanceMeters: distanceMeters ?? null,
@@ -142,7 +143,7 @@ export async function createCheckIn(
     targetLongitude: data.targetLongitude,
   });
 
-  const photos = (data.photos ?? []).slice(0, CHECKIN_MAX_PHOTOS);
+  const photos = normalizeStoredAssetPaths((data.photos ?? []).slice(0, CHECKIN_MAX_PHOTOS));
   const cityCode = await resolveCityCode(data.attractionId, data.cityCode, data.cityName);
   const isFirstAtAttraction = await isFirstCheckInAtAttraction(userId, data.attractionId);
   const pointsEarned = calculatePoints(photos.length > 0, isFirstAtAttraction);

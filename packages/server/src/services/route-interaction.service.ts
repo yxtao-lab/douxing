@@ -7,6 +7,7 @@ import { users } from '../db/schema/users.js';
 import { RouteStatus } from '@douxing/shared';
 import type { RouteListQuery, TravelRouteInfo } from '@douxing/shared';
 import { toRouteInfo } from '../utils/route-info.util.js';
+import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 export async function enrichRoutesWithUserFlags(
   routes: TravelRouteInfo[],
@@ -53,7 +54,7 @@ export async function enrichRoutesWithCreatorInfo(
     return {
       ...r,
       creatorNickname: creator?.nickname ?? null,
-      creatorAvatar: creator?.avatar ?? null,
+      creatorAvatar: rewritePublicAssetUrl(creator?.avatar ?? null),
     };
   });
 }

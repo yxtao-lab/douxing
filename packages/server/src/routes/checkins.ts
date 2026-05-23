@@ -15,6 +15,7 @@ import {
 import { getUserWithRoles } from '../services/user.service.js';
 import { RoleCode, CHECKIN_MAX_PHOTOS } from '@douxing/shared';
 import { isCheckinValidationError } from '../utils/checkin-errors.js';
+import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 const router = Router();
 
@@ -51,13 +52,6 @@ const photoUpload = multer({
   },
 });
 
-function resolvePublicBase(req: { protocol: string; get: (name: string) => string | undefined }) {
-  const fromEnv = process.env.API_PUBLIC_BASE_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
-  const host = req.get('host');
-  return `${req.protocol}://${host}`;
-}
-
 const checkInSchema = z.object({
   routeId: z.number().int().positive(),
   attractionId: z.number().int().positive().optional(),
@@ -90,9 +84,10 @@ router.post('/photos', authMiddleware, (req, res, next) => {
       return fail(res, '请选择图片');
     }
 
-    const publicBase = resolvePublicBase(req);
-    const photoUrl = `${publicBase}/uploads/checkins/${req.file.filename}`;
-    success(res, { url: photoUrl }, '上传成功');
+    const relativePath = `/uploads/checkins/${req.file.filename}`;
+    const publicBase = resolvePublicBaseFromRequest(req);
+    const photoUrl = resolvePublicAssetUrl(relativePath, { publicBase }) ?? relativePath;
+    success(res, { url: photoUrl, path: relativePath }, '上传成功');
   } catch (err) {
     console.error('[checkins/photos]', err);
     return fail(res, '照片上传失败', 500, 500);

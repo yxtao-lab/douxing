@@ -9,6 +9,7 @@ import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 import { wechatPayNotifyHandler } from './routes/payments.js';
 import { getCheckinConfigSummary } from './config/checkin.js';
 import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
+import { getConfiguredPublicBase } from './utils/public-asset-url.util.js';
 
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
@@ -41,5 +42,9 @@ app.listen(port, () => {
   );
   console.log(
     `[route-unlock] 解锁支付 ${routeUnlockConfig.paymentRequired ? '已启用' : '已关闭'}（ROUTE_UNLOCK_PAYMENT_REQUIRED=${routeUnlockConfig.rawEnv ?? '未设置，默认 false'}）`,
+  );
+  const publicBase = getConfiguredPublicBase();
+  console.log(
+    `[assets] 静态资源公网基址 ${publicBase ?? '未设置 API_PUBLIC_BASE_URL，接口返回 uploads 相对路径'}`,
   );
 });

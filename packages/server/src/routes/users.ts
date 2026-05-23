@@ -52,13 +52,6 @@ const updateProfileSchema = z.object({
   interestTags: z.array(z.string().min(1).max(16)).max(USER_INTEREST_MAX).optional(),
 });
 
-function resolvePublicBase(req: { protocol: string; get: (name: string) => string | undefined }) {
-  const fromEnv = process.env.API_PUBLIC_BASE_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
-  const host = req.get('host');
-  return `${req.protocol}://${host}`;
-}
-
 router.get('/me', authMiddleware, async (req, res) => {
   try {
     const userInfo = await getUserWithRoles(req.auth!.userId);
@@ -117,9 +110,8 @@ router.post('/me/avatar', authMiddleware, (req, res, next) => {
       return fail(res, '请选择图片');
     }
 
-    const publicBase = resolvePublicBase(req);
-    const avatarUrl = `${publicBase}/uploads/avatars/${req.file.filename}`;
-    const userInfo = await setUserAvatar(req.auth!.userId, avatarUrl);
+    const relativePath = `/uploads/avatars/${req.file.filename}`;
+    const userInfo = await setUserAvatar(req.auth!.userId, relativePath);
     if (!userInfo) {
       return fail(res, '用户不存在', 404, 404);
     }

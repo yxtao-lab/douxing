@@ -1,6 +1,6 @@
 import type { CheckInInfo, CheckInResult } from '@douxing/shared';
 import { request } from '@/utils/request';
-import { getApiBaseUrl } from '@/utils/api-base';
+import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
 
 const TOKEN_KEY = 'douxing_token';
 
@@ -30,6 +30,7 @@ export function fetchCheckIns(routeId?: number) {
 }
 
 export function uploadCheckInPhoto(filePath: string): Promise<string> {
+  assertRemoteApiBase('上传打卡照片');
   const token = uni.getStorageSync(TOKEN_KEY) as string;
   const base = getApiBaseUrl();
   const url = `${base}/checkins/photos`;

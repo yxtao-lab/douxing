@@ -3,6 +3,7 @@ import { getDb } from '../db/client.js';
 import { users, roles, userRoles } from '../db/schema/index.js';
 import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
 import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel } from '@douxing/shared';
+import { rewritePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 
 const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
 
@@ -31,7 +32,7 @@ function mapUserRow(
     id: user.id,
     username: user.username,
     nickname: user.nickname,
-    avatar: user.avatar,
+    avatar: rewritePublicAssetUrl(user.avatar),
     phone: user.phone,
     email: user.email,
     interestTags: user.interestTags ?? null,
@@ -86,7 +87,8 @@ export async function updateUserProfile(
   }
 
   if (input.avatar !== undefined) {
-    patch.avatar = input.avatar;
+    patch.avatar =
+      input.avatar === null ? null : normalizeStoredAssetPath(input.avatar) ?? input.avatar;
   }
 
   if (input.email !== undefined) {
@@ -105,8 +107,9 @@ export async function updateUserProfile(
   return getUserWithRoles(userId);
 }
 
-export async function setUserAvatar(userId: number, avatarUrl: string): Promise<UserInfo | null> {
+export async function setUserAvatar(userId: number, avatar: string): Promise<UserInfo | null> {
   const db = getDb();
-  await db.update(users).set({ avatar: avatarUrl }).where(eq(users.id, userId));
+  const stored = normalizeStoredAssetPath(avatar) ?? avatar;
+  await db.update(users).set({ avatar: stored }).where(eq(users.id, userId));
   return getUserWithRoles(userId);
 }

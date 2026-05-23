@@ -211,13 +211,25 @@ pm2 status
 pnpm deploy:server --nginx api.你的域名.com --skip-docker --skip-build
 ```
 
-### 8.1 OpenCloudOS 9（conf.d 方式）
+### 8.1 OpenCloudOS 9（default.d / conf.d）
+
+OpenCloudOS 部分镜像**没有** `/etc/nginx/conf.d/`，配置在 `default.d` 或需手动创建。推荐：
 
 ```bash
-sudo cp deploy/nginx/douxing-api.conf /etc/nginx/conf.d/douxing-api.conf
-# 若默认站点冲突，可移除：sudo rm -f /etc/nginx/conf.d/default.conf
+pnpm deploy:server --nginx api.yxtao.site --skip-docker --skip-build
+sudo bash scripts/install-nginx-conf.sh api.yxtao.site
+sudo certbot --nginx -d api.yxtao.site
+```
 
-sudo certbot --nginx -d api.你的域名.com
+手动方式（按实际目录二选一）：
+
+```bash
+# 若存在 default.d（OpenCloudOS 常见）
+sudo cp deploy/nginx/douxing-api.conf /etc/nginx/default.d/douxing-api.conf
+
+# 若存在 conf.d
+sudo cp deploy/nginx/douxing-api.conf /etc/nginx/conf.d/douxing-api.conf
+
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
@@ -301,6 +313,26 @@ pm2 save
 
 ## 11. 常见问题
 
+### OpenCloudOS 无 conf.d / Nginx 404
+
+```bash
+bash scripts/diagnose-server.sh
+sudo bash scripts/install-nginx-conf.sh api.yxtao.site
+```
+
+### 本机 curl 127.0.0.1:3000 连接失败
+
+说明 **Node API 未启动**，与 Nginx 无关：
+
+```bash
+bash scripts/diagnose-server.sh
+pnpm build:server
+pnpm deploy:server --skip-docker
+pnpm exec pm2 logs douxing-api --lines 50
+```
+
+常见原因：MySQL 未启动、`DATABASE_URL` 错误、未执行 `pnpm build:server`。
+
 ### Docker compose 命令不存在
 
 报错含 `Run 'docker --help'` 或 `unknown command "compose"`：
@@ -330,13 +362,17 @@ docker info
 Docker 和构建已成功时，只需补装 PM2 并重启进程：
 
 ```bash
-# 方式 A：使用项目内 pm2（推荐，需先拉取最新代码）
+# 方式 A：使用项目内 pm2（推荐，无需全局安装）
 pnpm install
 pnpm exec pm2 -v
+pnpm deploy:server --skip-docker --skip-build
 
-# 方式 B：全局安装
-sudo npm install -g pm2
+# 方式 B：全局安装（已是 root 时不要加 sudo！）
+npm install -g pm2
 pm2 -v
+
+# 若必须用 sudo，需保留 PATH（OpenCloudOS 常见）：
+sudo env "PATH=$PATH" npm install -g pm2
 
 # 跳过 Docker，只启动 API
 pnpm deploy:server --skip-docker --skip-build
