@@ -52,6 +52,7 @@ fi
 echo ""
 
 echo "[5] 构建产物"
+[[ -f packages/shared/dist/index.js ]] && echo "  ✓ packages/shared/dist/index.js" || echo "  ✗ 需 pnpm --filter @douxing/shared build"
 [[ -f packages/server/dist/index.js ]] && echo "  ✓ packages/server/dist/index.js" || echo "  ✗ 需 pnpm build:server"
 echo ""
 

@@ -296,8 +296,17 @@ pnpm build:mp-weixin
 
 ```bash
 bash scripts/diagnose-server.sh
-pnpm build:server && pnpm deploy:server --skip-docker
+pnpm build:server   # 会先构建 @douxing/shared 再构建 server
+pnpm deploy:server --skip-docker
 pnpm exec pm2 logs douxing-api --lines 50
+```
+
+PM2 日志若出现 `Cannot find module ... packages/shared/src/types.js`：
+
+```bash
+pnpm --filter @douxing/shared build
+pnpm build:server
+pnpm deploy:server --skip-docker --skip-build
 ```
 
 ### 公网 /api/health 返回 Nginx 404
