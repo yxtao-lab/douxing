@@ -46,6 +46,8 @@
     "setup:ubuntu22": "bash scripts/setup-ubuntu22.sh",
     "setup:opencloudos9": "bash scripts/setup-opencloudos9.sh",
     "setup:nginx-conf": "bash scripts/install-nginx-conf.sh",
+    "setup:nginx-ssl": "bash scripts/install-nginx-ssl.sh",
+    "setup:nginx-certbot": "bash scripts/install-nginx-certbot.sh",
     "diagnose:server": "bash scripts/diagnose-server.sh",
     "stop": "node scripts/stop.mjs",
     "stop:dev": "node scripts/stop.mjs --skip-docker",

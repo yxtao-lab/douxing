@@ -7,6 +7,7 @@
  *   pnpm deploy:server --skip-docker
  *   pnpm deploy:server --skip-build   # 仅重启 PM2（代码已构建）
  *   pnpm deploy:server --nginx DOMAIN=api.example.com
+ *   pnpm deploy:server --nginx api.example.com --ssl-cert /path/fullchain.pem --ssl-key /path/privkey.pem
  *   pnpm deploy:server --use-tsx       # 低内存：跳过 server tsc，PM2 用 tsx 跑源码
  */
 import { execSync, spawnSync } from 'node:child_process';
@@ -40,6 +41,10 @@ const useTsx = args.includes('--use-tsx');
 const checkOnly = args.includes('--check');
 const nginxIdx = args.indexOf('--nginx');
 const nginxDomain = nginxIdx !== -1 ? args[nginxIdx + 1] : null;
+const sslCertIdx = args.indexOf('--ssl-cert');
+const sslCertPath = sslCertIdx !== -1 ? args[sslCertIdx + 1] : null;
+const sslKeyIdx = args.indexOf('--ssl-key');
+const sslKeyPath = sslKeyIdx !== -1 ? args[sslKeyIdx + 1] : null;
 
 function run(cmd, opts = {}) {
   console.log(`\n> ${cmd}`);
@@ -200,22 +205,36 @@ function ensureEnvFile() {
   }
 }
 
-function renderNginxConfig(domain) {
-  const templatePath = resolve(root, 'deploy/nginx/douxing-api.conf.template');
+function renderNginxConfig(domain, sslCert, sslKey) {
+  const useSsl = Boolean(sslCert && sslKey);
+  const templatePath = resolve(
+    root,
+    useSsl ? 'deploy/nginx/douxing-api.ssl.conf.template' : 'deploy/nginx/douxing-api.conf.template',
+  );
   const outPath = resolve(root, 'deploy/nginx/douxing-api.conf');
   const port = process.env.SERVER_PORT || '3000';
-  const content = readFileSync(templatePath, 'utf8')
+  let content = readFileSync(templatePath, 'utf8')
     .replaceAll('__DOMAIN__', domain)
     .replaceAll('__SERVER_PORT__', port);
+  if (useSsl) {
+    content = content.replaceAll('__SSL_CERT__', sslCert).replaceAll('__SSL_KEY__', sslKey);
+  }
   writeFileSync(outPath, content, 'utf8');
-  console.log(`[deploy:server] 已生成 Nginx 配置: deploy/nginx/douxing-api.conf`);
+  console.log(
+    `[deploy:server] 已生成 Nginx 配置 (${useSsl ? 'HTTPS 已有证书' : 'HTTP，待 Certbot'}): deploy/nginx/douxing-api.conf`,
+  );
   console.log('');
   console.log('  Debian 12 / Ubuntu（sites-available，推荐）：');
   console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/sites-available/douxing-api`);
   console.log(`    sudo ln -sf /etc/nginx/sites-available/douxing-api /etc/nginx/sites-enabled/`);
   console.log(`    sudo rm -f /etc/nginx/sites-enabled/default`);
-  console.log(`    sudo certbot --nginx -d ${domain}`);
-  console.log(`    sudo nginx -t && sudo systemctl reload nginx`);
+  if (useSsl) {
+    console.log(`    sudo nginx -t && sudo systemctl reload nginx`);
+    console.log(`    curl https://${domain}/api/health`);
+  } else {
+    console.log(`    sudo certbot --nginx -d ${domain}`);
+    console.log(`    sudo nginx -t && sudo systemctl reload nginx`);
+  }
   console.log('');
   console.log('  OpenCloudOS / RHEL：');
   console.log(`    sudo bash scripts/install-nginx-conf.sh ${domain}`);
@@ -372,7 +391,11 @@ async function main() {
   }
 
   if (nginxDomain) {
-    renderNginxConfig(nginxDomain);
+    if ((sslCertPath && !sslKeyPath) || (!sslCertPath && sslKeyPath)) {
+      console.error('[deploy:server] --ssl-cert 与 --ssl-key 需同时指定');
+      process.exit(1);
+    }
+    renderNginxConfig(nginxDomain, sslCertPath, sslKeyPath);
   }
 
   const baseUrl = process.env.API_PUBLIC_BASE_URL?.replace(/\/$/, '');

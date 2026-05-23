@@ -1,15 +1,28 @@
-# 兜行 API — Nginx 反向代理模板（首次仅 HTTP，Certbot 会自动追加 HTTPS）
-# 1. pnpm deploy:server --nginx api.你的域名.com --skip-docker --skip-build
-# 2. sudo cp deploy/nginx/douxing-api.conf /etc/nginx/sites-available/douxing-api
-# 3. sudo ln -sf /etc/nginx/sites-available/douxing-api /etc/nginx/sites-enabled/
-# 4. sudo rm -f /etc/nginx/sites-enabled/default
-# 5. sudo nginx -t && sudo systemctl reload nginx
-# 6. sudo certbot --nginx -d api.你的域名.com
+# 兜行 API — Nginx 反向代理（已有 SSL 证书，无需 Certbot）
+# 生成:
+#   pnpm deploy:server --nginx api.yxtao.site \
+#     --ssl-cert /etc/nginx/ssl/api.yxtao.site/fullchain.pem \
+#     --ssl-key /etc/nginx/ssl/api.yxtao.site/privkey.pem \
+#     --skip-docker --skip-build
 
 server {
     listen 80;
     listen [::]:80;
     server_name __DOMAIN__;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name __DOMAIN__;
+
+    ssl_certificate __SSL_CERT__;
+    ssl_certificate_key __SSL_KEY__;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
 
     client_max_body_size 10m;
 
@@ -34,5 +47,3 @@ server {
         proxy_send_timeout 180s;
     }
 }
-
-# Certbot 执行后会自动在本文件追加 listen 443 ssl 与证书路径，并将 HTTP 重定向到 HTTPS

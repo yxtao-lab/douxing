@@ -237,15 +237,64 @@ sudo rm -f /etc/nginx/sites-enabled/default
 
 sudo nginx -t
 sudo systemctl reload nginx
+
+# 先验证 HTTP（Certbot 之前）
+curl http://api.yxtao.site/api/health
 ```
 
-### 8.3 申请 SSL 证书
+### 8.3 申请 SSL 证书（Certbot / Let's Encrypt，推荐）
+
+> **首次配置仅 HTTP:80**，勿手写 `listen 443 ssl`，Certbot 会自动追加 HTTPS。
+
+**一键安装：**
 
 ```bash
-sudo certbot --nginx -d api.yxtao.site
+cd /opt/douxing
+sudo bash scripts/install-nginx-certbot.sh api.yxtao.site 你的邮箱@example.com
 ```
 
-### 8.4 验证
+**或手动：**
+
+```bash
+sudo cp deploy/nginx/douxing-api.certbot.conf /etc/nginx/sites-available/douxing-api
+sudo ln -sf /etc/nginx/sites-available/douxing-api /etc/nginx/sites-enabled/
+sudo rm -f /etc/nginx/sites-enabled/default
+sudo nginx -t && sudo systemctl reload nginx
+
+curl http://api.yxtao.site/api/health   # 先通 HTTP
+
+sudo certbot --nginx -d api.yxtao.site
+curl https://api.yxtao.site/api/health
+```
+
+证书续期测试：`sudo certbot renew --dry-run`
+
+### 8.3b 已有 SSL 证书文件（腾讯云 / 其他 CA）
+
+**不需要 certbot**。一键脚本（Debian 12 兼容，无 `http2 on` 问题）：
+
+```bash
+# 1. 证书放到默认目录（脚本会自动识别 *_bundle.crt / *.key）
+sudo mkdir -p /etc/nginx/ssl/api.yxtao.site
+sudo cp api.yxtao.site_bundle.crt /etc/nginx/ssl/api.yxtao.site/
+sudo cp api.yxtao.site.key /etc/nginx/ssl/api.yxtao.site/
+
+# 2. 一键安装 Nginx HTTPS
+cd /opt/douxing
+sudo bash scripts/install-nginx-ssl.sh api.yxtao.site
+```
+
+或显式指定证书路径：
+
+```bash
+sudo bash scripts/install-nginx-ssl.sh api.yxtao.site \
+  /etc/nginx/ssl/api.yxtao.site/api.yxtao.site_bundle.crt \
+  /etc/nginx/ssl/api.yxtao.site/api.yxtao.site.key
+```
+
+> `ssl_certificate` 必须用**完整证书链**（bundle / fullchain），不能只用域名证书。
+
+### 8.4 验证 HTTPS
 
 ```bash
 curl https://api.yxtao.site/api/health
@@ -253,8 +302,6 @@ curl -X POST https://api.yxtao.site/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{"username":"demo","password":"admin123"}'
 ```
-
-证书续期测试：`sudo certbot renew --dry-run`
 
 ---
 
@@ -291,6 +338,17 @@ pnpm build:mp-weixin
 ---
 
 ## 11. 常见问题
+
+### certbot 报 ssl_certificate is not defined
+
+旧版模板含未配证书的 `listen 443 ssl`。重新生成并覆盖：
+
+```bash
+pnpm deploy:server --nginx api.yxtao.site --skip-docker --skip-build
+sudo cp deploy/nginx/douxing-api.conf /etc/nginx/sites-available/douxing-api
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d api.yxtao.site
+```
 
 ### pnpm build:server / tsc 卡住不动
 
