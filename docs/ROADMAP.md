@@ -4,7 +4,7 @@
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
 **文档版本**：3.2  
-**更新日期**：2026-05-23  
+**更新日期**：2026-05-24  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -229,12 +229,18 @@ POST /api/orders/:id/cancel
 GET  /api/orders
 ```
 
-### 3.3 默认账号
+### 3.3 默认账号（seed 演示用户）
+
+执行 `pnpm db:seed` 或 `pnpm bootstrap` 后写入数据库（定义见 `packages/server/src/db/seed.ts`）。**生产环境须改密或禁用 demo 账号。**
 
 | 用户名 | 密码 | 用途 |
 |--------|------|------|
+| **demo** | **demo123** | 移动端 / 小程序体验（路线、打卡、AI 规划联调） |
 | admin | admin123 | Web 管理端 |
-| demo | demo123 | 移动端体验 |
+
+**小程序登录：** 用户名 `demo`，密码 `demo123`（密码登录 Tab，非验证码登录）。
+
+若提示账号不存在：`pnpm db:seed` 后重试。
 
 ---
 
