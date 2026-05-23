@@ -209,20 +209,15 @@ function renderNginxConfig(domain) {
   writeFileSync(outPath, content, 'utf8');
   console.log(`[deploy:server] 已生成 Nginx 配置: deploy/nginx/douxing-api.conf`);
   console.log('');
-  console.log('  OpenCloudOS 9 / RHEL（推荐一键安装）：');
-  console.log(`    sudo bash scripts/install-nginx-conf.sh ${domain}`);
-  console.log(`    sudo certbot --nginx -d ${domain}`);
-  console.log('');
-  console.log('  或手动复制到 include 目录（conf.d 或 default.d）：');
-  console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/default.d/douxing-api.conf`);
-  console.log('');
-  console.log('  Ubuntu / Debian（sites-available）：');
+  console.log('  Debian 12 / Ubuntu（sites-available，推荐）：');
   console.log(`    sudo cp deploy/nginx/douxing-api.conf /etc/nginx/sites-available/douxing-api`);
   console.log(`    sudo ln -sf /etc/nginx/sites-available/douxing-api /etc/nginx/sites-enabled/`);
+  console.log(`    sudo rm -f /etc/nginx/sites-enabled/default`);
   console.log(`    sudo certbot --nginx -d ${domain}`);
   console.log(`    sudo nginx -t && sudo systemctl reload nginx`);
   console.log('');
-  console.log('  OpenCloudOS 若 502，执行: sudo setsebool -P httpd_can_network_connect 1');
+  console.log('  OpenCloudOS / RHEL：');
+  console.log(`    sudo bash scripts/install-nginx-conf.sh ${domain}`);
   console.log('');
 }
 

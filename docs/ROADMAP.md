@@ -353,7 +353,7 @@ GET  /api/orders
 | G5 | [ ] | — | 限流与网关 | §2.2.2 | Nginx 反代 + rate limit | 超限 429 |
 | G6 | [ ] | — | 安全合规 | §8 | 脱敏、审计日志、HTTPS 说明 | 敏感字段已脱敏 |
 | G7 | [ ] | — | 自动化测试 | §11 | API 集成测试 + 核心 E2E | CI `pnpm test` 通过 |
-| G8 | [~] | — | 生产部署 | §9 | Nginx + PM2 + 生产 compose、`docs/deploy-production.md` | 服务器 HTTPS 可访问 `/api/health` |
+| G8 | [~] | — | 生产部署 | §9 | Debian 12 指南 + setup-debian12、deploy-server | HTTPS `/api/health` 可访问 |
 
 ---
 
