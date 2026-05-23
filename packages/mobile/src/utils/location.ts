@@ -20,7 +20,7 @@ function getWxApi(): WxPrivacyApi | undefined {
 function getAuthSetting(): Promise<AuthSetting> {
   return new Promise((resolve) => {
     uni.getSetting({
-      success: (res) => resolve((res.authSetting ?? {}) as AuthSetting),
+      success: (res) => resolve((res.authSetting || {}) as AuthSetting),
       fail: () => resolve({}),
     });
   });
@@ -62,7 +62,7 @@ function promptOpenSettings(): Promise<boolean> {
 
 async function requirePrivacyAuthorizeIfNeeded() {
   const wxApi = getWxApi();
-  if (!wxApi?.requirePrivacyAuthorize) return;
+  if (!wxApi || !wxApi.requirePrivacyAuthorize) return;
 
   await new Promise<void>((resolve, reject) => {
     wxApi.requirePrivacyAuthorize!({
@@ -142,7 +142,7 @@ function fetchLocation(isHighAccuracy: boolean): Promise<CurrentLocation> {
         resolve({
           latitude: res.latitude,
           longitude: res.longitude,
-          accuracy: res.accuracy ?? 999,
+          accuracy: res.accuracy != null ? res.accuracy : 999,
         });
       },
       fail: (err) => {

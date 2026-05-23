@@ -172,7 +172,8 @@ import {
   fetchPlanSession,
   selectPlanCandidate,
 } from '@/api/plan-sessions';
-import { getStoredUser } from '@/utils/request';
+import * as authStorage from '@/utils/auth-storage';
+import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
@@ -194,7 +195,7 @@ interface ChatMessage {
 
 const inputText = ref('');
 const composerKey = ref(0);
-const user = ref<UserInfo | null>(getStoredUser());
+const user = ref<UserInfo | null>(authStorage.getStoredUser());
 const sessionId = ref<number | null>(null);
 const previousSessionId = ref<number | null>(null);
 const currentRouteId = ref<number | null>(null);
@@ -211,7 +212,7 @@ const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
 const memberLevelLabel = ref(getMemberLevelLabel(0));
 
 const membershipHint = computed(() => {
-  if (!getStoredUser()) return '';
+  if (!authStorage.getStoredUser()) return '';
   return `${memberLevelLabel.value} · 首条可生成 ${memberPlanCount.value} 套方案`;
 });
 
@@ -431,7 +432,7 @@ onMounted(async () => {
 
 onShow(() => {
   uni.hideTabBar({ animation: false });
-  user.value = getStoredUser();
+  user.value = authStorage.getStoredUser();
   if (user.value) {
     memberPlanCount.value = getPlanCandidateCountByMemberLevel(user.value.memberLevel);
     memberLevelLabel.value = getMemberLevelLabel(user.value.memberLevel);
@@ -454,7 +455,7 @@ onLoad(async (query) => {
   const rawSessionId = query?.sessionId;
   if (typeof rawSessionId === 'string' && rawSessionId.trim()) {
     const id = Number(rawSessionId);
-    if (!Number.isNaN(id) && getStoredUser()) {
+    if (!Number.isNaN(id) && authStorage.getStoredUser()) {
       try {
         await loadSession(id);
       } catch {
@@ -470,9 +471,21 @@ const quickPrompts = [
   '成都美食两日游',
 ];
 
+async function submitNewPlanSession(text: string) {
+  return createPlanSession({
+    prompt: text,
+    provider: provider.value,
+  });
+}
+
+async function submitPlanFollowUp(sessionIdValue: number, text: string) {
+  return appendPlanMessage(sessionIdValue, { content: text });
+}
+
 async function handleSend() {
   if (aiPlanLoadingState.active) return;
-  if (!getStoredUser()) {
+  const loggedInUser = ensureLoggedInUser();
+  if (!loggedInUser) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
@@ -489,37 +502,34 @@ async function handleSend() {
 
   try {
     if (!sessionId.value) {
-      const result = await createPlanSession({
-        prompt: text,
-        provider: provider.value,
-      });
-      sessionId.value = result.sessionId;
-      currentRouteId.value = result.id;
-      intentSnapshot.value = result.intentSnapshot ?? null;
-      ragMatchedCount.value = result.ragMatchedCount ?? 0;
-      candidates.value = result.candidates ?? [];
-      if (result.memberPlanCandidateCount != null) {
-        memberPlanCount.value = result.memberPlanCandidateCount;
+      const planActionResult = await submitNewPlanSession(text);
+      sessionId.value = planActionResult.sessionId;
+      currentRouteId.value = planActionResult.id;
+      intentSnapshot.value = planActionResult.intentSnapshot ?? null;
+      ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
+      candidates.value = planActionResult.candidates ?? [];
+      if (planActionResult.memberPlanCandidateCount != null) {
+        memberPlanCount.value = planActionResult.memberPlanCandidateCount;
       }
-      if (result.memberLevelLabel) {
-        memberLevelLabel.value = result.memberLevelLabel;
+      if (planActionResult.memberLevelLabel) {
+        memberLevelLabel.value = planActionResult.memberLevelLabel;
       }
-      handleGenerationResult(result);
-      const session = await fetchPlanSession(result.sessionId);
-      messages.value = mapMessages(session.messages);
+      handleGenerationResult(planActionResult);
+      const loadedSession = await fetchPlanSession(planActionResult.sessionId);
+      messages.value = mapMessages(loadedSession.messages);
       scrollToBottom();
       uni.showToast({ title: '方案已生成', icon: 'success' });
       return;
     }
 
-    const result = await appendPlanMessage(sessionId.value, { content: text });
-    currentRouteId.value = result.id;
-    intentSnapshot.value = result.intentSnapshot ?? null;
-    ragMatchedCount.value = result.ragMatchedCount ?? 0;
-    handleGenerationResult(result);
-    const session = await fetchPlanSession(sessionId.value);
-    messages.value = mapMessages(session.messages);
-    candidates.value = session.candidates ?? result.candidates ?? [];
+    const planActionResult = await submitPlanFollowUp(sessionId.value, text);
+    currentRouteId.value = planActionResult.id;
+    intentSnapshot.value = planActionResult.intentSnapshot ?? null;
+    ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
+    handleGenerationResult(planActionResult);
+    const loadedSession = await fetchPlanSession(sessionId.value);
+    messages.value = mapMessages(loadedSession.messages);
+    candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
     scrollToBottom();
     uni.showToast({ title: '方案已更新', icon: 'success' });
   } catch (e) {

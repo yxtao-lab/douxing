@@ -1,5 +1,6 @@
-import type { ApiResponse, UserInfo } from '@douxing/shared';
+import type { ApiResponse } from '@douxing/shared';
 import { getApiBaseUrl } from './api-base';
+import { getStoredToken, setAuth, getStoredUser, TOKEN_KEY } from './auth-storage';
 import {
   beginAiPlanLoading,
   endAiPlanLoading,
@@ -8,25 +9,10 @@ import {
   AI_PLAN_CANCELLED_MESSAGE,
 } from './ai-plan-loading';
 
-const TOKEN_KEY = 'douxing_token';
-const USER_KEY = 'douxing_user';
-
 /** 封装请求选项（url 由 path 拼接，无需传入） */
 export type AppRequestOptions = Omit<UniApp.RequestOptions, 'url'>;
 
-export function getStoredUser(): UserInfo | null {
-  try {
-    const raw = uni.getStorageSync(USER_KEY);
-    return raw ? (JSON.parse(raw) as UserInfo) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function setAuth(token: string, user: UserInfo) {
-  uni.setStorageSync(TOKEN_KEY, token);
-  uni.setStorageSync(USER_KEY, JSON.stringify(user));
-}
+export { getStoredUser, setAuth, TOKEN_KEY };
 
 function buildRequestUrl(path: string): string {
   const base = getApiBaseUrl();
@@ -38,7 +24,7 @@ function runRequest<T>(
   options: AppRequestOptions,
   trackForAbort = false,
 ): Promise<T> {
-  const token = uni.getStorageSync(TOKEN_KEY);
+  const token = getStoredToken();
 
   return new Promise((resolve, reject) => {
     const task = uni.request({

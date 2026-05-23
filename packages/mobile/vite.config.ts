@@ -5,6 +5,13 @@ import { fileURLToPath, URL } from 'node:url';
 export default defineConfig({
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
   plugins: [uni()],
+  build: {
+    // 微信小程序运行环境不支持 ?? / ?. 等 ES2020 语法，须降级
+    target: 'es2015',
+  },
+  esbuild: {
+    target: 'es2015',
+  },
   resolve: {
     alias: {
       '@douxing/shared': fileURLToPath(new URL('../shared/src/index.ts', import.meta.url)),
