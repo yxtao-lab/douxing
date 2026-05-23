@@ -10,7 +10,26 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.resolve(__dirname, '..');
-const aiEnabled = process.env.AI_SERVICE_ENABLED === 'true';
+
+/** 读取根目录 .env，注入 PM2，避免 reload 残留旧 DATABASE_URL */
+function loadEnvFile() {
+  const envPath = path.join(root, '.env');
+  const env = {};
+  if (!fs.existsSync(envPath)) return env;
+  for (const line of fs.readFileSync(envPath, 'utf8').split('\n')) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+    const eq = trimmed.indexOf('=');
+    if (eq === -1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+    env[key] = value;
+  }
+  return env;
+}
+
+const fileEnv = loadEnvFile();
+const aiEnabled = (fileEnv.AI_SERVICE_ENABLED || process.env.AI_SERVICE_ENABLED) === 'true';
 const serverDist = path.join(root, 'packages/server/dist/index.js');
 const useTsx = process.env.SERVER_RUNTIME === 'tsx' || !fs.existsSync(serverDist);
 
@@ -36,7 +55,7 @@ const apiApp = useTsx
       exec_mode: 'fork',
       autorestart: true,
       max_memory_restart: '768M',
-      env: { NODE_ENV: 'production', SERVER_RUNTIME: 'tsx' },
+      env: { ...fileEnv, NODE_ENV: 'production', SERVER_RUNTIME: 'tsx' },
       error_file: path.join(root, 'logs/pm2-api-error.log'),
       out_file: path.join(root, 'logs/pm2-api-out.log'),
       merge_logs: true,
@@ -50,7 +69,7 @@ const apiApp = useTsx
       exec_mode: 'fork',
       autorestart: true,
       max_memory_restart: '512M',
-      env: { NODE_ENV: 'production' },
+      env: { ...fileEnv, NODE_ENV: 'production' },
       error_file: path.join(root, 'logs/pm2-api-error.log'),
       out_file: path.join(root, 'logs/pm2-api-out.log'),
       merge_logs: true,

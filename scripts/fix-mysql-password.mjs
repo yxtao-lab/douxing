@@ -171,14 +171,20 @@ function verifyFromHost() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     console.warn('[fix:mysql] 未设置 DATABASE_URL，跳过宿主机连接验证');
-    return;
+    return false;
   }
-  run('pnpm --filter @douxing/server exec tsx src/db/wait-only.ts', { stdio: 'inherit' });
+  try {
+    run('pnpm --filter @douxing/server exec tsx src/db/wait-only.ts', { stdio: 'inherit' });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 loadEnvFile();
 
 const recreate = process.argv.includes('--recreate');
+const force = process.argv.includes('--force');
 
 console.log('========================================');
 console.log('  兜行 · Docker MySQL 密码修复');
@@ -196,14 +202,17 @@ if (recreate) {
   process.exit(0);
 }
 
-const appUser = process.env.MYSQL_USER || 'douxing';
-const appPassword = process.env.MYSQL_PASSWORD;
-const database = process.env.MYSQL_DATABASE || 'douxing';
-
-if (appPassword && tryAppLogin(appUser, appPassword, database)) {
-  console.log('[fix:mysql] 当前密码已与 .env 一致，无需修改');
-  verifyFromHost();
+const hostOk = verifyFromHost();
+if (hostOk && !force) {
+  console.log('[fix:mysql] 宿主机 DATABASE_URL 连接正常，无需修改 MySQL 密码');
+  console.log('[fix:mysql] 若 PM2 仍报 Access denied，请执行:');
+  console.log('  pnpm exec pm2 delete douxing-api');
+  console.log('  pnpm deploy:server --skip-docker --skip-build');
   process.exit(0);
+}
+
+if (hostOk && force) {
+  console.log('[fix:mysql] --force：仍强制同步 MySQL 用户密码');
 }
 
 const rootPassword = findWorkingRootPassword();
@@ -216,12 +225,12 @@ if (!rootPassword) {
 
 syncPasswords(rootPassword);
 
-if (!tryAppLogin(appUser, appPassword, database)) {
-  console.error('[fix:mysql] 密码同步后仍无法连接，请检查 .env 中 DATABASE_URL 是否与 MYSQL_PASSWORD 一致');
+if (!verifyFromHost()) {
+  console.error('[fix:mysql] 密码同步后宿主机仍无法连接，请检查 .env 中 DATABASE_URL 是否与 MYSQL_PASSWORD 一致');
   process.exit(1);
 }
 
-console.log('[fix:mysql] 应用用户连接验证通过');
-verifyFromHost();
+console.log('[fix:mysql] 宿主机连接验证通过');
 console.log('\n[fix:mysql] 完成。生产机请执行:');
+console.log('  pnpm exec pm2 delete douxing-api');
 console.log('  pnpm deploy:server --skip-docker --skip-build');

@@ -442,10 +442,9 @@ async function main() {
   console.log('\n[deploy:server] 启动 / 重载 PM2...');
   const pm2 = ensurePm2Ready();
   if (tryRun(`${pm2} describe douxing-api`)) {
-    run(`${pm2} reload deploy/ecosystem.config.cjs --update-env`);
-  } else {
-    run(`${pm2} start deploy/ecosystem.config.cjs`);
+    run(`${pm2} delete douxing-api`);
   }
+  run(`${pm2} start deploy/ecosystem.config.cjs`);
   run(`${pm2} save`);
 
   const serverPort = process.env.SERVER_PORT || '3000';

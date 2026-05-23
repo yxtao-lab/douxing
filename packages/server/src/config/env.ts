@@ -28,7 +28,8 @@ function warnDuplicateKeys(path: string) {
 
 if (envPath) {
   warnDuplicateKeys(envPath);
-  dotenv.config({ path: envPath });
+  // override: true — PM2 reload 可能残留旧 DATABASE_URL，必须以 .env 为准
+  dotenv.config({ path: envPath, override: true });
 } else {
-  dotenv.config();
+  dotenv.config({ override: true });
 }
