@@ -20,6 +20,7 @@ export async function generateRouteFromLlm(
     intent,
     ragCandidates: input.ragCandidates,
     variantHint: input.variantHint,
+    locale: input.locale,
   });
 
   const draft: GeneratedRouteDraft = {

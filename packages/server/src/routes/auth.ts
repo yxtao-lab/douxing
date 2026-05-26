@@ -12,15 +12,15 @@ import {
   getUserWithRoles,
 } from '../services/user.service.js';
 import { sendSmsCode, verifySmsCode } from '../services/sms.service.js';
-import { RoleCode, UserStatus, UserType } from '@douxing/shared';
+import { ApiMessageKey, RoleCode, UserStatus, UserType } from '@douxing/shared';
 import type { LoginResult } from '@douxing/shared';
-import { success, fail } from '../utils/response.js';
+import { success, fail, failFromError } from '../utils/response.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
 const phoneSchema = z.object({
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
+  phone: z.string().regex(/^1[3-9]\d{9}$/, ApiMessageKey.INVALID_PHONE),
 });
 
 const loginSchema = z.object({
@@ -35,8 +35,8 @@ const registerSchema = z.object({
 });
 
 const smsLoginSchema = z.object({
-  phone: z.string().regex(/^1[3-9]\d{9}$/, '手机号格式不正确'),
-  code: z.string().length(6, '验证码为6位数字'),
+  phone: z.string().regex(/^1[3-9]\d{9}$/, ApiMessageKey.INVALID_PHONE),
+  code: z.string().length(6, ApiMessageKey.INVALID_SMS_CODE_LENGTH),
 });
 
 function signToken(userId: number, username: string): string {
@@ -65,15 +65,14 @@ router.post('/sms/send', async (req, res) => {
   try {
     const parsed = phoneSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
     }
 
     const { phone } = parsed.data;
     const result = await sendSmsCode(phone);
-    success(res, result, '验证码已发送');
+    success(res, result, ApiMessageKey.SMS_SENT);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '发送失败';
-    return fail(res, message);
+    return failFromError(res, err, ApiMessageKey.SMS_SEND_FAILED);
   }
 });
 
@@ -81,12 +80,12 @@ router.post('/sms/login', async (req, res) => {
   try {
     const parsed = smsLoginSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
     }
 
     const { phone, code } = parsed.data;
     if (!verifySmsCode(phone, code)) {
-      return fail(res, '验证码错误或已过期');
+      return fail(res, ApiMessageKey.SMS_CODE_INVALID);
     }
 
     let user = await findUserByPhone(phone);
@@ -112,15 +111,15 @@ router.post('/sms/login', async (req, res) => {
       await assignDefaultRole(userId);
       user = (await findUserByPhone(phone))!;
     } else if (user.status !== UserStatus.ACTIVE) {
-      return fail(res, '账号已禁用');
+      return fail(res, ApiMessageKey.ACCOUNT_DISABLED);
     }
 
     const loginResult = await buildLoginResult(user.id);
     if (!loginResult) {
-      return fail(res, '登录失败', 500, 500);
+      return fail(res, ApiMessageKey.LOGIN_FAILED, 500, 500);
     }
 
-    success(res, loginResult, isNewUser ? '注册成功' : '登录成功');
+    success(res, loginResult, isNewUser ? ApiMessageKey.REGISTER_SUCCESS : ApiMessageKey.LOGIN_SUCCESS);
   } catch (err) {
     console.error('[auth/sms/login]', err);
     return fail(res, '登录失败', 500, 500);
@@ -131,11 +130,11 @@ router.post('/register', async (req, res) => {
   try {
     const parsed = registerSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
     }
     const { username, password, nickname } = parsed.data;
     const existing = await findUserByUsername(username);
-    if (existing) return fail(res, '用户名已存在');
+    if (existing) return fail(res, ApiMessageKey.USERNAME_EXISTS);
 
     const db = getDb();
     const hashed = await bcrypt.hash(password, 10);
@@ -151,9 +150,9 @@ router.post('/register', async (req, res) => {
     await assignDefaultRole(userId);
 
     const loginResult = await buildLoginResult(userId);
-    if (!loginResult) return fail(res, '注册失败', 500, 500);
+    if (!loginResult) return fail(res, ApiMessageKey.REGISTER_FAILED, 500, 500);
 
-    success(res, loginResult, '注册成功');
+    success(res, loginResult, ApiMessageKey.REGISTER_SUCCESS);
   } catch (err) {
     console.error('[auth/register]', err);
     return fail(res, '注册失败', 500, 500);
@@ -163,13 +162,13 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    return fail(res, '参数错误');
+    return fail(res, ApiMessageKey.PARAM_ERROR);
   }
 
   const { username, password } = parsed.data;
   const user = await findUserByUsername(username);
   if (!user) {
-    return fail(res, '用户名或密码错误');
+    return fail(res, ApiMessageKey.INVALID_CREDENTIALS);
   }
 
   if (user.status !== UserStatus.ACTIVE) {
@@ -178,21 +177,21 @@ router.post('/login', async (req, res) => {
 
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
-    return fail(res, '用户名或密码错误');
+    return fail(res, ApiMessageKey.INVALID_CREDENTIALS);
   }
 
   const loginResult = await buildLoginResult(user.id);
   if (!loginResult) {
-    return fail(res, '用户数据异常', 500, 500);
+    return fail(res, ApiMessageKey.USER_DATA_ERROR, 500, 500);
   }
 
-  success(res, loginResult, '登录成功');
+  success(res, loginResult, ApiMessageKey.LOGIN_SUCCESS);
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
   const userInfo = await getUserWithRoles(req.auth!.userId);
   if (!userInfo) {
-    return fail(res, '用户不存在', 404, 404);
+    return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
   }
   success(res, userInfo);
 });

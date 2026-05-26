@@ -32,7 +32,7 @@ export function generateRoute(data: GenerateRouteRequest) {
   return requestAiPlan<GenerateRouteResult>('/routes/generate', {
     method: 'POST',
     data,
-    loadingMessage: 'AI 正在规划路线…',
+    loadingMessageKey: 'plan.aiPlanning',
   });
 }
 
@@ -72,7 +72,7 @@ export function regenerateRoute(id: number, data: RegenerateRouteRequest) {
   return requestAiPlan<GenerateRouteResult>(`/routes/${id}/regenerate`, {
     method: 'POST',
     data,
-    loadingMessage: 'AI 正在重新规划路线…',
+    loadingMessageKey: 'plan.aiPlanningRegenerate',
   });
 }
 

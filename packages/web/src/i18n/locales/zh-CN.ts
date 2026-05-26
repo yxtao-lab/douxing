@@ -1,0 +1,25 @@
+/** Web 管理端中文文案 */
+export const webZhCN = {
+  login: {
+    smsTab: '验证码登录',
+    passwordTab: '密码登录',
+    phone: '手机号',
+    phonePlaceholder: '请输入手机号',
+    code: '验证码',
+    codePlaceholder: '6位验证码',
+    getCode: '获取验证码',
+    codeCountdown: '{seconds}s',
+    devCodeHint: '开发环境验证码：{code}',
+    smsSubmit: '登录 / 注册',
+    username: '用户名',
+    password: '密码',
+    usernamePlaceholder: '请输入用户名',
+    passwordPlaceholder: '请输入密码',
+    toggleToRegister: '没有账号？去注册',
+    toggleToLogin: '已有账号？去登录',
+    demoHint: '体验账号：admin / admin123',
+    smsHint: '未注册手机号将自动创建账号',
+    signingIn: '登录中...',
+    signingUp: '注册中...',
+  },
+} as const;

@@ -6,25 +6,28 @@
       <view class="info">
         <view class="name-row">
           <text class="name">{{ user.nickname || user.username }}</text>
-          <text class="member-badge" :class="memberBadgeClass">{{ memberLevelLabel }}</text>
+          <view class="member-badge" :class="memberBadgeClass" @click.stop="goMembership">
+            <MemberLevelIcon :level="user.memberLevel ?? 0" size="sm" />
+            <text class="member-badge-text">{{ memberLevelLabel }}</text>
+          </view>
         </view>
-        <text class="sub">@{{ user.username }} · 可生成 {{ planCandidateCount }} 套方案</text>
+        <text class="sub">@{{ planQuotaText }}</text>
         <view v-if="user.interestTags?.length" class="tag-row">
-          <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ tag }}</text>
+          <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
         </view>
       </view>
       <text class="edit-arrow">›</text>
     </view>
     <view class="user-card guest-card" v-else>
       <view class="guest-info">
-        <text class="guest-title">登录兜行</text>
-        <text class="guest-desc">解锁打卡、成就与排行榜</text>
+        <text class="guest-title">{{ t('profile.guestTitle') }}</text>
+        <text class="guest-desc">{{ t('profile.guestDesc') }}</text>
       </view>
-      <button class="btn-login" @click="goLogin">登录 / 注册</button>
+      <button class="btn-login" @click="goLogin">{{ t('profile.loginRegister') }}</button>
     </view>
 
     <view class="section">
-      <text class="section-title">个性化</text>
+      <text class="section-title">{{ t('profile.sectionPersonalize') }}</text>
       <view class="grid-card">
         <view
           v-for="item in travelGridItems"
@@ -41,7 +44,7 @@
     </view>
 
     <view class="section">
-      <text class="section-title">账号与服务</text>
+      <text class="section-title">{{ t('profile.sectionAccount') }}</text>
       <view class="action-card">
         <button
           v-for="action in userActions"
@@ -52,7 +55,7 @@
         >
           {{ action.label }}
         </button>
-        <button v-if="user" class="action-btn danger" @click="handleLogout">退出登录</button>
+        <button v-if="user" class="action-btn danger" @click="handleLogout">{{ t('common.logout') }}</button>
       </view>
     </view>
 
@@ -64,10 +67,25 @@
 import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { UserInfo } from '@douxing/shared';
-import { getMemberLevelLabel, getPlanCandidateCountByMemberLevel } from '@douxing/shared';
+import {
+  getMemberLevelI18nKey,
+  getMemberLevelBadgeClass,
+  getPlanCandidateCountByMemberLevel,
+  canAppendPlanByMemberLevel,
+} from '@douxing/shared';
+import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
 import { fetchCurrentUser } from '@/api/user';
 import { getStoredUser, setAuth } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
+import { useLocale } from '@/i18n/useLocale';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
+
+const { t, tf } = useTf();
+const { labelOf } = useInterestTagLabel();
+const { showLocalePicker } = useLocale();
+usePageTitle('nav.profile');
 
 interface GridItem {
   key: string;
@@ -91,34 +109,55 @@ const user = ref<UserInfo | null>(getStoredUser());
 const avatarText = computed(() => (user.value?.nickname || user.value?.username || '?').slice(0, 1));
 
 const memberLevelLabel = computed(() =>
-  getMemberLevelLabel(user.value?.memberLevel),
+  t(getMemberLevelI18nKey(user.value?.memberLevel)),
 );
 
 const planCandidateCount = computed(() =>
   getPlanCandidateCountByMemberLevel(user.value?.memberLevel),
 );
 
-const memberBadgeClass = computed(() => {
-  const level = user.value?.memberLevel ?? 0;
-  if (level >= 3) return 'vip';
-  if (level >= 2) return 'gold';
-  if (level >= 1) return 'silver';
-  return 'free';
+const planQuotaText = computed(() => {
+  if (!user.value) return '';
+  const followUp = canAppendPlanByMemberLevel(user.value.memberLevel)
+    ? t('profile.planQuotaFollowUpYes')
+    : t('profile.planQuotaFollowUpNo');
+  return tf('profile.planQuota', {
+    username: user.value.username,
+    count: planCandidateCount.value,
+    followUp,
+  });
 });
 
-const travelGridItems: GridItem[] = [
-  { key: 'checkins', icon: '📍', label: '打卡记录', bg: '#e6f4ff', action: goCheckins },
-  { key: 'map', icon: '🗺️', label: '打卡地图', bg: '#f0fdf4', needLogin: true, action: goCheckinMap },
-  { key: 'achievements', icon: '🏅', label: '我的成就', bg: '#fff7e6', needLogin: true, action: goAchievements },
-  { key: 'badges', icon: '🎖️', label: '我的徽章', bg: '#f9f0ff', needLogin: true, action: goBadges },
-  { key: 'leaderboard', icon: '🏆', label: '排行榜', bg: '#fff1f0', needLogin: true, action: goLeaderboard },
-];
+const memberBadgeClass = computed(() => getMemberLevelBadgeClass(user.value?.memberLevel));
 
-const userActions: UserAction[] = [
-  { key: 'edit', label: '编辑资料', variant: 'primary', needLogin: true, action: goEdit },
-  { key: 'routes', label: '我的路线', action: goRoutes },
-  { key: 'orders', label: '我的订单', needLogin: true, action: goOrders },
-];
+const travelGridItems = computed<GridItem[]>(() => [
+  { key: 'checkins', icon: '📍', label: t('profile.gridCheckins'), bg: '#e6f4ff', action: goCheckins },
+  { key: 'map', icon: '🗺️', label: t('profile.gridMap'), bg: '#f0fdf4', needLogin: true, action: goCheckinMap },
+  {
+    key: 'achievements',
+    icon: '🏅',
+    label: t('profile.gridAchievements'),
+    bg: '#fff7e6',
+    needLogin: true,
+    action: goAchievements,
+  },
+  { key: 'badges', icon: '🎖️', label: t('profile.gridBadges'), bg: '#f9f0ff', needLogin: true, action: goBadges },
+  {
+    key: 'leaderboard',
+    icon: '🏆',
+    label: t('profile.gridLeaderboard'),
+    bg: '#fff1f0',
+    needLogin: true,
+    action: goLeaderboard,
+  },
+  { key: 'language', icon: '🌐', label: t('profile.language'), bg: '#eef2ff', action: showLocalePicker },
+]);
+
+const userActions = computed<UserAction[]>(() => [
+  { key: 'edit', label: t('profile.actionEdit'), variant: 'primary', needLogin: true, action: goEdit },
+  { key: 'routes', label: t('profile.actionRoutes'), action: goRoutes },
+  { key: 'orders', label: t('profile.actionOrders'), needLogin: true, action: goOrders },
+]);
 
 function requireLogin(then: () => void) {
   if (!user.value) {
@@ -150,6 +189,14 @@ function goLogin() {
 
 function goEdit() {
   uni.navigateTo({ url: '/pages/profile/edit' });
+}
+
+function goMembership() {
+  if (!user.value) {
+    goLogin();
+    return;
+  }
+  uni.navigateTo({ url: '/pages/profile/membership' });
 }
 
 function goRoutes() {
@@ -184,7 +231,7 @@ function handleLogout() {
   uni.removeStorageSync('douxing_token');
   uni.removeStorageSync('douxing_user');
   user.value = null;
-  uni.showToast({ title: '已退出', icon: 'none' });
+  uni.showToast({ title: t('common.logoutDone'), icon: 'none' });
 }
 
 onShow(async () => {
@@ -281,9 +328,18 @@ onShow(async () => {
   font-weight: 600;
 }
 .member-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
   font-size: 20rpx;
-  padding: 4rpx 12rpx;
+  padding: 4rpx 12rpx 4rpx 6rpx;
   border-radius: 999rpx;
+}
+.member-badge-text {
+  line-height: 1.2;
+}
+.member-badge:active {
+  opacity: 0.75;
 }
 .member-badge.free {
   color: #6b7280;

@@ -12,19 +12,20 @@
         class="iconfont tab-icon"
         :class="[item.icon, current === index ? 'is-active' : '']"
       />
-      <text class="tab-text" :class="{ 'is-active': current === index }">{{ item.text }}</text>
+      <text class="tab-text" :class="{ 'is-active': current === index }">{{ item.label }}</text>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import { isAiPlanLoading } from '@/utils/ai-plan-loading';
 
 interface TabItem {
   pagePath: string;
-  text: string;
+  labelKey: string;
   icon: string;
 }
 
@@ -38,12 +39,22 @@ const props = withDefaults(
 /** 高亮仅由当前页传入的 current 决定，避免 Tab 页缓存导致选中态错乱 */
 const current = computed(() => props.current);
 
-const tabList: TabItem[] = [
-  { pagePath: '/pages/index/index', text: '首页', icon: 'icon-home' },
-  { pagePath: '/pages/plan/plan', text: '规划', icon: 'icon-plan' },
-  { pagePath: '/pages/routes/list', text: '路线', icon: 'icon-routes' },
-  { pagePath: '/pages/profile/profile', text: '我的', icon: 'icon-profile' },
+const { t } = useI18n();
+
+const tabDefs: TabItem[] = [
+  { pagePath: '/pages/index/index', labelKey: 'tab.home', icon: 'icon-home' },
+  { pagePath: '/pages/plan/plan', labelKey: 'tab.plan', icon: 'icon-plan' },
+  { pagePath: '/pages/routes/list', labelKey: 'tab.routes', icon: 'icon-routes' },
+  { pagePath: '/pages/profile/profile', labelKey: 'tab.profile', icon: 'icon-profile' },
 ];
+
+const tabList = computed(() =>
+  tabDefs.map((item) => ({
+    pagePath: item.pagePath,
+    icon: item.icon,
+    label: t(item.labelKey),
+  })),
+);
 
 function onSwitch(pagePath: string, index: number) {
   if (current.value === index) return;

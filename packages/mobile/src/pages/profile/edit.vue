@@ -3,28 +3,33 @@
     <view class="avatar-section" @click="chooseAvatar">
       <image v-if="form.avatar" class="avatar-img" :src="form.avatar" mode="aspectFill" />
       <view v-else class="avatar-placeholder">{{ avatarText }}</view>
-      <text class="avatar-hint">点击更换头像</text>
+      <text class="avatar-hint">{{ t('profileEdit.avatarHint') }}</text>
     </view>
 
     <view class="form-card">
       <view class="field">
-        <text class="label">昵称</text>
-        <input v-model="form.nickname" class="input" maxlength="64" placeholder="请输入昵称" />
+        <text class="label">{{ t('profileEdit.nickname') }}</text>
+        <input
+          v-model="form.nickname"
+          class="input"
+          maxlength="64"
+          :placeholder="t('profileEdit.nicknamePlaceholder')"
+        />
       </view>
       <view class="field">
-        <text class="label">邮箱</text>
+        <text class="label">{{ t('profileEdit.email') }}</text>
         <input
           v-model="form.email"
           class="input"
           type="text"
           maxlength="128"
-          placeholder="选填"
+          :placeholder="t('profileEdit.emailOptional')"
         />
       </view>
     </view>
 
     <view class="form-card">
-      <text class="label block">兴趣标签（最多 {{ maxTags }} 个）</text>
+      <text class="label block">{{ interestTagsTitle }}</text>
       <view class="tags">
         <text
           v-for="tag in presets"
@@ -33,12 +38,12 @@
           :class="{ active: form.interestTags.includes(tag) }"
           @click="toggleTag(tag)"
         >
-          {{ tag }}
+          {{ labelOf(tag) }}
         </text>
       </view>
     </view>
 
-    <button class="save-btn" :loading="saving" @click="handleSave">保存</button>
+    <button class="save-btn" :loading="saving" @click="handleSave">{{ t('common.save') }}</button>
   </view>
 </template>
 
@@ -46,11 +51,19 @@
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type { UserInfo } from '@douxing/shared';
-import { USER_INTEREST_PRESETS, USER_INTEREST_MAX } from '@douxing/shared';
+import { USER_INTEREST_MAX } from '@douxing/shared';
 import { fetchCurrentUser, updateUserProfile, uploadUserAvatar } from '@/api/user';
 import { getStoredUser } from '@/utils/request';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+import { interestTagPresets } from '@/i18n/interest-tags';
+import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
-const presets = USER_INTEREST_PRESETS;
+const { t, tf } = useTf();
+const { labelOf } = useInterestTagLabel();
+usePageTitle('nav.profileEdit');
+
+const presets = interestTagPresets;
 const maxTags = USER_INTEREST_MAX;
 
 const saving = ref(false);
@@ -64,6 +77,8 @@ const form = ref({
 });
 
 const avatarText = computed(() => form.value.nickname.slice(0, 1) || '?');
+
+const interestTagsTitle = computed(() => tf('profileEdit.interestTagsTitle', { max: maxTags }));
 
 function applyUser(user: UserInfo) {
   form.value = {
@@ -81,7 +96,7 @@ function toggleTag(tag: string) {
     return;
   }
   if (form.value.interestTags.length >= maxTags) {
-    uni.showToast({ title: `最多选择 ${maxTags} 个标签`, icon: 'none' });
+    uni.showToast({ title: tf('profileEdit.maxTagsToast', { max: maxTags }), icon: 'none' });
     return;
   }
   form.value.interestTags.push(tag);
@@ -105,12 +120,12 @@ async function chooseAvatar() {
     if (!filePath) return;
 
     uploading.value = true;
-    uni.showLoading({ title: '上传中' });
+    uni.showLoading({ title: t('profileEdit.uploading') });
     const user = await uploadUserAvatar(filePath);
     form.value.avatar = user.avatar;
-    uni.showToast({ title: '头像已更新', icon: 'success' });
+    uni.showToast({ title: t('profileEdit.avatarUpdated'), icon: 'success' });
   } catch (err) {
-    const message = err instanceof Error ? err.message : '上传失败';
+    const message = err instanceof Error ? err.message : t('profileEdit.uploadFailed');
     uni.showToast({ title: message, icon: 'none' });
   } finally {
     uploading.value = false;
@@ -121,7 +136,7 @@ async function chooseAvatar() {
 async function handleSave() {
   const nickname = form.value.nickname.trim();
   if (!nickname) {
-    uni.showToast({ title: '请填写昵称', icon: 'none' });
+    uni.showToast({ title: t('profileEdit.nicknameRequired'), icon: 'none' });
     return;
   }
 
@@ -137,7 +152,7 @@ async function handleSave() {
 
   if (emailRaw) {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
-      uni.showToast({ title: '邮箱格式不正确', icon: 'none' });
+      uni.showToast({ title: t('profileEdit.invalidEmail'), icon: 'none' });
       return;
     }
     payload.email = emailRaw;
@@ -148,10 +163,10 @@ async function handleSave() {
   saving.value = true;
   try {
     await updateUserProfile(payload);
-    uni.showToast({ title: '保存成功', icon: 'success' });
+    uni.showToast({ title: t('profileEdit.saveSuccess'), icon: 'success' });
     setTimeout(() => uni.navigateBack(), 400);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '保存失败';
+    const message = err instanceof Error ? err.message : t('profileEdit.saveFailed');
     uni.showToast({ title: message, icon: 'none' });
   } finally {
     saving.value = false;
@@ -166,7 +181,7 @@ onLoad(async () => {
     applyUser(fresh);
   } catch {
     if (!cached) {
-      uni.showToast({ title: '请先登录', icon: 'none' });
+      uni.showToast({ title: t('profileEdit.loginRequired'), icon: 'none' });
       setTimeout(() => uni.redirectTo({ url: '/pages/login/login' }), 500);
     }
   }

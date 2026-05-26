@@ -1,5 +1,6 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { z } from 'zod';
+import type { LocaleCode } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail } from '../utils/response.js';
 import {
@@ -27,6 +28,10 @@ import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import planSessionsRouter from './plan-sessions.js';
 
 const router = Router();
+
+function getRequestLocale(res: Response): LocaleCode {
+  return res.locals.locale ?? 'zh-CN';
+}
 
 const providerSchema = z.enum(['auto', 'deepseek', 'lmstudio']).optional();
 
@@ -117,7 +122,7 @@ router.post('/generate', authMiddleware, async (req, res) => {
     }
     const { route, generationSource, llmProvider } = await createRouteFromPrompt(
       req.auth!.userId,
-      parsed.data,
+      { ...parsed.data, locale: getRequestLocale(res) },
     );
     let message = buildRouteGenerationMessage(generationSource, llmProvider);
     success(res, { ...route, generationSource, llmProvider }, message);
@@ -196,7 +201,10 @@ router.post('/:id/regenerate', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const result = await regenerateRouteFromPrompt(routeId, req.auth!.userId, parsed.data);
+    const result = await regenerateRouteFromPrompt(routeId, req.auth!.userId, {
+      ...parsed.data,
+      locale: getRequestLocale(res),
+    });
     if (!result) return fail(res, '路线不存在', 404, 404);
     const { route, generationSource, llmProvider } = result;
     const message = buildRouteGenerationMessage(generationSource, llmProvider, true);

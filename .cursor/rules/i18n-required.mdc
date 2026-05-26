@@ -1,0 +1,41 @@
+---
+description: 所有新功能必须支持国际化（移动端、Web、后端 API）
+alwaysApply: true
+---
+
+# 国际化（i18n）强制要求
+
+后续**所有**新开发与改动，必须同时考虑 **移动端**、**Web 管理端**、**后端 API** 的多语言支持（当前语言：zh-CN、en-US）。
+
+## 禁止
+
+- 在用户可见处硬编码中文或英文（品牌装饰符号除外）
+- 后端 `success` / `fail` / `throw new Error('中文')` 直接返回未翻译文案
+- 只改一端文案、其它端仍硬编码
+
+## 前端（移动端 + Web）
+
+1. 文案放入 `packages/shared/src/i18n/locales/`（跨端）或 `packages/mobile|web/src/i18n/locales/`（端专属）
+2. 模板使用 `t('module.key')`；带参数时移动端优先 `useTf().tf('key', params)`
+3. 新页面调用 `usePageTitle('nav.xxx')` 更新导航栏标题
+4. 数据库存中文预设值（如兴趣标签）时，展示用 `useInterestTagLabel` / `formatInterestTagLabel`
+5. 修改 shared i18n 后执行：`pnpm --filter @douxing/shared build`
+
+## 后端 API
+
+1. 使用 `ApiMessageKey` + `success` / `fail` / `ApiError`，禁止新增裸中文字符串
+2. 业务层抛错：`throw new ApiError(ApiMessageKey.XXX, { param })`
+3. 新增 key 须同步：`api-keys.ts`、`api-messages.ts`（zh-CN + en-US）
+4. 依赖 `localeMiddleware` 与请求头 `Accept-Language`（客户端已与 UI 语言绑定）
+
+## 服务端动态文案
+
+助手回复、状态标签、模板路线名等须走 `@douxing/shared` 的 `plan-messages`、`formatMessage` 等，并传入 `res.locals.locale`
+
+## 验收自检
+
+- [ ] zh-CN / en-US 切换后 UI 无遗漏硬编码
+- [ ] API 错误/成功提示随 `Accept-Language` 变化
+- [ ] 新增文案键在两种语言文件中均已添加
+
+详细规范见 `docs/国际化.md`

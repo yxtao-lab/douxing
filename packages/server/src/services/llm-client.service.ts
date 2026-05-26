@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { PoiCategory } from '@douxing/shared';
-import type { PlanChatMessage, TravelIntentSnapshot, RagAttractionCandidate } from '@douxing/shared';
+import type {
+  LocaleCode,
+  PlanChatMessage,
+  TravelIntentSnapshot,
+  RagAttractionCandidate,
+} from '@douxing/shared';
+import { DEFAULT_LOCALE } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -133,8 +139,16 @@ JSON 结构：
 const MULTI_TURN_HINT = `
 7. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
 
-function buildSystemPrompt(hasHistory: boolean): string {
-  return hasHistory ? SYSTEM_PROMPT + MULTI_TURN_HINT : SYSTEM_PROMPT;
+const LOCALE_OUTPUT_HINT_EN = `
+8. Output language: English. Fields name, description, each day date/title, and attraction descriptions must be in English. interestTags may stay as short Chinese theme words from the user or English equivalents. City names (e.g. Hangzhou) may stay as commonly used English exonyms.`;
+
+const LOCALE_OUTPUT_HINT_ZH = `
+8. 输出语言：简体中文。name、description、每日 date/title 及景点说明均使用中文。`;
+
+function buildSystemPrompt(hasHistory: boolean, locale: LocaleCode = DEFAULT_LOCALE): string {
+  const localeHint = locale === 'en-US' ? LOCALE_OUTPUT_HINT_EN : LOCALE_OUTPUT_HINT_ZH;
+  const base = SYSTEM_PROMPT + localeHint;
+  return hasHistory ? base + MULTI_TURN_HINT : base;
 }
 
 function buildAssistantHistoryContent(message: PlanChatMessage): string {
@@ -276,6 +290,7 @@ async function chatCompletionWithProvider(
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
     variantHint?: string;
+    locale?: LocaleCode;
   },
 ): Promise<LlmRoutePayload> {
   const config = getProviderConfig(provider);
@@ -304,8 +319,9 @@ async function chatCompletionWithProvider(
       : userPrompt;
 
   const history = options?.history ?? [];
+  const locale = options?.locale ?? DEFAULT_LOCALE;
   const messages: ChatMessage[] = [
-    { role: 'system', content: buildSystemPrompt(history.length > 0) },
+    { role: 'system', content: buildSystemPrompt(history.length > 0, locale) },
     ...history.map((item) => ({
       role: item.role,
       content: buildAssistantHistoryContent(item),
@@ -389,6 +405,7 @@ export async function chatCompletionForRoute(
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
     variantHint?: string;
+    locale?: LocaleCode;
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);

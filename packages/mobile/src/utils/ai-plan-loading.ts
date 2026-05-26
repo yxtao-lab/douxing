@@ -1,10 +1,26 @@
 import { reactive, readonly } from 'vue';
+import { i18n } from '@/i18n';
 
-export const AI_PLAN_CANCELLED_MESSAGE = '已取消路线规划';
+export const AI_PLAN_CANCELLED_KEY = 'plan.cancelled';
+
+function translate(key: string): string {
+  return String(i18n.global.t(key));
+}
+
+export function getAiPlanCancelledMessage(): string {
+  return translate(AI_PLAN_CANCELLED_KEY);
+}
+
+export function isAiPlanCancelledError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  if (isRequestAbortedError(err.message)) return true;
+  const msg = err.message;
+  return msg === getAiPlanCancelledMessage() || msg === '已取消路线规划';
+}
 
 const state = reactive({
   active: false,
-  message: 'AI 正在规划路线…',
+  message: '',
 });
 
 let activeRequestTask: UniApp.RequestTask | null = null;
@@ -22,7 +38,7 @@ function installNavigationInterceptors() {
 
   const blockNavigation = () => {
     if (!state.active) return;
-    uni.showToast({ title: '路线规划进行中，请等待完成或取消', icon: 'none' });
+    uni.showToast({ title: translate('plan.aiPlanningNavBlocked'), icon: 'none' });
     return false;
   };
 
@@ -32,9 +48,9 @@ function installNavigationInterceptors() {
   }
 }
 
-export function beginAiPlanLoading(message = 'AI 正在规划路线…') {
+export function beginAiPlanLoading(message?: string) {
   installNavigationInterceptors();
-  state.message = message;
+  state.message = message ?? translate('plan.aiPlanning');
   state.active = true;
 }
 

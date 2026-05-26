@@ -1,0 +1,25 @@
+/** Web 管理端英文文案 */
+export const webEnUS = {
+  login: {
+    smsTab: 'SMS code',
+    passwordTab: 'Password',
+    phone: 'Phone',
+    phonePlaceholder: 'Enter phone number',
+    code: 'Code',
+    codePlaceholder: '6-digit code',
+    getCode: 'Get code',
+    codeCountdown: '{seconds}s',
+    devCodeHint: 'Dev verification code: {code}',
+    smsSubmit: 'Sign in / Sign up',
+    username: 'Username',
+    password: 'Password',
+    usernamePlaceholder: 'Enter username',
+    passwordPlaceholder: 'Enter password',
+    toggleToRegister: 'No account? Sign up',
+    toggleToLogin: 'Have an account? Sign in',
+    demoHint: 'Demo account: admin / admin123',
+    smsHint: 'New numbers will create an account automatically',
+    signingIn: 'Signing in...',
+    signingUp: 'Signing up...',
+  },
+} as const;

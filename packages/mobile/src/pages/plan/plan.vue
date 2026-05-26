@@ -3,24 +3,28 @@
     <view class="page-top">
       <view class="header">
       <view class="header-top">
-        <text class="title">AI 智能规划</text>
+        <text class="title">{{ t('plan.title') }}</text>
         <view v-if="sessionId || currentRouteId || previousSessionId" class="header-actions">
           <text
             v-if="previousSessionId && !sessionId"
             class="header-route-link"
             @click="restorePreviousSession"
-          >返回对话</text>
-          <text v-if="currentRouteId && sessionId" class="header-route-link" @click="openRouteDetail">路线详情</text>
-          <text v-if="sessionId" class="new-session" @click="startNewSession">新建</text>
+          >{{ t('plan.backToChat') }}</text>
+          <text v-if="currentRouteId && sessionId" class="header-route-link" @click="openRouteDetail">{{ t('plan.routeDetail') }}</text>
+          <text v-if="sessionId" class="new-session" @click="startNewSession">{{ t('plan.newSession') }}</text>
         </view>
       </view>
-      <text class="desc">首条需求按会员等级生成多套方案；选定后可多轮追问调整</text>
+      <text class="desc">{{ t('plan.desc') }}</text>
       <view v-if="intentSummary" class="intent-bar">
-        <text class="intent-label">已理解需求</text>
+        <text class="intent-label">{{ t('plan.intentLabel') }}</text>
         <text class="intent-value">{{ intentSummary }}{{ intentBarExtra }}</text>
       </view>
       <view v-if="membershipHint" class="membership-bar">
         <text class="membership-label">{{ membershipHint }}</text>
+      </view>
+      <view v-if="appendLockedHint" class="append-locked-bar">
+        <text class="append-locked-text">{{ appendLockedHint }}</text>
+        <text class="append-locked-link" @click="goMembership">{{ t('nav.membership') }}</text>
       </view>
       <view v-if="showLlmStatus" class="llm-status warn">
         <text>{{ llmIssueMessage }}</text>
@@ -29,7 +33,7 @@
 
       <view v-if="!sessionId" class="card setup-card">
         <template v-if="showModelPicker">
-          <text class="label">选择模型</text>
+          <text class="label">{{ t('plan.selectModel') }}</text>
           <picker
             mode="selector"
             :range="providerPickerLabels"
@@ -106,10 +110,10 @@
           :class="{ active: item.isSelected }"
           @click="handleSelectCandidate(item)"
         >
-          <text class="candidate-label">{{ item.label }}</text>
-          <text class="candidate-name">{{ item.route?.name || '路线方案' }}</text>
+          <text class="candidate-label">{{ candidateLabel(item) }}</text>
+          <text class="candidate-name">{{ item.route?.name || t('plan.routePlanFallback') }}</text>
           <text class="candidate-meta">
-            {{ item.route?.days ?? '—' }}天
+            {{ formatRouteDays(item.route?.days) }}
             <text v-if="item.route?.budgetRange"> · {{ item.route.budgetRange }}</text>
           </text>
         </view>
@@ -127,10 +131,10 @@
           :class="{ active: item.isSelected }"
           @click="handleSelectCandidate(item)"
         >
-          <text class="candidate-label">{{ item.label }}</text>
-          <text class="candidate-name">{{ item.route?.name || '路线方案' }}</text>
+          <text class="candidate-label">{{ candidateLabel(item) }}</text>
+          <text class="candidate-name">{{ item.route?.name || t('plan.routePlanFallback') }}</text>
           <text class="candidate-meta">
-            {{ item.route?.days ?? '—' }}天
+            {{ formatRouteDays(item.route?.days) }}
             <text v-if="item.route?.budgetRange"> · {{ item.route.budgetRange }}</text>
           </text>
         </view>
@@ -140,7 +144,7 @@
         ref="composerRef"
         v-model="inputText"
         :placeholder="composerPlaceholder"
-        :disabled="aiPlanning"
+        :disabled="composerLocked"
         :loading="aiPlanning"
         @send="handleSend"
       />
@@ -163,7 +167,7 @@ import {
 import * as authStorage from '@/utils/auth-storage';
 import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
-import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
+import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
 import type {
@@ -174,13 +178,27 @@ import type {
   UserInfo,
   PlanRouteCandidate,
 } from '@douxing/shared';
-import { LlmProvider, getMemberLevelLabel, getPlanCandidateCountByMemberLevel } from '@douxing/shared';
+import {
+  LlmProvider,
+  formatPlanIntentSummary,
+  formatPlanVariantLabel,
+  getMemberLevelI18nKey,
+  getPlanCandidateCountByMemberLevel,
+  canAppendPlanByMemberLevel,
+} from '@douxing/shared';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
 interface ChatMessage {
   id: number | string;
   role: 'user' | 'assistant';
   content: string;
 }
+
+const { t, tf } = useTf();
+const { currentLocale } = useInterestTagLabel();
+usePageTitle('nav.plan');
 
 const inputText = ref('');
 const composerRef = ref<InstanceType<typeof VoiceTextComposer> | null>(null);
@@ -198,14 +216,32 @@ const providerOptions = ref<LlmProviderOption[]>([]);
 const llmAvailable = ref<boolean | null>(null);
 const llmIssueMessage = ref('');
 const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
-const memberLevelLabel = ref(getMemberLevelLabel(0));
+const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
 /** 模型选择仅开发环境展示，生产包使用服务端默认策略 */
 const showModelPicker = import.meta.env.DEV;
 
+const memberLevelLabel = computed(() =>
+  t(getMemberLevelI18nKey(user.value?.memberLevel)),
+);
+
 const membershipHint = computed(() => {
   if (!authStorage.getStoredUser()) return '';
-  return `${memberLevelLabel.value} · 可生成 ${memberPlanCount.value} 套方案`;
+  const followUp = canAppendPlan.value
+    ? t('plan.membershipFollowUpYes')
+    : t('plan.membershipFollowUpNo');
+  return tf('plan.membershipHint', {
+    level: memberLevelLabel.value,
+    count: memberPlanCount.value,
+    followUp,
+  });
 });
+
+const appendLockedHint = computed(() => {
+  if (!sessionId.value || canAppendPlan.value) return '';
+  return t('plan.appendLockedHint');
+});
+
+const composerLocked = computed(() => aiPlanning.value || (!!sessionId.value && !canAppendPlan.value));
 
 const showLlmStatus = computed(() => llmIssueMessage.value.length > 0);
 
@@ -214,12 +250,37 @@ const pageStyle = computed(() => ({
 }));
 
 const userAvatarText = computed(() =>
-  (user.value?.nickname || user.value?.username || '我').slice(0, 1),
+  (user.value?.nickname || user.value?.username || t('plan.userAvatarFallback')).slice(0, 1),
 );
 
-const composerPlaceholder = computed(() =>
-  sessionId.value ? '追问修改，如：预算降到3000' : '描述需求，如：杭州3天亲子游',
-);
+const composerPlaceholder = computed(() => {
+  if (sessionId.value && !canAppendPlan.value) {
+    return t('plan.placeholderFollowUpLocked');
+  }
+  return sessionId.value ? t('plan.placeholderFollowUp') : t('plan.placeholderNew');
+});
+
+const quickPrompts = computed(() => [
+  t('plan.quickPrompt1'),
+  t('plan.quickPrompt2'),
+  t('plan.quickPrompt3'),
+]);
+
+function formatRouteDays(days: number | undefined | null): string {
+  if (days == null) return '—';
+  return `${days}${t('plan.daysUnit')}`;
+}
+
+function resolveProviderLabel(opt: LlmProviderOption): string {
+  if (opt.id === LlmProvider.AUTO) return t('plan.providerAuto');
+  if (opt.id === LlmProvider.LMSTUDIO) return t('plan.providerLmstudio');
+  if (opt.id === LlmProvider.DEEPSEEK) {
+    const modelMatch = opt.label.match(/[（(]([^）)]+)[）)]/);
+    const model = modelMatch?.[1] ?? opt.label;
+    return tf('plan.providerDeepseek', { model });
+  }
+  return opt.label;
+}
 
 function reportLlmIssue(message: string) {
   llmIssueMessage.value = message;
@@ -231,7 +292,7 @@ function clearLlmIssue() {
 
 function handleGenerationResult(result: { generationSource?: 'llm' | 'template' }) {
   if (result.generationSource === 'template') {
-    reportLlmIssue('AI 模型调用异常，已改用模板方案生成');
+    reportLlmIssue(t('plan.llmTemplateFallback'));
   } else {
     clearLlmIssue();
   }
@@ -240,24 +301,25 @@ function handleGenerationResult(result: { generationSource?: 'llm' | 'template' 
 const intentSummary = computed(() => {
   const intent = intentSnapshot.value;
   if (!intent) return '';
-  const parts: string[] = [];
-  if (intent.city) parts.push(intent.city);
-  if (intent.days != null) parts.push(`${intent.days}天`);
-  if (intent.budget) parts.push(`预算${intent.budget}`);
-  if (intent.themes.length > 0) parts.push(intent.themes.join('·'));
-  return parts.join(' · ');
+  return formatPlanIntentSummary(intent, currentLocale.value);
 });
+
+function candidateLabel(item: PlanRouteCandidate): string {
+  return (
+    formatPlanVariantLabel(item.variantKey, currentLocale.value) || item.label
+  );
+}
 
 const ragMatchedCount = ref(0);
 
 const intentBarExtra = computed(() => {
   if (ragMatchedCount.value <= 0) return '';
-  return ` · 库内景点 ${ragMatchedCount.value} 处`;
+  return tf('plan.intentRagExtra', { count: ragMatchedCount.value });
 });
 
 const providerPickerLabels = computed(() =>
   providerOptions.value.map((opt) =>
-    opt.available ? opt.label : `${opt.label}（未配置）`,
+    opt.available ? resolveProviderLabel(opt) : `${resolveProviderLabel(opt)}${t('plan.providerNotConfigured')}`,
   ),
 );
 
@@ -268,8 +330,9 @@ const providerPickerIndex = computed(() => {
 
 const currentProviderLabel = computed(() => {
   const opt = providerOptions.value.find((o) => o.id === provider.value);
-  if (!opt) return '请选择模型';
-  return opt.available ? opt.label : `${opt.label}（未配置）`;
+  if (!opt) return t('plan.chooseProvider');
+  const label = resolveProviderLabel(opt);
+  return opt.available ? label : `${label}${t('plan.providerNotConfigured')}`;
 });
 
 function onProviderPickerChange(e: { detail: { value: string | number } }) {
@@ -278,7 +341,7 @@ function onProviderPickerChange(e: { detail: { value: string | number } }) {
   const opt = providerOptions.value[index];
   if (!opt) return;
   if (!opt.available) {
-    uni.showToast({ title: '该模型未配置', icon: 'none' });
+    uni.showToast({ title: t('plan.providerUnavailableToast'), icon: 'none' });
     return;
   }
   provider.value = opt.id;
@@ -290,7 +353,7 @@ function refreshStatusForProvider() {
   if (p === LlmProvider.AUTO) {
     llmAvailable.value = providerOptions.value.some((o) => o.available);
     if (!llmAvailable.value) {
-      reportLlmIssue('当前无可用 AI 模型，将使用模板生成');
+      reportLlmIssue(t('plan.llmNoModel'));
     } else {
       clearLlmIssue();
     }
@@ -299,7 +362,9 @@ function refreshStatusForProvider() {
   const opt = providerOptions.value.find((o) => o.id === p);
   llmAvailable.value = opt?.available ?? false;
   if (!llmAvailable.value) {
-    reportLlmIssue(`${opt?.label ?? p} 未就绪，将尝试其他源或模板生成`);
+    reportLlmIssue(
+      tf('plan.llmProviderNotReady', { label: opt ? resolveProviderLabel(opt) : p }),
+    );
   } else {
     clearLlmIssue();
   }
@@ -353,7 +418,7 @@ async function restorePreviousSession() {
     previousSessionId.value = null;
   } catch (e) {
     uni.showToast({
-      title: e instanceof Error ? e.message : '恢复对话失败',
+      title: e instanceof Error ? e.message : t('plan.restoreSessionFailed'),
       icon: 'none',
     });
   }
@@ -362,6 +427,10 @@ async function restorePreviousSession() {
 function openRouteDetail() {
   if (!currentRouteId.value) return;
   uni.navigateTo({ url: `/pages/routes/detail?id=${currentRouteId.value}` });
+}
+
+function goMembership() {
+  uni.navigateTo({ url: '/pages/profile/membership' });
 }
 
 async function loadSession(id: number) {
@@ -390,10 +459,10 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
     currentRouteId.value = result.id;
     candidates.value = result.candidates ?? [];
     ragMatchedCount.value = result.ragMatchedCount ?? 0;
-    uni.showToast({ title: '已切换方案', icon: 'success' });
+    uni.showToast({ title: t('plan.candidateSwitched'), icon: 'success' });
   } catch (e) {
     uni.showToast({
-      title: e instanceof Error ? e.message : '切换失败',
+      title: e instanceof Error ? e.message : t('plan.candidateSwitchFailed'),
       icon: 'none',
     });
   }
@@ -408,15 +477,15 @@ onMounted(async () => {
     }
     llmAvailable.value = status.enabled && status.available;
     if (!status.enabled) {
-      reportLlmIssue('AI 服务已在服务端禁用，将使用模板生成');
+      reportLlmIssue(t('plan.llmServiceDisabled'));
     } else if (!status.available) {
-      reportLlmIssue('当前无可用 AI 模型，将使用模板生成');
+      reportLlmIssue(t('plan.llmNoModel'));
     } else {
       refreshStatusForProvider();
     }
   } catch {
     llmAvailable.value = false;
-    reportLlmIssue('AI 服务检测失败，将使用模板生成');
+    reportLlmIssue(t('plan.llmDetectFailed'));
   }
 });
 
@@ -425,11 +494,11 @@ onShow(() => {
   user.value = authStorage.getStoredUser();
   if (user.value) {
     memberPlanCount.value = getPlanCandidateCountByMemberLevel(user.value.memberLevel);
-    memberLevelLabel.value = getMemberLevelLabel(user.value.memberLevel);
+    canAppendPlan.value = canAppendPlanByMemberLevel(user.value.memberLevel);
     fetchMembershipInfo()
       .then((info) => {
         memberPlanCount.value = info.planCandidateCount;
-        memberLevelLabel.value = info.label;
+        canAppendPlan.value = info.canAppendPlan;
       })
       .catch(() => {
         /* 使用本地缓存等级 */
@@ -455,12 +524,6 @@ onLoad(async (query) => {
   }
 });
 
-const quickPrompts = [
-  '杭州3天亲子游，预算5000',
-  '上海周末情侣游',
-  '成都美食两日游',
-];
-
 async function submitNewPlanSession(text: string) {
   return createPlanSession({
     prompt: text,
@@ -481,7 +544,11 @@ async function handleSend(text: string) {
   }
   const content = text.trim();
   if (!content) {
-    uni.showToast({ title: '请输入内容', icon: 'none' });
+    uni.showToast({ title: t('plan.inputRequired'), icon: 'none' });
+    return;
+  }
+  if (sessionId.value && !canAppendPlan.value) {
+    uni.showToast({ title: t('plan.appendLockedHint'), icon: 'none' });
     return;
   }
 
@@ -501,14 +568,11 @@ async function handleSend(text: string) {
       if (planActionResult.memberPlanCandidateCount != null) {
         memberPlanCount.value = planActionResult.memberPlanCandidateCount;
       }
-      if (planActionResult.memberLevelLabel) {
-        memberLevelLabel.value = planActionResult.memberLevelLabel;
-      }
       handleGenerationResult(planActionResult);
       const loadedSession = await fetchPlanSession(planActionResult.sessionId);
       messages.value = mapMessages(loadedSession.messages);
       scrollToBottom();
-      uni.showToast({ title: '方案已生成', icon: 'success' });
+      uni.showToast({ title: t('plan.plansGenerated'), icon: 'success' });
       return;
     }
 
@@ -521,11 +585,11 @@ async function handleSend(text: string) {
     messages.value = mapMessages(loadedSession.messages);
     candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
     scrollToBottom();
-    uni.showToast({ title: '方案已更新', icon: 'success' });
+    uni.showToast({ title: t('plan.planUpdated'), icon: 'success' });
   } catch (e) {
     messages.value = messages.value.filter((m) => m.id !== pendingId);
-    const msg = e instanceof Error ? e.message : '发送失败';
-    if (msg !== AI_PLAN_CANCELLED_MESSAGE) {
+    if (!isAiPlanCancelledError(e)) {
+      const msg = e instanceof Error ? e.message : t('plan.sendFailed');
       uni.showToast({ title: msg, icon: 'none' });
     }
     inputText.value = content;
@@ -536,9 +600,11 @@ async function handleSend(text: string) {
 <style scoped>
 .page {
   --page-gutter: 32rpx;
-  --composer-line-height: 42rpx;
+  --composer-row-height: 80rpx;
+  --composer-line-height: var(--composer-row-height);
   --composer-max-height: calc(var(--composer-line-height) * 4);
   --composer-padding-y: 32rpx;
+  --composer-shell-height: calc(var(--composer-row-height) + 32rpx);
   --composer-tab-gap: 24rpx;
   --candidate-dock-height: 0rpx;
   --tab-bar-offset: calc(100rpx + env(safe-area-inset-bottom));
@@ -550,8 +616,8 @@ async function handleSend(text: string) {
   padding-left: var(--page-gutter);
   padding-right: var(--page-gutter);
   padding-bottom: calc(
-    var(--tab-bar-offset) + var(--composer-tab-gap) + var(--composer-line-height) +
-      var(--composer-padding-y) + var(--candidate-dock-height) + 28rpx
+    var(--tab-bar-offset) + var(--composer-tab-gap) + var(--composer-shell-height) +
+      var(--candidate-dock-height) + 28rpx
   );
   background: #f5f7fa;
   box-sizing: border-box;
@@ -614,6 +680,27 @@ async function handleSend(text: string) {
 .membership-label {
   font-size: 22rpx;
   color: #b45309;
+}
+.append-locked-bar {
+  margin-top: 12rpx;
+  padding: 12rpx 16rpx;
+  background: #fef2f2;
+  border-radius: 8rpx;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8rpx;
+}
+.append-locked-text {
+  font-size: 22rpx;
+  color: #b91c1c;
+  flex: 1;
+  min-width: 0;
+}
+.append-locked-link {
+  font-size: 22rpx;
+  color: #1677ff;
+  flex-shrink: 0;
 }
 .llm-status {
   margin-top: 16rpx;

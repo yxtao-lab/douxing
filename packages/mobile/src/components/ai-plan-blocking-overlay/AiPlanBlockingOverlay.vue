@@ -8,15 +8,18 @@
     <view class="ai-plan-panel" @click.stop>
       <view class="ai-plan-spinner" />
       <text class="ai-plan-title">{{ aiPlanLoadingState.message }}</text>
-      <text class="ai-plan-hint">正在调用 AI 生成行程，请稍候</text>
-      <text class="ai-plan-tip">期间无法切换页面或进行其他操作</text>
-      <button class="ai-plan-cancel" @click="handleCancel">取消规划</button>
+      <text class="ai-plan-hint">{{ t('plan.aiPlanningHint') }}</text>
+      <text class="ai-plan-tip">{{ t('plan.aiPlanningTip') }}</text>
+      <button class="ai-plan-cancel" @click="handleCancel">{{ t('plan.aiPlanningCancel') }}</button>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
 import { aiPlanLoadingState, cancelAiPlanLoading } from '@/utils/ai-plan-loading';
+import { useTf } from '@/i18n/useTf';
+
+const { t } = useTf();
 
 function handleCancel() {
   cancelAiPlanLoading();

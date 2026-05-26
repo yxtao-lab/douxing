@@ -10,6 +10,9 @@ import { wechatPayNotifyHandler } from './routes/payments.js';
 import { getCheckinConfigSummary } from './config/checkin.js';
 import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
 import { getConfiguredPublicBase } from './utils/public-asset-url.util.js';
+import { localeMiddleware } from './middleware/locale.js';
+import { success } from './utils/response.js';
+import { ApiMessageKey } from '@douxing/shared';
 
 const app = express();
 const port = Number(process.env.SERVER_PORT) || 3000;
@@ -24,12 +27,13 @@ app.post(
   wechatPayNotifyHandler,
 );
 app.use(express.json());
+app.use(localeMiddleware);
 app.use('/uploads/avatars', express.static(uploadsDir));
 app.use('/uploads/checkins', express.static(checkInPhotosDir));
 app.use(routes);
 
 app.get('/', (_req, res) => {
-  res.json({ name: APP_NAME, message: '兜行 API 服务运行中' });
+  success(res, { name: APP_NAME, status: 'ok' }, ApiMessageKey.SERVER_RUNNING);
 });
 
 app.listen(port, () => {

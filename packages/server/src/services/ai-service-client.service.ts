@@ -43,6 +43,7 @@ function buildGenerateBody(input: GenerateRouteInput) {
     intent: input.intent ?? null,
     ragCandidates: input.ragCandidates ?? [],
     variantHint: input.variantHint ?? null,
+    locale: input.locale ?? 'zh-CN',
   };
 }
 

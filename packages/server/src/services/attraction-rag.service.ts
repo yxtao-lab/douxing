@@ -7,7 +7,14 @@ import {
   AttractionStatus,
   PoiCategory,
 } from '@douxing/shared';
-import type { RagAttractionCandidate } from '@douxing/shared';
+import type { LocaleCode, RagAttractionCandidate } from '@douxing/shared';
+import {
+  formatPlanVariantSuffix,
+  formatRagRouteDescription,
+  formatRagRouteName,
+  formatRouteDayDate,
+  formatRouteDayTitle,
+} from '@douxing/shared';
 import { resolveCityCode } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 import type { TravelIntentSnapshot } from '@douxing/shared';
@@ -251,6 +258,7 @@ export function buildRouteFromRagCatalog(
   prompt: string,
   variantIndex = 0,
   variantKey?: string,
+  locale: LocaleCode = 'zh-CN',
 ): GeneratedRouteDraft | null {
   const days = intent.days ?? 3;
   const city = intent.city;
@@ -262,16 +270,7 @@ export function buildRouteFromRagCatalog(
   const used = new Set<number>();
   const dayPlans: GeneratedRouteDraft['routeDetail']['days'] = [];
 
-  const variantSuffix: Record<string, string> = {
-    classic: '经典均衡',
-    culture: '文化深度',
-    relaxed: '休闲轻松',
-    family: '亲子友好',
-    food: '美食探店',
-    romantic: '浪漫约会',
-    outdoor: '户外自然',
-  };
-  const suffix = (variantKey && variantSuffix[variantKey]) || '精选';
+  const suffix = formatPlanVariantSuffix(variantKey, locale);
 
   for (let d = 0; d < days; d++) {
     const spots: GeneratedRouteDraft['routeDetail']['days'][0]['attractions'] = [];
@@ -294,8 +293,8 @@ export function buildRouteFromRagCatalog(
     }
     if (spots.length === 0) return null;
     dayPlans.push({
-      date: `第${d + 1}天`,
-      title: `${city}${suffix}·第${d + 1}天`,
+      date: formatRouteDayDate(d, locale),
+      title: formatRouteDayTitle({ city, variantKey, dayIndex: d, locale }),
       attractions: spots,
     });
   }
@@ -306,9 +305,10 @@ export function buildRouteFromRagCatalog(
       ? `${intent.budgetMin}-${intent.budgetMax}`
       : intent.budget ?? '1500-4000';
 
+  const promptSnippet = `${prompt.slice(0, 36)}${prompt.length > 36 ? '…' : ''}`;
   return {
-    name: `${city}${suffix}${days}日游`,
-    description: `基于兜行景点库的${suffix}路线（${prompt.slice(0, 36)}）`,
+    name: formatRagRouteName({ city, days, variantKey, locale }),
+    description: formatRagRouteDescription({ suffix, promptSnippet, locale }),
     budgetRange,
     days,
     interestTags: themes,

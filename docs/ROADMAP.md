@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.2  
-**更新日期**：2026-05-24  
+**文档版本**：3.3  
+**更新日期**：2026-05-26  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -27,10 +27,10 @@
 
 | 维度 | 状态 | 说明 |
 |------|------|------|
-| **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
-| **当前焦点** | 阶段 D/E + 小程序正式发版 | 社交 / 商业 / 微信审核上线 |
-| **下一步建议** | E2 真支付 · D2 搭子 · 小程序提审 | 见 [§7](#7-推荐实施顺序) |
-| **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
+| **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化进行中** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
+| **当前焦点** | G9 界面/API 多语言 · 阶段 D/E + 小程序正式发版 | 中英文 UI、合规资质、社交 / 商业 |
+| **下一步建议** | G9 页面文案扫尾 · E2 真支付 · D2 搭子 · 小程序提审 | 见 [§7](#7-推荐实施顺序) |
+| **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**框架已落地** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
 
@@ -77,7 +77,8 @@ gantt
 | **D** | — | [ ] | 阶段 D 完成 | D1～D5 社交 | 依赖 B 部分能力 |
 | **E** | — | [ ] | 阶段 E 完成 | E1～E7 商业闭环 | 依赖 A4 |
 | **F** | — | [ ] | 阶段 F 完成 | F1～F3 AR/VR | 可后置 |
-| **G** | — | [ ] | 阶段 G 完成 | G1～G8 平台工程 | 建议穿插 |
+| **G9** | 2026-05-26 | [~] | 国际化（i18n）框架 | 前端 vue-i18n + 后端 `messageKey` + `Accept-Language` | 见 [§ G9](./开发记录-重难点与亮点.md#g9-国际化i18n) |
+| **G** | — | [ ] | 阶段 G 完成 | G1～G9 平台工程 | 建议穿插 |
 
 ### 2.2 版本迭代日志（简表）
 
@@ -103,6 +104,8 @@ gantt
 | v0.5.5 | 2026-05-22 | 多方案生成 | 首条生成 3 套候选；横向卡片选择；追问收敛为单方案 |
 | v0.5.6 | 2026-05-22 | AI 微服务 | packages/ai-service FastAPI+LangChain；Node 优先调用、失败降级 |
 | v0.6.0 | 2026-05-23 | 生产部署 | Debian 12 指南；deploy-server + PM2；Nginx/Certbot 自动配置；tsx 低内存；三套 env 与发版流程文档 |
+| v0.6.1 | 2026-05-26 | 国际化 | `@douxing/shared` i18n 包；Web/移动端 vue-i18n；`Accept-Language` + `messageKey`；规划助手/变体/兴趣标签多语言 |
+| v0.6.2 | 2026-05-26 | 体验 | 规划页 `VoiceTextComposer` 语音输入（录音 + 服务端腾讯云 ASR，替代微信同声传译插件） |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -114,6 +117,9 @@ gantt
 | 2026-05-22 | C4 | 一次返回 2～3 套候选路线（已完成） |
 | 2026-05-22 | C5 | Python AI 微服务 FastAPI+LangChain（已完成） |
 | 2026-05-23 | G8 | 生产部署公有化（Debian 12 / Nginx / Certbot / 发版流程）（已完成） |
+| 2026-05-26 | G9 | 国际化框架（vue-i18n + API messageKey）（进行中，页面扫尾待办） |
+| — | G9+ | 全站硬编码文案迁移、后端 route/service 全量 `ApiMessageKey` | 见 [国际化.md](./国际化.md) 迁移清单 |
+| — | E2 | 微信支付正式联调 | 依赖 [后期待办.md](./后期待办.md) 商户号与公司主体 |
 
 > 计划日随实际进度调整；完成某步后请将上表「状态」改为 `[x]` 并填写实际完成日。
 
@@ -150,6 +156,7 @@ gantt
 | 2026-05-22 | C1+ 路线解锁支付开关 | [§ C1+](./开发记录-重难点与亮点.md#c1-路线解锁支付开关) |
 | 2026-05-22 | A3++ 草稿编辑入口分离 | [§ A3++](./开发记录-重难点与亮点.md#a3-草稿编辑入口分离) |
 | 2026-05-23 | G8 生产部署与 API 公有化 | [§ G8](./开发记录-重难点与亮点.md#g8-生产部署与-api-公有化) |
+| 2026-05-26 | G9 国际化（i18n） | [§ G9](./开发记录-重难点与亮点.md#g9-国际化i18n) |
 
 新任务完成后：在独立文档按附录模板追加一章，并在此表增加一行索引。
 
@@ -174,6 +181,8 @@ gantt
 | 管理端 | 2026-05-19 | 路线、订单、打卡列表（admin） |
 | 多端脚本 | 2026-05-20 | `dev:only`、`deploy:app`、H5 / 微信小程序 / Android / iOS |
 | 生产部署 | 2026-05-23 | `deploy:server`、PM2、Docker MySQL+Redis、Nginx 反代、Certbot；`docs/启动与部署流程.md` |
+| 国际化 | 2026-05-26 | zh-CN / en-US；`packages/shared/src/i18n`；Web + 移动端 vue-i18n；`localeMiddleware` + `messageKey`；详见 [国际化.md](./国际化.md) |
+| 语音输入 | 2026-05-26 | 规划页 `VoiceTextComposer`；H5 Web Speech / 小程序·App 录音上传 + `POST /api/speech/transcribe`（腾讯云 ASR） |
 | 景点库 | 2026-05-20 | `attractions` 表 + 28 条种子；路线生成自动关联 `attractionId` |
 | 数据表 | 2026-05-22 | `users`、`travel_routes`、`plan_sessions`、`plan_session_messages`、`check_ins`、`achievements`、`badges`、`orders` 等 |
 
@@ -227,6 +236,7 @@ GET  /api/orders/payment-config
 POST /api/orders/:id/pay
 POST /api/orders/:id/cancel
 GET  /api/orders
+POST /api/speech/transcribe
 ```
 
 ### 3.3 默认账号（seed 演示用户）
@@ -249,7 +259,7 @@ GET  /api/orders
 | 设计文档章节 | 模块 | 已实现 | 未实现 / 仅简化 |
 |-------------|------|--------|----------------|
 | §2 | 系统架构 | 单体 Express、多端脚本 | 微服务、K8s、API 网关、消息队列 |
-| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案 | 多 Agent、RAG、向量库、语音/图输入 |
+| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案；**语音输入（ASR）** | 多 Agent、向量库、图片输入 |
 | §4.3 | 打卡地图 | GPS 围栏、地图足迹、照片字段 | 热力图、照片审核 |
 | §4.6 | 成就系统 | 8 种配置化成就 + 徽章 + 排行榜 | 事件驱动（Kafka） |
 | §4.4 | 搭子匹配 | — | 发布需求、匹配算法、邀请组队 |
@@ -265,7 +275,8 @@ GET  /api/orders
 | §8 | 安全合规 | JWT、RBAC；短信验证码登录 | 脱敏、审计、OAuth、等保；验证码 Redis 持久化（G1） |
 | §9 | 部署运维 | Docker MySQL+Redis、PM2、Nginx HTTPS、deploy-server、Debian 12 指南 | K8s、Prometheus、ELK |
 | §11 | 测试 | — | 单元 / 集成 / E2E、压测 |
-| §12 | 接口规范 | 部分 REST | WebSocket、完整 v1 清单 |
+| §12 | 接口规范 | REST + **`Accept-Language` / `messageKey`**（G9 部分落地） | WebSocket、完整 v1 清单、全量 ApiMessageKey |
+| 国际化 | 界面与 API 多语言 | **G9 框架**：vue-i18n、shared 文案、locale 中间件 | 全页面/全接口迁移、第三语言、LLM 输出语言跟随 |
 | §13 | 前沿技术 | — | Web3、联邦学习等 |
 | 移动端 UX | iconfont TabBar、四 Tab | 自定义主题、消息红点 |
 
@@ -365,6 +376,7 @@ GET  /api/orders
 | G6 | [~] | — | 安全合规 | §8 | 脱敏、审计日志、HTTPS 说明 | 敏感字段已脱敏 |
 | G7 | [ ] | — | 自动化测试 | §11 | API 集成测试 + 核心 E2E | CI `pnpm test` 通过 |
 | G8 | [x] | 2026-05-23 | 生产部署 | §9 | Debian 12 + deploy-server + Nginx/Certbot 自动 + tsx 低内存 + 发版文档 | `curl https://api.yxtao.site/api/health` |
+| G9 | [~] | 2026-05-26 | 国际化（i18n） | §12、产品出海 | `@douxing/shared` i18n；Web/移动 vue-i18n；`localeMiddleware`；`ApiMessageKey` + 旧中文兼容映射 | 切换语言后 Tab/登录/规划页文案变化；API 返回对应语言 `message` |
 
 ---
 
@@ -377,7 +389,7 @@ GET  /api/orders
 | Sprint 5–6 | AI 增强 | **C + F** | C1～C5 已完成（2026-05-22）；M0 已含基础 LLM |
 | Sprint 3–4 | 社交功能 | **B + D** | B 已完成（2026-05-22）；D 未开始 |
 | Sprint 7–8 | 商业闭环 | **E** | 未开始 |
-| 基础设施 | 贯穿 | **G（G8 已完成，G1/G5/G6 部分）** | G8 2026-05-23 |
+| 基础设施 | 贯穿 | **G（G8 已完成，G9 进行中，G1/G5/G6 部分）** | G8 2026-05-23；G9 2026-05-26 起 |
 
 ---
 
@@ -391,7 +403,8 @@ GET  /api/orders
 | AI 对齐设计文档 | C2 → C3 → C4 → C5 |
 | 商业化变现 | A4 → E1 → E2 → E3 |
 | 社交差异化 | D1 → D2 → D3 → D5 |
-| 工程可上线 | G8（已完成）→ G7 → G2 → E2 真支付 |
+| 工程可上线 | G8（已完成）→ G9 文案扫尾 → G7 → G2 → E2 真支付 |
+| 小程序提审 / 出海 | G9（进行中）→ 合规 [后期待办](./后期待办.md) → E2 真支付 |
 
 ### 7.2 最小可行迭代（对齐时间节点）
 
@@ -403,6 +416,7 @@ GET  /api/orders
 | 迭代 3 | 2026-06-03 ～ 06-14 | B4 + B5 + A3 | 徽章成就 + 路线互动 |
 | 迭代 4 | 2026-05-22 ～ 06-12 | C1～C5 | 对话式规划 + 约束 + RAG + 多方案 + Python AI 服务（已完成） |
 | 迭代 7 | 2026-05-23 | G8 | **已完成** — 生产 API 公有化、HTTPS、发版流程 |
+| 迭代 7.5 | 2026-05-26 起 | G9 | **进行中** — 中英文 UI + API 多语言；语音输入 ASR |
 | 迭代 8 | 2026-07 起 | D2 + D3 | 搭子匹配 MVP |
 | 迭代 9 | 2026-07 起 | E2 + E3 | 真支付 + 盲盒 |
 
@@ -416,6 +430,7 @@ GET  /api/orders
 - [ ] 类型已同步到 `@douxing/shared`
 - [ ] API 已在 `README.md` 或本文档补充
 - [ ] 移动端 / 管理端页面可演示
+- [ ] **国际化**：用户可见文案已入 i18n 包（移动 + Web）；API 使用 `ApiMessageKey`；zh-CN / en-US 均已添加（见 [国际化.md](./国际化.md)）
 - [ ] `pnpm --filter @douxing/server exec tsc --noEmit` 通过
 - [ ] 本地 `pnpm dev` 可端到端走通
 - [ ] **本文档** §2.1 / §5 对应步骤状态与完成日已更新
@@ -458,6 +473,8 @@ GET  /api/orders
 | 生产部署（Debian 12） | [docs/deploy-production.md](./deploy-production.md) |
 | 环境配置与打包 | [docs/env-environments.md](./env-environments.md) |
 | 开发记录（重难点与亮点） | [docs/开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) |
+| 国际化（i18n） | [docs/国际化.md](./国际化.md) |
+| 后期待办（合规资质） | [docs/后期待办.md](./后期待办.md) |
 | 微信小程序 | [scripts/mp-weixin.md](../scripts/mp-weixin.md) |
 | 原生 App 部署 | [scripts/app-native.md](../scripts/app-native.md) |
 
@@ -469,8 +486,9 @@ GET  /api/orders
 2. **每完成一项任务**：在 [开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) 追加一章（含思考过程；每章 2～3 亮点 + 2～3 重难点），并在 §2.4 索引表增加一行。  
 3. **每发布版本**：在 §2.2 追加版本行（如 v0.3.2）。  
 4. **计划变更**：只改 §2.3 与 §5「计划完成」列，保留历史于 Git 提交记录。  
-5. **README**：MVP / API 有重大变更时同步 [README.md](../README.md)。
+5. **README**：MVP / API 有重大变更时同步 [README.md](../README.md)。  
+6. **国际化**：任何新功能默认纳入 G9 范围；不得跳过 i18n 验收（移动 + Web + API）。
 
 ---
 
-*文档版本 3.2 · 最后更新：2026-05-23*
+*文档版本 3.3 · 最后更新：2026-05-26*

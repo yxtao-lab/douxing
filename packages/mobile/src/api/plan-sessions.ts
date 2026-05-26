@@ -20,7 +20,7 @@ export function createPlanSession(data: CreatePlanSessionRequest) {
   return requestAiPlan<PlanSessionActionResult>('/routes/plan-sessions', {
     method: 'POST',
     data,
-    loadingMessage: 'AI 正在生成多套方案…',
+    loadingMessageKey: 'plan.aiPlanningMulti',
   });
 }
 
@@ -28,7 +28,7 @@ export function appendPlanMessage(sessionId: number, data: AppendPlanMessageRequ
   return requestAiPlan<PlanSessionActionResult>(`/routes/plan-sessions/${sessionId}/messages`, {
     method: 'POST',
     data,
-    loadingMessage: 'AI 正在调整方案…',
+    loadingMessageKey: 'plan.aiPlanningAdjust',
   });
 }
 

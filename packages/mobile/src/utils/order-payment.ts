@@ -1,5 +1,6 @@
 import { OrderStatus, type OrderInfo, type WechatJsapiPayParams } from '@douxing/shared';
 import { createUnlockOrder, createOrderPrepay, payOrder, fetchOrderById } from '@/api/orders';
+import { i18n } from '@/i18n';
 
 const PAYMENT_POLL_INTERVAL_MS = 1500;
 const PAYMENT_POLL_MAX_ATTEMPTS = 40;
@@ -38,9 +39,9 @@ function invokeWechatPayment(params: WechatJsapiPayParams): Promise<void> {
       fail: (err) => {
         const msg = err.errMsg || '';
         if (msg.includes('cancel')) {
-          reject(new Error('已取消支付'));
+          reject(new Error(String(i18n.global.t('routes.payCancelled'))));
         } else {
-          reject(new Error(msg || '微信支付失败'));
+          reject(new Error(msg || String(i18n.global.t('routes.payFailed'))));
         }
       },
     });
@@ -96,8 +97,8 @@ export async function completeRouteUnlockPayment(routeId: number): Promise<Order
 
 /** 解锁按钮文案 */
 export function getUnlockPayButtonLabel(): string {
-  if (isMpWeixin()) return '微信支付解锁';
-  return '解锁路线（模拟支付）';
+  if (isMpWeixin()) return String(i18n.global.t('routes.unlockPayWechat'));
+  return String(i18n.global.t('routes.unlockPayMock'));
 }
 
 /** 继续支付按钮文案 */

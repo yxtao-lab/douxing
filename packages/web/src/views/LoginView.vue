@@ -1,7 +1,14 @@
 <template>
   <div class="login-page">
     <div class="login-card">
-      <h1>{{ isRegister ? '注册' : '登录' }} {{ APP_NAME }}</h1>
+      <div class="login-card-head">
+        <h1>{{ isRegister ? t('common.register') : t('common.login') }} {{ t('app.name') }}</h1>
+        <select class="locale-select" :value="currentLocale" @change="onLocaleChange">
+          <option v-for="item in localeOptions" :key="item.code" :value="item.code">
+            {{ item.label }}
+          </option>
+        </select>
+      </div>
 
       <div class="login-tabs">
         <button
@@ -10,7 +17,7 @@
           :class="{ active: loginMode === 'sms' }"
           @click="loginMode = 'sms'"
         >
-          验证码登录
+          {{ t('login.smsTab') }}
         </button>
         <button
           type="button"
@@ -18,23 +25,29 @@
           :class="{ active: loginMode === 'password' }"
           @click="loginMode = 'password'"
         >
-          密码登录
+          {{ t('login.passwordTab') }}
         </button>
       </div>
 
       <form v-if="loginMode === 'sms'" @submit.prevent="handleSmsSubmit">
         <label>
-          <span>手机号</span>
-          <input v-model="smsForm.phone" type="tel" maxlength="11" placeholder="请输入手机号" required />
+          <span>{{ t('login.phone') }}</span>
+          <input
+            v-model="smsForm.phone"
+            type="tel"
+            maxlength="11"
+            :placeholder="t('login.phonePlaceholder')"
+            required
+          />
         </label>
         <label class="code-label">
-          <span>验证码</span>
+          <span>{{ t('login.code') }}</span>
           <div class="code-row">
             <input
               v-model="smsForm.code"
               type="text"
               maxlength="6"
-              placeholder="6位验证码"
+              :placeholder="t('login.codePlaceholder')"
               required
             />
             <button
@@ -43,51 +56,76 @@
               :disabled="sendingCode || countdown > 0"
               @click="handleSendCode"
             >
-              {{ countdown > 0 ? `${countdown}s` : sendingCode ? '发送中...' : '获取验证码' }}
+              {{ codeButtonLabel }}
             </button>
           </div>
         </label>
-        <p v-if="devCodeHint" class="dev-hint">开发环境验证码：{{ devCodeHint }}</p>
+        <p v-if="devCodeHint" class="dev-hint">{{ t('login.devCodeHint', { code: devCodeHint }) }}</p>
         <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading">{{ loading ? '登录中...' : '登录 / 注册' }}</button>
-        <p class="hint">未注册手机号将自动创建账号</p>
+        <button type="submit" :disabled="loading">
+          {{ loading ? t('login.signingIn') : t('login.smsSubmit') }}
+        </button>
+        <p class="hint">{{ t('login.smsHint') }}</p>
       </form>
 
       <form v-else @submit.prevent="handlePasswordSubmit">
         <label>
-          <span>用户名</span>
+          <span>{{ t('login.username') }}</span>
           <input v-model="form.username" type="text" placeholder="admin" required />
         </label>
         <label>
-          <span>密码</span>
+          <span>{{ t('login.password') }}</span>
           <input v-model="form.password" type="password" placeholder="admin123" required />
         </label>
         <p v-if="error" class="error">{{ error }}</p>
         <button type="submit" :disabled="loading">
-          {{ loading ? (isRegister ? '注册中...' : '登录中...') : isRegister ? '注册' : '登录' }}
+          {{
+            loading
+              ? isRegister
+                ? t('login.signingUp')
+                : t('login.signingIn')
+              : isRegister
+                ? t('common.register')
+                : t('common.login')
+          }}
         </button>
         <p class="switch-link">
           <a href="#" @click.prevent="isRegister = !isRegister">
-            {{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
+            {{ isRegister ? t('login.toggleToLogin') : t('login.toggleToRegister') }}
           </a>
         </p>
+        <p class="hint">{{ t('login.demoHint') }}</p>
       </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, onUnmounted } from 'vue';
+import { reactive, ref, computed, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { APP_NAME } from '@douxing/shared';
+import type { LocaleCode } from '@douxing/shared';
 import { login, register, sendSmsCode, smsLogin } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
+import { useLocale } from '@/i18n/useLocale';
 
 type LoginMode = 'sms' | 'password';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
+const { t, currentLocale, localeOptions, setLocale } = useLocale();
+
+function onLocaleChange(event: Event) {
+  setLocale((event.target as HTMLSelectElement).value as LocaleCode);
+}
+
+const codeButtonLabel = computed(() => {
+  if (countdown.value > 0) {
+    return t('login.codeCountdown', { seconds: countdown.value });
+  }
+  if (sendingCode.value) return t('common.sending');
+  return t('login.getCode');
+});
 
 const loginMode = ref<LoginMode>('sms');
 const isRegister = ref(false);

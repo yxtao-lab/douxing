@@ -15,7 +15,7 @@
     <view v-if="activeScope === 'mine'" class="filters">
       <text
         v-for="f in statusFilters"
-        :key="f.value"
+        :key="String(f.value)"
         class="chip"
         :class="{ active: statusFilter === f.value }"
         @click="statusFilter = f.value"
@@ -29,19 +29,19 @@
         <view v-if="routes.length === 0" class="empty">
           <text>{{ emptyText }}</text>
           <text v-if="activeScope === 'mine' && currentUserLabel" class="empty-user">
-            当前账号：{{ currentUserLabel }}
+            {{ emptyAccountLine }}
           </text>
           <text v-if="activeScope === 'mine' && statusFilter !== undefined" class="empty-hint">
-            已筛选「{{ statusFilterLabel }}」，可点「全部」查看
+            {{ emptyFilterHintLine }}
           </text>
-          <button v-if="activeScope === 'mine'" class="btn" @click="goPlan">去规划</button>
+          <button v-if="activeScope === 'mine'" class="btn" @click="goPlan">{{ t('routes.goPlan') }}</button>
         </view>
         <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item)">
           <view class="card-head">
             <text class="name">{{ item.name }}</text>
             <text class="tag" v-if="item.isAiGenerated">AI</text>
           </view>
-          <text class="meta">{{ item.days }}天 · 预算 {{ item.budgetRange || '待定' }}</text>
+          <text class="meta">{{ cardMeta(item) }}</text>
           <text v-if="activeScope === 'plaza' && item.creatorNickname" class="author">
             @{{ item.creatorNickname }}
           </text>
@@ -54,7 +54,7 @@
           </view>
           <view class="footer">
             <text class="status">{{ footerLabel(item) }}</text>
-            <text class="arrow">查看 ›</text>
+            <text class="arrow">{{ t('routes.viewDetail') }}</text>
           </view>
         </view>
       </view>
@@ -71,6 +71,11 @@ import { fetchRoutes } from '@/api/routes';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+
+const { t, tf } = useTf();
+usePageTitle('nav.routes');
 
 const routes = ref<TravelRouteInfo[]>([]);
 const activeScope = ref<RouteListScope>('mine');
@@ -78,40 +83,55 @@ const statusFilter = ref<number | undefined>(undefined);
 const currentUserLabel = ref('');
 const loadError = ref('');
 
-const scopeTabs = [
-  { id: 'mine' as RouteListScope, label: '我的' },
-  { id: 'plaza' as RouteListScope, label: '广场' },
-  { id: 'favorites' as RouteListScope, label: '收藏' },
-];
+const scopeTabs = computed(() => [
+  { id: 'mine' as RouteListScope, label: t('routes.scopeMine') },
+  { id: 'plaza' as RouteListScope, label: t('routes.scopePlaza') },
+  { id: 'favorites' as RouteListScope, label: t('routes.scopeFavorites') },
+]);
 
-const statusFilters = [
-  { label: '全部', value: undefined as number | undefined },
-  { label: '草稿', value: RouteStatus.DRAFT },
-  { label: '已发布', value: RouteStatus.PUBLISHED },
-];
+const statusFilters = computed(() => [
+  { label: t('routes.filterAll'), value: undefined as number | undefined },
+  { label: t('routes.filterDraft'), value: RouteStatus.DRAFT },
+  { label: t('routes.filterPublished'), value: RouteStatus.PUBLISHED },
+]);
 
 const statusFilterLabel = computed(() => {
-  if (statusFilter.value === RouteStatus.PUBLISHED) return '已发布';
-  if (statusFilter.value === RouteStatus.DRAFT) return '草稿';
-  return '全部';
+  if (statusFilter.value === RouteStatus.PUBLISHED) return t('routes.filterPublished');
+  if (statusFilter.value === RouteStatus.DRAFT) return t('routes.filterDraft');
+  return t('routes.filterAll');
 });
 
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
-  if (activeScope.value === 'plaza') return '广场还没有公开路线，发布并分享一条吧';
-  if (activeScope.value === 'favorites') return '还没有收藏，去热门看看吧';
-  return '暂无路线，去「规划」生成一条吧';
+  if (activeScope.value === 'plaza') return t('routes.emptyPlaza');
+  if (activeScope.value === 'favorites') return t('routes.emptyFavorites');
+  return t('routes.emptyMine');
 });
 
+const emptyAccountLine = computed(() =>
+  tf('routes.emptyAccount', { label: currentUserLabel.value }),
+);
+
+const emptyFilterHintLine = computed(() =>
+  tf('routes.emptyFilterHint', { filter: statusFilterLabel.value }),
+);
+
 function statusText(status: number) {
-  if (status === RouteStatus.PUBLISHED) return '已发布';
-  if (status === RouteStatus.ARCHIVED) return '已归档';
-  return '草稿';
+  if (status === RouteStatus.PUBLISHED) return t('routes.statusPublished');
+  if (status === RouteStatus.ARCHIVED) return t('routes.statusArchived');
+  return t('routes.statusDraft');
 }
 
 function footerLabel(item: TravelRouteInfo) {
-  if (activeScope.value === 'plaza') return '公开分享';
+  if (activeScope.value === 'plaza') return t('routes.statusPublicShare');
   return statusText(item.status);
+}
+
+function cardMeta(item: TravelRouteInfo) {
+  return tf('routes.cardMeta', {
+    days: item.days,
+    budget: item.budgetRange || t('routes.budgetTbd'),
+  });
 }
 
 function goDetail(item: TravelRouteInfo) {
@@ -136,7 +156,7 @@ async function loadRoutes() {
     });
   } catch (e) {
     routes.value = [];
-    const msg = e instanceof Error ? e.message : '加载失败';
+    const msg = e instanceof Error ? e.message : t('routes.loadFailed');
     loadError.value = msg;
     uni.showToast({ title: msg, icon: 'none' });
   }
@@ -157,7 +177,8 @@ onShow(async () => {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
-  currentUserLabel.value = user.nickname || user.username || `用户#${user.id}`;
+  currentUserLabel.value =
+    user.nickname || user.username || tf('routes.userFallback', { id: user.id });
   await loadRoutes();
 });
 

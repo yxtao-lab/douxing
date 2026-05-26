@@ -66,21 +66,36 @@
       </view>
 
       <template v-else>
-        <textarea
-          :key="composerKey"
-          :value="modelValue"
-          class="composer-input"
-          :class="{ 'composer-input--empty': !modelValue }"
-          :placeholder="placeholder"
-          placeholder-style="color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-          :maxlength="maxlength"
-          :disabled="disabled"
-          :auto-height="Boolean(modelValue)"
-          :show-confirm-bar="false"
-          confirm-type="send"
-          @input="onTextInput"
-          @confirm="emitSend"
-        />
+        <view class="composer-input-wrap">
+          <textarea
+            :key="composerKey"
+            :value="modelValue"
+            class="composer-input"
+            :class="{
+              'composer-input--empty': !modelValue,
+              'composer-input--has-clear': showClearButton,
+            }"
+            :placeholder="placeholder"
+            placeholder-style="color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
+            :maxlength="maxlength"
+            :disabled="disabled"
+            :auto-height="autoHeightEnabled"
+            :show-confirm-bar="false"
+            confirm-type="send"
+            @input="onTextInput"
+            @confirm="emitSend"
+          />
+          <view
+            v-if="showClearButton"
+            class="btn-clear"
+            @tap.stop="handleClear"
+          >
+            <view class="clear-icon" aria-hidden="true">
+              <view class="clear-icon-line clear-icon-line--a" />
+              <view class="clear-icon-line clear-icon-line--b" />
+            </view>
+          </view>
+        </view>
         <view v-if="speechSupported" class="btn-mode-switch" @tap.stop="switchToVoice">
           <view class="mic-icon">
             <view class="mic-head" />
@@ -102,7 +117,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
+import { useTf } from '@/i18n/useTf';
 import {
   isSpeechToTextSupported,
   startSpeechToText,
@@ -142,10 +158,10 @@ const props = withDefaults(
     loading: false,
     defaultMode: 'keyboard',
     maxlength: 500,
-    sendLabel: '发送',
-    holdLabel: '按住 说话',
-    recordingHint: '松开发送  上滑取消',
-    cancelHint: '松开手指，取消发送',
+    sendLabel: undefined,
+    holdLabel: undefined,
+    recordingHint: undefined,
+    cancelHint: undefined,
     slideCancelThresholdPx: 50,
   },
 );
@@ -156,8 +172,35 @@ const emit = defineEmits<{
   send: [text: string];
 }>();
 
+const { t } = useTf();
+
+const sendLabel = computed(() => props.sendLabel ?? t('plan.composerSend'));
+const holdLabel = computed(() => props.holdLabel ?? t('plan.composerHold'));
+const recordingHint = computed(() => props.recordingHint ?? t('plan.composerRecording'));
+const cancelHint = computed(() => props.cancelHint ?? t('plan.composerCancelHold'));
+
+const showClearButton = computed(() => Boolean(props.modelValue) && !props.disabled);
+
+/** 空内容时关闭 auto-height，避免小程序端收起后仍保留多行高度 */
+const autoHeightEnabled = computed(() => Boolean(props.modelValue.trim()));
+
 const speechSupported = isSpeechToTextSupported();
 const composerKey = ref(0);
+
+function remountTextarea() {
+  composerKey.value += 1;
+}
+
+watch(
+  () => props.modelValue,
+  (val, prev) => {
+    const wasNonEmpty = Boolean(prev?.trim());
+    const isEmpty = !val.trim();
+    if (wasNonEmpty && isEmpty) {
+      nextTick(remountTextarea);
+    }
+  },
+);
 const inputMode = ref<'voice' | 'keyboard'>(props.defaultMode);
 const speechRecordingUi = ref(false);
 const holdFingerDown = ref(false);
@@ -358,7 +401,11 @@ function handleHoldEnd(event?: TouchLikeEvent) {
 /** 清空输入并重置 textarea（发送成功后调用） */
 function clear() {
   emit('update:modelValue', '');
-  composerKey.value += 1;
+}
+
+function handleClear() {
+  if (props.disabled) return;
+  clear();
 }
 
 onBeforeUnmount(() => {
@@ -372,8 +419,12 @@ defineExpose({ clear });
 
 <style scoped>
 .voice-text-composer {
-  --composer-line-height: 42rpx;
-  --composer-max-height: calc(var(--composer-line-height) * 4);
+  --composer-row-height: 80rpx;
+  --composer-text-line-height: 56rpx;
+  --composer-input-padding-y: 12rpx;
+  --composer-max-height: calc(
+    var(--composer-input-padding-y) * 2 + var(--composer-text-line-height) * 4
+  );
   width: 100%;
 }
 .voice-hold-mask {
@@ -389,7 +440,7 @@ defineExpose({ clear });
   position: relative;
   width: 100%;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 16rpx;
   background: #fff;
   border-radius: 16rpx;
@@ -423,7 +474,7 @@ defineExpose({ clear });
 .hold-speak-btn {
   width: 100%;
   min-width: 0;
-  height: 72rpx;
+  height: var(--composer-row-height);
   border-radius: 12rpx;
   background: #f3f4f6;
   display: flex;
@@ -474,8 +525,8 @@ defineExpose({ clear });
 }
 .btn-mode-switch {
   flex-shrink: 0;
-  width: 72rpx;
-  height: 72rpx;
+  width: var(--composer-row-height);
+  height: var(--composer-row-height);
   border-radius: 12rpx;
   background: transparent;
   display: flex;
@@ -529,18 +580,72 @@ defineExpose({ clear });
     transform: scaleY(1);
   }
 }
+.composer-input-wrap {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
 .composer-input {
   flex: 1;
   width: 100%;
-  min-height: var(--composer-line-height);
+  min-height: var(--composer-row-height);
   max-height: var(--composer-max-height);
   font-size: 28rpx;
-  line-height: var(--composer-line-height);
+  line-height: var(--composer-text-line-height);
+  padding: var(--composer-input-padding-y) 8rpx;
   overflow-y: auto;
   box-sizing: border-box;
 }
+.composer-input--has-clear {
+  padding-right: 64rpx;
+}
 .composer-input--empty {
-  height: var(--composer-line-height);
+  height: var(--composer-row-height) !important;
+  min-height: var(--composer-row-height);
+  max-height: var(--composer-row-height);
+  overflow: hidden;
+}
+.btn-clear {
+  position: absolute;
+  right: 4rpx;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+.btn-clear:active {
+  opacity: 0.75;
+}
+.clear-icon {
+  position: relative;
+  width: 24rpx;
+  height: 24rpx;
+}
+.clear-icon-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24rpx;
+  height: 3rpx;
+  margin-left: -12rpx;
+  margin-top: -1.5rpx;
+  border-radius: 999rpx;
+  background: #6b7280;
+}
+.clear-icon-line--a {
+  transform: rotate(45deg);
+}
+.clear-icon-line--b {
+  transform: rotate(-45deg);
 }
 .mic-icon {
   display: flex;
@@ -570,10 +675,17 @@ defineExpose({ clear });
 .btn-send {
   flex-shrink: 0;
   min-width: 120rpx;
+  height: var(--composer-row-height);
+  line-height: var(--composer-row-height);
+  padding: 0 28rpx;
   background: #1677ff;
   color: #fff;
   border-radius: 12rpx;
   font-size: 28rpx;
   margin: 0;
+  box-sizing: border-box;
+}
+.btn-send::after {
+  border: none;
 }
 </style>

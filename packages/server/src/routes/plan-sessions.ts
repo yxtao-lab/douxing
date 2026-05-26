@@ -1,7 +1,9 @@
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { z } from 'zod';
+import type { LocaleCode } from '@douxing/shared';
+import { ApiMessageKey } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
-import { success, fail } from '../utils/response.js';
+import { success, fail, failFromError } from '../utils/response.js';
 import {
   appendPlanSessionMessage,
   createPlanSession,
@@ -35,6 +37,11 @@ const listQuerySchema = z.object({
 });
 
 import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
+
+function getRequestLocale(res: Response): LocaleCode {
+  return res.locals.locale ?? 'zh-CN';
+}
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
@@ -53,7 +60,7 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const result = await createPlanSession(req.auth!.userId, parsed.data);
+    const result = await createPlanSession(req.auth!.userId, parsed.data, getRequestLocale(res));
     const message = buildRouteGenerationMessage(result.generationSource, result.llmProvider);
     const suffix =
       result.candidates && result.candidates.length > 1
@@ -70,7 +77,11 @@ router.get('/:sessionId', authMiddleware, async (req, res) => {
   try {
     const sessionId = parseInt(String(req.params.sessionId), 10);
     if (Number.isNaN(sessionId)) return fail(res, '无效的会话 ID');
-    const session = await getPlanSessionDetail(sessionId, req.auth!.userId);
+    const session = await getPlanSessionDetail(
+      sessionId,
+      req.auth!.userId,
+      getRequestLocale(res),
+    );
     if (!session) return fail(res, '会话不存在', 404, 404);
     success(res, session);
   } catch (err) {
@@ -91,6 +102,7 @@ router.post('/:sessionId/select-candidate', authMiddleware, async (req, res) => 
       sessionId,
       req.auth!.userId,
       parsed.data.routeId,
+      getRequestLocale(res),
     );
     if (!result) return fail(res, '会话不存在', 404, 404);
     success(res, result, '已切换方案');
@@ -118,21 +130,13 @@ router.post('/:sessionId/messages', authMiddleware, async (req, res) => {
       sessionId,
       req.auth!.userId,
       parsed.data.content,
+      getRequestLocale(res),
     );
     if (!result) return fail(res, '会话不存在', 404, 404);
     const message = buildRouteGenerationMessage(result.generationSource, result.llmProvider, true);
     success(res, result, message);
   } catch (err) {
-    if (err instanceof Error) {
-      if (err.message.includes('会话') || err.message.includes('请输入')) {
-        return fail(res, err.message);
-      }
-      if (err.message.includes('支持重新生成') || err.message.includes('已发布')) {
-        return fail(res, err.message);
-      }
-    }
-    console.error('[plan-sessions/messages]', err);
-    return fail(res, '更新规划方案失败', 500, 500);
+    return failFromError(res, err, ApiMessageKey.PLAN_SESSION_UPDATE_FAILED);
   }
 });
 

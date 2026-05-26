@@ -1,6 +1,16 @@
 import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js';
 import type { LlmProviderChoice } from '../config/llm.js';
-import type { PlanChatMessage, TravelIntentSnapshot, RagAttractionCandidate } from '@douxing/shared';
+import type {
+  LocaleCode,
+  PlanChatMessage,
+  TravelIntentSnapshot,
+  RagAttractionCandidate,
+} from '@douxing/shared';
+import {
+  formatTemplateRouteDescription,
+  formatTemplateRouteName,
+  formatRagRouteMetaSuffix,
+} from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 import {
   canUseAiServiceForRoute,
@@ -34,6 +44,8 @@ export interface GenerateRouteInput {
   variantKey?: string;
   /** C4：RAG 组装时轮换候选起点 */
   ragVariantIndex?: number;
+  /** 输出语言（路线标题、简介等） */
+  locale?: LocaleCode;
 }
 
 export interface GeneratedRouteDraft {
@@ -175,6 +187,7 @@ export function generateRouteFromTemplate(
     .join('；');
   const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
 
+  const locale = input.locale ?? 'zh-CN';
   if (resolvedIntent.city && ragCandidates.length >= (resolvedIntent.days ?? 3)) {
     const ragDraft = buildRouteFromRagCatalog(
       resolvedIntent,
@@ -182,11 +195,12 @@ export function generateRouteFromTemplate(
       prompt,
       input.ragVariantIndex ?? 0,
       input.variantKey,
+      locale,
     );
     if (ragDraft) {
       return {
         ...ragDraft,
-        description: `${ragDraft.description}（内容库 RAG 组装）`,
+        description: `${ragDraft.description}${formatRagRouteMetaSuffix(locale)}`,
       };
     }
   }
@@ -208,7 +222,13 @@ export function generateRouteFromTemplate(
 
   const budgetRange = budget || best.budgetRange;
   const name = city
-    ? `${city}${tags[0] ?? '精选'}${days}日游`
+    ? formatTemplateRouteName({
+        city,
+        days,
+        themeTag: tags[0],
+        fallbackName: best.name,
+        locale,
+      })
     : best.name;
 
   const routeDetail = {
@@ -219,9 +239,14 @@ export function generateRouteFromTemplate(
     })),
   };
 
+  const promptSnippet = `${prompt.slice(0, 50)}${prompt.length > 50 ? '…' : ''}`;
   return {
     name,
-    description: `${best.description}（根据「${prompt.slice(0, 50)}${prompt.length > 50 ? '…' : ''}」智能匹配）`,
+    description: formatTemplateRouteDescription({
+      baseDesc: best.description,
+      promptSnippet,
+      locale,
+    }),
     budgetRange,
     days,
     interestTags: [...new Set([...best.interestTags, ...tags])],

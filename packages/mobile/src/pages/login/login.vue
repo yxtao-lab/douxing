@@ -1,7 +1,7 @@
 <template>
   <view class="login-page">
     <view class="card">
-      <text class="title">{{ isRegister ? '注册' : '登录' }} {{ APP_NAME }}</text>
+      <text class="title">{{ isRegister ? t('common.register') : t('common.login') }} {{ t('app.name') }}</text>
 
       <view class="tabs">
         <text
@@ -9,14 +9,14 @@
           :class="{ active: loginMode === 'sms' }"
           @click="loginMode = 'sms'"
         >
-          验证码登录
+          {{ t('login.smsTab') }}
         </text>
         <text
           class="tab"
           :class="{ active: loginMode === 'password' }"
           @click="loginMode = 'password'"
         >
-          密码登录
+          {{ t('login.passwordTab') }}
         </text>
       </view>
 
@@ -26,7 +26,7 @@
           class="input"
           type="number"
           maxlength="11"
-          placeholder="手机号"
+          :placeholder="t('login.phonePlaceholder')"
         />
         <view class="code-row">
           <input
@@ -34,33 +34,33 @@
             class="input code-input"
             type="number"
             maxlength="6"
-            placeholder="验证码"
+            :placeholder="t('login.codePlaceholder')"
           />
           <button
             class="code-btn"
             :disabled="sendingCode || countdown > 0"
             @click="handleSendCode"
           >
-            {{ countdown > 0 ? `${countdown}s` : sendingCode ? '发送中' : '获取验证码' }}
+            {{ codeButtonLabel }}
           </button>
         </view>
-        <text v-if="devCodeHint" class="dev-hint">开发环境验证码：{{ devCodeHint }}</text>
+        <text v-if="devCodeHint" class="dev-hint">{{ devCodeHintText }}</text>
         <button class="btn" :loading="loading" @click="handleSmsLogin">
-          登录 / 注册
+          {{ t('login.smsSubmit') }}
         </button>
-        <text class="hint">未注册手机号将自动创建账号</text>
+        <text class="hint">{{ t('login.smsHint') }}</text>
       </template>
 
       <template v-else>
-        <input v-model="username" class="input" placeholder="用户名" />
-        <input v-model="password" class="input" password placeholder="密码" />
+        <input v-model="username" class="input" :placeholder="t('login.usernamePlaceholder')" />
+        <input v-model="password" class="input" password :placeholder="t('login.passwordPlaceholder')" />
         <button class="btn" :loading="loading" @click="handlePasswordSubmit">
-          {{ isRegister ? '注册' : '登录' }}
+          {{ isRegister ? t('common.register') : t('common.login') }}
         </button>
         <text class="switch" @click="isRegister = !isRegister">
-          {{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
+          {{ isRegister ? t('login.toggleToLogin') : t('login.toggleToRegister') }}
         </text>
-        <text class="hint">体验账号：demo / demo123</text>
+        <text class="hint">{{ t('login.demoHint') }}</text>
       </template>
 
       <text v-if="error" class="error">{{ error }}</text>
@@ -69,10 +69,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
-import { APP_NAME } from '@douxing/shared';
+import { ref, computed, onUnmounted } from 'vue';
 import type { LoginResult } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+
+const { t, tf } = useTf();
+usePageTitle('nav.login');
 
 type LoginMode = 'sms' | 'password';
 
@@ -89,6 +93,18 @@ const countdown = ref(0);
 const devCodeHint = ref('');
 
 let countdownTimer: ReturnType<typeof setInterval> | null = null;
+
+const codeButtonLabel = computed(() => {
+  if (countdown.value > 0) {
+    return tf('login.codeCountdown', { seconds: countdown.value });
+  }
+  if (sendingCode.value) return t('common.sending');
+  return t('login.getCode');
+});
+
+const devCodeHintText = computed(() =>
+  devCodeHint.value ? tf('login.devCodeHint', { code: devCodeHint.value }) : '',
+);
 
 onUnmounted(() => {
   if (countdownTimer) clearInterval(countdownTimer);

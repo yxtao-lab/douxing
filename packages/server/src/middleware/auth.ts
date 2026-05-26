@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { fail } from '../utils/response.js';
+import { ApiMessageKey } from '@douxing/shared';
 
 export interface AuthPayload {
   userId: number;
@@ -18,13 +19,13 @@ declare global {
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {
-    return fail(res, '未登录', 401, 401);
+    return fail(res, ApiMessageKey.UNAUTHORIZED, 401, 401);
   }
 
   const token = header.slice(7);
   const secret = process.env.JWT_SECRET;
   if (!secret) {
-    return fail(res, '服务配置错误', 500, 500);
+    return fail(res, ApiMessageKey.SERVER_CONFIG_ERROR, 500, 500);
   }
 
   try {
@@ -32,6 +33,6 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     req.auth = payload;
     next();
   } catch {
-    return fail(res, '登录已过期', 401, 401);
+    return fail(res, ApiMessageKey.TOKEN_EXPIRED, 401, 401);
   }
 }

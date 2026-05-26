@@ -8,7 +8,15 @@ import type {
   CreatePlanSessionRequest,
   TravelIntentSnapshot,
 } from '@douxing/shared';
-import { PlanSessionStatus } from '@douxing/shared';
+import {
+  PlanSessionStatus,
+  buildMultiCandidateAssistantReply,
+  buildPlanAssistantReply,
+  buildPlanCandidateSwitchedReply,
+  formatPlanVariantHint,
+  formatPlanVariantLabel,
+  type LocaleCode,
+} from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import {
   planSessions,
@@ -22,15 +30,12 @@ import {
   getRouteById,
 } from './route.service.js';
 import type { GenerateRouteInput } from './route-generator.service.js';
-import {
-  buildIntentFromHistory,
-  formatIntentSummary,
-} from './travel-intent.service.js';
+import { buildIntentFromHistory } from './travel-intent.service.js';
 import {
   buildPlanRouteVariants,
 } from '../config/plan-route-variants.js';
 import { getPlanCandidateCountForUser, getUserMemberLevel } from './membership.service.js';
-import { getMemberLevelLabel } from '@douxing/shared';
+import { ApiError, ApiMessageKey, canAppendPlanByMemberLevel, getMemberLevelLabel } from '@douxing/shared';
 import type { PlanRouteCandidate } from '@douxing/shared';
 
 const SESSION_TITLE_MAX = 40;
@@ -64,34 +69,6 @@ function buildRouteSnapshot(payload: {
     matchedCity: payload.matchedCity,
     routeDetail: payload.routeDetail,
   };
-}
-
-function buildMultiCandidateAssistantReply(
-  count: number,
-  selectedName: string,
-  intent?: TravelIntentSnapshot,
-): string {
-  const intentHint = intent ? `\n已理解需求：${formatIntentSummary(intent)}` : '';
-  return `已为您生成 ${count} 套候选方案，请在下方选择。当前默认选中「${selectedName}」。${intentHint}`;
-}
-
-function buildAssistantReply(
-  route: {
-    name: string;
-    description: string | null;
-    days: number;
-    budgetRange: string | null;
-    routeDetail?: Record<string, unknown> | null;
-  },
-  intent?: TravelIntentSnapshot,
-): string {
-  const budget = route.budgetRange ? `，预算 ${route.budgetRange}` : '';
-  const intentHint = intent ? `\n已理解需求：${formatIntentSummary(intent)}` : '';
-  const detail = route.routeDetail ?? {};
-  const ragMatched = typeof detail.ragMatchedCount === 'number' ? detail.ragMatchedCount : 0;
-  const ragHint =
-    ragMatched > 0 ? `\n已引用内容库景点 ${ragMatched} 处` : '';
-  return `已为您生成「${route.name}」：${route.description ?? ''}（${route.days} 天${budget}）${intentHint}${ragHint}`;
 }
 
 function buildHistoryForLlm(messages: PlanSessionMessageInfo[]): PlanChatMessage[] {
@@ -187,9 +164,19 @@ function snapshotFromRoute(route: NonNullable<Awaited<ReturnType<typeof getRoute
   });
 }
 
+function resolveCandidateLabel(
+  variantKey: string | null,
+  storedLabel: string,
+  locale: LocaleCode,
+): string {
+  const localized = formatPlanVariantLabel(variantKey, locale);
+  return localized || storedLabel;
+}
+
 async function loadSessionCandidates(
   sessionId: number,
   userId: number,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<PlanRouteCandidate[]> {
   const db = getDb();
   const rows = await db
@@ -204,7 +191,7 @@ async function loadSessionCandidates(
     candidates.push({
       id: row.id,
       routeId: row.routeId,
-      label: row.label,
+      label: resolveCandidateLabel(row.variantKey, row.label, locale),
       variantKey: row.variantKey,
       sortOrder: row.sortOrder,
       isSelected: row.isSelected === 1,
@@ -227,6 +214,7 @@ async function generateSessionCandidates(
   userId: number,
   baseInput: GenerateRouteInput,
   intent: TravelIntentSnapshot,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<{ rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number }> {
   const memberLevel = await getUserMemberLevel(userId);
   const candidateCount = await getPlanCandidateCountForUser(userId);
@@ -238,15 +226,16 @@ async function generateSessionCandidates(
     try {
       const { route, generationSource, llmProvider } = await createRouteFromPrompt(userId, {
         ...baseInput,
+        locale,
         variantKey: variant.key,
-        variantHint: variant.hint,
+        variantHint: formatPlanVariantHint(variant.key, locale),
         ragVariantIndex: i,
       });
       results.push({
         route,
         generationSource,
         llmProvider,
-        label: variant.label,
+        label: formatPlanVariantLabel(variant.key, locale),
         variantKey: variant.key,
         sortOrder: i,
       });
@@ -321,13 +310,14 @@ export async function listPlanSessions(
 export async function getPlanSessionDetail(
   sessionId: number,
   userId: number,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<PlanSessionInfo | null> {
   const session = await getOwnedSession(sessionId, userId);
   if (!session) return null;
 
   const messages = await loadSessionMessages(sessionId);
   const route = session.routeId ? await getRouteById(session.routeId, userId) : null;
-  const candidates = await loadSessionCandidates(sessionId, userId);
+  const candidates = await loadSessionCandidates(sessionId, userId, locale);
 
   return {
     id: session.id,
@@ -348,6 +338,7 @@ export async function getPlanSessionDetail(
 export async function createPlanSession(
   userId: number,
   input: CreatePlanSessionRequest,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<PlanSessionActionResult> {
   const prompt = input.prompt.trim();
   if (!prompt) {
@@ -365,9 +356,10 @@ export async function createPlanSession(
     budget: input.budget,
     provider: input.provider,
     intent,
+    locale,
   };
 
-  const generatedPack = await generateSessionCandidates(userId, generateInput, intent);
+  const generatedPack = await generateSessionCandidates(userId, generateInput, intent, locale);
   const generated = generatedPack.rows;
   if (generated.length === 0) {
     throw new Error('生成路线失败，请稍后重试');
@@ -380,8 +372,13 @@ export async function createPlanSession(
   const memberLevelLabel = getMemberLevelLabel(memberLevel);
   const assistantMessage =
     generated.length > 1
-      ? buildMultiCandidateAssistantReply(generated.length, primary.route.name, resolvedIntent)
-      : buildAssistantReply(primary.route, resolvedIntent);
+      ? buildMultiCandidateAssistantReply(
+          generated.length,
+          primary.route.name,
+          resolvedIntent,
+          locale,
+        )
+      : buildPlanAssistantReply(primary.route, resolvedIntent, locale);
   const snapshot = snapshotFromRoute(primary.route);
 
   const db = getDb();
@@ -410,7 +407,7 @@ export async function createPlanSession(
   ]);
 
   const candidates =
-    generated.length > 1 ? await loadSessionCandidates(sessionId, userId) : undefined;
+    generated.length > 1 ? await loadSessionCandidates(sessionId, userId, locale) : undefined;
 
   return buildActionResult(sessionId, primary.route, assistantMessage, {
     generationSource: primary.generationSource,
@@ -428,6 +425,7 @@ export async function selectPlanSessionCandidate(
   sessionId: number,
   userId: number,
   routeId: number,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<PlanSessionActionResult | null> {
   const session = await getOwnedSession(sessionId, userId);
   if (!session) return null;
@@ -435,7 +433,7 @@ export async function selectPlanSessionCandidate(
     throw new Error('该会话已结束，请新建规划');
   }
 
-  const candidates = await loadSessionCandidates(sessionId, userId);
+  const candidates = await loadSessionCandidates(sessionId, userId, locale);
   const picked = candidates.find((c) => c.routeId === routeId);
   if (!picked) {
     throw new Error('无效的候选方案');
@@ -463,8 +461,12 @@ export async function selectPlanSessionCandidate(
   const route = await getRouteById(routeId, userId);
   if (!route) return null;
 
-  const refreshedCandidates = await loadSessionCandidates(sessionId, userId);
-  const assistantMessage = `已切换为「${picked.label}」：${route.name}`;
+  const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
+  const assistantMessage = buildPlanCandidateSwitchedReply(
+    picked.variantKey,
+    route.name,
+    locale,
+  );
 
   return buildActionResult(sessionId, route, assistantMessage, {
     intentSnapshot: (session.intentSnapshot as TravelIntentSnapshot | null) ?? null,
@@ -477,10 +479,16 @@ export async function appendPlanSessionMessage(
   sessionId: number,
   userId: number,
   content: string,
+  locale: LocaleCode = 'zh-CN',
 ): Promise<PlanSessionActionResult | null> {
   const text = content.trim();
   if (!text) {
-    throw new Error('请输入追问或修改意见');
+    throw new ApiError(ApiMessageKey.VALIDATION_ERROR);
+  }
+
+  const memberLevel = await getUserMemberLevel(userId);
+  if (!canAppendPlanByMemberLevel(memberLevel)) {
+    throw new ApiError(ApiMessageKey.PLAN_SESSION_APPEND_NOT_ALLOWED);
   }
 
   const session = await getOwnedSession(sessionId, userId);
@@ -505,15 +513,16 @@ export async function appendPlanSessionMessage(
     provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
     history,
     intent,
+    locale,
   };
 
   const result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
   if (!result) return null;
 
   const { route, generationSource, llmProvider, intent: resolvedIntent } = result;
-  const assistantMessage = buildAssistantReply(route, resolvedIntent);
+  const assistantMessage = buildPlanAssistantReply(route, resolvedIntent, locale);
   const snapshot = snapshotFromRoute(route);
-  const refreshedCandidates = await loadSessionCandidates(sessionId, userId);
+  const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
 
   const db = getDb();
   await db.insert(planSessionMessages).values([

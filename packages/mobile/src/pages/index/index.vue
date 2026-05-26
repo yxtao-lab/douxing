@@ -2,47 +2,56 @@
   <view class="container tab-page">
     <view class="hero">
       <text class="logo">兜</text>
-      <text class="title">{{ APP_NAME }}</text>
-      <text class="subtitle">AI 驱动 · 一句话生成专属旅行</text>
+      <text class="title">{{ t('app.name') }}</text>
+      <text class="subtitle">{{ t('home.subtitle') }}</text>
     </view>
 
     <view class="features">
       <view class="feature" @click="goPlan">
         <text class="icon">✨</text>
-        <text class="label">智能规划</text>
-        <text class="hint">描述需求，一键生成路线</text>
+        <text class="label">{{ t('home.featurePlan') }}</text>
+        <text class="hint">{{ t('home.featurePlanHint') }}</text>
       </view>
       <view class="feature" @click="goRoutes">
         <text class="icon">🗺️</text>
-        <text class="label">我的路线</text>
-        <text class="hint">查看与管理行程</text>
+        <text class="label">{{ t('home.featureRoutes') }}</text>
+        <text class="hint">{{ t('home.featureRoutesHint') }}</text>
       </view>
       <view class="feature" @click="goProfile">
         <text class="icon">🏅</text>
-        <text class="label">成就打卡</text>
-        <text class="hint">打卡解锁旅行成就</text>
+        <text class="label">{{ t('home.featureAchievements') }}</text>
+        <text class="hint">{{ t('home.featureAchievementsHint') }}</text>
       </view>
     </view>
 
     <view class="card" v-if="user">
-      <text class="welcome">你好，{{ user.nickname || user.username }}</text>
+      <text class="welcome">{{ welcomeText }}</text>
     </view>
     <view class="card" v-else>
-      <button class="btn" @click="goLogin">登录体验 MVP</button>
+      <button class="btn" @click="goLogin">{{ t('home.loginCta') }}</button>
     </view>
     <DouxingTabBar :current="0" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import { APP_NAME } from '@douxing/shared';
 import type { UserInfo } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
+import { usePageTitle } from '@/i18n/usePageTitle';
+import { useTf } from '@/i18n/useTf';
+
+const { t, tf } = useTf();
+usePageTitle('nav.index');
 
 const user = ref<UserInfo | null>(getStoredUser());
+
+const welcomeText = computed(() => {
+  if (!user.value) return '';
+  return tf('home.welcome', { name: user.value.nickname || user.value.username });
+});
 
 onShow(() => {
   uni.hideTabBar({ animation: false });

@@ -5,10 +5,10 @@ import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { authMiddleware } from '../middleware/auth.js';
-import { success, fail } from '../utils/response.js';
+import { success, fail, failFromError } from '../utils/response.js';
 import { getUserWithRoles, updateUserProfile, setUserAvatar } from '../services/user.service.js';
 import { getMembershipInfoForUser } from '../services/membership.service.js';
-import { USER_INTEREST_MAX } from '@douxing/shared';
+import { ApiMessageKey, USER_INTEREST_MAX } from '@douxing/shared';
 
 const router = Router();
 
@@ -38,7 +38,7 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
-      cb(new Error('仅支持图片文件'));
+      cb(new Error(ApiMessageKey.IMAGE_ONLY));
       return;
     }
     cb(null, true);
@@ -56,12 +56,12 @@ router.get('/me', authMiddleware, async (req, res) => {
   try {
     const userInfo = await getUserWithRoles(req.auth!.userId);
     if (!userInfo) {
-      return fail(res, '用户不存在', 404, 404);
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
     }
     success(res, userInfo);
   } catch (err) {
     console.error('[users/me GET]', err);
-    return fail(res, '获取资料失败', 500, 500);
+    return fail(res, ApiMessageKey.PROFILE_FETCH_FAILED, 500, 500);
   }
 });
 
@@ -69,12 +69,12 @@ router.get('/me/membership', authMiddleware, async (req, res) => {
   try {
     const membership = await getMembershipInfoForUser(req.auth!.userId);
     if (!membership) {
-      return fail(res, '用户不存在', 404, 404);
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
     }
     success(res, membership);
   } catch (err) {
     console.error('[users/me/membership]', err);
-    return fail(res, '获取会员信息失败', 500, 500);
+    return fail(res, ApiMessageKey.MEMBERSHIP_FETCH_FAILED, 500, 500);
   }
 });
 
@@ -82,43 +82,41 @@ router.put('/me', authMiddleware, async (req, res) => {
   try {
     const parsed = updateProfileSchema.safeParse(req.body);
     if (!parsed.success) {
-      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
     }
 
     const userInfo = await updateUserProfile(req.auth!.userId, parsed.data);
     if (!userInfo) {
-      return fail(res, '用户不存在', 404, 404);
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
     }
-    success(res, userInfo, '资料已更新');
+    success(res, userInfo, ApiMessageKey.PROFILE_UPDATED);
   } catch (err) {
-    const message = err instanceof Error ? err.message : '更新失败';
-    return fail(res, message);
+    return failFromError(res, err, ApiMessageKey.PROFILE_UPDATE_FAILED);
   }
 });
 
 router.post('/me/avatar', authMiddleware, (req, res, next) => {
   upload.single('file')(req, res, (err) => {
     if (err) {
-      const message = err instanceof Error ? err.message : '上传失败';
-      return fail(res, message);
+      return failFromError(res, err, ApiMessageKey.UPLOAD_FAILED);
     }
     next();
   });
 }, async (req, res) => {
   try {
     if (!req.file) {
-      return fail(res, '请选择图片');
+      return fail(res, ApiMessageKey.IMAGE_REQUIRED);
     }
 
     const relativePath = `/uploads/avatars/${req.file.filename}`;
     const userInfo = await setUserAvatar(req.auth!.userId, relativePath);
     if (!userInfo) {
-      return fail(res, '用户不存在', 404, 404);
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
     }
-    success(res, userInfo, '头像已更新');
+    success(res, userInfo, ApiMessageKey.AVATAR_UPDATED);
   } catch (err) {
     console.error('[users/me/avatar]', err);
-    return fail(res, '头像上传失败', 500, 500);
+    return fail(res, ApiMessageKey.AVATAR_UPLOAD_FAILED, 500, 500);
   }
 });
 

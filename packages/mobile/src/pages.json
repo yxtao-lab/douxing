@@ -38,6 +38,12 @@
       }
     },
     {
+      "path": "pages/profile/membership",
+      "style": {
+        "navigationBarTitleText": "会员权益"
+      }
+    },
+    {
       "path": "pages/badges/index",
       "style": {
         "navigationBarTitleText": "我的徽章"

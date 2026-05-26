@@ -1,6 +1,8 @@
 export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
+  /** 稳定错误码，客户端可按需做二次翻译或埋点 */
+  messageKey?: string;
   data: T;
 }
 

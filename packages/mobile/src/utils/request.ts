@@ -1,4 +1,7 @@
 import type { ApiResponse } from '@douxing/shared';
+import { ApiMessageKey, resolveApiMessage } from '@douxing/shared';
+import { getApiAcceptLanguage } from './api-locale-header';
+import { i18n } from '@/i18n';
 import { getApiBaseUrl } from './api-base';
 import { getStoredToken, setAuth, getStoredUser, TOKEN_KEY } from './auth-storage';
 import {
@@ -6,13 +9,21 @@ import {
   endAiPlanLoading,
   registerAiPlanRequestTask,
   isRequestAbortedError,
-  AI_PLAN_CANCELLED_MESSAGE,
+  getAiPlanCancelledMessage,
 } from './ai-plan-loading';
 
 /** 封装请求选项（url 由 path 拼接，无需传入） */
 export type AppRequestOptions = Omit<UniApp.RequestOptions, 'url'>;
 
 export { getStoredUser, setAuth, TOKEN_KEY };
+
+function resolveApiErrorMessage(body: ApiResponse<unknown>): string {
+  if (body.message?.trim()) return body.message;
+  if (body.messageKey) {
+    return resolveApiMessage(body.messageKey, getApiAcceptLanguage());
+  }
+  return resolveApiMessage(ApiMessageKey.REQUEST_FAILED, getApiAcceptLanguage());
+}
 
 function buildRequestUrl(path: string): string {
   const base = getApiBaseUrl();
@@ -33,6 +44,7 @@ function runRequest<T>(
       data: options.data,
       header: {
         'Content-Type': 'application/json',
+        'Accept-Language': getApiAcceptLanguage(),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.header,
       },
@@ -43,17 +55,17 @@ function runRequest<T>(
             resolve(body.data);
             return;
           }
-          reject(new Error(body.message || '请求失败'));
+          reject(new Error(resolveApiErrorMessage(body)));
           return;
         }
-        reject(new Error('响应格式错误'));
+        reject(new Error(resolveApiMessage(ApiMessageKey.RESPONSE_FORMAT_ERROR, getApiAcceptLanguage())));
       },
       fail: (err) => {
         if (trackForAbort && isRequestAbortedError(err.errMsg)) {
-          reject(new Error(AI_PLAN_CANCELLED_MESSAGE));
+          reject(new Error(getAiPlanCancelledMessage()));
           return;
         }
-        reject(new Error(err.errMsg || '网络错误'));
+        reject(new Error(err.errMsg || resolveApiMessage(ApiMessageKey.NETWORK_ERROR, getApiAcceptLanguage())));
       },
     });
     if (trackForAbort) {
@@ -67,18 +79,29 @@ export function request<T>(path: string, options: AppRequestOptions = {}): Promi
 }
 
 export interface RequestAiPlanOptions extends AppRequestOptions {
+  /** @deprecated 请使用 loadingMessageKey */
   loadingMessage?: string;
+  /** i18n 键，如 plan.aiPlanningMulti */
+  loadingMessageKey?: string;
+}
+
+function resolveAiPlanLoadingMessage(options: RequestAiPlanOptions): string | undefined {
+  if (options.loadingMessageKey) {
+    return String(i18n.global.t(options.loadingMessageKey));
+  }
+  return options.loadingMessage;
 }
 
 /** AI 路线生成/重新生成：全局遮罩 + 可 abort */
 export function requestAiPlan<T>(path: string, options: RequestAiPlanOptions = {}): Promise<T> {
-  if (options.loadingMessage) {
-    beginAiPlanLoading(options.loadingMessage);
+  const loadingMessage = resolveAiPlanLoadingMessage(options);
+  if (loadingMessage) {
+    beginAiPlanLoading(loadingMessage);
   } else {
     beginAiPlanLoading();
   }
 
-  const { loadingMessage: _msg, ...requestOptions } = options;
+  const { loadingMessage: _msg, loadingMessageKey: _key, ...requestOptions } = options;
   const url = buildRequestUrl(path);
 
   return runRequest<T>(url, requestOptions, true).finally(() => {

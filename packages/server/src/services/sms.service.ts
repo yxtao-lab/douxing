@@ -1,3 +1,4 @@
+import { ApiError, ApiMessageKey } from '@douxing/shared';
 import { resolveSmsProvider, shouldExposeDevCode } from '../config/sms.js';
 import { sendTencentSmsCode } from './tencent-sms.provider.js';
 
@@ -41,7 +42,7 @@ export async function sendSmsCode(phone: string): Promise<{ devCode?: string }> 
   const prev = lastSendAt.get(phone);
   if (prev && now - prev < SEND_INTERVAL_MS) {
     const remainSec = Math.ceil((SEND_INTERVAL_MS - (now - prev)) / 1000);
-    throw new Error(`请 ${remainSec} 秒后再试`);
+    throw new ApiError(ApiMessageKey.SMS_RATE_LIMIT, { seconds: remainSec });
   }
 
   const code = generateCode();
