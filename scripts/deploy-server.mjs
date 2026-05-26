@@ -37,6 +37,20 @@ function loadEnvFile() {
 
 loadEnvFile();
 
+function resolveApiPublicBaseUrl() {
+  const explicit = process.env.API_PUBLIC_BASE_URL?.trim();
+  if (explicit) return explicit.replace(/\/$/, '');
+  if (process.env.NODE_ENV?.trim() === 'production') {
+    const prod = process.env.API_PUBLIC_BASE_URL_PROD?.trim();
+    if (prod) return prod.replace(/\/$/, '');
+  }
+  const dve = process.env.API_PUBLIC_BASE_URL_DVE?.trim();
+  if (dve) return dve.replace(/\/$/, '');
+  const dev = process.env.API_PUBLIC_BASE_URL_DEV?.trim();
+  if (dev) return dev.replace(/\/$/, '');
+  return '';
+}
+
 const args = process.argv.slice(2);
 const skipDocker = args.includes('--skip-docker');
 const skipBuild = args.includes('--skip-build');
@@ -192,22 +206,20 @@ function validateProductionEnv() {
   const errors = [];
   const warnings = [];
 
-  const required = [
-    'DATABASE_URL',
-    'JWT_SECRET',
-    'API_PUBLIC_BASE_URL',
-    'MYSQL_ROOT_PASSWORD',
-    'MYSQL_PASSWORD',
-  ];
+  const required = ['DATABASE_URL', 'JWT_SECRET', 'MYSQL_ROOT_PASSWORD', 'MYSQL_PASSWORD'];
   for (const key of required) {
     if (!process.env[key]?.trim()) errors.push(`缺少必填项: ${key}`);
+  }
+  if (!resolveApiPublicBaseUrl()) {
+    errors.push('缺少必填项: API_PUBLIC_BASE_URL 或 API_PUBLIC_BASE_URL_PROD');
   }
 
   if (process.env.JWT_SECRET === 'change-me-in-production') {
     errors.push('JWT_SECRET 仍为默认值，请改为强随机字符串');
   }
-  if (process.env.API_PUBLIC_BASE_URL?.startsWith('http://')) {
-    warnings.push('API_PUBLIC_BASE_URL 使用 HTTP，小程序上线须 HTTPS');
+  const publicBase = resolveApiPublicBaseUrl();
+  if (publicBase.startsWith('http://')) {
+    warnings.push('静态资源公网基址使用 HTTP，小程序上线须 HTTPS');
   }
   if (process.env.NODE_ENV !== 'production') {
     warnings.push('建议设置 NODE_ENV=production');
@@ -237,7 +249,7 @@ function resolveNginxDomain() {
   if (nginxDomain && !nginxDomain.startsWith('-')) return nginxDomain;
   if (process.env.NGINX_DOMAIN?.trim()) return process.env.NGINX_DOMAIN.trim();
   try {
-    const base = process.env.API_PUBLIC_BASE_URL?.trim();
+    const base = resolveApiPublicBaseUrl();
     if (base) return new URL(base).hostname;
   } catch {
     /* ignore */
@@ -476,7 +488,7 @@ async function main() {
     setupNginxAuto(resolveNginxDomain());
   }
 
-  const baseUrl = process.env.API_PUBLIC_BASE_URL?.replace(/\/$/, '');
+  const baseUrl = resolveApiPublicBaseUrl();
   console.log('\n========================================');
   console.log('  部署完成');
   console.log('========================================');

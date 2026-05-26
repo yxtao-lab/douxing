@@ -2,6 +2,10 @@ import { defineConfig } from 'vite';
 import uni from '@dcloudio/vite-plugin-uni';
 import { fileURLToPath, URL } from 'node:url';
 
+const uniPlatform = process.env.UNI_PLATFORM ?? '';
+/** H5 与 App 并行 dev 时避免 5174 端口冲突 */
+const devServerPort = uniPlatform.startsWith('app') ? 5175 : 5174;
+
 export default defineConfig({
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
   plugins: [uni()],
@@ -19,7 +23,7 @@ export default defineConfig({
   },
   server: {
     host: true,
-    port: 5174,
+    port: devServerPort,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

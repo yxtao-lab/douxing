@@ -7,7 +7,7 @@ AppID：`wx8bdbe398733ca0f0`
 一键（推荐，与 `pnpm bootstrap` / `pnpm bootstrap:dev` 配套）：
 
 ```bash
-pnpm dev   # API + 管理端 + H5 + 微信小程序编译监听
+pnpm dev   # API + 管理端 + H5 + 微信小程序 + Android App 编译监听
 ```
 
 或分终端：

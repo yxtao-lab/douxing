@@ -10,6 +10,7 @@ import badgesRouter from './badges.js';
 import leaderboardRouter from './leaderboard.js';
 import usersRouter from './users.js';
 import attractionsRouter from './attractions.js';
+import speechRouter from './speech.js';
 
 const router = Router();
 
@@ -23,5 +24,6 @@ router.use(`${API_PREFIX}/orders`, ordersRouter);
 router.use(`${API_PREFIX}/achievements`, achievementsRouter);
 router.use(`${API_PREFIX}/badges`, badgesRouter);
 router.use(`${API_PREFIX}/leaderboard`, leaderboardRouter);
+router.use(`${API_PREFIX}/speech`, speechRouter);
 
 export default router;

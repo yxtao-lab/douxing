@@ -1,15 +1,43 @@
 /**
  * 静态资源（头像、打卡图）存储与解析：
  * - 数据库只存相对路径 `/uploads/avatars/xxx.jpg`，不含域名/网关
- * - 接口返回时按 API_PUBLIC_BASE_URL 或当前请求动态拼完整 URL
+ * - 接口返回时按 API_PUBLIC_BASE_URL（或分环境变量）或当前请求动态拼完整 URL
  */
 
 const OUR_UPLOAD_PATH = /^(\/uploads\/(?:avatars|checkins)\/.+)$/i;
 const OUR_UPLOAD_FULL = /^https?:\/\/[^/]+(\/uploads\/(?:avatars|checkins)\/.+)$/i;
 
+function trimPublicBase(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed.replace(/\/$/, '') : null;
+}
+
+/**
+ * 解析静态资源公网基址，优先级：
+ * 1. API_PUBLIC_BASE_URL（显式覆盖）
+ * 2. NODE_ENV=production → API_PUBLIC_BASE_URL_PROD
+ * 3. API_PUBLIC_BASE_URL_DVE / API_PUBLIC_BASE_URL_DEV
+ */
+export function resolveApiPublicBaseUrlFromEnv(): string | null {
+  const explicit = trimPublicBase(process.env.API_PUBLIC_BASE_URL);
+  if (explicit) return explicit;
+
+  if (process.env.NODE_ENV?.trim() === 'production') {
+    const prod = trimPublicBase(process.env.API_PUBLIC_BASE_URL_PROD);
+    if (prod) return prod;
+  }
+
+  const dve = trimPublicBase(process.env.API_PUBLIC_BASE_URL_DVE);
+  if (dve) return dve;
+
+  const dev = trimPublicBase(process.env.API_PUBLIC_BASE_URL_DEV);
+  if (dev) return dev;
+
+  return null;
+}
+
 export function getConfiguredPublicBase(): string | null {
-  const fromEnv = process.env.API_PUBLIC_BASE_URL?.trim();
-  return fromEnv ? fromEnv.replace(/\/$/, '') : null;
+  return resolveApiPublicBaseUrlFromEnv();
 }
 
 export function resolvePublicBaseFromRequest(req: {

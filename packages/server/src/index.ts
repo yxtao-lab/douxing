@@ -45,6 +45,6 @@ app.listen(port, () => {
   );
   const publicBase = getConfiguredPublicBase();
   console.log(
-    `[assets] 静态资源公网基址 ${publicBase ?? '未设置 API_PUBLIC_BASE_URL，接口返回 uploads 相对路径'}`,
+    `[assets] 静态资源公网基址 ${publicBase ?? '未设置 API_PUBLIC_BASE_URL(_DVE/_PROD)，接口返回 uploads 相对路径'}`,
   );
 });

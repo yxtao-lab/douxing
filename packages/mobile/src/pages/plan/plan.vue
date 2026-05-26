@@ -28,19 +28,21 @@
       </view>
 
       <view v-if="!sessionId" class="card setup-card">
-        <text class="label">选择模型</text>
-        <picker
-          mode="selector"
-          :range="providerPickerLabels"
-          :value="providerPickerIndex"
-          :disabled="!!sessionId || aiPlanning"
-          @change="onProviderPickerChange"
-        >
-          <view class="provider-picker" :class="{ disabled: !!sessionId || aiPlanning }">
-            <text class="provider-picker-text">{{ currentProviderLabel }}</text>
-            <text class="provider-picker-arrow">▼</text>
-          </view>
-        </picker>
+        <template v-if="showModelPicker">
+          <text class="label">选择模型</text>
+          <picker
+            mode="selector"
+            :range="providerPickerLabels"
+            :value="providerPickerIndex"
+            :disabled="!!sessionId || aiPlanning"
+            @change="onProviderPickerChange"
+          >
+            <view class="provider-picker" :class="{ disabled: !!sessionId || aiPlanning }">
+              <text class="provider-picker-text">{{ currentProviderLabel }}</text>
+              <text class="provider-picker-arrow">▼</text>
+            </view>
+          </picker>
+        </template>
         <view class="chips">
           <text
             v-for="item in quickPrompts"
@@ -139,14 +141,30 @@
           :key="composerKey"
           v-model="inputText"
           class="composer-input"
+          :class="{ 'composer-input--empty': !inputText }"
           :placeholder="composerPlaceholder"
+          placeholder-style="color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
           :maxlength="500"
           :disabled="aiPlanning"
-          auto-height
+          :auto-height="Boolean(inputText)"
           :show-confirm-bar="false"
           confirm-type="send"
           @confirm="handleSend"
         />
+        <view
+          class="btn-mic"
+          :class="{
+            'btn-mic--active': speechListening,
+            'btn-mic--disabled': aiPlanning || !speechSupported,
+          }"
+          @tap.stop="handleToggleSpeech"
+        >
+          <view class="mic-icon">
+            <view class="mic-head" />
+            <view class="mic-neck" />
+            <view class="mic-base" />
+          </view>
+        </view>
         <button
           class="btn-send"
           :loading="aiPlanning"
@@ -163,7 +181,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
 import {
@@ -176,6 +194,11 @@ import * as authStorage from '@/utils/auth-storage';
 import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
+import {
+  isSpeechToTextSupported,
+  startSpeechToText,
+  stopSpeechToText,
+} from '@/utils/speech-to-text';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import type {
   LlmProviderChoice,
@@ -210,6 +233,63 @@ const llmAvailable = ref<boolean | null>(null);
 const llmIssueMessage = ref('');
 const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
 const memberLevelLabel = ref(getMemberLevelLabel(0));
+const speechSupported = isSpeechToTextSupported();
+const speechListening = ref(false);
+const speechBaseText = ref('');
+/** 模型选择仅开发环境展示，生产包使用服务端默认策略 */
+const showModelPicker = import.meta.env.DEV;
+
+function joinSpeechText(base: string, recognized: string) {
+  const trimmedBase = base.trim();
+  const trimmedRecognized = recognized.trim();
+  if (!trimmedRecognized) return trimmedBase;
+  if (!trimmedBase) return trimmedRecognized;
+  return `${trimmedBase} ${trimmedRecognized}`;
+}
+
+function applySpeechPartial(recognized: string) {
+  inputText.value = joinSpeechText(speechBaseText.value, recognized);
+}
+
+function applySpeechFinal(recognized: string) {
+  inputText.value = joinSpeechText(speechBaseText.value, recognized);
+  speechBaseText.value = inputText.value.trim();
+}
+
+async function handleToggleSpeech() {
+  if (aiPlanning.value) return;
+  if (!speechSupported) {
+    uni.showToast({ title: '当前环境不支持语音输入', icon: 'none' });
+    return;
+  }
+
+  if (speechListening.value) {
+    stopSpeechToText();
+    return;
+  }
+
+  speechBaseText.value = inputText.value.trim();
+  speechListening.value = true;
+
+  const session = await startSpeechToText({
+    onPartial: applySpeechPartial,
+    onFinal: applySpeechFinal,
+    onError: (message) => {
+      uni.showToast({ title: message, icon: 'none' });
+    },
+    onEnd: () => {
+      speechListening.value = false;
+    },
+  });
+
+  if (!session) {
+    speechListening.value = false;
+  }
+}
+
+onBeforeUnmount(() => {
+  stopSpeechToText();
+});
 
 const membershipHint = computed(() => {
   if (!authStorage.getStoredUser()) return '';
@@ -227,7 +307,7 @@ const userAvatarText = computed(() =>
 );
 
 const composerPlaceholder = computed(() =>
-  sessionId.value ? '继续追问或提出修改，如：预算降到3000' : '描述旅行需求，如：杭州3天亲子游，预算5000',
+  sessionId.value ? '追问修改，如：预算降到3000' : '描述需求，如：杭州3天亲子游',
 );
 
 function reportLlmIssue(message: string) {
@@ -870,11 +950,60 @@ async function handleSend() {
   width: 100%;
   min-height: var(--composer-line-height);
   max-height: var(--composer-max-height);
-  height: var(--composer-line-height);
   font-size: 28rpx;
-  line-height: 1.5;
+  line-height: var(--composer-line-height);
   overflow-y: auto;
   box-sizing: border-box;
+}
+.composer-input--empty {
+  height: var(--composer-line-height);
+}
+.btn-mic {
+  flex-shrink: 0;
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 12rpx;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.btn-mic--active {
+  background: #fee2e2;
+}
+.btn-mic--active .mic-head,
+.btn-mic--active .mic-neck,
+.btn-mic--active .mic-base {
+  background: #ef4444;
+}
+.btn-mic--disabled {
+  opacity: 0.45;
+}
+.mic-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.mic-head {
+  width: 20rpx;
+  height: 28rpx;
+  border-radius: 10rpx;
+  background: #6b7280;
+}
+.mic-neck {
+  width: 4rpx;
+  height: 8rpx;
+  margin-top: 2rpx;
+  background: #6b7280;
+}
+.mic-base {
+  width: 28rpx;
+  height: 4rpx;
+  margin-top: 2rpx;
+  border-radius: 2rpx;
+  background: #6b7280;
 }
 .btn-send {
   flex-shrink: 0;

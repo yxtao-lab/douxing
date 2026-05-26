@@ -129,7 +129,7 @@ async function main() {
   console.log('========================================');
   console.log('  请在新终端执行以下命令启动访问：');
   console.log('');
-  console.log('    pnpm dev          # API + 管理端 + H5 + 微信小程序编译');
+  console.log('    pnpm dev          # API + 管理端 + H5 + 微信小程序 + Android App 编译监听');
   console.log('');
   console.log('  或一键部署并启动：');
   console.log('    pnpm bootstrap:dev');

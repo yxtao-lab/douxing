@@ -4,7 +4,7 @@
   "private": true,
   "description": "兜行 - 多端出行服务平台",
   "scripts": {
-    "dev": "concurrently -k -n api,web,mobile,mp -c blue,green,magenta,yellow \"pnpm dev:server\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\"",
+    "dev": "concurrently -k -n api,web,mobile,mp,app -c blue,green,magenta,yellow,cyan \"pnpm dev:server\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\" \"pnpm dev:app-android\"",
     "dev:only": "node scripts/run-dev.mjs",
     "dev:web": "pnpm --filter @douxing/web dev",
     "dev:mobile": "pnpm --filter @douxing/mobile dev:h5",
@@ -14,7 +14,7 @@
     "dev:app-ios": "pnpm --filter @douxing/mobile dev:app-ios",
     "dev:server": "pnpm --filter @douxing/shared build && pnpm --filter @douxing/server dev",
     "dev:ai-service": "node scripts/run-ai-service.mjs",
-    "dev:with-ai": "concurrently -k -n api,ai,web,mobile,mp -c blue,cyan,green,magenta,yellow \"pnpm dev:server\" \"pnpm dev:ai-service\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\"",
+    "dev:with-ai": "concurrently -k -n api,ai,web,mobile,mp,app -c blue,cyan,green,magenta,yellow,gray \"pnpm dev:server\" \"pnpm dev:ai-service\" \"pnpm dev:web\" \"pnpm dev:mobile\" \"pnpm dev:mp-weixin\" \"pnpm dev:app-android\"",
     "build": "pnpm run -r build",
     "build:only": "node scripts/run-build.mjs",
     "build:web": "pnpm --filter @douxing/web build",

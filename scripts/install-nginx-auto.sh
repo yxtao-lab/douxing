@@ -17,8 +17,18 @@ cd "$ROOT"
 if [[ -f .env ]]; then
   set -a
   # shellcheck disable=SC1091
-  source <(grep -E '^(API_PUBLIC_BASE_URL|NGINX_DOMAIN|SERVER_PORT|NGINX_CERTBOT_EMAIL)=' .env | sed 's/\r$//')
+  source <(grep -E '^(API_PUBLIC_BASE_URL(_PROD|_DVE|_DEV)?|NGINX_DOMAIN|SERVER_PORT|NGINX_CERTBOT_EMAIL)=' .env | sed 's/\r$//')
   set +a
+fi
+
+if [[ -z "${API_PUBLIC_BASE_URL:-}" ]]; then
+  if [[ "${NODE_ENV:-}" == "production" && -n "${API_PUBLIC_BASE_URL_PROD:-}" ]]; then
+    API_PUBLIC_BASE_URL="$API_PUBLIC_BASE_URL_PROD"
+  elif [[ -n "${API_PUBLIC_BASE_URL_DVE:-}" ]]; then
+    API_PUBLIC_BASE_URL="$API_PUBLIC_BASE_URL_DVE"
+  elif [[ -n "${API_PUBLIC_BASE_URL_DEV:-}" ]]; then
+    API_PUBLIC_BASE_URL="$API_PUBLIC_BASE_URL_DEV"
+  fi
 fi
 
 DOMAIN="${1:-${NGINX_DOMAIN:-}}"

@@ -94,11 +94,13 @@ pnpm db:reset      # 重置库并重新迁移、种子
 
 ### 开发运行（dev）
 
-**一次启动全部（API + Web + H5 + 微信小程序）：**
+**一次启动全部（API + Web + H5 + 微信小程序 + Android App 热更新）：**
 
 ```bash
 pnpm dev
 ```
+
+HBuilderX 导入 App 开发目录：`packages/mobile/dist/dev/app`（首次需「运行到手机」制作自定义调试基座）。
 
 **只启动某一个或几个平台：**
 
@@ -120,7 +122,7 @@ pnpm dev:web           # Web 管理端     → http://localhost:5173
 pnpm dev:mobile        # 移动端 H5      → http://localhost:5174
 pnpm dev:mp-weixin     # 微信小程序     → packages/mobile/dist/dev/mp-weixin
 pnpm dev:app           # 原生 App 开发
-pnpm dev:app-android   # Android App 开发
+pnpm dev:app-android   # Android App 开发 → packages/mobile/dist/dev/app（Vite :5175）
 pnpm dev:app-ios       # iOS App 开发（需 macOS + Xcode）
 ```
 
