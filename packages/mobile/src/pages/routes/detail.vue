@@ -2,8 +2,23 @@
   <AiPlanBlockingOverlay />
   <view class="page" v-if="route">
     <view class="hero">
-      <text class="title">{{ route.name }}</text>
-      <text class="meta">{{ heroMeta }}</text>
+      <view class="hero-top">
+        <view class="hero-title-wrap">
+          <view class="title-row">
+            <text class="title">{{ route.name }}</text>
+            <text v-if="isOwner" class="status-badge" :class="routeStatusClass">{{ routeStatusLabel }}</text>
+          </view>
+          <text class="meta">{{ heroMeta }}</text>
+        </view>
+        <view
+          v-if="canEditRouteInfo"
+          class="hero-edit-btn"
+          :aria-label="t('routes.editRouteInfo')"
+          @click.stop="openEditModal"
+        >
+          <image class="hero-edit-icon" src="/static/iconfont/svg/edit.svg" mode="aspectFit" />
+        </view>
+      </view>
       <text class="desc">{{ route.description }}</text>
       <view class="stats-row">
         <text class="stat">{{ statViews }}</text>
@@ -24,6 +39,10 @@
       </view>
     </view>
 
+    <view v-if="isUnlocked && routePath" class="card map-card">
+      <RouteMapPlayer :route-path="routePath" :auto-play="true" />
+    </view>
+
     <view v-if="showInteraction" class="card interact-card">
       <button class="btn-interact" :class="{ active: route.isLiked }" @click="handleLike">
         {{ route.isLiked ? t('routes.liked') : t('routes.like') }}
@@ -33,11 +52,44 @@
       </button>
     </view>
 
-    <view v-if="showDraftEdit" class="card edit-card">
-      <text class="edit-title">{{ t('routes.editDraftTitle') }}</text>
-      <input v-model="editName" class="edit-input" :placeholder="t('routes.namePlaceholder')" />
-      <textarea v-model="editDesc" class="edit-textarea" :placeholder="t('routes.descPlaceholder')" />
-      <button class="btn-save-draft" :loading="savingDraft" @click="handleSaveDraft">{{ t('routes.saveDraft') }}</button>
+    <view v-if="editModalVisible" class="edit-modal-mask" @click="closeEditModal">
+      <view class="edit-modal" @click.stop>
+        <view class="edit-modal-header">
+          <text class="edit-modal-title">{{ t('routes.editDraftTitle') }}</text>
+          <text class="edit-modal-close" @click="closeEditModal">×</text>
+        </view>
+        <text class="edit-modal-hint">{{ t('routes.editDraftHint') }}</text>
+        <scroll-view scroll-y class="edit-modal-body" :show-scrollbar="true">
+          <view class="edit-field">
+            <text class="edit-label">{{ t('routes.editNameLabel') }}</text>
+            <textarea
+              v-model="editName"
+              class="edit-textarea edit-textarea--name"
+              :style="{ minHeight: editNameMinHeight }"
+              :placeholder="t('routes.nameInputPlaceholder')"
+              auto-height
+              :maxlength="128"
+            />
+          </view>
+          <view class="edit-field">
+            <text class="edit-label">{{ t('routes.editDescLabel') }}</text>
+            <textarea
+              v-model="editDesc"
+              class="edit-textarea"
+              :style="{ minHeight: editDescMinHeight }"
+              :placeholder="t('routes.descInputPlaceholder')"
+              auto-height
+              :maxlength="500"
+            />
+          </view>
+        </scroll-view>
+        <view class="edit-modal-actions">
+          <button class="btn-edit-cancel" @click="closeEditModal">{{ t('routes.editCancel') }}</button>
+          <button class="btn-save-draft" :loading="savingDraft" @click="handleSaveDraft">
+            {{ t('routes.saveDraft') }}
+          </button>
+        </view>
+      </view>
     </view>
 
     <view class="card" v-if="!isUnlocked">
@@ -97,7 +149,13 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import type { RouteDayAttraction, TravelRouteInfo, RouteCommentInfo } from '@douxing/shared';
+import type {
+  RouteDayAttraction,
+  RouteDetailPayload,
+  TravelRouteInfo,
+  RouteCommentInfo,
+} from '@douxing/shared';
+import { buildRoutePathFromDetail } from '@douxing/shared';
 import {
   fetchRouteDetail,
   publishRoute,
@@ -115,6 +173,7 @@ import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
+import RouteMapPlayer from '@/components/route-map/RouteMapPlayer.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -134,6 +193,7 @@ const unlockPayLabel = computed(() => getUnlockPayButtonLabel());
 const regeneratePrompt = ref('');
 const editName = ref('');
 const editDesc = ref('');
+const editModalVisible = ref(false);
 const savingDraft = ref(false);
 const sharing = ref(false);
 const comments = ref<RouteCommentInfo[]>([]);
@@ -148,13 +208,23 @@ const isOwner = computed(
   () => route.value != null && route.value.creatorId === currentUserId.value,
 );
 
-const isDraft = computed(() => route.value?.status === RouteStatus.DRAFT);
-
-const allowDraftEdit = ref(false);
-
-const showDraftEdit = computed(
-  () => isDraft.value && isOwner.value && allowDraftEdit.value,
+const canEditRouteInfo = computed(
+  () => isOwner.value && route.value?.status === RouteStatus.DRAFT,
 );
+
+const routeStatusLabel = computed(() => {
+  if (!route.value) return '';
+  if (route.value.status === RouteStatus.PUBLISHED) return t('routes.statusPublished');
+  if (route.value.status === RouteStatus.ARCHIVED) return t('routes.statusArchived');
+  return t('routes.statusDraft');
+});
+
+const routeStatusClass = computed(() => {
+  if (!route.value) return '';
+  if (route.value.status === RouteStatus.PUBLISHED) return 'status-published';
+  if (route.value.status === RouteStatus.ARCHIVED) return 'status-archived';
+  return 'status-draft';
+});
 
 const showShareSetting = computed(
   () => isOwner.value && route.value?.status === RouteStatus.PUBLISHED,
@@ -239,6 +309,33 @@ const days = computed(() => {
   return detail?.days ?? [];
 });
 
+const routePath = computed(() => {
+  if (!route.value?.routeDetail) return null;
+  return buildRoutePathFromDetail(route.value.routeDetail as RouteDetailPayload, {
+    routeId: route.value.id,
+    name: route.value.name,
+  });
+});
+
+const editDescMinHeight = computed(() =>
+  computeTextareaMinHeight(editDesc.value || '', { minRpx: 160, maxRpx: 560, charsPerLine: 18 }),
+);
+
+const editNameMinHeight = computed(() =>
+  computeTextareaMinHeight(editName.value || '', { minRpx: 88, maxRpx: 240, charsPerLine: 14 }),
+);
+
+function computeTextareaMinHeight(
+  text: string,
+  options: { minRpx: number; maxRpx: number; charsPerLine: number },
+) {
+  const lineCount = text.split('\n').reduce((count, line) => {
+    return count + Math.max(1, Math.ceil(line.length / options.charsPerLine));
+  }, 0);
+  const heightRpx = Math.max(options.minRpx, Math.min(lineCount * 42 + 32, options.maxRpx));
+  return `${heightRpx}rpx`;
+}
+
 async function loadComments() {
   if (!route.value?.isPublic) {
     comments.value = [];
@@ -265,6 +362,17 @@ async function loadDetail() {
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : t('routes.loadFailed'), icon: 'none' });
   }
+}
+
+function openEditModal() {
+  if (!canEditRouteInfo.value) return;
+  editName.value = route.value?.name ?? '';
+  editDesc.value = route.value?.description ?? '';
+  editModalVisible.value = true;
+}
+
+function closeEditModal() {
+  editModalVisible.value = false;
 }
 
 async function handleShareToggle(e: { detail: { value: boolean } }) {
@@ -341,6 +449,7 @@ async function handleSaveDraft() {
       description: editDesc.value.trim() || null,
     });
     uni.showToast({ title: t('routes.draftSaved'), icon: 'success' });
+    editModalVisible.value = false;
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : t('routes.saveFailed'), icon: 'none' });
   } finally {
@@ -471,7 +580,6 @@ async function handleCheckIn(spot: RouteDayAttraction) {
 
 onLoad((query) => {
   routeId = parseInt(String(query?.id ?? '0'), 10);
-  allowDraftEdit.value = query?.edit === '1';
   if (getStoredUser()) {
     fetchOrderPaymentConfig()
       .then((config) => {
@@ -498,10 +606,52 @@ onLoad((query) => {
   border-radius: 16rpx;
   margin-bottom: 24rpx;
 }
+.hero-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.hero-title-wrap {
+  flex: 1;
+  min-width: 0;
+}
+.title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
 .title {
   font-size: 36rpx;
   font-weight: 600;
-  display: block;
+}
+.status-badge {
+  padding: 4rpx 14rpx;
+  border-radius: 999rpx;
+  font-size: 20rpx;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.22);
+}
+.status-badge.status-published {
+  background: rgba(255, 255, 255, 0.28);
+}
+.status-badge.status-archived {
+  background: rgba(0, 0, 0, 0.18);
+}
+.hero-edit-btn {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-edit-icon {
+  width: 32rpx;
+  height: 32rpx;
 }
 .meta {
   font-size: 24rpx;
@@ -529,6 +679,9 @@ onLoad((query) => {
   margin-top: 12rpx;
   font-size: 24rpx;
   opacity: 0.95;
+}
+.map-card {
+  padding: 24rpx;
 }
 .share-card {
   border: 2rpx solid #e8f3ff;
@@ -565,33 +718,106 @@ onLoad((query) => {
   background: #e8f3ff;
   color: #1677ff;
 }
-.edit-card {
-  border: 2rpx dashed #d1d5db;
+.edit-modal-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32rpx;
 }
-.edit-title {
-  font-size: 28rpx;
-  font-weight: 600;
-  display: block;
-  margin-bottom: 16rpx;
-}
-.edit-input {
+.edit-modal {
   width: 100%;
-  font-size: 28rpx;
-  padding: 16rpx;
-  background: #f9fafb;
-  border-radius: 8rpx;
+  max-width: 640rpx;
+  max-height: 82vh;
+  background: #fff;
+  border-radius: 20rpx;
+  padding: 32rpx;
+  box-shadow: 0 16rpx 48rpx rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.edit-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.edit-modal-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: #111827;
+}
+.edit-modal-close {
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  font-size: 40rpx;
+  color: #9ca3af;
+}
+.edit-modal-hint {
+  display: block;
+  margin-top: 12rpx;
   margin-bottom: 16rpx;
+  font-size: 22rpx;
+  color: #9ca3af;
+  line-height: 1.5;
+}
+.edit-modal-body {
+  flex: 1;
+  height: 52vh;
+  max-height: 52vh;
+}
+.edit-field {
+  margin-bottom: 20rpx;
+}
+.edit-field:last-child {
+  margin-bottom: 0;
+}
+.edit-label {
+  display: block;
+  margin-bottom: 10rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #374151;
 }
 .edit-textarea {
   width: 100%;
-  min-height: 120rpx;
+  min-height: 160rpx;
   font-size: 26rpx;
+  line-height: 1.6;
   padding: 16rpx;
   background: #f9fafb;
   border-radius: 8rpx;
+  box-sizing: border-box;
+}
+.edit-textarea--name {
+  min-height: 88rpx;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+.edit-modal-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 24rpx;
+}
+.btn-edit-cancel,
+.btn-save-draft {
+  flex: 1;
+  margin: 0;
+  font-size: 28rpx;
+  border: none;
+  border-radius: 12rpx;
+}
+.btn-edit-cancel {
+  background: #f3f4f6;
+  color: #374151;
 }
 .btn-save-draft {
-  margin-top: 20rpx;
   background: #1677ff;
   color: #fff;
 }

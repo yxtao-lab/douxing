@@ -135,11 +135,7 @@ function cardMeta(item: TravelRouteInfo) {
 }
 
 function goDetail(item: TravelRouteInfo) {
-  let url = `/pages/routes/detail?id=${item.id}`;
-  if (activeScope.value === 'mine' && item.status === RouteStatus.DRAFT) {
-    url += '&edit=1';
-  }
-  uni.navigateTo({ url });
+  uni.navigateTo({ url: `/pages/routes/detail?id=${item.id}` });
 }
 
 function goPlan() {
