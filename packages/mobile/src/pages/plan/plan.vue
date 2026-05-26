@@ -136,44 +136,14 @@
         </view>
       </scroll-view>
 
-      <view class="composer">
-        <textarea
-          :key="composerKey"
-          v-model="inputText"
-          class="composer-input"
-          :class="{ 'composer-input--empty': !inputText }"
-          :placeholder="composerPlaceholder"
-          placeholder-style="color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
-          :maxlength="500"
-          :disabled="aiPlanning"
-          :auto-height="Boolean(inputText)"
-          :show-confirm-bar="false"
-          confirm-type="send"
-          @confirm="handleSend"
-        />
-        <view
-          class="btn-mic"
-          :class="{
-            'btn-mic--active': speechListening,
-            'btn-mic--disabled': aiPlanning || !speechSupported,
-          }"
-          @tap.stop="handleToggleSpeech"
-        >
-          <view class="mic-icon">
-            <view class="mic-head" />
-            <view class="mic-neck" />
-            <view class="mic-base" />
-          </view>
-        </view>
-        <button
-          class="btn-send"
-          :loading="aiPlanning"
-          :disabled="aiPlanning || !inputText.trim()"
-          @click="handleSend"
-        >
-          发送
-        </button>
-      </view>
+      <VoiceTextComposer
+        ref="composerRef"
+        v-model="inputText"
+        :placeholder="composerPlaceholder"
+        :disabled="aiPlanning"
+        :loading="aiPlanning"
+        @send="handleSend"
+      />
     </view>
 
     <DouxingTabBar :current="1" />
@@ -181,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick } from 'vue';
 import { onShow, onLoad } from '@dcloudio/uni-app';
 import { fetchLlmStatus, fetchLlmProviders } from '@/api/routes';
 import {
@@ -194,12 +164,8 @@ import * as authStorage from '@/utils/auth-storage';
 import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, AI_PLAN_CANCELLED_MESSAGE } from '@/utils/ai-plan-loading';
-import {
-  isSpeechToTextSupported,
-  startSpeechToText,
-  stopSpeechToText,
-} from '@/utils/speech-to-text';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
+import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
 import type {
   LlmProviderChoice,
   LlmProviderOption,
@@ -217,7 +183,7 @@ interface ChatMessage {
 }
 
 const inputText = ref('');
-const composerKey = ref(0);
+const composerRef = ref<InstanceType<typeof VoiceTextComposer> | null>(null);
 const user = ref<UserInfo | null>(authStorage.getStoredUser());
 const sessionId = ref<number | null>(null);
 const previousSessionId = ref<number | null>(null);
@@ -233,67 +199,12 @@ const llmAvailable = ref<boolean | null>(null);
 const llmIssueMessage = ref('');
 const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
 const memberLevelLabel = ref(getMemberLevelLabel(0));
-const speechSupported = isSpeechToTextSupported();
-const speechListening = ref(false);
-const speechBaseText = ref('');
 /** 模型选择仅开发环境展示，生产包使用服务端默认策略 */
 const showModelPicker = import.meta.env.DEV;
 
-function joinSpeechText(base: string, recognized: string) {
-  const trimmedBase = base.trim();
-  const trimmedRecognized = recognized.trim();
-  if (!trimmedRecognized) return trimmedBase;
-  if (!trimmedBase) return trimmedRecognized;
-  return `${trimmedBase} ${trimmedRecognized}`;
-}
-
-function applySpeechPartial(recognized: string) {
-  inputText.value = joinSpeechText(speechBaseText.value, recognized);
-}
-
-function applySpeechFinal(recognized: string) {
-  inputText.value = joinSpeechText(speechBaseText.value, recognized);
-  speechBaseText.value = inputText.value.trim();
-}
-
-async function handleToggleSpeech() {
-  if (aiPlanning.value) return;
-  if (!speechSupported) {
-    uni.showToast({ title: '当前环境不支持语音输入', icon: 'none' });
-    return;
-  }
-
-  if (speechListening.value) {
-    stopSpeechToText();
-    return;
-  }
-
-  speechBaseText.value = inputText.value.trim();
-  speechListening.value = true;
-
-  const session = await startSpeechToText({
-    onPartial: applySpeechPartial,
-    onFinal: applySpeechFinal,
-    onError: (message) => {
-      uni.showToast({ title: message, icon: 'none' });
-    },
-    onEnd: () => {
-      speechListening.value = false;
-    },
-  });
-
-  if (!session) {
-    speechListening.value = false;
-  }
-}
-
-onBeforeUnmount(() => {
-  stopSpeechToText();
-});
-
 const membershipHint = computed(() => {
   if (!authStorage.getStoredUser()) return '';
-  return `${memberLevelLabel.value} · 首条可生成 ${memberPlanCount.value} 套方案`;
+  return `${memberLevelLabel.value} · 可生成 ${memberPlanCount.value} 套方案`;
 });
 
 const showLlmStatus = computed(() => llmIssueMessage.value.length > 0);
@@ -412,8 +323,7 @@ function scrollToBottom() {
 }
 
 function resetComposerInput() {
-  inputText.value = '';
-  composerKey.value += 1;
+  composerRef.value?.clear();
 }
 
 function clearSessionView() {
@@ -562,27 +472,27 @@ async function submitPlanFollowUp(sessionIdValue: number, text: string) {
   return appendPlanMessage(sessionIdValue, { content: text });
 }
 
-async function handleSend() {
+async function handleSend(text: string) {
   if (aiPlanLoadingState.active) return;
   const loggedInUser = ensureLoggedInUser();
   if (!loggedInUser) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
-  const text = inputText.value.trim();
-  if (!text) {
+  const content = text.trim();
+  if (!content) {
     uni.showToast({ title: '请输入内容', icon: 'none' });
     return;
   }
 
   const pendingId = `pending-${Date.now()}`;
-  messages.value.push({ id: pendingId, role: 'user', content: text });
+  messages.value.push({ id: pendingId, role: 'user', content });
   resetComposerInput();
   scrollToBottom();
 
   try {
     if (!sessionId.value) {
-      const planActionResult = await submitNewPlanSession(text);
+      const planActionResult = await submitNewPlanSession(content);
       sessionId.value = planActionResult.sessionId;
       currentRouteId.value = planActionResult.id;
       intentSnapshot.value = planActionResult.intentSnapshot ?? null;
@@ -602,7 +512,7 @@ async function handleSend() {
       return;
     }
 
-    const planActionResult = await submitPlanFollowUp(sessionId.value, text);
+    const planActionResult = await submitPlanFollowUp(sessionId.value, content);
     currentRouteId.value = planActionResult.id;
     intentSnapshot.value = planActionResult.intentSnapshot ?? null;
     ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
@@ -618,7 +528,7 @@ async function handleSend() {
     if (msg !== AI_PLAN_CANCELLED_MESSAGE) {
       uni.showToast({ title: msg, icon: 'none' });
     }
-    inputText.value = text;
+    inputText.value = content;
   }
 }
 </script>
@@ -932,86 +842,5 @@ async function handleSend() {
   color: #1f2937;
   border-bottom-left-radius: 4rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
-}
-.composer {
-  position: relative;
-  width: 100%;
-  display: flex;
-  align-items: flex-end;
-  gap: 16rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 16rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
-  box-sizing: border-box;
-}
-.composer-input {
-  flex: 1;
-  width: 100%;
-  min-height: var(--composer-line-height);
-  max-height: var(--composer-max-height);
-  font-size: 28rpx;
-  line-height: var(--composer-line-height);
-  overflow-y: auto;
-  box-sizing: border-box;
-}
-.composer-input--empty {
-  height: var(--composer-line-height);
-}
-.btn-mic {
-  flex-shrink: 0;
-  width: 72rpx;
-  height: 72rpx;
-  border-radius: 12rpx;
-  background: #f3f4f6;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-sizing: border-box;
-}
-.btn-mic--active {
-  background: #fee2e2;
-}
-.btn-mic--active .mic-head,
-.btn-mic--active .mic-neck,
-.btn-mic--active .mic-base {
-  background: #ef4444;
-}
-.btn-mic--disabled {
-  opacity: 0.45;
-}
-.mic-icon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-}
-.mic-head {
-  width: 20rpx;
-  height: 28rpx;
-  border-radius: 10rpx;
-  background: #6b7280;
-}
-.mic-neck {
-  width: 4rpx;
-  height: 8rpx;
-  margin-top: 2rpx;
-  background: #6b7280;
-}
-.mic-base {
-  width: 28rpx;
-  height: 4rpx;
-  margin-top: 2rpx;
-  border-radius: 2rpx;
-  background: #6b7280;
-}
-.btn-send {
-  flex-shrink: 0;
-  min-width: 120rpx;
-  background: #1677ff;
-  color: #fff;
-  border-radius: 12rpx;
-  font-size: 28rpx;
-  margin: 0;
 }
 </style>
