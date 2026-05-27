@@ -9,6 +9,8 @@ import {
   LEADERBOARD_DEFAULT_LIMIT,
   LEADERBOARD_MAX_LIMIT,
   UserStatus,
+  ApiError,
+  ApiMessageKey,
 } from '@douxing/shared';
 import type { LeaderboardEntry, LeaderboardResult } from '@douxing/shared';
 import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
@@ -59,7 +61,7 @@ export async function getLeaderboard(options: {
 }): Promise<LeaderboardResult> {
   const range = resolvePeriodRange(options.period);
   if (!range) {
-    throw new Error('无效的排行榜周期');
+    throw new ApiError(ApiMessageKey.LEADERBOARD_INVALID_PERIOD);
   }
 
   const metric = resolveMetric(options.metric);

@@ -6,7 +6,7 @@ import type {
   TravelIntentSnapshot,
   RagAttractionCandidate,
 } from '@douxing/shared';
-import { DEFAULT_LOCALE } from '@douxing/shared';
+import { DEFAULT_LOCALE, ApiError, ApiMessageKey } from '@douxing/shared';
 import {
   type LlmProviderId,
   type LlmProviderChoice,
@@ -410,7 +410,7 @@ export async function chatCompletionForRoute(
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);
   if (chain.length === 0) {
-    throw new Error('未配置任何可用模型（请设置 DEEPSEEK_API_KEY 或启动 LM Studio）');
+    throw new ApiError(ApiMessageKey.LLM_NO_MODEL);
   }
 
   const errors: string[] = [];

@@ -1,4 +1,5 @@
 import { sms } from 'tencentcloud-sdk-nodejs';
+import { ApiError, ApiMessageKey } from '@douxing/shared';
 import { getTencentSmsConfig } from '../config/sms.js';
 
 type SmsClient = InstanceType<typeof sms.v20210111.Client>;
@@ -8,7 +9,7 @@ let cachedClient: SmsClient | null = null;
 function createClient(): SmsClient {
   const config = getTencentSmsConfig();
   if (!config) {
-    throw new Error('腾讯云短信未配置');
+    throw new ApiError(ApiMessageKey.TENCENT_SMS_NOT_CONFIGURED);
   }
 
   return new sms.v20210111.Client({
@@ -63,7 +64,7 @@ function mapTencentError(code: string | undefined, message: string | undefined):
 export async function sendTencentSmsCode(phone: string, code: string): Promise<void> {
   const config = getTencentSmsConfig();
   if (!config) {
-    throw new Error('腾讯云短信未配置');
+    throw new ApiError(ApiMessageKey.TENCENT_SMS_NOT_CONFIGURED);
   }
 
   const client = getClient();
@@ -86,6 +87,6 @@ export async function sendTencentSmsCode(phone: string, code: string): Promise<v
       throw err;
     }
     console.error('[tencent-sms] 发送失败', err);
-    throw new Error('短信发送失败，请稍后重试');
+    throw new ApiError(ApiMessageKey.SMS_SEND_RETRY);
   }
 }

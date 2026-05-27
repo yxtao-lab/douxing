@@ -1,6 +1,7 @@
 import type { CheckInInfo, CheckInResult } from '@douxing/shared';
 import { request } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
+import { mobileT } from '@/i18n/mobileT';
 
 const TOKEN_KEY = 'douxing_token';
 
@@ -52,12 +53,12 @@ export function uploadCheckInPhoto(filePath: string): Promise<string> {
             resolve(body.data.url);
             return;
           }
-          reject(new Error(body.message || '上传失败'));
+          reject(new Error(body.message || mobileT('common.uploadFailed')));
         } catch {
-          reject(new Error('响应格式错误'));
+          reject(new Error(mobileT('common.invalidResponse')));
         }
       },
-      fail: (err) => reject(new Error(err.errMsg || '上传失败')),
+      fail: (err) => reject(new Error(err.errMsg || mobileT('common.uploadFailed'))),
     });
   });
 }

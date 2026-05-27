@@ -1,19 +1,19 @@
 <template>
   <div class="checkins-page">
     <div class="page-head">
-      <h2>打卡记录</h2>
-      <router-link class="map-link" to="/checkins/map">地图视图 ›</router-link>
+      <h2>{{ t('checkins.title') }}</h2>
+      <router-link class="map-link" to="/checkins/map">{{ t('checkins.mapLink') }}</router-link>
     </div>
     <table class="table" v-if="list.length">
       <thead>
         <tr>
-          <th>用户</th>
-          <th>路线</th>
-          <th>地点</th>
-          <th>城市</th>
-          <th>积分</th>
-          <th>照片</th>
-          <th>时间</th>
+          <th>{{ t('checkins.colUser') }}</th>
+          <th>{{ t('checkins.colRoute') }}</th>
+          <th>{{ t('checkins.colPlace') }}</th>
+          <th>{{ t('checkins.colCity') }}</th>
+          <th>{{ t('checkins.colPoints') }}</th>
+          <th>{{ t('checkins.colPhotos') }}</th>
+          <th>{{ t('checkins.colTime') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -23,21 +23,27 @@
           <td>{{ c.location.placeName || '-' }}</td>
           <td>{{ c.city || c.cityCode }}</td>
           <td>{{ c.pointsEarned }}</td>
-          <td>{{ c.photos.length > 0 ? `${c.photos.length} 张` : '-' }}</td>
+          <td>{{ photoLabel(c.photos.length) }}</td>
           <td>{{ c.checkedAt.slice(0, 16).replace('T', ' ') }}</td>
         </tr>
       </tbody>
     </table>
-    <p v-else class="empty">暂无打卡</p>
+    <p v-else class="empty">{{ t('checkins.empty') }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { CheckInInfo } from '@douxing/shared';
 import { fetchAllCheckIns } from '@/api/checkins';
 
+const { t } = useI18n();
 const list = ref<CheckInInfo[]>([]);
+
+function photoLabel(count: number) {
+  return count > 0 ? t('checkins.photoCount', { count }) : '-';
+}
 
 onMounted(async () => {
   try {

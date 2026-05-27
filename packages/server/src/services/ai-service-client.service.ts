@@ -1,8 +1,10 @@
+import { ApiError, ApiMessageKey } from '@douxing/shared';
 import {
   canUseAiService,
   getAiServiceBaseUrl,
   getAiServiceTimeoutMs,
-} from '../config/ai-service.js';import { llmRouteSchema, type LlmRoutePayload } from './llm-client.service.js';
+} from '../config/ai-service.js';
+import { llmRouteSchema, type LlmRoutePayload } from './llm-client.service.js';
 import type { GenerateRouteInput } from './route-generator.service.js';
 
 interface AiServiceGenerateResponse {
@@ -52,7 +54,7 @@ export async function generateRouteViaAiService(
   input: GenerateRouteInput,
 ): Promise<{ payload: LlmRoutePayload; provider: 'deepseek' | 'lmstudio' }> {
   if (!canUseAiService()) {
-    throw new Error('Python AI 微服务未启用');
+    throw new ApiError(ApiMessageKey.AI_SERVICE_DISABLED);
   }
 
   const baseUrl = getAiServiceBaseUrl();

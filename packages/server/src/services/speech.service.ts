@@ -1,3 +1,4 @@
+import { ApiError, ApiMessageKey } from '@douxing/shared';
 import { resolveSpeechProvider } from '../config/speech.js';
 import { transcribeWithTencent, type TencentVoiceFormat } from './tencent-asr.provider.js';
 
@@ -18,15 +19,15 @@ export async function transcribeSpeechBuffer(
   options?: { mimeType?: string; originalName?: string },
 ): Promise<string> {
   if (!audio.length) {
-    throw new Error('音频文件为空');
+    throw new ApiError(ApiMessageKey.SPEECH_EMPTY);
   }
   if (audio.length > MAX_AUDIO_BYTES) {
-    throw new Error('音频文件过大，请缩短录音时长');
+    throw new ApiError(ApiMessageKey.SPEECH_FILE_TOO_LARGE_HINT);
   }
 
   const provider = resolveSpeechProvider();
   if (provider === 'mock') {
-    throw new Error('语音识别未配置，请在服务端配置腾讯云 ASR（与短信共用 SecretId/Key）');
+    throw new ApiError(ApiMessageKey.SPEECH_NOT_CONFIGURED);
   }
 
   const voiceFormat = detectVoiceFormat(options?.mimeType, options?.originalName);

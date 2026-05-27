@@ -4,6 +4,7 @@ import {
   type SpeechToTextHandlers,
   type SpeechToTextSession,
 } from './speech-to-text.shared';
+import { currentMobileLocale, mobileT } from '@/i18n/mobileT';
 
 export type { SpeechToTextHandlers, SpeechToTextSession };
 export { stopSpeechToText };
@@ -46,15 +47,15 @@ function mapSpeechError(code: string): string {
   switch (code) {
     case 'not-allowed':
     case 'service-not-allowed':
-      return '麦克风权限未开启，请在浏览器设置中允许';
+      return mobileT('speech.h5NotAllowed');
     case 'no-speech':
-      return '未识别到语音，请重试';
+      return mobileT('speech.noSpeechRetry');
     case 'network':
-      return '网络异常，语音识别失败';
+      return mobileT('speech.h5Network');
     case 'aborted':
-      return '语音识别已取消';
+      return mobileT('speech.h5Aborted');
     default:
-      return '语音识别失败，请重试';
+      return mobileT('speech.h5Failed');
   }
 }
 
@@ -67,13 +68,14 @@ export async function startSpeechToText(
 ): Promise<SpeechToTextSession | null> {
   const Ctor = getSpeechRecognitionCtor();
   if (!Ctor) {
-    handlers.onError('当前浏览器不支持语音识别');
+    handlers.onError(mobileT('speech.unsupportedBrowser'));
     handlers.onEnd?.();
     return null;
   }
 
   const recognition = new Ctor();
-  recognition.lang = 'zh-CN';
+  const locale = currentMobileLocale();
+  recognition.lang = locale.startsWith('en') ? 'en-US' : 'zh-CN';
   recognition.continuous = true;
   recognition.interimResults = true;
 
@@ -136,7 +138,7 @@ export async function startSpeechToText(
   try {
     recognition.start();
   } catch {
-    handlers.onError('无法启动语音识别');
+    handlers.onError(mobileT('speech.cannotStartRecognition'));
     handlers.onEnd?.();
     return null;
   }

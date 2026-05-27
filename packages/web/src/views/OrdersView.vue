@@ -1,16 +1,16 @@
 <template>
   <div class="orders-page">
-    <h2>订单管理</h2>
-    <p class="desc">路线解锁订单（MVP 模拟支付）</p>
+    <h2>{{ t('orders.title') }}</h2>
+    <p class="desc">{{ t('orders.desc') }}</p>
     <table class="table" v-if="orders.length">
       <thead>
         <tr>
-          <th>订单号</th>
-          <th>商品</th>
-          <th>金额</th>
-          <th>状态</th>
-          <th>用户</th>
-          <th>时间</th>
+          <th>{{ t('orders.colOrderNo') }}</th>
+          <th>{{ t('orders.colProduct') }}</th>
+          <th>{{ t('orders.colAmount') }}</th>
+          <th>{{ t('orders.colStatus') }}</th>
+          <th>{{ t('orders.colUser') }}</th>
+          <th>{{ t('orders.colTime') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -24,19 +24,23 @@
         </tr>
       </tbody>
     </table>
-    <p v-else class="empty">暂无订单</p>
+    <p v-else class="empty">{{ t('orders.empty') }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { OrderInfo } from '@douxing/shared';
-import { getOrderStatusLabel } from '@douxing/shared';
+import { getOrderStatusI18nKey } from '@douxing/shared';
 import { fetchAllOrders } from '@/api/orders';
 
+const { t } = useI18n();
 const orders = ref<OrderInfo[]>([]);
 
-const orderStatusLabel = getOrderStatusLabel;
+function orderStatusLabel(status: number) {
+  return t(getOrderStatusI18nKey(status));
+}
 
 onMounted(async () => {
   try {

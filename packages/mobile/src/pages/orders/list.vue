@@ -12,7 +12,7 @@
       </text>
     </view>
 
-    <view v-if="loading" class="empty">加载中…</view>
+    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
     <view v-else-if="filteredList.length === 0" class="empty">{{ emptyHint }}</view>
 
     <view v-for="item in filteredList" :key="item.id" class="card">
@@ -20,19 +20,19 @@
         <text class="product">{{ item.productName }}</text>
         <text class="status" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</text>
       </view>
-      <text class="meta">订单号 {{ item.orderNo }}</text>
-      <text class="meta">¥{{ item.totalAmount }} · {{ formatTime(item.createdAt) }}</text>
+      <text class="meta">{{ orderNoText(item.orderNo) }}</text>
+      <text class="meta">{{ amountLineText(item) }}</text>
 
       <view v-if="item.status === OrderStatus.PENDING" class="actions">
         <button class="btn-primary" size="mini" :loading="payingId === item.id" @click="handleContinuePay(item)">
           {{ continuePayLabel }}
         </button>
         <button class="btn-outline" size="mini" :loading="cancellingId === item.id" @click="handleCancel(item)">
-          取消订单
+          {{ t('orders.cancelOrder') }}
         </button>
       </view>
       <view v-else-if="item.orderType === OrderType.ROUTE && canViewRoute(item.status)" class="actions">
-        <button class="btn-outline" size="mini" @click="goRouteDetail(item.productId)">查看路线</button>
+        <button class="btn-outline" size="mini" @click="goRouteDetail(item.productId)">{{ t('orders.viewRoute') }}</button>
       </view>
     </view>
   </view>
@@ -42,25 +42,30 @@
 import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { OrderInfo } from '@douxing/shared';
-import { OrderStatus, OrderType, getOrderStatusLabel } from '@douxing/shared';
+import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
 import { fetchOrders, cancelOrder } from '@/api/orders';
 import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-payment';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 
 type OrderTab = 'all' | 'pending' | 'done';
 
-const tabs: { key: OrderTab; label: string }[] = [
-  { key: 'all', label: '全部' },
-  { key: 'pending', label: '待支付' },
-  { key: 'done', label: '已完成' },
-];
+usePageTitle('nav.orders');
+const { t, tf } = useTf();
+
+const tabs = computed(() => [
+  { key: 'all' as OrderTab, label: t('orders.tabAll') },
+  { key: 'pending' as OrderTab, label: t('orders.tabPending') },
+  { key: 'done' as OrderTab, label: t('orders.tabDone') },
+]);
 
 const activeTab = ref<OrderTab>('all');
 const list = ref<OrderInfo[]>([]);
 const loading = ref(false);
 const payingId = ref<number | null>(null);
 const cancellingId = ref<number | null>(null);
-const continuePayLabel = getContinuePayButtonLabel();
+const continuePayLabel = computed(() => getContinuePayButtonLabel());
 
 const filteredList = computed(() => {
   if (activeTab.value === 'pending') {
@@ -75,13 +80,13 @@ const filteredList = computed(() => {
 });
 
 const emptyHint = computed(() => {
-  if (activeTab.value === 'pending') return '暂无待支付订单';
-  if (activeTab.value === 'done') return '暂无已完成订单';
-  return '暂无订单';
+  if (activeTab.value === 'pending') return t('orders.emptyPending');
+  if (activeTab.value === 'done') return t('orders.emptyDone');
+  return t('orders.emptyAll');
 });
 
 function statusLabel(status: number) {
-  return getOrderStatusLabel(status);
+  return t(getOrderStatusI18nKey(status));
 }
 
 function statusClass(status: number) {
@@ -93,6 +98,17 @@ function statusClass(status: number) {
 
 function canViewRoute(status: number) {
   return status === OrderStatus.COMPLETED || status === OrderStatus.PAID;
+}
+
+function orderNoText(orderNo: string) {
+  return tf('orders.orderNo', { no: orderNo });
+}
+
+function amountLineText(item: OrderInfo) {
+  return tf('orders.amountLine', {
+    amount: item.totalAmount,
+    time: formatTime(item.createdAt),
+  });
 }
 
 function formatTime(iso: string) {
@@ -118,11 +134,11 @@ async function handleContinuePay(item: OrderInfo) {
   payingId.value = item.id;
   try {
     await continuePayForOrder(item.id);
-    uni.showToast({ title: '支付成功', icon: 'success' });
+    uni.showToast({ title: t('orders.paySuccess'), icon: 'success' });
     await loadOrders();
   } catch (e) {
-    const msg = e instanceof Error ? e.message : '支付失败';
-    if (msg !== '已取消支付') {
+    const msg = e instanceof Error ? e.message : t('routes.payFailed');
+    if (msg !== t('routes.payCancelled')) {
       uni.showToast({ title: msg, icon: 'none' });
     }
   } finally {
@@ -133,8 +149,8 @@ async function handleContinuePay(item: OrderInfo) {
 async function handleCancel(item: OrderInfo) {
   const confirmed = await new Promise<boolean>((resolve) => {
     uni.showModal({
-      title: '取消订单',
-      content: '确定取消该待支付订单？',
+      title: t('orders.cancelModalTitle'),
+      content: t('orders.cancelModalContent'),
       success: (res) => resolve(!!res.confirm),
       fail: () => resolve(false),
     });
@@ -144,10 +160,10 @@ async function handleCancel(item: OrderInfo) {
   cancellingId.value = item.id;
   try {
     await cancelOrder(item.id);
-    uni.showToast({ title: '已取消', icon: 'success' });
+    uni.showToast({ title: t('orders.cancelSuccess'), icon: 'success' });
     await loadOrders();
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : '取消失败', icon: 'none' });
+    uni.showToast({ title: e instanceof Error ? e.message : t('orders.cancelFailed'), icon: 'none' });
   } finally {
     cancellingId.value = null;
   }

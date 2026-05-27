@@ -1,4 +1,5 @@
 import { asr } from 'tencentcloud-sdk-nodejs';
+import { ApiError, ApiMessageKey } from '@douxing/shared';
 import { getTencentAsrConfig } from '../config/speech.js';
 
 type AsrClient = InstanceType<typeof asr.v20190614.Client>;
@@ -10,7 +11,7 @@ let cachedClient: AsrClient | null = null;
 function createClient(): AsrClient {
   const config = getTencentAsrConfig();
   if (!config) {
-    throw new Error('腾讯云语音识别未配置');
+    throw new ApiError(ApiMessageKey.TENCENT_ASR_NOT_CONFIGURED);
   }
 
   return new asr.v20190614.Client({
@@ -52,7 +53,7 @@ export async function transcribeWithTencent(
 
   const text = response.Result?.trim() ?? '';
   if (!text) {
-    throw new Error('未识别到语音内容');
+    throw new ApiError(ApiMessageKey.SPEECH_NO_CONTENT);
   }
   return text;
 }

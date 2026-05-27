@@ -2,9 +2,9 @@
   <view class="page">
     <view class="summary">
       <text class="summary-title">{{ periodLabel }} · {{ metricLabel }}</text>
-      <text v-if="myRank != null" class="summary-rank">我的排名：第 {{ myRank }} 名</text>
-      <text v-else class="summary-rank">我的排名：暂无数据</text>
-      <text class="summary-value">{{ metricLabel }} {{ myValue ?? 0 }}</text>
+      <text v-if="myRank != null" class="summary-rank">{{ myRankText }}</text>
+      <text v-else class="summary-rank">{{ t('leaderboard.myRankEmpty') }}</text>
+      <text class="summary-value">{{ myValueText }}</text>
     </view>
 
     <scroll-view scroll-x class="filters" :show-scrollbar="false">
@@ -31,8 +31,8 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">加载中...</view>
-    <view v-else-if="entries.length === 0" class="empty">该时段暂无排行数据</view>
+    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
+    <view v-else-if="entries.length === 0" class="empty">{{ t('leaderboard.empty') }}</view>
     <view v-else class="rank-list">
       <view
         v-for="item in entries"
@@ -45,7 +45,7 @@
         <view v-else class="avatar">{{ avatarText(item.nickname) }}</view>
         <view class="rank-body">
           <text class="nickname">{{ item.nickname }}</text>
-          <text class="sub-stat">打卡 {{ item.checkinCount }} · 积分 {{ item.totalPoints }}</text>
+          <text class="sub-stat">{{ userStatsText(item) }}</text>
         </view>
         <text class="rank-value">{{ item.value }}{{ metricUnit }}</text>
       </view>
@@ -60,16 +60,21 @@ import type { LeaderboardEntry } from '@douxing/shared';
 import { LeaderboardMetric, LeaderboardPeriod } from '@douxing/shared';
 import { fetchLeaderboard } from '@/api/leaderboard';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 
-const periodOptions = [
-  { key: LeaderboardPeriod.WEEK, label: '周榜' },
-  { key: LeaderboardPeriod.MONTH, label: '月榜' },
-];
+usePageTitle('nav.leaderboard');
+const { t, tf } = useTf();
 
-const metricOptions = [
-  { key: LeaderboardMetric.CHECKINS, label: '打卡数' },
-  { key: LeaderboardMetric.POINTS, label: '积分' },
-];
+const periodOptions = computed(() => [
+  { key: LeaderboardPeriod.WEEK, label: t('leaderboard.periodWeek') },
+  { key: LeaderboardPeriod.MONTH, label: t('leaderboard.periodMonth') },
+]);
+
+const metricOptions = computed(() => [
+  { key: LeaderboardMetric.CHECKINS, label: t('leaderboard.metricCheckins') },
+  { key: LeaderboardMetric.POINTS, label: t('leaderboard.metricPoints') },
+]);
 
 const activePeriod = ref<string>(LeaderboardPeriod.WEEK);
 const activeMetric = ref<string>(LeaderboardMetric.CHECKINS);
@@ -79,15 +84,32 @@ const myRank = ref<number | null>(null);
 const myValue = ref<number | null>(null);
 
 const periodLabel = computed(() =>
-  activePeriod.value === LeaderboardPeriod.MONTH ? '本月' : '本周',
+  activePeriod.value === LeaderboardPeriod.MONTH
+    ? t('leaderboard.thisMonth')
+    : t('leaderboard.thisWeek'),
 );
 
 const metricLabel = computed(() =>
-  activeMetric.value === LeaderboardMetric.POINTS ? '积分' : '打卡数',
+  activeMetric.value === LeaderboardMetric.POINTS
+    ? t('leaderboard.metricPoints')
+    : t('leaderboard.metricCheckins'),
 );
 
 const metricUnit = computed(() =>
-  activeMetric.value === LeaderboardMetric.POINTS ? ' 分' : ' 次',
+  activeMetric.value === LeaderboardMetric.POINTS
+    ? t('leaderboard.pointsUnit')
+    : t('leaderboard.checkinUnit'),
+);
+
+const myRankText = computed(() =>
+  myRank.value != null ? tf('leaderboard.myRank', { rank: myRank.value }) : '',
+);
+
+const myValueText = computed(() =>
+  tf('leaderboard.myValue', {
+    metric: metricLabel.value,
+    value: myValue.value ?? 0,
+  }),
 );
 
 function avatarText(name: string) {
@@ -99,6 +121,13 @@ function formatRank(rank: number) {
   if (rank === 2) return '🥈';
   if (rank === 3) return '🥉';
   return String(rank);
+}
+
+function userStatsText(item: LeaderboardEntry) {
+  return tf('leaderboard.userStats', {
+    checkins: item.checkinCount,
+    points: item.totalPoints,
+  });
 }
 
 async function loadLeaderboard() {
@@ -116,7 +145,7 @@ async function loadLeaderboard() {
     myRank.value = null;
     myValue.value = null;
     uni.showToast({
-      title: err instanceof Error ? err.message : '加载失败',
+      title: err instanceof Error ? err.message : t('common.loadFailed'),
       icon: 'none',
     });
   } finally {
@@ -138,7 +167,7 @@ function switchMetric(key: string) {
 
 onShow(async () => {
   if (!getStoredUser()) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
+    uni.showToast({ title: t('common.loginRequired'), icon: 'none' });
     setTimeout(() => uni.navigateBack(), 800);
     return;
   }

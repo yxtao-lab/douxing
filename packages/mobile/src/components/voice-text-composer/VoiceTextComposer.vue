@@ -75,7 +75,7 @@
               'composer-input--empty': !modelValue,
               'composer-input--has-clear': showClearButton,
             }"
-            :placeholder="placeholder"
+            :placeholder="placeholderText"
             placeholder-style="color: #9ca3af; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"
             :maxlength="maxlength"
             :disabled="disabled"
@@ -119,6 +119,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue';
 import { useTf } from '@/i18n/useTf';
+import { mobileT } from '@/i18n/mobileT';
 import {
   isSpeechToTextSupported,
   startSpeechToText,
@@ -153,7 +154,7 @@ const props = withDefaults(
   }>(),
   {
     modelValue: '',
-    placeholder: '请输入内容',
+    placeholder: '',
     disabled: false,
     loading: false,
     defaultMode: 'keyboard',
@@ -178,6 +179,7 @@ const sendLabel = computed(() => props.sendLabel ?? t('plan.composerSend'));
 const holdLabel = computed(() => props.holdLabel ?? t('plan.composerHold'));
 const recordingHint = computed(() => props.recordingHint ?? t('plan.composerRecording'));
 const cancelHint = computed(() => props.cancelHint ?? t('plan.composerCancelHold'));
+const placeholderText = computed(() => props.placeholder || t('plan.inputRequired'));
 
 const showClearButton = computed(() => Boolean(props.modelValue) && !props.disabled);
 
@@ -302,7 +304,7 @@ function emitSend() {
   if (props.disabled) return;
   const text = props.modelValue.trim();
   if (!text) {
-    uni.showToast({ title: '请输入内容', icon: 'none' });
+    uni.showToast({ title: t('plan.inputRequired'), icon: 'none' });
     return;
   }
   emit('send', text);
@@ -316,7 +318,7 @@ function handleHoldMove(event: TouchLikeEvent) {
 async function handleHoldStart(event: TouchLikeEvent) {
   if (props.disabled) return;
   if (!speechSupported) {
-    uni.showToast({ title: '当前环境不支持语音输入', icon: 'none' });
+    uni.showToast({ title: mobileT('speech.unsupportedEnv'), icon: 'none' });
     return;
   }
   if (speechRecordingUi.value) return;

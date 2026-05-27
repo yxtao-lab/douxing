@@ -19,9 +19,9 @@ async function getWxLoginCode(): Promise<string> {
       provider: 'weixin',
       success: (res) => {
         if (res.code) resolve(res.code);
-        else reject(new Error('微信登录失败，请重试'));
+        else reject(new Error(String(i18n.global.t('orders.wxLoginFailed'))));
       },
-      fail: (err) => reject(new Error(err.errMsg || '微信登录失败')),
+      fail: (err) => reject(new Error(err.errMsg || String(i18n.global.t('orders.wxLoginFailed')))),
     });
   });
 }
@@ -59,7 +59,7 @@ async function pollOrderFulfilled(orderId: number): Promise<OrderInfo> {
     if (isOrderFulfilled(order.status)) return order;
     await new Promise((r) => setTimeout(r, PAYMENT_POLL_INTERVAL_MS));
   }
-  throw new Error('支付结果确认中，请稍后下拉刷新查看');
+  throw new Error(String(i18n.global.t('orders.payPendingConfirm')));
 }
 
 /** 已有待支付订单：预下单 → 调起支付（订单列表「继续支付」） */
@@ -80,7 +80,7 @@ export async function continuePayForOrder(orderId: number): Promise<OrderInfo> {
   }
 
   if (!prepay.wechat) {
-    throw new Error('微信支付参数缺失');
+    throw new Error(String(i18n.global.t('orders.wechatPayParamsMissing')));
   }
 
   await invokeWechatPayment(prepay.wechat);
@@ -103,6 +103,6 @@ export function getUnlockPayButtonLabel(): string {
 
 /** 继续支付按钮文案 */
 export function getContinuePayButtonLabel(): string {
-  if (isMpWeixin()) return '继续支付';
-  return '继续支付（模拟）';
+  if (isMpWeixin()) return String(i18n.global.t('orders.continuePay'));
+  return String(i18n.global.t('orders.continuePayMock'));
 }

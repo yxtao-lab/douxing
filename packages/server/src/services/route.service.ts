@@ -1,7 +1,7 @@
 import { eq, desc, and } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
-import { RouteStatus } from '@douxing/shared';
+import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
 import type { TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
@@ -25,7 +25,7 @@ async function syncDraftToAttractionLibrary(
 ) {
   const { days } = normalizeRouteDetailDays(draft.routeDetail);
   if (days.length === 0) {
-    throw new Error('生成的路线没有有效行程节点，无法同步景点库');
+    throw new ApiError(ApiMessageKey.ROUTE_NO_VALID_NODES);
   }
   const routeDetailForSync = {
     days: cloneRouteDaysForSync(days, options.stripAttractionIds ?? false),
@@ -139,7 +139,7 @@ export async function setRoutePublicShare(routeId: number, userId: number, isPub
   if (!row) return null;
 
   if (isPublic && row.status !== RouteStatus.PUBLISHED) {
-    throw new Error('请先发布路线后再公开分享到广场');
+    throw new ApiError(ApiMessageKey.ROUTE_PUBLISH_BEFORE_SHARE);
   }
 
   await db
@@ -164,7 +164,7 @@ export async function updateDraftRoute(
   const row = rows[0];
   if (!row) return null;
   if (row.status !== RouteStatus.DRAFT) {
-    throw new Error('仅草稿状态的路线可编辑');
+    throw new ApiError(ApiMessageKey.ROUTE_DRAFT_ONLY_EDIT);
   }
 
   const existingDetail = (row.routeDetail ?? {}) as Record<string, unknown>;
@@ -255,10 +255,10 @@ export async function regenerateRouteFromPrompt(
 
   const existingDetail = (row.routeDetail ?? {}) as Record<string, unknown>;
   if (existingDetail.isAiGenerated !== true) {
-    throw new Error('仅 AI 生成的路线支持重新生成');
+    throw new ApiError(ApiMessageKey.ROUTE_AI_REGENERATE_ONLY);
   }
   if (row.status !== RouteStatus.DRAFT) {
-    throw new Error('已发布的路线不可重新生成，请复制需求后新建路线');
+    throw new ApiError(ApiMessageKey.ROUTE_PUBLISHED_NO_REGENERATE);
   }
 
   const draft = await generateRoute({

@@ -342,7 +342,7 @@ export async function createPlanSession(
 ): Promise<PlanSessionActionResult> {
   const prompt = input.prompt.trim();
   if (!prompt) {
-    throw new Error('请描述您的旅行需求');
+    throw new ApiError(ApiMessageKey.PLAN_PROMPT_REQUIRED);
   }
 
   const intent = buildIntentFromHistory(undefined, prompt, {
@@ -362,7 +362,7 @@ export async function createPlanSession(
   const generatedPack = await generateSessionCandidates(userId, generateInput, intent, locale);
   const generated = generatedPack.rows;
   if (generated.length === 0) {
-    throw new Error('生成路线失败，请稍后重试');
+    throw new ApiError(ApiMessageKey.PLAN_GENERATE_EMPTY);
   }
 
   const primary = generated[0]!;
@@ -430,13 +430,13 @@ export async function selectPlanSessionCandidate(
   const session = await getOwnedSession(sessionId, userId);
   if (!session) return null;
   if (session.status !== PlanSessionStatus.ACTIVE) {
-    throw new Error('该会话已结束，请新建规划');
+    throw new ApiError(ApiMessageKey.PLAN_SESSION_ENDED);
   }
 
   const candidates = await loadSessionCandidates(sessionId, userId, locale);
   const picked = candidates.find((c) => c.routeId === routeId);
   if (!picked) {
-    throw new Error('无效的候选方案');
+    throw new ApiError(ApiMessageKey.PLAN_INVALID_CANDIDATE);
   }
 
   const db = getDb();
@@ -494,10 +494,10 @@ export async function appendPlanSessionMessage(
   const session = await getOwnedSession(sessionId, userId);
   if (!session) return null;
   if (session.status !== PlanSessionStatus.ACTIVE) {
-    throw new Error('该会话已结束，请新建规划');
+    throw new ApiError(ApiMessageKey.PLAN_SESSION_ENDED);
   }
   if (!session.routeId) {
-    throw new Error('会话尚未关联路线，请重新发起规划');
+    throw new ApiError(ApiMessageKey.PLAN_SESSION_NO_ROUTE);
   }
 
   const previousMessages = await loadSessionMessages(sessionId);

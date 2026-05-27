@@ -13,16 +13,16 @@
         </view>
       </scroll-view>
       <view class="toolbar-actions">
-        <text class="stats">{{ filteredList.length }} 条记录 · {{ totalPoints }} 积分</text>
-        <text class="map-link" @click="goMap">地图足迹 ›</text>
+        <text class="stats">{{ statsLine }}</text>
+        <text class="map-link" @click="goMap">{{ t('checkins.mapLink') }}</text>
       </view>
     </view>
 
-    <view v-if="filteredList.length === 0" class="empty">该时段暂无打卡记录</view>
+    <view v-if="filteredList.length === 0" class="empty">{{ t('checkins.listEmpty') }}</view>
     <view v-for="item in filteredList" :key="item.id" class="card">
       <view class="card-head">
-        <text class="place">{{ item.location.placeName || '未知地点' }}</text>
-        <text class="points">+{{ item.pointsEarned }} 积分</text>
+        <text class="place">{{ placeLabel(item) }}</text>
+        <text class="points">{{ pointsLabel(item.pointsEarned) }}</text>
       </view>
       <text class="city" v-if="item.city || item.cityCode">{{ item.city || item.cityCode }}</text>
       <text class="time">{{ formatTime(item.checkedAt) }}</text>
@@ -47,6 +47,8 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import type { CheckInInfo } from '@douxing/shared';
 import { fetchCheckIns } from '@/api/checkins';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
@@ -55,12 +57,31 @@ import {
   formatCheckInTime,
 } from '@/utils/checkin-map';
 
-const timeRangeOptions = CHECKIN_TIME_RANGE_OPTIONS;
+usePageTitle('nav.checkins');
+const { t, tf } = useTf();
+
+const timeRangeOptions = computed(() =>
+  CHECKIN_TIME_RANGE_OPTIONS.map((opt) => ({
+    key: opt.key,
+    label: t(opt.labelKey),
+  })),
+);
 const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
 
 const filteredList = computed(() => filterCheckInsByTimeRange(allList.value, timeRange.value));
 const totalPoints = computed(() => sumCheckInPoints(filteredList.value));
+const statsLine = computed(() =>
+  tf('checkins.statsLine', { count: filteredList.value.length, points: totalPoints.value }),
+);
+
+function placeLabel(item: CheckInInfo) {
+  return item.location.placeName || t('common.unknownPlace');
+}
+
+function pointsLabel(points: number) {
+  return tf('checkins.pointsEarned', { points });
+}
 
 function formatTime(iso: string) {
   return formatCheckInTime(iso);
@@ -76,7 +97,7 @@ function goMap() {
 
 onLoad((query) => {
   const range = String(query?.range ?? '');
-  if (timeRangeOptions.some((opt) => opt.key === range)) {
+  if (CHECKIN_TIME_RANGE_OPTIONS.some((opt) => opt.key === range)) {
     timeRange.value = range as CheckInTimeRange;
   }
 });

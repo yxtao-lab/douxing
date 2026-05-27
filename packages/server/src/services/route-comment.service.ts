@@ -3,7 +3,7 @@ import { getDb } from '../db/client.js';
 import { routeComments } from '../db/schema/route-comments.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { users } from '../db/schema/users.js';
-import { RouteStatus } from '@douxing/shared';
+import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
 import type { RouteCommentInfo } from '@douxing/shared';
 import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
@@ -60,7 +60,7 @@ export async function createRouteComment(routeId: number, userId: number, conten
 
   const trimmed = content.trim();
   if (!trimmed) {
-    throw new Error('评论内容不能为空');
+    throw new ApiError(ApiMessageKey.ROUTE_COMMENT_EMPTY);
   }
 
   const db = getDb();

@@ -2,10 +2,10 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h2>待审核景点</h2>
-        <p class="desc">AI 生成路线同步入库的景点，审核通过后可被搜索与打卡引用</p>
+        <h2>{{ t('attractions.title') }}</h2>
+        <p class="desc">{{ t('attractions.desc') }}</p>
       </div>
-      <button class="btn-refresh" :disabled="loading" @click="loadList">刷新</button>
+      <button class="btn-refresh" :disabled="loading" @click="loadList">{{ t('common.refresh') }}</button>
     </div>
 
     <p v-if="error" class="error">{{ error }}</p>
@@ -14,13 +14,13 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>名称</th>
-          <th>城市</th>
-          <th>类型</th>
-          <th>坐标</th>
-          <th>来源</th>
-          <th>参考价</th>
-          <th>操作</th>
+          <th>{{ t('attractions.colName') }}</th>
+          <th>{{ t('attractions.colCity') }}</th>
+          <th>{{ t('attractions.colType') }}</th>
+          <th>{{ t('attractions.colCoord') }}</th>
+          <th>{{ t('attractions.colSource') }}</th>
+          <th>{{ t('attractions.colPrice') }}</th>
+          <th>{{ t('attractions.colAction') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -38,7 +38,7 @@
             <span v-if="hasCoords(item)" class="coord ok">
               {{ formatCoord(item.latitude!) }}, {{ formatCoord(item.longitude!) }}
             </span>
-            <span v-else class="coord warn">缺少坐标</span>
+            <span v-else class="coord warn">{{ t('attractions.missingCoord') }}</span>
           </td>
           <td>{{ sourceLabel(item.source) }}</td>
           <td>{{ item.ticketPrice > 0 ? `¥${item.ticketPrice}` : '-' }}</td>
@@ -48,23 +48,25 @@
               :disabled="approvingId === item.id"
               @click="handleApprove(item)"
             >
-              {{ approvingId === item.id ? '处理中…' : '通过' }}
+              {{ approvingId === item.id ? t('attractions.approving') : t('attractions.approve') }}
             </button>
           </td>
         </tr>
       </tbody>
     </table>
 
-    <p v-else-if="!loading && !error" class="empty">暂无待审核景点</p>
-    <p v-if="loading" class="loading">加载中…</p>
+    <p v-else-if="!loading && !error" class="empty">{{ t('attractions.empty') }}</p>
+    <p v-if="loading" class="loading">{{ t('common.loading') }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { AttractionInfo } from '@douxing/shared';
 import { approveAttraction, fetchPendingAttractions } from '@/api/attractions';
 
+const { t } = useI18n();
 const list = ref<AttractionInfo[]>([]);
 const loading = ref(false);
 const error = ref('');
@@ -72,19 +74,19 @@ const approvingId = ref<number | null>(null);
 
 function categoryLabel(category: string) {
   const map: Record<string, string> = {
-    attraction: '景点',
-    restaurant: '餐厅',
-    hotel: '酒店',
+    attraction: t('attractions.typeAttraction'),
+    restaurant: t('attractions.typeRestaurant'),
+    hotel: t('attractions.typeHotel'),
   };
   return map[category] ?? category;
 }
 
 function sourceLabel(source: string) {
   const map: Record<string, string> = {
-    seed: '种子',
-    llm: 'AI 同步',
-    manual: '人工',
-    amap: '高德',
+    seed: t('attractions.sourceSeed'),
+    llm: t('attractions.sourceLlm'),
+    manual: t('attractions.sourceManual'),
+    amap: t('attractions.sourceAmap'),
   };
   return map[source] ?? source;
 }
@@ -104,7 +106,7 @@ async function loadList() {
     list.value = await fetchPendingAttractions();
   } catch (e) {
     list.value = [];
-    error.value = e instanceof Error ? e.message : '加载失败';
+    error.value = e instanceof Error ? e.message : t('common.loadFailed');
   } finally {
     loading.value = false;
   }
@@ -112,9 +114,7 @@ async function loadList() {
 
 async function handleApprove(item: AttractionInfo) {
   if (!hasCoords(item)) {
-    const ok = window.confirm(
-      `「${item.name}」缺少坐标，通过后地理围栏打卡可能失败。仍要通过审核吗？`,
-    );
+    const ok = window.confirm(t('attractions.approveConfirm', { name: item.name }));
     if (!ok) return;
   }
 
@@ -124,7 +124,7 @@ async function handleApprove(item: AttractionInfo) {
     await approveAttraction(item.id);
     list.value = list.value.filter((row) => row.id !== item.id);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '审核失败';
+    error.value = e instanceof Error ? e.message : t('attractions.approveFailed');
   } finally {
     approvingId.value = null;
   }

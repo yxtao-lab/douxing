@@ -164,7 +164,7 @@ async function handleSendCode() {
   devCodeHint.value = '';
 
   if (!validatePhone(smsForm.phone)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('login.invalidPhone');
     return;
   }
 
@@ -176,7 +176,7 @@ async function handleSendCode() {
     }
     startCountdown();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '发送失败';
+    error.value = e instanceof Error ? e.message : t('login.sendFailed');
   } finally {
     sendingCode.value = false;
   }
@@ -187,7 +187,7 @@ async function handleSmsSubmit() {
   error.value = '';
   try {
     if (!validatePhone(smsForm.phone)) {
-      error.value = '请输入正确的手机号';
+      error.value = t('login.invalidPhone');
       return;
     }
     const result = await smsLogin(smsForm.phone, smsForm.code);
@@ -195,7 +195,7 @@ async function handleSmsSubmit() {
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '登录失败';
+    error.value = e instanceof Error ? e.message : t('login.loginFailed');
   } finally {
     loading.value = false;
   }
@@ -212,7 +212,7 @@ async function handlePasswordSubmit() {
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '操作失败';
+    error.value = e instanceof Error ? e.message : t('common.operationFailed');
   } finally {
     loading.value = false;
   }

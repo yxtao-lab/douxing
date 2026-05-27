@@ -2,7 +2,7 @@
   <view class="page">
     <view class="summary">
       <text class="summary-count">{{ unlockedCount }}/{{ badgeCatalog.length }}</text>
-      <text class="summary-label">已解锁徽章</text>
+      <text class="summary-label">{{ t('badges.unlockedSummary') }}</text>
     </view>
 
     <scroll-view scroll-x class="filters" :show-scrollbar="false">
@@ -29,8 +29,8 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">加载中...</view>
-    <view v-else-if="filteredBadges.length === 0" class="empty">该筛选条件下暂无徽章</view>
+    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
+    <view v-else-if="filteredBadges.length === 0" class="empty">{{ t('badges.emptyFilter') }}</view>
     <view v-else class="badge-grid">
       <view
         v-for="item in filteredBadges"
@@ -48,11 +48,9 @@
               :style="{ width: progressPercent(item) + '%' }"
             />
           </view>
-          <text class="badge-progress">
-            进度 {{ item.progress.current }}/{{ item.progress.target }}
-          </text>
+          <text class="badge-progress">{{ progressLabel(item) }}</text>
         </view>
-        <text v-else-if="isCompleted(item)" class="badge-unlocked">已解锁</text>
+        <text v-else-if="isCompleted(item)" class="badge-unlocked">{{ t('common.statusUnlocked') }}</text>
       </view>
     </view>
   </view>
@@ -65,19 +63,24 @@ import type { BadgeCatalogItem } from '@douxing/shared';
 import { BadgeCategory } from '@douxing/shared';
 import { fetchBadgeCatalog } from '@/api/badges';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 
-const categoryOptions = [
-  { key: 'all', label: '全部' },
-  { key: BadgeCategory.CITY, label: '城市' },
-  { key: BadgeCategory.ACHIEVEMENT, label: '成就' },
-  { key: BadgeCategory.SPECIAL, label: '特殊' },
-];
+usePageTitle('nav.badges');
+const { t, tf } = useTf();
 
-const unlockOptions = [
-  { key: 'all', label: '全部状态' },
-  { key: 'unlocked', label: '已解锁' },
-  { key: 'locked', label: '未解锁' },
-];
+const categoryOptions = computed(() => [
+  { key: 'all', label: t('common.filterAll') },
+  { key: BadgeCategory.CITY, label: t('badgeCategory.city') },
+  { key: BadgeCategory.ACHIEVEMENT, label: t('badgeCategory.achievement') },
+  { key: BadgeCategory.SPECIAL, label: t('badgeCategory.special') },
+]);
+
+const unlockOptions = computed(() => [
+  { key: 'all', label: t('common.statusAll') },
+  { key: 'unlocked', label: t('common.statusUnlocked') },
+  { key: 'locked', label: t('common.statusLocked') },
+]);
 
 const badgeCatalog = ref<BadgeCatalogItem[]>([]);
 const activeCategory = ref('all');
@@ -115,9 +118,17 @@ function progressPercent(item: BadgeCatalogItem) {
   return Math.min(100, Math.round((progress.current / progress.target) * 100));
 }
 
+function progressLabel(item: BadgeCatalogItem) {
+  const progress = item.progress!;
+  return tf('achievements.progressLabel', {
+    current: progress.current,
+    target: progress.target,
+  });
+}
+
 onShow(async () => {
   if (!getStoredUser()) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
+    uni.showToast({ title: t('common.loginRequired'), icon: 'none' });
     setTimeout(() => uni.navigateBack(), 800);
     return;
   }
@@ -127,7 +138,7 @@ onShow(async () => {
     badgeCatalog.value = await fetchBadgeCatalog();
   } catch {
     badgeCatalog.value = [];
-    uni.showToast({ title: '加载失败', icon: 'none' });
+    uni.showToast({ title: t('common.loadFailed'), icon: 'none' });
   } finally {
     loading.value = false;
   }

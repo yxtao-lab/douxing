@@ -2,13 +2,13 @@
   <div class="page">
     <div class="page-head">
       <div>
-        <h2>打卡地图</h2>
-        <p class="desc">管理员查看全平台打卡足迹，照片显示在坐标点正上方</p>
+        <h2>{{ t('checkinMap.title') }}</h2>
+        <p class="desc">{{ t('checkinMap.desc') }}</p>
       </div>
       <div class="head-actions">
-        <button class="btn-secondary" @click="resetMapView">全国视图</button>
-        <button class="btn-secondary" @click="loadList">刷新</button>
-        <router-link class="btn-link" to="/checkins">列表视图</router-link>
+        <button class="btn-secondary" @click="resetMapView">{{ t('checkinMap.nationalView') }}</button>
+        <button class="btn-secondary" @click="loadList">{{ t('common.refresh') }}</button>
+        <router-link class="btn-link" to="/checkins">{{ t('checkinMap.listLink') }}</router-link>
       </div>
     </div>
 
@@ -25,8 +25,8 @@
         </button>
       </div>
       <p class="stats">
-        {{ filteredList.length }} 个足迹 · {{ totalPoints }} 积分
-        <span v-if="hiddenCount > 0" class="hint">（{{ hiddenCount }} 个无坐标未显示）</span>
+        {{ statsLine }}
+        <span v-if="hiddenCount > 0" class="hint">{{ hiddenHint }}</span>
       </p>
     </div>
 
@@ -40,12 +40,12 @@
           :selected-id="selectedId"
           @select="selectedId = $event"
         />
-        <p v-else class="loading">加载中…</p>
+        <p v-else class="loading">{{ t('common.loading') }}</p>
       </div>
 
       <aside class="side-panel">
-        <h3>足迹列表</h3>
-        <p v-if="filteredList.length === 0" class="empty">该时段暂无打卡</p>
+        <h3>{{ t('checkinMap.listTitle') }}</h3>
+        <p v-if="filteredList.length === 0" class="empty">{{ t('checkinMap.empty') }}</p>
         <button
           v-for="item in filteredList"
           :key="item.id"
@@ -60,9 +60,9 @@
             alt=""
           />
           <div class="timeline-body">
-            <strong>{{ item.location.placeName || '未知地点' }}</strong>
-            <span>用户 {{ item.userId }} · {{ formatTime(item.checkedAt) }}</span>
-            <span>+{{ item.pointsEarned }} 积分 · {{ item.city || item.cityCode || '-' }}</span>
+            <strong>{{ item.location.placeName || t('common.unknownPlace') }}</strong>
+            <span>{{ userLine(item) }}</span>
+            <span>{{ pointsCityLine(item) }}</span>
           </div>
         </button>
       </aside>
@@ -73,6 +73,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { CheckInInfo } from '@douxing/shared';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
@@ -85,7 +86,14 @@ import {
 import { fetchAllCheckInsForMap } from '@/api/checkins';
 import CheckInMap from '@/components/CheckInMap.vue';
 
-const timeRangeOptions = CHECKIN_TIME_RANGE_OPTIONS;
+const { t } = useI18n();
+
+const timeRangeOptions = computed(() =>
+  CHECKIN_TIME_RANGE_OPTIONS.map((opt) => ({
+    key: opt.key,
+    label: t(opt.labelKey),
+  })),
+);
 const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
 const selectedId = ref<number | null>(null);
@@ -98,8 +106,27 @@ const hiddenCount = computed(
   () => filteredList.value.length - getCheckInsWithCoords(filteredList.value).length,
 );
 
+const statsLine = computed(() =>
+  t('checkinMap.stats', { count: filteredList.value.length, points: totalPoints.value }),
+);
+
+const hiddenHint = computed(() =>
+  hiddenCount.value > 0 ? t('checkinMap.hiddenNoCoords', { count: hiddenCount.value }) : '',
+);
+
 function formatTime(iso: string) {
   return formatCheckInTime(iso);
+}
+
+function userLine(item: CheckInInfo) {
+  return t('checkinMap.userLine', { userId: item.userId, time: formatTime(item.checkedAt) });
+}
+
+function pointsCityLine(item: CheckInInfo) {
+  return t('checkinMap.pointsCity', {
+    points: item.pointsEarned,
+    city: item.city || item.cityCode || '-',
+  });
 }
 
 async function loadList() {
@@ -109,7 +136,7 @@ async function loadList() {
     allList.value = await fetchAllCheckInsForMap();
   } catch (e) {
     allList.value = [];
-    error.value = e instanceof Error ? e.message : '加载失败';
+    error.value = e instanceof Error ? e.message : t('common.loadFailed');
   } finally {
     loading.value = false;
   }

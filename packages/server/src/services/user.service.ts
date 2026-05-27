@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { users, roles, userRoles } from '../db/schema/index.js';
 import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
-import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel } from '@douxing/shared';
+import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel, ApiError, ApiMessageKey } from '@douxing/shared';
 import { rewritePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 
 const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
@@ -82,7 +82,7 @@ export async function updateUserProfile(
 
   if (input.nickname !== undefined) {
     const nickname = input.nickname.trim();
-    if (!nickname) throw new Error('昵称不能为空');
+    if (!nickname) throw new ApiError(ApiMessageKey.NICKNAME_REQUIRED);
     patch.nickname = nickname;
   }
 

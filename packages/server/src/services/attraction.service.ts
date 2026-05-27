@@ -6,6 +6,8 @@ import {
   AttractionSource,
   AttractionPriceSource,
   AttractionCategory,
+  ApiError,
+  ApiMessageKey,
 } from '@douxing/shared';
 import type { AttractionInfo, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
@@ -208,7 +210,7 @@ export async function approveAttraction(id: number) {
   const row = rows[0];
   if (!row) return null;
   if (row.status !== AttractionStatus.PENDING) {
-    throw new Error('仅待审核景点可通过审核');
+    throw new ApiError(ApiMessageKey.ATTRACTION_APPROVE_PENDING_ONLY);
   }
 
   const now = new Date();

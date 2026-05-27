@@ -1,4 +1,5 @@
 import { transcribeAudioFile } from '@/api/speech';
+import { mobileT } from '@/i18n/mobileT';
 import {
   bindSpeechSession,
   type SpeechToTextHandlers,
@@ -58,22 +59,22 @@ function ensureRecorderHooks() {
     }
 
     if (!res.tempFilePath) {
-      handlers.onError('录音失败，请重试');
+      handlers.onError(mobileT('speech.recordingFailed'));
       handlers.onEnd?.();
       return;
     }
 
-    uni.showLoading({ title: '识别中...', mask: true });
+    uni.showLoading({ title: mobileT('speech.transcribing'), mask: true });
 
     try {
       const text = await transcribeAudioFile(res.tempFilePath);
       if (text.trim()) {
         handlers.onFinal(text.trim());
       } else {
-        handlers.onError('未识别到语音，请重试');
+        handlers.onError(mobileT('speech.noSpeechRetry'));
       }
     } catch (e) {
-      handlers.onError(e instanceof Error ? e.message : '语音识别失败');
+      handlers.onError(e instanceof Error ? e.message : mobileT('speech.transcribeFailed'));
     } finally {
       uni.hideLoading();
       handlers.onEnd?.();
@@ -86,7 +87,7 @@ function ensureRecorderHooks() {
     activeHandlers = null;
     sessionState = null;
     if (!handlers) return;
-    handlers.onError('录音失败，请检查麦克风权限');
+    handlers.onError(mobileT('speech.recordingMicCheck'));
     handlers.onEnd?.();
   });
 }
@@ -115,7 +116,7 @@ export async function startRecorderSpeechToText(
   try {
     await ensurePermission();
   } catch (e) {
-    handlers.onError(e instanceof Error ? e.message : '麦克风权限未开启');
+    handlers.onError(e instanceof Error ? e.message : mobileT('speech.micDenied'));
     handlers.onEnd?.();
     return null;
   }
@@ -145,7 +146,7 @@ export async function startRecorderSpeechToText(
   } catch {
     activeHandlers = null;
     sessionState = null;
-    handlers.onError('无法启动录音');
+    handlers.onError(mobileT('speech.cannotStartRecording'));
     handlers.onEnd?.();
     return null;
   }

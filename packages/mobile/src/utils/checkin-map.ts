@@ -1,12 +1,13 @@
 import type { CheckInInfo } from '@douxing/shared';
+import { mobileT } from '@/i18n/mobileT';
 
 export type CheckInTimeRange = 'all' | '7d' | '30d' | '90d';
 
-export const CHECKIN_TIME_RANGE_OPTIONS: Array<{ key: CheckInTimeRange; label: string }> = [
-  { key: 'all', label: '全部' },
-  { key: '7d', label: '近7天' },
-  { key: '30d', label: '近30天' },
-  { key: '90d', label: '近90天' },
+export const CHECKIN_TIME_RANGE_OPTIONS: Array<{ key: CheckInTimeRange; labelKey: string }> = [
+  { key: 'all', labelKey: 'checkins.rangeAll' },
+  { key: '7d', labelKey: 'checkins.range7d' },
+  { key: '30d', labelKey: 'checkins.range30d' },
+  { key: '90d', labelKey: 'checkins.range90d' },
 ];
 
 const RANGE_DAYS: Record<Exclude<CheckInTimeRange, 'all'>, number> = {
@@ -68,7 +69,7 @@ export type MapPolyline = {
 export function buildMapMarkers(items: CheckInInfo[]): MapMarker[] {
   return getCheckInsWithCoords(items).map((item) => {
     const photoUrl = item.photos[0];
-    const title = item.location.placeName || '打卡点';
+    const title = item.location.placeName || mobileT('checkins.mapMarkerFallback');
     const base = {
       id: item.id,
       latitude: item.location.latitude!,
@@ -95,7 +96,7 @@ export function buildMapMarkers(items: CheckInInfo[]): MapMarker[] {
       width: 28,
       height: 28,
       callout: {
-        content: `${title}\n+${item.pointsEarned} 积分`,
+        content: `${title}\n${mobileT('checkins.mapCalloutPoints', { points: item.pointsEarned })}`,
         display: 'BYCLICK' as const,
         padding: 8,
         borderRadius: 6,

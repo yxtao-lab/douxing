@@ -24,6 +24,19 @@ export function shouldAutoCompleteAfterPay(orderType: string): boolean {
   return orderType === OrderType.ROUTE;
 }
 
+const ORDER_STATUS_I18N_KEY: Record<number, string> = {
+  [OrderStatus.PENDING]: 'orderStatus.pending',
+  [OrderStatus.PAID]: 'orderStatus.paid',
+  [OrderStatus.COMPLETED]: 'orderStatus.completed',
+  [OrderStatus.CANCELLED]: 'orderStatus.cancelled',
+};
+
+/** 返回订单状态 i18n 键（组件内配合 `t()` 使用） */
+export function getOrderStatusI18nKey(status: number): string {
+  return ORDER_STATUS_I18N_KEY[status] ?? ORDER_STATUS_I18N_KEY[OrderStatus.PENDING]!;
+}
+
+/** @deprecated 请使用 getOrderStatusI18nKey + t() */
 export function getOrderStatusLabel(status: number): string {
   if (status === OrderStatus.PAID) return '已支付';
   if (status === OrderStatus.COMPLETED) return '已完成';

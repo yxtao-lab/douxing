@@ -4,6 +4,7 @@ import {
   type SpeechToTextSession,
 } from './speech-to-text.shared';
 import { startRecorderSpeechToText } from './speech-to-text.recorder-upload';
+import { mobileT } from '@/i18n/mobileT';
 
 export type { SpeechToTextHandlers, SpeechToTextSession };
 export { stopSpeechToText };
@@ -27,10 +28,10 @@ function getPlusRuntime(): PlusRuntime | undefined {
 function promptOpenAppSettings(): Promise<boolean> {
   return new Promise((resolve) => {
     uni.showModal({
-      title: '需要麦克风权限',
-      content: '语音输入需使用麦克风，请在系统设置中为本 App 开启麦克风权限。',
-      confirmText: '去设置',
-      cancelText: '取消',
+      title: mobileT('speech.micPermissionTitle'),
+      content: mobileT('speech.micPermissionContentApp'),
+      confirmText: mobileT('common.goSettings'),
+      cancelText: mobileT('common.cancel'),
       success: (modalRes) => {
         if (!modalRes.confirm) {
           resolve(false);
@@ -63,9 +64,9 @@ function requestAndroidRecordPermission(): Promise<void> {
           resolve();
           return;
         }
-        reject(new Error('麦克风权限未开启'));
+        reject(new Error(mobileT('speech.micDenied')));
       },
-      () => reject(new Error('麦克风权限未开启')),
+      () => reject(new Error(mobileT('speech.micDenied'))),
     );
   });
 }
@@ -80,19 +81,18 @@ async function ensureAppRecordPermission(): Promise<void> {
     } catch {
       const opened = await promptOpenAppSettings();
       if (!opened) {
-        throw new Error('麦克风权限未开启');
+        throw new Error(mobileT('speech.micDenied'));
       }
       return;
     }
   }
 
-  // iOS 首次录音时系统会弹窗；此处仅做授权状态检查
   if (typeof uni.getAppAuthorizeSetting === 'function') {
     const setting = uni.getAppAuthorizeSetting();
     if (setting.microphoneAuthorized === 'denied') {
       const opened = await promptOpenAppSettings();
       if (!opened) {
-        throw new Error('麦克风权限未开启');
+        throw new Error(mobileT('speech.micDenied'));
       }
     }
   }

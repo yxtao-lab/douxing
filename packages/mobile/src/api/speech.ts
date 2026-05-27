@@ -1,5 +1,6 @@
 import { getApiBaseUrl } from '@/utils/api-base';
 import { getStoredToken } from '@/utils/auth-storage';
+import { mobileT } from '@/i18n/mobileT';
 
 export function transcribeAudioFile(filePath: string): Promise<string> {
   const token = getStoredToken();
@@ -21,13 +22,13 @@ export function transcribeAudioFile(filePath: string): Promise<string> {
             resolve(body.data.text);
             return;
           }
-          reject(new Error(body.message || '语音识别失败'));
+          reject(new Error(body.message || mobileT('speech.transcribeFailed')));
         } catch {
-          reject(new Error('响应格式错误'));
+          reject(new Error(mobileT('common.invalidResponse')));
         }
       },
       fail: (err) => {
-        reject(new Error(err.errMsg || '上传失败'));
+        reject(new Error(err.errMsg || mobileT('common.uploadFailed')));
       },
     });
   });

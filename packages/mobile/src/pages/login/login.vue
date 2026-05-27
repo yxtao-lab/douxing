@@ -131,7 +131,7 @@ async function handleSendCode() {
   devCodeHint.value = '';
 
   if (!validatePhone(phone.value)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('login.invalidPhone');
     return;
   }
 
@@ -144,10 +144,10 @@ async function handleSendCode() {
     if (data.devCode) {
       devCodeHint.value = data.devCode;
     }
-    uni.showToast({ title: '验证码已发送', icon: 'success' });
+    uni.showToast({ title: t('login.smsSent'), icon: 'success' });
     startCountdown();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '发送失败';
+    error.value = e instanceof Error ? e.message : t('login.sendFailed');
   } finally {
     sendingCode.value = false;
   }
@@ -156,11 +156,11 @@ async function handleSendCode() {
 async function handleSmsLogin() {
   error.value = '';
   if (!validatePhone(phone.value)) {
-    error.value = '请输入正确的手机号';
+    error.value = t('login.invalidPhone');
     return;
   }
   if (!/^\d{6}$/.test(smsCode.value)) {
-    error.value = '请输入6位验证码';
+    error.value = t('login.invalidCodeLength');
     return;
   }
 
@@ -171,12 +171,12 @@ async function handleSmsLogin() {
       data: { phone: phone.value, code: smsCode.value },
     });
     setAuth(data.token, data.user);
-    uni.showToast({ title: '登录成功', icon: 'success' });
+    uni.showToast({ title: t('login.loginSuccess'), icon: 'success' });
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/index/index' });
     }, 500);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '登录失败';
+    error.value = e instanceof Error ? e.message : t('login.loginFailed');
   } finally {
     loading.value = false;
   }
@@ -192,12 +192,15 @@ async function handlePasswordSubmit() {
       data: { username: username.value, password: password.value },
     });
     setAuth(data.token, data.user);
-    uni.showToast({ title: isRegister.value ? '注册成功' : '登录成功', icon: 'success' });
+    uni.showToast({
+      title: isRegister.value ? t('login.registerSuccess') : t('login.loginSuccess'),
+      icon: 'success',
+    });
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/index/index' });
     }, 500);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : '操作失败';
+    error.value = e instanceof Error ? e.message : t('common.operationFailed');
   } finally {
     loading.value = false;
   }

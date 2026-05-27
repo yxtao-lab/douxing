@@ -1,19 +1,19 @@
 <template>
   <div class="routes-page">
-    <h2>路线管理</h2>
-    <p class="desc">查看平台全部用户路线（MVP 管理端）</p>
+    <h2>{{ t('routes.title') }}</h2>
+    <p class="desc">{{ t('routes.desc') }}</p>
     <table class="table" v-if="routes.length">
       <thead>
         <tr>
           <th>ID</th>
-          <th>名称</th>
-          <th>天数</th>
-          <th>预算</th>
-          <th>状态</th>
-          <th>浏览</th>
-          <th>点赞</th>
-          <th>收藏</th>
-          <th>创建者</th>
+          <th>{{ t('routes.colName') }}</th>
+          <th>{{ t('routes.colDays') }}</th>
+          <th>{{ t('routes.colBudget') }}</th>
+          <th>{{ t('routes.colStatus') }}</th>
+          <th>{{ t('routes.colViews') }}</th>
+          <th>{{ t('routes.colLikes') }}</th>
+          <th>{{ t('routes.colFavorites') }}</th>
+          <th>{{ t('routes.colCreator') }}</th>
         </tr>
       </thead>
       <tbody>
@@ -30,22 +30,24 @@
         </tr>
       </tbody>
     </table>
-    <p v-else class="empty">暂无数据</p>
+    <p v-else class="empty">{{ t('common.noData') }}</p>
   </div>
 </template>
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
 import { fetchAllRoutes } from '@/api/routes';
 
+const { t } = useI18n();
 const routes = ref<TravelRouteInfo[]>([]);
 
 function statusLabel(status: number) {
-  if (status === RouteStatus.PUBLISHED) return '已发布';
-  if (status === RouteStatus.ARCHIVED) return '已归档';
-  return '草稿';
+  if (status === RouteStatus.PUBLISHED) return t('routeStatus.published');
+  if (status === RouteStatus.ARCHIVED) return t('routeStatus.archived');
+  return t('routeStatus.draft');
 }
 
 onMounted(async () => {

@@ -13,10 +13,10 @@
         </view>
       </scroll-view>
       <view class="stats">
-        <text>{{ filteredList.length }} 个足迹</text>
+        <text>{{ footprintStats }}</text>
         <text class="dot">·</text>
-        <text>{{ totalPoints }} 积分</text>
-        <text v-if="hiddenCount > 0" class="hint">（{{ hiddenCount }} 个无坐标未显示）</text>
+        <text>{{ totalPoints }} {{ t('common.points') }}</text>
+        <text v-if="hiddenCount > 0" class="hint">{{ hiddenHint }}</text>
       </view>
     </view>
 
@@ -56,17 +56,17 @@
         <!-- #endif -->
       </map>
       <view v-if="filteredList.length === 0" class="map-empty">
-        <text>该时段暂无打卡足迹</text>
+        <text>{{ t('checkins.mapEmpty') }}</text>
       </view>
     </view>
 
     <view v-if="selectedItem" class="detail-card">
       <view class="detail-head">
-        <text class="detail-place">{{ selectedItem.location.placeName || '未知地点' }}</text>
-        <text class="detail-points">+{{ selectedItem.pointsEarned }} 积分</text>
+        <text class="detail-place">{{ placeLabel(selectedItem) }}</text>
+        <text class="detail-points">{{ pointsLabel(selectedItem.pointsEarned) }}</text>
       </view>
       <text class="detail-meta">
-        {{ selectedItem.city || selectedItem.cityCode || '未知城市' }} · {{ formatTime(selectedItem.checkedAt) }}
+        {{ cityLabel(selectedItem) }} · {{ formatTime(selectedItem.checkedAt) }}
       </text>
       <text v-if="selectedItem.remark" class="detail-remark">{{ selectedItem.remark }}</text>
       <view v-if="selectedItem.photos.length > 0" class="detail-photos">
@@ -82,7 +82,7 @@
     </view>
 
     <scroll-view scroll-y class="timeline" :class="{ compact: !!selectedItem }">
-      <view v-if="filteredList.length === 0" class="timeline-empty">切换时间范围或去路线详情打卡</view>
+      <view v-if="filteredList.length === 0" class="timeline-empty">{{ t('checkins.timelineEmpty') }}</view>
       <view
         v-for="item in filteredList"
         :key="item.id"
@@ -92,16 +92,14 @@
       >
         <view class="timeline-dot" />
         <view class="timeline-body">
-          <text class="timeline-place">{{ item.location.placeName || '未知地点' }}</text>
-          <text class="timeline-meta">
-            {{ formatTime(item.checkedAt) }} · +{{ item.pointsEarned }} 积分
-          </text>
+          <text class="timeline-place">{{ placeLabel(item) }}</text>
+          <text class="timeline-meta">{{ timelineMeta(item) }}</text>
         </view>
       </view>
     </scroll-view>
 
     <view class="footer-actions">
-      <button class="btn-secondary" @click="goList">列表视图</button>
+      <button class="btn-secondary" @click="goList">{{ t('common.listView') }}</button>
     </view>
   </view>
 </template>
@@ -112,6 +110,8 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import type { CheckInInfo } from '@douxing/shared';
 import { fetchCheckIns } from '@/api/checkins';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
@@ -127,9 +127,17 @@ import {
   getCheckInsWithCoords,
 } from '@/utils/checkin-map';
 
+usePageTitle('nav.checkinMap');
+const { t, tf } = useTf();
+
 const isMpWeixin = process.env.UNI_PLATFORM === 'mp-weixin';
 
-const timeRangeOptions = CHECKIN_TIME_RANGE_OPTIONS;
+const timeRangeOptions = computed(() =>
+  CHECKIN_TIME_RANGE_OPTIONS.map((opt) => ({
+    key: opt.key,
+    label: t(opt.labelKey),
+  })),
+);
 const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
 const selectedId = ref<number | null>(null);
@@ -139,6 +147,12 @@ const overrideCenter = ref<{ latitude: number; longitude: number } | null>(null)
 
 const filteredList = computed(() => filterCheckInsByTimeRange(allList.value, timeRange.value));
 const totalPoints = computed(() => sumCheckInPoints(filteredList.value));
+const footprintStats = computed(() =>
+  tf('checkins.footprintCount', { count: filteredList.value.length }),
+);
+const hiddenHint = computed(() =>
+  hiddenCount.value > 0 ? tf('checkins.hiddenNoCoords', { count: hiddenCount.value }) : '',
+);
 const markers = computed(() => buildMapMarkers(filteredList.value));
 const displayMarkers = computed(() =>
   isMpWeixin ? markers.value : buildMapMarkersWithPhotoIcon(filteredList.value),
@@ -165,6 +179,25 @@ const selectedItem = computed(() =>
     ? null
     : filteredList.value.find((item) => item.id === selectedId.value) ?? null,
 );
+
+function placeLabel(item: CheckInInfo) {
+  return item.location.placeName || t('common.unknownPlace');
+}
+
+function cityLabel(item: CheckInInfo) {
+  return item.city || item.cityCode || t('common.unknownCity');
+}
+
+function pointsLabel(points: number) {
+  return tf('checkins.pointsEarned', { points });
+}
+
+function timelineMeta(item: CheckInInfo) {
+  return tf('checkins.timelineMeta', {
+    time: formatTime(item.checkedAt),
+    points: item.pointsEarned,
+  });
+}
 
 function formatTime(iso: string) {
   return formatCheckInTime(iso);
@@ -234,7 +267,7 @@ function goList() {
 
 onLoad((query) => {
   const range = String(query?.range ?? '');
-  if (timeRangeOptions.some((opt) => opt.key === range)) {
+  if (CHECKIN_TIME_RANGE_OPTIONS.some((opt) => opt.key === range)) {
     timeRange.value = range as CheckInTimeRange;
   }
 });

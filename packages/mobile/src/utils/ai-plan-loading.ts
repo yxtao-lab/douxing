@@ -15,7 +15,7 @@ export function isAiPlanCancelledError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
   if (isRequestAbortedError(err.message)) return true;
   const msg = err.message;
-  return msg === getAiPlanCancelledMessage() || msg === '已取消路线规划';
+  return msg === getAiPlanCancelledMessage();
 }
 
 const state = reactive({

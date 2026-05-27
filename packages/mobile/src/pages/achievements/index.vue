@@ -2,7 +2,7 @@
   <view class="page">
     <view class="summary">
       <text class="summary-count">{{ unlockedCount }}/{{ achievementCatalog.length }}</text>
-      <text class="summary-label">已解锁成就</text>
+      <text class="summary-label">{{ t('achievements.unlockedSummary') }}</text>
     </view>
 
     <scroll-view scroll-x class="filters" :show-scrollbar="false">
@@ -29,8 +29,8 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">加载中...</view>
-    <view v-else-if="filteredAchievements.length === 0" class="empty">该筛选条件下暂无成就</view>
+    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
+    <view v-else-if="filteredAchievements.length === 0" class="empty">{{ t('achievements.emptyFilter') }}</view>
     <view v-else class="achievement-list">
       <view
         v-for="item in filteredAchievements"
@@ -42,16 +42,14 @@
         <view class="achievement-body">
           <view class="achievement-head">
             <text class="achievement-name">{{ item.name }}</text>
-            <text v-if="isCompleted(item)" class="achievement-tag">已解锁</text>
+            <text v-if="isCompleted(item)" class="achievement-tag">{{ t('common.statusUnlocked') }}</text>
           </view>
           <text class="achievement-desc">{{ item.description }}</text>
           <view v-if="!isCompleted(item) && item.progress" class="progress-wrap">
             <view class="progress-bar">
               <view class="progress-fill" :style="{ width: progressPercent(item) + '%' }" />
             </view>
-            <text class="achievement-progress">
-              进度 {{ item.progress.current }}/{{ item.progress.target }}
-            </text>
+            <text class="achievement-progress">{{ progressLabel(item) }}</text>
           </view>
         </view>
       </view>
@@ -66,18 +64,23 @@ import type { AchievementCatalogItem } from '@douxing/shared';
 import { AchievementCategory } from '@douxing/shared';
 import { fetchAchievementCatalog } from '@/api/achievements';
 import { getStoredUser } from '@/utils/request';
+import { useTf } from '@/i18n/useTf';
+import { usePageTitle } from '@/i18n/usePageTitle';
 
-const categoryOptions = [
-  { key: 'all', label: '全部' },
-  { key: AchievementCategory.EXPLORE, label: '探索' },
-  { key: AchievementCategory.CHALLENGE, label: '挑战' },
-];
+usePageTitle('nav.achievements');
+const { t, tf } = useTf();
 
-const unlockOptions = [
-  { key: 'all', label: '全部状态' },
-  { key: 'unlocked', label: '已解锁' },
-  { key: 'locked', label: '未解锁' },
-];
+const categoryOptions = computed(() => [
+  { key: 'all', label: t('common.filterAll') },
+  { key: AchievementCategory.EXPLORE, label: t('achievementCategory.explore') },
+  { key: AchievementCategory.CHALLENGE, label: t('achievementCategory.challenge') },
+]);
+
+const unlockOptions = computed(() => [
+  { key: 'all', label: t('common.statusAll') },
+  { key: 'unlocked', label: t('common.statusUnlocked') },
+  { key: 'locked', label: t('common.statusLocked') },
+]);
 
 const achievementCatalog = ref<AchievementCatalogItem[]>([]);
 const activeCategory = ref('all');
@@ -117,9 +120,17 @@ function progressPercent(item: AchievementCatalogItem) {
   return Math.min(100, Math.round((progress.current / progress.target) * 100));
 }
 
+function progressLabel(item: AchievementCatalogItem) {
+  const progress = item.progress!;
+  return tf('achievements.progressLabel', {
+    current: progress.current,
+    target: progress.target,
+  });
+}
+
 onShow(async () => {
   if (!getStoredUser()) {
-    uni.showToast({ title: '请先登录', icon: 'none' });
+    uni.showToast({ title: t('common.loginRequired'), icon: 'none' });
     setTimeout(() => uni.navigateBack(), 800);
     return;
   }
@@ -129,7 +140,7 @@ onShow(async () => {
     achievementCatalog.value = await fetchAchievementCatalog();
   } catch {
     achievementCatalog.value = [];
-    uni.showToast({ title: '加载失败', icon: 'none' });
+    uni.showToast({ title: t('common.loadFailed'), icon: 'none' });
   } finally {
     loading.value = false;
   }

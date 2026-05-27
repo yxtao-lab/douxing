@@ -4,6 +4,7 @@ import {
   type SpeechToTextSession,
 } from './speech-to-text.shared';
 import { startRecorderSpeechToText } from './speech-to-text.recorder-upload';
+import { mobileT } from '@/i18n/mobileT';
 
 export type { SpeechToTextHandlers, SpeechToTextSession };
 export { stopSpeechToText };
@@ -32,10 +33,10 @@ function requestRecordAuthorize(): Promise<boolean> {
 function promptOpenRecordSettings(): Promise<boolean> {
   return new Promise((resolve) => {
     uni.showModal({
-      title: '需要麦克风权限',
-      content: '语音输入需使用麦克风，请在设置中开启「录音」权限。',
-      confirmText: '去设置',
-      cancelText: '取消',
+      title: mobileT('speech.micPermissionTitle'),
+      content: mobileT('speech.micPermissionContentMp'),
+      confirmText: mobileT('common.goSettings'),
+      cancelText: mobileT('common.cancel'),
       success: (modalRes) => {
         if (!modalRes.confirm) {
           resolve(false);
@@ -60,7 +61,7 @@ async function ensureWeixinRecordPermission(): Promise<void> {
   if (auth['scope.record'] === false) {
     const opened = await promptOpenRecordSettings();
     if (!opened) {
-      throw new Error('麦克风权限未开启');
+      throw new Error(mobileT('speech.micDenied'));
     }
     return;
   }
@@ -70,7 +71,7 @@ async function ensureWeixinRecordPermission(): Promise<void> {
 
   const opened = await promptOpenRecordSettings();
   if (!opened) {
-    throw new Error('麦克风权限未开启');
+    throw new Error(mobileT('speech.micDenied'));
   }
 }
 

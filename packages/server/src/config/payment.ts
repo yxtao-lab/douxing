@@ -1,4 +1,4 @@
-import { PaymentChannel } from '@douxing/shared';
+import { PaymentChannel, ApiError, ApiMessageKey } from '@douxing/shared';
 
 export type PaymentMode = 'mock' | 'wechat' | 'auto';
 
@@ -26,10 +26,10 @@ export function resolvePaymentChannel(wxCode?: string): typeof PaymentChannel.MO
   if (mode === 'mock') return PaymentChannel.MOCK;
   if (mode === 'wechat') {
     if (!isWechatPayConfigured()) {
-      throw new Error('未配置微信支付，请检查环境变量');
+      throw new ApiError(ApiMessageKey.WECHAT_PAY_NOT_CONFIGURED);
     }
     if (!wxCode) {
-      throw new Error('请在微信小程序内完成支付');
+      throw new ApiError(ApiMessageKey.WECHAT_PAY_MP_ONLY);
     }
     return PaymentChannel.WECHAT_JSAPI;
   }
