@@ -1,4 +1,9 @@
-import type { PlanChatMessage, TravelIntentSnapshot } from '@douxing/shared';
+import type {
+  LodgingTier,
+  PlanChatMessage,
+  TransportPreference,
+  TravelIntentSnapshot,
+} from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 
@@ -15,6 +20,72 @@ const CN_DAY_NUM: Record<string, number> = {
   七: 7,
 };
 
+const TRANSPORT_KEYWORDS: Array<{ pattern: RegExp; value: TransportPreference }> = [
+  { pattern: /高铁|动车|火车|铁路/, value: 'high_speed_rail' },
+  { pattern: /飞机|航班|坐飞机|航空/, value: 'flight' },
+  { pattern: /自驾|开车|租车/, value: 'self_drive' },
+  { pattern: /大巴|巴士/, value: 'train' },
+];
+
+const LODGING_AREA_PATTERNS = [
+  /住(?:在)?([\u4e00-\u9fa5]{2,8}(?:边|附近|商圈|景区|周围))/,
+  /(?:靠近|临近)([\u4e00-\u9fa5]{2,8})/,
+  /([\u4e00-\u9fa5]{2,6})附近(?:住|酒店)/,
+];
+
+const LODGING_TIER_KEYWORDS: Array<{ pattern: RegExp; value: LodgingTier }> = [
+  { pattern: /经济型|快捷|青旅|民宿|穷游住/, value: 'budget' },
+  { pattern: /豪华|奢华|五星|高星|精品酒店/, value: 'luxury' },
+  { pattern: /舒适|四星|中档/, value: 'comfort' },
+];
+
+function detectTransportPreference(text: string): TransportPreference | null {
+  for (const { pattern, value } of TRANSPORT_KEYWORDS) {
+    if (pattern.test(text)) return value;
+  }
+  return null;
+}
+
+function detectLodgingArea(text: string): string | null {
+  for (const pattern of LODGING_AREA_PATTERNS) {
+    const match = text.match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+  return null;
+}
+
+function detectLodgingTier(text: string): LodgingTier | null {
+  for (const { pattern, value } of LODGING_TIER_KEYWORDS) {
+    if (pattern.test(text)) return value;
+  }
+  return null;
+}
+
+function detectMultiCities(text: string): string[] {
+  const found: string[] = [];
+  for (const city of KNOWN_CITIES) {
+    if (text.includes(city) && !found.includes(city)) {
+      found.push(city);
+    }
+  }
+  return found;
+}
+
+function mergeTransportPreference(
+  current: TransportPreference | null | undefined,
+  next: TransportPreference | null,
+): TransportPreference | null {
+  if (next) return next;
+  return current ?? null;
+}
+
+function mergeLodgingTier(
+  current: LodgingTier | null | undefined,
+  next: LodgingTier | null,
+): LodgingTier | null {
+  if (next && next !== 'any') return next;
+  return current ?? null;
+}
 const THEME_KEYWORDS: Record<string, string> = {
   亲子: '亲子',
   带娃: '亲子',
@@ -205,7 +276,29 @@ export function createEmptyIntent(): TravelIntentSnapshot {
     budgetMax: null,
     themes: [],
     confidence: 'low',
+    transportPreference: null,
+    lodgingArea: null,
+    lodgingTier: null,
+    cities: [],
   };
+}
+
+function applyH9Fields(intent: TravelIntentSnapshot, text: string): void {
+  const transport = detectTransportPreference(text);
+  intent.transportPreference = mergeTransportPreference(intent.transportPreference, transport);
+
+  const area = detectLodgingArea(text);
+  if (area) intent.lodgingArea = area;
+
+  const tier = detectLodgingTier(text);
+  intent.lodgingTier = mergeLodgingTier(intent.lodgingTier, tier);
+
+  const multi = detectMultiCities(text);
+  if (multi.length >= 2) {
+    intent.cities = multi;
+  } else if (intent.city && !intent.cities?.length) {
+    intent.cities = [intent.city];
+  }
 }
 
 /** 从单条自然语言中抽取旅行意图 */
@@ -220,8 +313,13 @@ export function parseTravelIntent(text: string): TravelIntentSnapshot {
     budgetMax: budget.max,
     themes: detectThemes(trimmed),
     confidence: 'low',
+    transportPreference: null,
+    lodgingArea: null,
+    lodgingTier: null,
+    cities: [],
   };
   intent.confidence = computeConfidence(intent);
+  applyH9Fields(intent, trimmed);
   return intent;
 }
 
@@ -267,6 +365,19 @@ export function buildIntentFromConversation(
       if (parsed.themes.length > 0) {
         intent.themes = uniqueThemes([...intent.themes, ...parsed.themes]);
       }
+      if (parsed.transportPreference) {
+        intent.transportPreference = mergeTransportPreference(
+          intent.transportPreference,
+          parsed.transportPreference,
+        );
+      }
+      if (parsed.lodgingArea) intent.lodgingArea = parsed.lodgingArea;
+      if (parsed.lodgingTier) {
+        intent.lodgingTier = mergeLodgingTier(intent.lodgingTier, parsed.lodgingTier);
+      }
+      if (parsed.cities && parsed.cities.length >= 2) {
+        intent.cities = parsed.cities;
+      }
     }
   }
 
@@ -279,6 +390,8 @@ export function buildIntentFromConversation(
   }
 
   intent.confidence = computeConfidence(intent);
+  const fullText = messages.join('；');
+  applyH9Fields(intent, fullText);
   return intent;
 }
 
@@ -300,6 +413,10 @@ export function formatIntentSummary(intent: TravelIntentSnapshot): string {
   if (intent.days != null) parts.push(`${intent.days}天`);
   if (intent.budget) parts.push(`预算${intent.budget}`);
   if (intent.themes.length > 0) parts.push(intent.themes.join('·'));
+  if (intent.transportPreference && intent.transportPreference !== 'any') {
+    parts.push(`交通:${intent.transportPreference}`);
+  }
+  if (intent.lodgingArea) parts.push(`住${intent.lodgingArea}`);
   return parts.length > 0 ? parts.join(' · ') : '通用休闲游';
 }
 
@@ -317,7 +434,47 @@ export function formatIntentConstraintsForLlm(intent: TravelIntentSnapshot): str
   if (intent.themes.length > 0) {
     lines.push(`- 主题偏好：${intent.themes.join('、')}，interestTags 须包含这些标签`);
   }
+  lines.push('- 仅规划游玩 POI（attraction/restaurant/meal）；不要输出 hotel/transport 节点，交通与住宿由系统补全');
   if (lines.length === 1) return '';
+  return lines.join('\n');
+}
+
+/** H9：Enricher 约束块（交通/住宿偏好） */
+export function formatIntentConstraintsForEnricher(intent: TravelIntentSnapshot): string {
+  const lines: string[] = ['【Enricher 约束 — 交通与住宿】'];
+  let hasContent = false;
+
+  if (intent.transportPreference && intent.transportPreference !== 'any') {
+    const labelMap: Record<TransportPreference, string> = {
+      train: '火车',
+      flight: '飞机',
+      high_speed_rail: '高铁',
+      self_drive: '自驾',
+      any: '不限',
+    };
+    lines.push(`- 大交通偏好：${labelMap[intent.transportPreference]}`);
+    hasContent = true;
+  }
+  if (intent.lodgingArea) {
+    lines.push(`- 住宿区域：${intent.lodgingArea}`);
+    hasContent = true;
+  }
+  if (intent.lodgingTier && intent.lodgingTier !== 'any') {
+    const tierMap: Record<LodgingTier, string> = {
+      budget: '经济型',
+      comfort: '舒适型',
+      luxury: '豪华型',
+      any: '不限',
+    };
+    lines.push(`- 住宿档次：${tierMap[intent.lodgingTier]}`);
+    hasContent = true;
+  }
+  if (intent.cities && intent.cities.length >= 2) {
+    lines.push(`- 多城顺序：${intent.cities.join(' → ')}`);
+    hasContent = true;
+  }
+
+  if (!hasContent) return '';
   return lines.join('\n');
 }
 

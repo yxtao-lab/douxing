@@ -20,6 +20,10 @@ class TravelIntentSnapshot(BaseModel):
     budgetMax: int | None = None
     themes: list[str] = Field(default_factory=list)
     confidence: Literal["low", "medium", "high"] = "low"
+    transportPreference: str | None = None
+    lodgingArea: str | None = None
+    lodgingTier: str | None = None
+    cities: list[str] = Field(default_factory=list)
 
 
 class RagAttractionCandidate(BaseModel):
@@ -37,7 +41,7 @@ class RagAttractionCandidate(BaseModel):
 
 class RouteSpot(BaseModel):
     name: str
-    time: str
+    time: str = ""
     cost: float
     description: str
     poiType: str

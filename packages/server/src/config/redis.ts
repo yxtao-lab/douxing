@@ -22,3 +22,12 @@ export function getGeocodeCacheTtlSec(): number {
 }
 
 export const GEOCODE_CACHE_KEY_PREFIX = 'douxing:amap:geocode:';
+
+/** 高德 distance/matrix 缓存键前缀 */
+export const MATRIX_CACHE_KEY_PREFIX = 'douxing:amap:matrix:';
+
+/** 路网耗时缓存 TTL（秒），默认 7 天 */
+export function getMatrixCacheTtlSec(): number {
+  const raw = parseInt(trimEnv('AMAP_MATRIX_CACHE_TTL_SEC') || '604800', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 604800;
+}

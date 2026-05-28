@@ -47,10 +47,60 @@ export interface RouteDayAttraction {
   longitude?: number;
 }
 
+/** H9：交通段类型 */
+export type RouteTransitKind = 'intercity' | 'local';
+
+/** H9：交通方式 */
+export type RouteTransitMode =
+  | 'train'
+  | 'flight'
+  | 'subway'
+  | 'bus'
+  | 'taxi'
+  | 'walk'
+  | 'drive';
+
+/** H9：结构化交通段（Enricher 产出） */
+export interface RouteTransitSegment {
+  kind: RouteTransitKind;
+  mode: RouteTransitMode;
+  from: string;
+  to: string;
+  /** 如 08:30-10:45 */
+  time?: string;
+  durationMinutes: number;
+  cost?: number;
+  /** Phase 1 跨城 mock 订票链接 */
+  bookingUrl?: string;
+  /** 高德失败 Haversine 估算时为 true */
+  estimated?: boolean;
+  description?: string;
+}
+
+/** H9：每日住宿（Enricher 产出） */
+export interface RouteDayLodging {
+  name: string;
+  area?: string;
+  tier?: LodgingTier;
+  cost?: number;
+  /** 入住时段，如 21:00 或 21:00-22:00 */
+  time?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+}
+
 export interface RouteDayPlan {
   date: string;
   title: string;
+  /** 游玩 POI（不含 Enricher 负责的 hotel/transport） */
   attractions: RouteDayAttraction[];
+  /** H9：当日推荐住宿 */
+  lodging?: RouteDayLodging;
+  /** H9：市内/跨城交通段 */
+  transit?: RouteTransitSegment[];
+  /** H9：排程警告（如时间窗冲突） */
+  warnings?: string[];
 }
 
 export interface RouteDetailPayload {
@@ -234,6 +284,12 @@ export interface RagAttractionCandidate {
   score: number;
 }
 
+/** H9：大交通偏好 */
+export type TransportPreference = 'train' | 'flight' | 'high_speed_rail' | 'self_drive' | 'any';
+
+/** H9：住宿档次 */
+export type LodgingTier = 'budget' | 'comfort' | 'luxury' | 'any';
+
 /** C2：从用户描述中解析的结构化旅行意图 */
 export interface TravelIntentSnapshot {
   city: string | null;
@@ -244,6 +300,14 @@ export interface TravelIntentSnapshot {
   budgetMax: number | null;
   themes: string[];
   confidence: 'low' | 'medium' | 'high';
+  /** H9：大交通偏好（高铁/飞机/自驾等） */
+  transportPreference?: TransportPreference | null;
+  /** H9：住宿区域偏好，如「西湖边」 */
+  lodgingArea?: string | null;
+  /** H9：住宿档次 */
+  lodgingTier?: LodgingTier | null;
+  /** H9：多城行程城市顺序（可选） */
+  cities?: string[];
 }
 
 /** 传给 LLM 的对话历史条目 */

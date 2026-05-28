@@ -22,7 +22,7 @@ export function normalizeRouteDetailDays(
   return { days: [] };
 }
 
-/** 深拷贝行程节点，可选去掉旧 attractionId（重新生成时强制重新匹配/入库） */
+/** 深拷贝行程节点，保留 Enricher 产出的 lodging / transit / warnings */
 export function cloneRouteDaysForSync(
   days: RouteDayPlan[],
   stripAttractionIds = false,
@@ -30,6 +30,9 @@ export function cloneRouteDaysForSync(
   return days.map((day) => ({
     date: day.date,
     title: day.title,
+    lodging: day.lodging ? { ...day.lodging } : undefined,
+    transit: day.transit?.map((seg) => ({ ...seg })),
+    warnings: day.warnings ? [...day.warnings] : undefined,
     attractions: day.attractions.map((spot) => {
       const cloned: RouteDayAttraction = {
         name: spot.name,

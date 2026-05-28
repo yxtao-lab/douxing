@@ -99,13 +99,14 @@
     </view>
 
     <view class="card" v-else>
-      <view v-for="(day, idx) in days" :key="idx" class="day-block">
-        <text class="day-title">{{ dayTitle(day) }}</text>
-        <view v-for="(spot, si) in day.attractions" :key="si" class="spot">
-          <text class="spot-name">{{ spot.name }}</text>
-          <text class="spot-time">{{ spot.time }} · ¥{{ spot.cost }}</text>
-          <text class="spot-desc">{{ spot.description }}</text>
-          <button size="mini" class="btn-checkin" @click="handleCheckIn(spot)">{{ t('routes.checkInHere') }}</button>
+      <RouteDayFlowChart
+        :days="days"
+        show-check-in
+        @check-in="handleCheckIn"
+      />
+      <view v-for="(day, idx) in days" :key="`warn-${idx}`">
+        <view v-if="day.warnings?.length" class="day-warnings">
+          <text v-for="(warn, wi) in day.warnings" :key="`w-${wi}`" class="warning-text">{{ warn }}</text>
         </view>
       </view>
     </view>
@@ -151,6 +152,7 @@ import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type {
   RouteDayAttraction,
+  RouteDayPlan,
   RouteDetailPayload,
   TravelRouteInfo,
   RouteCommentInfo,
@@ -174,6 +176,7 @@ import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import RouteMapPlayer from '@/components/route-map/RouteMapPlayer.vue';
+import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -275,10 +278,6 @@ const checkInSheetItems = computed(() => [
   t('routes.checkInWithPhoto'),
 ]);
 
-function dayTitle(day: { date: string; title: string }) {
-  return tf('routes.dayTitle', { date: day.date, title: day.title });
-}
-
 const unlockPrice = computed(() => {
   const detail = route.value?.routeDetail as Record<string, unknown> | null;
   return (detail?.unlockPrice as number) ?? route.value?.unlockPrice ?? 9.9;
@@ -300,12 +299,8 @@ const matchedCity = computed(() => {
   return detail?.matchedCity;
 });
 
-const days = computed(() => {
-  const detail = route.value?.routeDetail as { days?: Array<{
-    date: string;
-    title: string;
-    attractions: RouteDayAttraction[];
-  }> } | null;
+const days = computed((): RouteDayPlan[] => {
+  const detail = route.value?.routeDetail as RouteDetailPayload | null;
   return detail?.days ?? [];
 });
 
@@ -886,6 +881,72 @@ onLoad((query) => {
 .btn-primary {
   background: #1677ff;
   color: #fff;
+}
+.day-block {
+  margin-bottom: 32rpx;
+  padding-bottom: 24rpx;
+  border-bottom: 1rpx solid #f3f4f6;
+}
+.day-block:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.day-section {
+  margin-bottom: 24rpx;
+}
+.section-label {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1677ff;
+  margin-bottom: 12rpx;
+  letter-spacing: 1rpx;
+}
+.transit-item {
+  background: #f9fafb;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+  margin-bottom: 16rpx;
+}
+.transit-route {
+  font-size: 26rpx;
+  font-weight: 500;
+  display: block;
+  color: #1f2937;
+}
+.transit-meta,
+.transit-time {
+  font-size: 24rpx;
+  color: #6b7280;
+  display: block;
+  margin-top: 4rpx;
+}
+.transit-estimated {
+  font-size: 22rpx;
+  color: #d97706;
+  display: block;
+  margin-top: 6rpx;
+}
+.transit-desc,
+.transit-demo-link {
+  font-size: 22rpx;
+  color: #9ca3af;
+  display: block;
+  margin-top: 4rpx;
+}
+.lodging-item {
+  border-left: 4rpx solid #8b5cf6;
+  padding-left: 20rpx;
+}
+.day-warnings {
+  margin-top: 8rpx;
+}
+.warning-text {
+  display: block;
+  font-size: 22rpx;
+  color: #d97706;
+  margin-top: 4rpx;
 }
 .day-title {
   font-weight: 600;

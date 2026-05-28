@@ -26,6 +26,7 @@ import {
   buildRouteFromRagCatalog,
   retrieveAttractionsForPlanning,
 } from './attraction-rag.service.js';
+import { enrichRouteDraft } from './route-enricher.service.js';
 
 export interface GenerateRouteInput {
   prompt: string;
@@ -96,6 +97,21 @@ function withRagMeta<T extends GeneratedRouteDraft>(
   return { ...draft, ragMatchedCount, ragCandidateCount };
 }
 
+async function finalizeRouteDraft(
+  draft: GeneratedRouteDraft,
+  input: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+  ragCandidates: RagAttractionCandidate[],
+): Promise<GeneratedRouteDraft> {
+  const constrained = enforceRouteConstraints(draft, intent);
+  const linked = applyRagToRouteDraft(constrained, ragCandidates);
+  const enriched = await enrichRouteDraft(linked, {
+    intent,
+    locale: input.locale,
+  });
+  return withRagMeta(enriched, enriched.ragMatchedCount ?? linked.ragMatchedCount ?? 0, enriched.ragCandidateCount ?? linked.ragCandidateCount ?? ragCandidates.length);
+}
+
 function scoreTemplate(template: RouteTemplate, city: string | null, days: number, tags: string[]): number {
   let score = 0;
   if (city && template.city === city) score += 10;
@@ -128,10 +144,9 @@ export async function generateRoute(
   if (canUseAiServiceForRoute()) {
     try {
       const draft = await generateRouteFromAiService(enrichedInput);
-      const constrained = enforceRouteConstraints(draft, intent);
-      const linked = applyRagToRouteDraft(constrained, ragCandidates);
+      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates);
       return {
-        ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
+        ...finalized,
         generationSource: 'llm',
         llmProvider: draft.llmProvider,
         intent,
@@ -147,10 +162,9 @@ export async function generateRoute(
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
-      const constrained = enforceRouteConstraints(draft, intent);
-      const linked = applyRagToRouteDraft(constrained, ragCandidates);
+      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates);
       return {
-        ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
+        ...finalized,
         generationSource: 'llm',
         llmProvider: draft.llmProvider,
         intent,
@@ -164,10 +178,9 @@ export async function generateRoute(
   }
 
   const templateDraft = generateRouteFromTemplate(enrichedInput, intent, ragCandidates);
-  const constrained = enforceRouteConstraints(templateDraft, intent);
-  const linked = applyRagToRouteDraft(constrained, ragCandidates);
+  const finalized = await finalizeRouteDraft(templateDraft, enrichedInput, intent, ragCandidates);
   return {
-    ...withRagMeta(linked, linked.ragMatchedCount, linked.ragCandidateCount),
+    ...finalized,
     generationSource: 'template',
     intent,
   };

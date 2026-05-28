@@ -5,6 +5,7 @@ import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
 import type { TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
+import type { RouteDayPlan } from '@douxing/shared';
 import {
   normalizeRouteDetailDays,
   cloneRouteDaysForSync,
@@ -36,13 +37,48 @@ async function syncDraftToAttractionLibrary(
   });
 }
 
+function mergeEnrichedDaysWithSyncedAttractions(
+  enrichedDays: RouteDayPlan[],
+  syncedDays: RouteDayPlan[],
+): RouteDayPlan[] {
+  return enrichedDays.map((day, dayIndex) => {
+    const syncedDay = syncedDays[dayIndex];
+    if (!syncedDay) return day;
+
+    const syncedByName = new Map(syncedDay.attractions.map((spot) => [spot.name, spot]));
+    const attractions = day.attractions.map((spot, spotIndex) => {
+      const syncedSpot = syncedByName.get(spot.name) ?? syncedDay.attractions[spotIndex];
+      if (!syncedSpot) return spot;
+      return {
+        ...spot,
+        attractionId: syncedSpot.attractionId,
+        latitude: spot.latitude ?? syncedSpot.latitude,
+        longitude: spot.longitude ?? syncedSpot.longitude,
+        poiType: spot.poiType ?? syncedSpot.poiType,
+      };
+    });
+
+    return {
+      date: day.date,
+      title: day.title,
+      attractions,
+      lodging: day.lodging,
+      transit: day.transit,
+      warnings: day.warnings,
+    };
+  });
+}
+
 function buildRouteDetailFromDraft(
   draft: Awaited<ReturnType<typeof generateRoute>>,
   linkedDays: Awaited<ReturnType<typeof syncAttractionsFromRouteDetail>>,
   options: { sourcePrompt: string; provider?: GenerateRouteInput['provider'] },
 ) {
+  const enrichedDays = normalizeRouteDetailDays(draft.routeDetail).days;
+  const days = mergeEnrichedDaysWithSyncedAttractions(enrichedDays, linkedDays.days);
+
   return {
-    days: linkedDays.days,
+    days,
     isAiGenerated: draft.isAiGenerated,
     unlockPrice: draft.unlockPrice,
     isUnlocked: !isRouteUnlockPaymentRequired(),

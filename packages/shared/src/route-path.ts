@@ -116,7 +116,13 @@ function buildStraightSegment(
   };
 }
 
-/** 从单条路线 detail 构建可播放路径（MVP：POI 间直线插值） */
+function isMapPoi(spot: RouteDayAttraction): boolean {
+  if (!hasValidCoords(spot)) return false;
+  const type = spot.poiType ?? 'attraction';
+  return type === 'attraction' || type === 'hotel';
+}
+
+/** 从单条路线 detail 构建可播放路径（MVP：POI 间直线插值；含有坐标 hotel） */
 export function buildRoutePathFromDetail(
   routeDetail: RouteDetailPayload | Record<string, unknown> | null | undefined,
   options: BuildRoutePathOptions = {},
@@ -128,25 +134,39 @@ export function buildRoutePathFromDetail(
   let totalSpotCount = 0;
   let hiddenSpotCount = 0;
 
-  const pois: RoutePathPoi[] = days.flatMap((day, dayIndex) =>
-    day.attractions.flatMap((spot, spotIndex) => {
+  const pois: RoutePathPoi[] = [];
+
+  for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
+    const day = days[dayIndex]!;
+    for (let spotIndex = 0; spotIndex < day.attractions.length; spotIndex += 1) {
+      const spot = day.attractions[spotIndex]!;
       totalSpotCount += 1;
-      if (!hasValidCoords(spot)) {
+      if (!isMapPoi(spot)) {
         hiddenSpotCount += 1;
-        return [];
+        continue;
       }
-      return [
-        {
-          latitude: spot.latitude!,
-          longitude: spot.longitude!,
-          name: spot.name,
-          dayIndex,
-          spotIndex,
-          poiType: spot.poiType,
-        },
-      ];
-    }),
-  );
+      pois.push({
+        latitude: spot.latitude!,
+        longitude: spot.longitude!,
+        name: spot.name,
+        dayIndex,
+        spotIndex,
+        poiType: spot.poiType,
+      });
+    }
+    const lodging = day.lodging;
+    if (lodging?.latitude != null && lodging.longitude != null) {
+      totalSpotCount += 1;
+      pois.push({
+        latitude: lodging.latitude,
+        longitude: lodging.longitude,
+        name: lodging.name,
+        dayIndex,
+        spotIndex: day.attractions.length,
+        poiType: 'hotel',
+      });
+    }
+  }
 
   if (pois.length < 2) return null;
 
