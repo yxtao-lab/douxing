@@ -376,6 +376,7 @@ export const mobileZhCN = {
     pointsUnit: ' 分',
   },
   orders: {
+    pageDesc: '查看路线解锁与会员订单，随时继续支付',
     tabAll: '全部',
     tabPending: '待支付',
     tabDone: '已完成',

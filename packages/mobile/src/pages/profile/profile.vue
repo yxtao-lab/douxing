@@ -1,83 +1,87 @@
 <template>
   <view class="page tab-page" :class="themeClass">
-    <view class="profile-hero">
-      <view class="hero-bg" />
-      <view class="hero-content">
-        <view v-if="user" class="user-card" @click="goEdit">
-          <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
-          <view v-else class="avatar">{{ avatarText }}</view>
-          <view class="info">
-            <view class="name-row">
-              <text class="name">{{ user.nickname || user.username }}</text>
-              <view class="member-badge" :class="memberBadgeClass" @click.stop="goMembership">
-                <MemberLevelIcon :level="user.memberLevel ?? 0" size="sm" />
-                <text class="member-badge-text">{{ memberLevelLabel }}</text>
+    <view class="page-header">
+      <view class="profile-hero">
+        <view class="hero-bg" />
+        <view class="hero-content">
+          <view v-if="user" class="user-card" @click="goEdit">
+            <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
+            <view v-else class="avatar">{{ avatarText }}</view>
+            <view class="info">
+              <view class="name-row">
+                <text class="name">{{ user.nickname || user.username }}</text>
+                <view class="member-badge" :class="memberBadgeClass" @click.stop="goMembership">
+                  <MemberLevelIcon :level="user.memberLevel ?? 0" size="sm" />
+                  <text class="member-badge-text">{{ memberLevelLabel }}</text>
+                </view>
+              </view>
+              <text class="sub">{{ planQuotaText }}</text>
+              <view v-if="user.interestTags?.length" class="tag-row">
+                <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
               </view>
             </view>
-            <text class="sub">{{ planQuotaText }}</text>
-            <view v-if="user.interestTags?.length" class="tag-row">
-              <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
-            </view>
+            <text class="edit-arrow">›</text>
           </view>
-          <text class="edit-arrow">›</text>
-        </view>
 
-        <view v-else class="guest-block">
-          <view class="guest-brand">
-            <view class="logo-mark">
-              <text class="logo-text">兜</text>
+          <view v-else class="guest-block">
+            <view class="guest-brand">
+              <view class="logo-mark">
+                <text class="logo-text">兜</text>
+              </view>
+              <view class="guest-copy">
+                <text class="guest-title">{{ t('profile.guestTitle') }}</text>
+                <text class="guest-desc">{{ t('profile.guestDesc') }}</text>
+              </view>
             </view>
-            <view class="guest-copy">
-              <text class="guest-title">{{ t('profile.guestTitle') }}</text>
-              <text class="guest-desc">{{ t('profile.guestDesc') }}</text>
-            </view>
+            <button class="btn-login" @click="goLogin">{{ t('profile.loginRegister') }}</button>
           </view>
-          <button class="btn-login" @click="goLogin">{{ t('profile.loginRegister') }}</button>
         </view>
       </view>
     </view>
 
-    <view class="page-body">
-      <view class="section">
-        <text class="section-title">{{ t('profile.sectionPersonalize') }}</text>
-        <view class="grid-card">
-          <view
-            v-for="item in travelGridItems"
-            :key="item.key"
-            class="grid-item"
-            @click="handleGridTap(item)"
-          >
-            <view class="grid-icon-wrap" :style="{ background: item.bg }">
-              <text class="grid-icon">{{ item.icon }}</text>
+    <scroll-view :scroll-y="contentNeedsScroll" class="page-content" enable-back-to-top>
+      <view class="page-body">
+        <view class="section">
+          <text class="section-title">{{ t('profile.sectionPersonalize') }}</text>
+          <view class="grid-card">
+            <view
+              v-for="item in travelGridItems"
+              :key="item.key"
+              class="grid-item"
+              @click="handleGridTap(item)"
+            >
+              <view class="grid-icon-wrap" :style="{ background: item.bg }">
+                <text class="grid-icon">{{ item.icon }}</text>
+              </view>
+              <text class="grid-label">{{ item.label }}</text>
             </view>
-            <text class="grid-label">{{ item.label }}</text>
+          </view>
+        </view>
+
+        <view class="section">
+          <text class="section-title">{{ t('profile.sectionAccount') }}</text>
+          <view class="action-card">
+            <button
+              v-for="action in userActions"
+              :key="action.key"
+              class="action-btn"
+              :class="action.variant"
+              @click="handleActionTap(action)"
+            >
+              {{ action.label }}
+            </button>
+            <button v-if="user" class="action-btn danger" @click="handleLogout">{{ t('common.logout') }}</button>
           </view>
         </view>
       </view>
-
-      <view class="section">
-        <text class="section-title">{{ t('profile.sectionAccount') }}</text>
-        <view class="action-card">
-          <button
-            v-for="action in userActions"
-            :key="action.key"
-            class="action-btn"
-            :class="action.variant"
-            @click="handleActionTap(action)"
-          >
-            {{ action.label }}
-          </button>
-          <button v-if="user" class="action-btn danger" @click="handleLogout">{{ t('common.logout') }}</button>
-        </view>
-      </view>
-    </view>
+    </scroll-view>
 
     <DouxingTabBar :current="3" />
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { UserInfo } from '@douxing/shared';
 import {
@@ -120,6 +124,8 @@ interface UserAction {
 }
 
 const user = ref<UserInfo | null>(getStoredUser());
+const contentNeedsScroll = ref(false);
+const pageProxy = getCurrentInstance()?.proxy;
 
 const avatarText = computed(() => (user.value?.nickname || user.value?.username || '?').slice(0, 1));
 
@@ -248,12 +254,41 @@ function handleLogout() {
   uni.removeStorageSync('douxing_user');
   user.value = null;
   uni.showToast({ title: t('common.logoutDone'), icon: 'none' });
+  void syncPageLayout();
+}
+
+function syncPageLayout() {
+  void nextTick(() => {
+    const query = uni.createSelectorQuery();
+    if (pageProxy) {
+      query.in(pageProxy);
+    }
+    query.select('.page-content').boundingClientRect();
+    query.select('.page-body').boundingClientRect();
+    query.exec((results) => {
+      const container = results[0];
+      const body = results[1];
+      if (
+        container &&
+        body &&
+        !Array.isArray(container) &&
+        !Array.isArray(body) &&
+        container.height > 0 &&
+        body.height > 0
+      ) {
+        contentNeedsScroll.value = body.height > container.height + 2;
+      }
+    });
+  });
 }
 
 onShow(async () => {
   uni.hideTabBar({ animation: false });
   user.value = getStoredUser();
-  if (!user.value) return;
+  if (!user.value) {
+    void syncPageLayout();
+    return;
+  }
   try {
     const fresh = await fetchCurrentUser();
     user.value = fresh;
@@ -262,15 +297,31 @@ onShow(async () => {
   } catch {
     /* 离线时沿用本地缓存 */
   }
+  void syncPageLayout();
+});
+
+watch(user, () => {
+  void syncPageLayout();
 });
 </script>
 
 <style scoped>
 .page {
   --page-gutter: 32rpx;
-  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--dx-bg);
   box-sizing: border-box;
+  overflow: hidden;
+}
+.page-header {
+  flex-shrink: 0;
+}
+.page-content {
+  flex: 1;
+  height: 0;
+  width: 100%;
 }
 .profile-hero {
   position: relative;
@@ -430,7 +481,8 @@ onShow(async () => {
   display: block;
 }
 .page-body {
-  padding: 0 var(--page-gutter);
+  padding: 0 var(--page-gutter) 24rpx;
+  box-sizing: border-box;
 }
 .section {
   margin-top: 24rpx;

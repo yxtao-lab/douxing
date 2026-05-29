@@ -378,6 +378,7 @@ export const mobileEnUS = {
     pointsUnit: ' pts',
   },
   orders: {
+    pageDesc: 'View route unlocks and membership orders; resume payment anytime',
     tabAll: 'All',
     tabPending: 'Pending',
     tabDone: 'Completed',

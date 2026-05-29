@@ -1,122 +1,147 @@
 <template>
-  <scroll-view scroll-y class="page tab-page" :class="themeClass" enable-back-to-top>
-    <view class="hero">
-      <view class="hero-bg" />
-      <view class="hero-content">
-        <view class="brand-row">
-          <view class="logo-mark">
-            <text class="logo-text">兜</text>
-          </view>
-          <view class="brand-copy">
-            <text class="brand-name">{{ t('app.name') }}</text>
-            <text class="brand-sub">{{ t('home.subtitle') }}</text>
-          </view>
-        </view>
-        <text class="tagline">{{ t('home.tagline') }}</text>
-        <view class="value-props">
-          <text v-for="item in valueProps" :key="item" class="value-chip">{{ item }}</text>
-        </view>
-        <button class="cta-primary" @click="goPlan">{{ t('home.ctaPlan') }}</button>
-        <view v-if="user" class="welcome-bar">
-          <text class="welcome-name">{{ welcomeText }}</text>
-          <text class="welcome-sub">{{ t('home.welcomeSub') }}</text>
-        </view>
-        <view v-else class="guest-bar">
-          <text class="guest-hint">{{ t('home.hotRoutesGuestHint') }}</text>
-          <text class="guest-link" @click="goLogin">{{ t('home.ctaLogin') }}</text>
-        </view>
-      </view>
-    </view>
-
-    <view class="quick-actions">
-      <view class="quick-item" @click="goPlan">
-        <view class="quick-icon quick-icon--plan">✨</view>
-        <text class="quick-label">{{ t('home.quickPlan') }}</text>
-      </view>
-      <view class="quick-item" @click="goRoutes">
-        <view class="quick-icon quick-icon--routes">🗺️</view>
-        <text class="quick-label">{{ t('home.quickRoutes') }}</text>
-      </view>
-      <view class="quick-item" @click="goProfile">
-        <view class="quick-icon quick-icon--profile">🏅</view>
-        <text class="quick-label">{{ t('home.quickProfile') }}</text>
-      </view>
-    </view>
-
-    <view class="section hot-section">
-      <view class="section-head">
-        <text class="section-title">{{ t('home.hotRoutesTitle') }}</text>
-        <text v-if="user && hotRoutes.length > 0" class="section-more" @click="goPlaza">
-          {{ t('home.hotRoutesMore') }}
-        </text>
-      </view>
-
-      <DouxingEmptyState
-        v-if="!user"
-        variant="plaza"
-        embedded
-        compact
-        :title="t('home.hotRoutesGuestHint')"
-        :action-label="t('home.ctaLogin')"
-        @action="goLogin"
-      />
-
-      <DouxingEmptyState v-else-if="hotLoading" loading embedded compact />
-
-      <DouxingEmptyState
-        v-else-if="hotError"
-        variant="error"
-        embedded
-        compact
-        :title="hotError"
-        :action-label="t('common.refresh')"
-        @action="loadHotRoutes"
-      />
-
-      <DouxingEmptyState
-        v-else-if="hotRoutes.length === 0"
-        variant="plaza"
-        embedded
-        compact
-        :title="t('home.hotRoutesEmpty')"
-        :description="t('emptyState.routesPlazaDesc')"
-        :action-label="t('home.ctaPlan')"
-        @action="goPlan"
-      />
-
-      <scroll-view
-        v-else
-        scroll-x
-        class="hot-scroll"
-        :show-scrollbar="false"
-      >
-        <view class="hot-scroll-inner">
-          <view
-            v-for="item in hotRoutes"
-            :key="item.id"
-            class="hot-card"
-            @click="goRouteDetail(item.id)"
-          >
-            <view class="hot-card-top">
-              <text class="hot-name">{{ item.name }}</text>
-              <text v-if="item.isAiGenerated" class="hot-ai-tag">AI</text>
+  <view class="page tab-page" :class="themeClass">
+    <view class="page-header">
+      <view class="hero">
+        <view class="hero-bg" />
+        <view class="hero-content">
+          <view class="brand-row">
+            <view class="logo-mark">
+              <text class="logo-text">兜</text>
             </view>
-            <text class="hot-meta">{{ routeMeta(item) }}</text>
-            <text class="hot-desc">{{ item.description || t('routes.noDescription') }}</text>
-            <view class="hot-stats">
-              <text class="hot-stat">👁 {{ item.viewCount ?? 0 }}</text>
-              <text class="hot-stat">♥ {{ item.likeCount ?? 0 }}</text>
+            <view class="brand-copy">
+              <text class="brand-name">{{ t('app.name') }}</text>
+              <text class="brand-sub">{{ t('home.subtitle') }}</text>
             </view>
           </view>
+          <text class="tagline">{{ t('home.tagline') }}</text>
+          <view class="value-props">
+            <text v-for="item in valueProps" :key="item" class="value-chip">{{ item }}</text>
+          </view>
+          <button class="cta-primary" @click="goPlan">{{ t('home.ctaPlan') }}</button>
+          <view v-if="user" class="welcome-bar">
+            <text class="welcome-name">{{ welcomeText }}</text>
+            <text class="welcome-sub">{{ t('home.welcomeSub') }}</text>
+          </view>
+          <view v-else class="guest-bar">
+            <text class="guest-hint">{{ t('home.hotRoutesGuestHint') }}</text>
+            <text class="guest-link" @click="goLogin">{{ t('home.ctaLogin') }}</text>
+          </view>
         </view>
-      </scroll-view>
+      </view>
     </view>
+
+    <scroll-view :scroll-y="contentNeedsScroll" class="page-content" enable-back-to-top>
+      <view class="page-body">
+        <view class="quick-actions">
+          <view class="quick-item" @click="goPlan">
+            <view class="quick-icon quick-icon--plan">✨</view>
+            <text class="quick-label">{{ t('home.quickPlan') }}</text>
+          </view>
+          <view class="quick-item" @click="goRoutes">
+            <view class="quick-icon quick-icon--routes">🗺️</view>
+            <text class="quick-label">{{ t('home.quickRoutes') }}</text>
+          </view>
+          <view class="quick-item" @click="goProfile">
+            <view class="quick-icon quick-icon--profile">🏅</view>
+            <text class="quick-label">{{ t('home.quickProfile') }}</text>
+          </view>
+        </view>
+
+        <view class="section hot-section">
+          <view class="section-head">
+            <text class="section-title">{{ t('home.hotRoutesTitle') }}</text>
+            <text v-if="user && hotRoutes.length > 0" class="section-more" @click="goPlaza">
+              {{ t('home.hotRoutesMore') }}
+            </text>
+          </view>
+
+          <DouxingEmptyState
+            v-if="!user"
+            variant="plaza"
+            embedded
+            compact
+            :title="t('home.hotRoutesGuestHint')"
+            :action-label="t('home.ctaLogin')"
+            @action="goLogin"
+          />
+
+          <DouxingEmptyState v-else-if="hotLoading" loading embedded compact />
+
+          <DouxingEmptyState
+            v-else-if="hotError"
+            variant="error"
+            embedded
+            compact
+            :title="hotError"
+            :action-label="t('common.refresh')"
+            @action="loadHotRoutes"
+          />
+
+          <DouxingEmptyState
+            v-else-if="hotRoutes.length === 0"
+            variant="plaza"
+            embedded
+            compact
+            :title="t('home.hotRoutesEmpty')"
+            :description="t('emptyState.routesPlazaDesc')"
+            :action-label="t('home.ctaPlan')"
+            @action="goPlan"
+          />
+
+          <view v-else class="hot-carousel">
+            <swiper
+              class="hot-swiper"
+              :style="hotSwiperStyle"
+              :current="hotCurrent"
+              :circular="hotRoutes.length > 1"
+              previous-margin="72rpx"
+              next-margin="72rpx"
+              :duration="380"
+              @change="onHotSwiperChange"
+            >
+              <swiper-item
+                v-for="(item, index) in hotRoutes"
+                :key="item.id"
+                class="hot-swiper-item"
+              >
+                <view
+                  class="hot-card"
+                  :class="cardCarouselClass(index)"
+                  @click="goRouteDetail(item.id)"
+                >
+                  <view class="hot-card-top">
+                    <text class="hot-name">{{ item.name }}</text>
+                    <text v-if="item.isAiGenerated" class="hot-ai-tag">AI</text>
+                  </view>
+                  <text class="hot-meta">{{ routeMeta(item) }}</text>
+                  <text class="hot-desc">{{ item.description || t('routes.noDescription') }}</text>
+                  <view class="hot-stats">
+                    <text class="hot-stat">👁 {{ item.viewCount ?? 0 }}</text>
+                    <text class="hot-stat">♥ {{ item.likeCount ?? 0 }}</text>
+                  </view>
+                </view>
+              </swiper-item>
+            </swiper>
+            <view v-if="hotRoutes.length > 1" class="hot-dots">
+              <view
+                v-for="(_, index) in hotRoutes"
+                :key="index"
+                class="hot-dot"
+                :class="{ active: index === hotCurrent }"
+                @click="goHotSlide(index)"
+              />
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
     <DouxingTabBar :current="0" />
-  </scroll-view>
+  </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
@@ -137,6 +162,14 @@ const user = ref(getStoredUser());
 const hotRoutes = ref<TravelRouteInfo[]>([]);
 const hotLoading = ref(false);
 const hotError = ref('');
+const hotCurrent = ref(0);
+const hotSwiperHeightPx = ref(0);
+const contentNeedsScroll = ref(false);
+const pageProxy = getCurrentInstance()?.proxy;
+
+const hotSwiperStyle = computed(() =>
+  hotSwiperHeightPx.value > 0 ? { height: `${hotSwiperHeightPx.value}px` } : {},
+);
 
 const valueProps = computed(() => [
   t('home.valueProp1'),
@@ -158,8 +191,60 @@ onShow(() => {
     hotRoutes.value = [];
     hotError.value = '';
     hotLoading.value = false;
+    void syncPageLayout();
   }
 });
+
+watch(user, () => {
+  void syncPageLayout();
+});
+
+watch(hotRoutes, () => {
+  hotCurrent.value = 0;
+  void syncPageLayout();
+});
+
+watch(hotLoading, (loading) => {
+  if (!loading) {
+    void syncPageLayout();
+  }
+});
+
+function syncPageLayout() {
+  void nextTick(() => {
+    const query = uni.createSelectorQuery();
+    if (pageProxy) {
+      query.in(pageProxy);
+    }
+    query.select('.page-content').boundingClientRect();
+    query.select('.page-body').boundingClientRect();
+    query.select('.hot-swiper-item .hot-card').boundingClientRect();
+    query.exec((results) => {
+      const container = results[0];
+      const body = results[1];
+      const card = results[2];
+
+      if (
+        container &&
+        body &&
+        !Array.isArray(container) &&
+        !Array.isArray(body) &&
+        container.height > 0 &&
+        body.height > 0
+      ) {
+        contentNeedsScroll.value = body.height > container.height + 2;
+      }
+
+      if (hotRoutes.value.length === 0) {
+        hotSwiperHeightPx.value = 0;
+        return;
+      }
+      if (card && !Array.isArray(card) && card.height > 0) {
+        hotSwiperHeightPx.value = Math.ceil(card.height);
+      }
+    });
+  });
+}
 
 async function loadHotRoutes() {
   hotLoading.value = true;
@@ -171,7 +256,32 @@ async function loadHotRoutes() {
     hotError.value = e instanceof Error ? e.message : t('home.hotRoutesLoadFailed');
   } finally {
     hotLoading.value = false;
+    void syncPageLayout();
   }
+}
+
+function onHotSwiperChange(e: { detail: { current: number } }) {
+  hotCurrent.value = e.detail.current;
+}
+
+function goHotSlide(index: number) {
+  hotCurrent.value = index;
+}
+
+function cardCarouselClass(index: number) {
+  const total = hotRoutes.value.length;
+  if (total <= 1) return ['hot-card--active'];
+
+  const current = hotCurrent.value;
+  let diff = index - current;
+  const half = total / 2;
+  if (diff > half) diff -= total;
+  if (diff < -half) diff += total;
+
+  if (diff === 0) return ['hot-card--active'];
+  if (diff === 1) return ['hot-card--side', 'hot-card--next'];
+  if (diff === -1) return ['hot-card--side', 'hot-card--prev'];
+  return ['hot-card--far'];
 }
 
 function routeMeta(item: TravelRouteInfo) {
@@ -209,14 +319,33 @@ function goRouteDetail(id: number) {
 
 <style scoped>
 .page {
-  min-height: 100vh;
+  --page-gutter: 32rpx;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--dx-bg);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.page-header {
+  flex-shrink: 0;
+}
+
+.page-content {
+  flex: 1;
+  height: 0;
+  width: 100%;
+}
+
+.page-body {
+  padding: 0 var(--page-gutter) 24rpx;
   box-sizing: border-box;
 }
 
 .hero {
   position: relative;
-  padding: 24rpx 32rpx 0;
+  padding: 24rpx var(--page-gutter) 0;
   overflow: hidden;
 }
 
@@ -367,8 +496,8 @@ function goRouteDetail(id: number) {
 .quick-actions {
   display: flex;
   gap: 16rpx;
-  padding: 8rpx 32rpx 0;
-  margin-top: -8rpx;
+  padding-top: 8rpx;
+  margin-top: -24rpx;
 }
 
 .quick-item {
@@ -409,8 +538,7 @@ function goRouteDetail(id: number) {
 }
 
 .section {
-  padding: 32rpx;
-  padding-bottom: calc(32rpx + 120rpx + env(safe-area-inset-bottom));
+  padding-top: 32rpx;
 }
 
 .section-head {
@@ -432,24 +560,96 @@ function goRouteDetail(id: number) {
   font-weight: 500;
 }
 
-.hot-scroll {
-  width: 100%;
+.hot-carousel {
+  margin: 0 -8rpx;
+  padding: 8rpx 0 4rpx;
 }
 
-.hot-scroll-inner {
+.hot-swiper {
+  width: 100%;
+  perspective: 1400rpx;
+}
+
+.hot-swiper-item {
+  box-sizing: border-box;
+  padding: 0 10rpx;
   display: flex;
-  flex-direction: row;
-  gap: 20rpx;
-  padding: 4rpx 0 8rpx;
+  align-items: center;
+  justify-content: center;
+  overflow: visible;
 }
 
 .hot-card {
   flex-shrink: 0;
   width: 480rpx;
   padding: 28rpx;
+  box-sizing: border-box;
   background: var(--dx-surface);
-  border-radius: var(--dx-radius-md);
+  border-radius: var(--dx-radius-xl);
+  border: 2rpx solid rgba(255, 255, 255, 0.65);
   box-shadow: var(--dx-shadow-sm);
+  transform: scale(0.86) rotateY(10deg);
+  transform-origin: center center;
+  opacity: 0.55;
+  filter: blur(3px);
+  transition:
+    transform 0.38s ease,
+    opacity 0.38s ease,
+    filter 0.38s ease,
+    box-shadow 0.38s ease;
+}
+
+.hot-card--active {
+  transform: scale(1) rotateY(0deg);
+  opacity: 1;
+  filter: none;
+  z-index: 3;
+  box-shadow: var(--dx-shadow-md);
+  border-color: rgba(255, 255, 255, 0.95);
+}
+
+.hot-card--side {
+  opacity: 0.78;
+  filter: blur(1.5px);
+  z-index: 2;
+}
+
+.hot-card--prev {
+  transform: scale(0.9) rotateY(8deg);
+  transform-origin: right center;
+}
+
+.hot-card--next {
+  transform: scale(0.9) rotateY(-8deg);
+  transform-origin: left center;
+}
+
+.hot-card--far {
+  transform: scale(0.82) rotateY(0deg);
+  opacity: 0.4;
+  filter: blur(4px);
+  z-index: 1;
+}
+
+.hot-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12rpx;
+  margin-top: 20rpx;
+}
+
+.hot-dot {
+  width: 12rpx;
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: var(--dx-border);
+  transition: width 0.28s ease, background 0.28s ease;
+}
+
+.hot-dot.active {
+  width: 28rpx;
+  background: var(--dx-primary);
 }
 
 .hot-card-top {
