@@ -70,6 +70,15 @@ class LlmRoutePayload(BaseModel):
     routeDetail: RouteDetail
 
 
+class PlaybookMatch(BaseModel):
+    id: str
+    city: str
+    scope: str
+    summary: str
+    classicOrder: list[str] = Field(default_factory=list)
+    score: float = 0
+
+
 class GenerateRouteRequest(BaseModel):
     prompt: str
     days: int | None = Field(default=None, ge=1, le=7)
@@ -78,7 +87,9 @@ class GenerateRouteRequest(BaseModel):
     history: list[PlanChatMessage] = Field(default_factory=list)
     intent: TravelIntentSnapshot | None = None
     ragCandidates: list[RagAttractionCandidate] = Field(default_factory=list)
+    playbookMatches: list[PlaybookMatch] = Field(default_factory=list)
     variantHint: str | None = None
+    locale: str | None = "zh-CN"
 
 
 class GenerateRouteResponse(BaseModel):

@@ -95,10 +95,39 @@ function estimateByHaversine(from: LatLngPoint, to: LatLngPoint): TravelDuration
   };
 }
 
-function pickModeFromDistance(distanceMeters: number, durationMinutes: number): RouteTransitMode {
+export interface TravelDurationOptions {
+  /** H9-4：playbook 建议的交通方式，优先于距离规则 */
+  preferredMode?: RouteTransitMode;
+  /** H9-4：景区簇内（如西湖），短距优先步行/观光车 */
+  scenicCluster?: boolean;
+}
+
+function pickLocalTransitMode(
+  distanceMeters: number,
+  durationMinutes: number,
+  options?: TravelDurationOptions,
+): RouteTransitMode {
+  if (options?.preferredMode) return options.preferredMode;
+
+  if (options?.scenicCluster) {
+    if (distanceMeters <= 2500) return 'walk';
+    return 'bus';
+  }
+
   if (distanceMeters <= WALK_DISTANCE_THRESHOLD_M) return 'walk';
-  if (durationMinutes <= 25) return 'subway';
+  if (distanceMeters <= 3000) return 'walk';
+  if (distanceMeters <= 5000 && durationMinutes <= 20) return 'taxi';
+  if (distanceMeters <= 10000) return 'bus';
   return 'drive';
+}
+
+/** @deprecated 使用 pickLocalTransitMode；保留命名供内部调用 */
+function pickModeFromDistance(
+  distanceMeters: number,
+  durationMinutes: number,
+  options?: TravelDurationOptions,
+): RouteTransitMode {
+  return pickLocalTransitMode(distanceMeters, durationMinutes, options);
 }
 
 /**
@@ -108,6 +137,7 @@ function pickModeFromDistance(distanceMeters: number, durationMinutes: number): 
 export async function getTravelDuration(
   from: LatLngPoint,
   to: LatLngPoint,
+  options?: TravelDurationOptions,
 ): Promise<TravelDurationResult> {
   const cached = await getCachedTravelDuration(
     from.latitude,
@@ -115,11 +145,17 @@ export async function getTravelDuration(
     to.latitude,
     to.longitude,
   );
-  if (cached) return cached;
+  if (cached) {
+    if (!options?.preferredMode && !options?.scenicCluster) return cached;
+  }
 
   const key = getAmapWebKey();
   if (!key || !isAmapGeocodeEnabled()) {
-    return estimateByHaversine(from, to);
+    const estimated = estimateByHaversine(from, to);
+    return {
+      ...estimated,
+      mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
+    };
   }
 
   const origins = `${from.longitude},${from.latitude}`;
@@ -138,36 +174,50 @@ export async function getTravelDuration(
 
     if (data.status !== '1' || !data.results?.[0]) {
       console.warn('[amap-direction] distance 无结果:', data.info ?? res.status);
-      return estimateByHaversine(from, to);
+      const estimated = estimateByHaversine(from, to);
+      return {
+        ...estimated,
+        mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
+      };
     }
 
     const distanceMeters = parseInt(data.results[0].distance ?? '0', 10);
     const durationSec = parseInt(data.results[0].duration ?? '0', 10);
     if (!Number.isFinite(distanceMeters) || !Number.isFinite(durationSec) || durationSec <= 0) {
-      return estimateByHaversine(from, to);
+      const estimated = estimateByHaversine(from, to);
+      return {
+        ...estimated,
+        mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
+      };
     }
 
     const durationMinutes = Math.max(5, Math.round(durationSec / 60));
     const result: TravelDurationResult = {
       durationMinutes,
       distanceMeters,
-      mode: pickModeFromDistance(distanceMeters, durationMinutes),
+      mode: pickLocalTransitMode(distanceMeters, durationMinutes, options),
       estimated: false,
     };
-    await setCachedTravelDuration(
-      from.latitude,
-      from.longitude,
-      to.latitude,
-      to.longitude,
-      result,
-    );
+    if (!options?.preferredMode && !options?.scenicCluster) {
+      await setCachedTravelDuration(
+        from.latitude,
+        from.longitude,
+        to.latitude,
+        to.longitude,
+        result,
+      );
+    }
     return result;
   } catch (err) {
     console.warn(
       '[amap-direction] distance 请求失败:',
       err instanceof Error ? err.message : err,
     );
-    return estimateByHaversine(from, to);
+    const estimated = estimateByHaversine(from, to);
+    return {
+      ...estimated,
+      mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
+    };
   }
 }
 

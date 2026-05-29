@@ -38,7 +38,8 @@ JSON 结构：
 4. poiType=attraction 时必须填写真实可参考的 latitude、longitude（中国境内 WGS84）。
 5. poiType=restaurant 时 name 必须是具体店名；鼓励填写 latitude、longitude。
 6. time 字段可留空字符串，不要编造交通或酒店时刻。
-7. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。"""
+7. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。
+8. 若提供了「玩法动线参考」，attractions 的排列顺序应尽量贴近其中的经典顺序；仍禁止输出 transit/lodging。"""
 
 MULTI_TURN_HINT = """
 8. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。"""

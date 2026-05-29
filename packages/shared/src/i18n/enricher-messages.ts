@@ -12,6 +12,14 @@ const ENRICHER_MESSAGES: Record<LocaleCode, Record<string, string>> = {
       '{name} 到达时间早于开放（{openTime} 起），建议 {openTime} 后再前往',
     'enricher.warn.afterClose':
       '{name} 游玩结束晚于闭馆（{closeTime}），建议缩短停留或改期',
+    'enricher.intercity.catalog': '参考班次 {scheduleNo}，可跳转第三方订票',
+    'enricher.intercity.api': '班次 {scheduleNo}（实时查询），可跳转订票',
+    'enricher.intercity.template': '参考耗时；演示订票链接',
+    'enricher.transit.classicWalk': '经典动线建议步行（{scope}）',
+    'enricher.transit.scenicWalk': '景区内建议步行（{scope}）',
+    'enricher.transit.sightseeingBus': '景区建议观光车（{scope}）',
+    'enricher.transit.ferry': '建议游船（{scope}）',
+    'enricher.transit.taxiShort': '短距建议打车（{scope}）',
   },
   'en-US': {
     'enricher.warn.lateSchedule': 'Tight schedule at {name}',
@@ -21,6 +29,14 @@ const ENRICHER_MESSAGES: Record<LocaleCode, Record<string, string>> = {
       '{name}: arrival is before opening ({openTime}); visit after {openTime}',
     'enricher.warn.afterClose':
       '{name}: visit ends after closing ({closeTime}); shorten stay or reschedule',
+    'enricher.intercity.catalog': 'Ref. {scheduleNo} — book via partner link',
+    'enricher.intercity.api': '{scheduleNo} (live) — book via partner link',
+    'enricher.intercity.template': 'Reference duration only; demo booking link',
+    'enricher.transit.classicWalk': 'Classic route: walk ({scope})',
+    'enricher.transit.scenicWalk': 'Walk inside scenic area ({scope})',
+    'enricher.transit.sightseeingBus': 'Scenic shuttle suggested ({scope})',
+    'enricher.transit.ferry': 'Ferry suggested ({scope})',
+    'enricher.transit.taxiShort': 'Short taxi hop ({scope})',
   },
 };
 
@@ -59,5 +75,37 @@ export function formatEnricherWarning(
     name: params.name,
     openTime,
     closeTime,
+  });
+}
+
+export type IntercityDescriptionKey = 'catalog' | 'api' | 'template';
+
+/** H9-3：跨城段说明文案 */
+export function formatIntercitySegmentDescription(
+  key: IntercityDescriptionKey,
+  locale: LocaleCode,
+  params?: { scheduleNo?: string },
+): string {
+  const messageKey = `enricher.intercity.${key}`;
+  return enricherMsg(messageKey, locale, {
+    scheduleNo: params?.scheduleNo?.trim() ?? '',
+  });
+}
+
+export type PlaybookTransitReasonKey =
+  | 'classicWalk'
+  | 'scenicWalk'
+  | 'sightseeingBus'
+  | 'ferry'
+  | 'taxiShort';
+
+/** H9-4：玩法段间交通推荐理由 */
+export function formatPlaybookTransitDescription(
+  reasonKey: PlaybookTransitReasonKey,
+  locale: LocaleCode,
+  params: { scope: string },
+): string {
+  return enricherMsg(`enricher.transit.${reasonKey}`, locale, {
+    scope: params.scope,
   });
 }

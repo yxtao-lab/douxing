@@ -8,13 +8,12 @@ import {
   type RouteDayPlan,
   type RouteTransitSegment,
   type TravelIntentSnapshot,
-  type TransportPreference,
   checkVisitOpenHours,
   formatEnricherWarning,
+  formatPlaybookTransitDescription,
   parseWeekdayFromRouteDate,
 } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
-import { findCityPairTemplate } from '../data/city-pair-transit.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 import { geocodeByPlaceText, resolveCoordinatesFromAmap } from './amap-geocode.service.js';
 import {
@@ -30,6 +29,12 @@ import {
 import { formatIntentConstraintsForEnricher } from './travel-intent.service.js';
 import { retrieveHotelsForLodging } from './attraction-rag.service.js';
 import { getOpenHoursByAttractionIds } from './attraction.service.js';
+import { resolveIntercityTransitSegment } from './intercity-transit.service.js';
+import {
+  findPlaybookSegmentHint,
+  isScenicClusterDay,
+  type MatchedRoutePlaybook,
+} from './playbook-rag.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 
@@ -48,6 +53,8 @@ const LODGING_SEARCH_KEYWORDS: Record<Exclude<LodgingTier, 'any'>, string[]> = {
 export interface EnrichRouteOptions {
   intent: TravelIntentSnapshot;
   locale?: LocaleCode;
+  /** H9-4：玩法动线检索结果 */
+  playbooks?: MatchedRoutePlaybook[];
 }
 
 function isPlayPoi(spot: RouteDayAttraction): boolean {
@@ -238,49 +245,6 @@ function resolveDayCities(
   return days.map((day) => detectCityInText(day.title) ?? detectCityInText(day.date) ?? primary);
 }
 
-function pickIntercityMode(
-  preference?: TransportPreference | null,
-  templateMode?: 'train' | 'flight',
-): RouteTransitSegment['mode'] {
-  if (preference === 'flight') return 'flight';
-  if (preference === 'train' || preference === 'high_speed_rail') return 'train';
-  if (preference === 'self_drive') return 'drive';
-  return templateMode ?? 'train';
-}
-
-function buildIntercitySegment(
-  fromCity: string,
-  toCity: string,
-  intent: TravelIntentSnapshot,
-  locale: LocaleCode,
-): RouteTransitSegment | null {
-  const template = findCityPairTemplate(fromCity, toCity, intent.transportPreference ?? 'any');
-  if (!template) return null;
-
-  const mode = pickIntercityMode(intent.transportPreference, template.mode);
-  const [depH, depM] = template.departureTime.split(':').map((v) => parseInt(v, 10));
-  const startMinutes = depH * 60 + (depM || 0);
-  const endMinutes = startMinutes + template.durationMinutes;
-
-  const estimatedNote =
-    locale === 'en-US'
-      ? 'Reference duration only; demo booking link'
-      : '参考耗时；演示订票链接';
-
-  return {
-    kind: 'intercity',
-    mode,
-    from: `${fromCity}${locale === 'en-US' ? ' Station' : '站'}`,
-    to: `${toCity}${locale === 'en-US' ? ' Station' : '站'}`,
-    time: formatTimeRange(startMinutes, endMinutes),
-    durationMinutes: template.durationMinutes,
-    cost: template.cost,
-    bookingUrl: template.bookingUrl,
-    estimated: true,
-    description: estimatedNote,
-  };
-}
-
 async function buildTransitLeg(
   from: LatLngPoint,
   to: LatLngPoint,
@@ -288,9 +252,30 @@ async function buildTransitLeg(
   toLabel: string,
   departMinutes: number,
   locale: LocaleCode,
+  options?: {
+    playbooks?: MatchedRoutePlaybook[];
+    scenicCluster?: boolean;
+  },
 ): Promise<{ segment: RouteTransitSegment; arriveMinutes: number }> {
-  const leg = await getTravelDuration(from, to);
+  const segmentHint = options?.playbooks?.length
+    ? findPlaybookSegmentHint(options.playbooks, fromLabel, toLabel)
+    : null;
+
+  const leg = await getTravelDuration(from, to, {
+    preferredMode: segmentHint?.mode,
+    scenicCluster: options?.scenicCluster && !segmentHint,
+  });
   const arriveMinutes = departMinutes + leg.durationMinutes;
+
+  let description: string | undefined;
+  if (segmentHint) {
+    description = formatPlaybookTransitDescription(segmentHint.reasonKey, locale, {
+      scope: segmentHint.scope,
+    });
+  } else if (leg.estimated) {
+    description = locale === 'en-US' ? 'Estimated travel time' : '估算交通耗时';
+  }
+
   return {
     arriveMinutes,
     segment: {
@@ -301,11 +286,7 @@ async function buildTransitLeg(
       time: formatTimeRange(departMinutes, arriveMinutes),
       durationMinutes: leg.durationMinutes,
       estimated: leg.estimated,
-      description: leg.estimated
-        ? locale === 'en-US'
-          ? 'Estimated travel time'
-          : '估算交通耗时'
-        : undefined,
+      description,
     },
   };
 }
@@ -359,12 +340,15 @@ async function scheduleDayPois(
   locale: LocaleCode,
   options: {
     dayDate?: string;
+    dayTitle?: string;
     openHoursMap: Map<number, AttractionOpenHours>;
+    playbooks?: MatchedRoutePlaybook[];
   },
 ): Promise<{ attractions: RouteDayAttraction[]; transit: RouteTransitSegment[]; warnings: string[] }> {
   const warnings: string[] = [];
   const weekday = parseWeekdayFromRouteDate(options.dayDate);
   const openHoursMap = options.openHoursMap;
+  const playbooks = options.playbooks ?? [];
   const geocoded = await geocodePlayPois(city, spots);
   const withCoords = geocoded.filter(hasCoords);
   const missingCoords = geocoded.filter((s) => !hasCoords(s));
@@ -397,6 +381,12 @@ async function scheduleDayPois(
     ? await optimizePoiOrderFromDepot(lodgingPoint, poiPoints)
     : await optimizeVisitOrder(poiPoints);
   const orderedSpots = order.map((idx) => withCoords[idx]!);
+  const scenicCluster = isScenicClusterDay(
+    playbooks,
+    [...geocoded.map((s) => s.name), ...missingCoords.map((s) => s.name)],
+    options.dayTitle ?? city,
+  );
+  const legOptions = { playbooks, scenicCluster };
 
   if (lodgingPoint && orderedSpots.length > 0) {
     const firstLeg = await buildTransitLeg(
@@ -406,6 +396,7 @@ async function scheduleDayPois(
       orderedSpots[0]!.name,
       cursor,
       locale,
+      legOptions,
     );
     transit.push(firstLeg.segment);
     cursor = firstLeg.arriveMinutes;
@@ -422,6 +413,7 @@ async function scheduleDayPois(
         spot.name,
         cursor,
         locale,
+        legOptions,
       );
       transit.push(leg.segment);
       cursor = leg.arriveMinutes;
@@ -454,6 +446,7 @@ async function scheduleDayPois(
       lodging.name,
       cursor,
       locale,
+      legOptions,
     );
     transit.push(returnLeg.segment);
   }
@@ -484,7 +477,7 @@ export async function enrichRouteDraft(
   draft: GeneratedRouteDraft,
   options: EnrichRouteOptions,
 ): Promise<GeneratedRouteDraft> {
-  const { intent, locale = 'zh-CN' } = options;
+  const { intent, locale = 'zh-CN', playbooks = [] } = options;
   const matchedCity = draft.matchedCity || intent.city || '当地';
   const dayCities = resolveDayCities(draft.routeDetail.days, intent, matchedCity);
 
@@ -510,7 +503,9 @@ export async function enrichRouteDraft(
     const { attractions: scheduledPois, transit: localTransit, warnings } =
       await scheduleDayPois(city, playPois, lodging, locale, {
         dayDate: day.date,
+        dayTitle: day.title,
         openHoursMap,
+        playbooks,
       });
 
     lodging.time = formatMinutesToTime(
@@ -522,7 +517,13 @@ export async function enrichRouteDraft(
     if (dayIndex > 0) {
       const prevCity = dayCities[dayIndex - 1]!;
       if (prevCity !== city) {
-        const intercity = buildIntercitySegment(prevCity, city, intent, locale);
+        const intercity = await resolveIntercityTransitSegment(prevCity, city, {
+          dayIndex,
+          dayDate: day.date,
+          startDate: intent.startDate,
+          transportPreference: intent.transportPreference,
+          locale,
+        });
         if (intercity) {
           transit.unshift(intercity);
         }

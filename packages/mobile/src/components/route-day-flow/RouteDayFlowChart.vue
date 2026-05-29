@@ -68,7 +68,7 @@
               class="flow-booking-link"
               @click.stop="openBookingUrl(node.transit!.bookingUrl!)"
             >
-              {{ t('routes.transitBookDemo') }}
+              {{ bookingLinkLabel(node.transit) }}
             </text>
             <button
               v-if="showCheckIn && node.kind === 'play' && node.spot"
@@ -87,7 +87,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { RouteDayPlan, RouteDayAttraction } from '@douxing/shared';
+import type { RouteDayPlan, RouteDayAttraction, RouteTransitSegment } from '@douxing/shared';
 import type { RouteFlowNode, RouteFlowNodeKind } from '@/utils/route-day-flow';
 import { buildRouteDayFlow } from '@/utils/route-day-flow';
 import { useTf } from '@/i18n/useTf';
@@ -171,12 +171,24 @@ function nodeMeta(node: RouteFlowNode): string {
     const modeKey = `routes.transitMode_${node.transit.mode}` as const;
     const modeLabel = t(modeKey);
     const mode = modeLabel === modeKey ? node.transit.mode : modeLabel;
-    return `${mode} · ${tf('routes.transitDuration', { minutes: node.transit.durationMinutes })}`;
+    const duration = tf('routes.transitDuration', { minutes: node.transit.durationMinutes });
+    if (node.transit.scheduleNo) {
+      const schedule = tf('routes.transitScheduleNo', { no: node.transit.scheduleNo });
+      return `${schedule} · ${mode} · ${duration}`;
+    }
+    return `${mode} · ${duration}`;
   }
   if (node.meta != null && node.meta !== '') {
     return `¥${node.meta}`;
   }
   return '';
+}
+
+function bookingLinkLabel(seg: RouteTransitSegment): string {
+  if (seg.scheduleSource === 'catalog' || seg.scheduleSource === 'api') {
+    return t('routes.transitBookReal');
+  }
+  return t('routes.transitBookDemo');
 }
 
 function openBookingUrl(url: string) {

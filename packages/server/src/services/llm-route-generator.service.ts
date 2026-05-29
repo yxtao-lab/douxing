@@ -19,6 +19,7 @@ export async function generateRouteFromLlm(
     history: input.history,
     intent,
     ragCandidates: input.ragCandidates,
+    playbookMatches: input.playbookMatches,
     variantHint: input.variantHint,
     locale: input.locale,
   });

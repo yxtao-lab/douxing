@@ -19,6 +19,7 @@ import {
 } from '../config/llm.js';
 import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
 import { formatRagContextForLlm } from './attraction-rag.service.js';
+import { formatPlaybookContextForLlm, type MatchedRoutePlaybook } from './playbook-rag.service.js';
 
 const poiTypeEnum = z.enum([
   PoiCategory.ATTRACTION,
@@ -135,7 +136,8 @@ JSON 结构：
 4. poiType=attraction 时必须填写真实可参考的 latitude、longitude（中国境内 WGS84）。
 5. poiType=restaurant 时 name 必须是具体店名；鼓励填写 latitude、longitude。
 6. time 字段可留空字符串，不要编造交通或酒店时刻。
-7. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。`;
+7. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。
+8. 若提供了「玩法动线参考」，attractions 的排列顺序应尽量贴近其中的经典顺序；仍禁止输出 transit/lodging。`;
 
 const MULTI_TURN_HINT = `
 8. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
@@ -290,6 +292,7 @@ async function chatCompletionWithProvider(
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
+    playbookMatches?: MatchedRoutePlaybook[];
     variantHint?: string;
     locale?: LocaleCode;
   },
@@ -300,6 +303,7 @@ async function chatCompletionWithProvider(
   }
 
   const model = await resolveModelId(provider);
+  const locale = options?.locale ?? DEFAULT_LOCALE;
   const blocks: string[] = [];
   if (options?.intent) {
     const constraintBlock = formatIntentConstraintsForLlm(options.intent);
@@ -311,6 +315,9 @@ async function chatCompletionWithProvider(
   if (options?.ragCandidates?.length) {
     blocks.push(formatRagContextForLlm(options.ragCandidates));
   }
+  if (options?.playbookMatches?.length) {
+    blocks.push(formatPlaybookContextForLlm(options.playbookMatches, locale));
+  }
   if (options?.variantHint?.trim()) {
     blocks.push(`【本方案风格 — 与其他候选路线需有明显差异】\n${options.variantHint.trim()}`);
   }
@@ -320,7 +327,6 @@ async function chatCompletionWithProvider(
       : userPrompt;
 
   const history = options?.history ?? [];
-  const locale = options?.locale ?? DEFAULT_LOCALE;
   const messages: ChatMessage[] = [
     { role: 'system', content: buildSystemPrompt(history.length > 0, locale) },
     ...history.map((item) => ({
@@ -412,6 +418,7 @@ export async function chatCompletionForRoute(
     history?: PlanChatMessage[];
     intent?: TravelIntentSnapshot;
     ragCandidates?: RagAttractionCandidate[];
+    playbookMatches?: MatchedRoutePlaybook[];
     variantHint?: string;
     locale?: LocaleCode;
   },

@@ -44,7 +44,11 @@ export {
 } from './plan-route-names.js';
 export {
   formatEnricherWarning,
+  formatIntercitySegmentDescription,
+  formatPlaybookTransitDescription,
   type EnricherWarningKey,
+  type IntercityDescriptionKey,
+  type PlaybookTransitReasonKey,
 } from './enricher-messages.js';
 
 import { MemberLevel } from '../constants.js';

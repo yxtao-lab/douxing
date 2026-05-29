@@ -246,6 +246,8 @@ export const mobileEnUS = {
     transitEstimated: 'Reference time (estimated)',
     transitDemoLink: 'Demo booking link (not a real schedule)',
     transitBookDemo: 'View demo booking link',
+    transitBookReal: 'Book via partner',
+    transitScheduleNo: 'Schedule {no}',
     bookingLinkCopied: 'Link copied to clipboard',
     transitMode_train: 'Train',
     transitMode_flight: 'Flight',

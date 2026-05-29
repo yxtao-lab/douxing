@@ -17,6 +17,7 @@ from app.schemas import (
     GenerateRouteRequest,
     GenerateRouteResponse,
     LlmRoutePayload,
+    PlaybookMatch,
     ProviderStatus,
     RagAttractionCandidate,
     TravelIntentSnapshot,
@@ -45,6 +46,34 @@ def format_intent_constraints_for_llm(intent: TravelIntentSnapshot) -> str:
         )
     if len(lines) == 1:
         return ""
+    return "\n".join(lines)
+
+
+def format_playbook_context_for_llm(matches: list[PlaybookMatch], locale: str = "zh-CN") -> str:
+    if not matches:
+        return ""
+
+    if locale == "en-US":
+        lines = [
+            "【Playbook reference — align attractions order; do NOT invent transit/lodging】",
+            "- Keep poiType=attraction names from the POI catalog when possible",
+            "- Follow the classic visit order below when selecting and ordering spots",
+        ]
+        arrow = " → "
+    else:
+        lines = [
+            "【玩法动线参考 — 排列 attractions 顺序；禁止编造 transit/lodging】",
+            "- poiType=attraction 仍须优先使用内容库 POI 名称",
+            "- 下列经典顺序仅作游玩顺序参考，可在库内 POI 中微调",
+        ]
+        arrow = " → "
+
+    for item in matches:
+        order = arrow.join(item.classicOrder)
+        lines.append(f"- {item.scope}（{item.city}）：{item.summary}")
+        if order:
+            lines.append(f"  顺序：{order}")
+
     return "\n".join(lines)
 
 
@@ -131,6 +160,9 @@ def _build_user_content(request: GenerateRouteRequest) -> str:
             blocks.append(f"（预算：{request.budget}）")
     if request.ragCandidates:
         blocks.append(format_rag_context_for_llm(request.ragCandidates))
+    if request.playbookMatches:
+        locale = request.locale or "zh-CN"
+        blocks.append(format_playbook_context_for_llm(request.playbookMatches, locale))
     if request.variantHint and request.variantHint.strip():
         blocks.append(
             f"【本方案风格 — 与其他候选路线需有明显差异】\n{request.variantHint.strip()}"

@@ -60,6 +60,9 @@ export type RouteTransitMode =
   | 'walk'
   | 'drive';
 
+/** H9-3：跨城班次数据来源 */
+export type RouteScheduleSource = 'api' | 'catalog' | 'template';
+
 /** H9：结构化交通段（Enricher 产出） */
 export interface RouteTransitSegment {
   kind: RouteTransitKind;
@@ -70,11 +73,15 @@ export interface RouteTransitSegment {
   time?: string;
   durationMinutes: number;
   cost?: number;
-  /** Phase 1 跨城 mock 订票链接 */
+  /** 跨城订票链接（班次库/第三方 API 为真实跳转；模板为演示） */
   bookingUrl?: string;
-  /** 高德失败 Haversine 估算时为 true */
+  /** 高德失败 Haversine 估算，或仅有参考模板时为 true */
   estimated?: boolean;
   description?: string;
+  /** H9-3：车次/航班号 */
+  scheduleNo?: string;
+  /** H9-3：班次数据来源 */
+  scheduleSource?: RouteScheduleSource;
 }
 
 /** H9：每日住宿（Enricher 产出） */
@@ -321,6 +328,8 @@ export interface TravelIntentSnapshot {
   lodgingTier?: LodgingTier | null;
   /** H9：多城行程城市顺序（可选） */
   cities?: string[];
+  /** H9-3：出发日期 ISO（YYYY-MM-DD），用于跨城班次查询 */
+  startDate?: string | null;
 }
 
 /** 传给 LLM 的对话历史条目 */

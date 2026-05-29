@@ -244,6 +244,8 @@ export const mobileZhCN = {
     transitEstimated: '参考耗时（估算）',
     transitDemoLink: '演示订票链接（非真实班次）',
     transitBookDemo: '查看演示订票链接',
+    transitBookReal: '前往第三方订票',
+    transitScheduleNo: '班次 {no}',
     bookingLinkCopied: '链接已复制到剪贴板',
     transitMode_train: '高铁/火车',
     transitMode_flight: '飞机',

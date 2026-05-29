@@ -36,6 +36,7 @@ async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: numbe
 }
 
 function buildGenerateBody(input: GenerateRouteInput) {
+  const locale = input.locale ?? 'zh-CN';
   return {
     prompt: input.prompt.trim(),
     days: input.intent?.days ?? input.days,
@@ -44,8 +45,16 @@ function buildGenerateBody(input: GenerateRouteInput) {
     history: input.history ?? [],
     intent: input.intent ?? null,
     ragCandidates: input.ragCandidates ?? [],
+    playbookMatches: (input.playbookMatches ?? []).map(({ playbook, score }) => ({
+      id: playbook.id,
+      city: playbook.city,
+      scope: playbook.scope,
+      summary: locale === 'en-US' ? playbook.summaryEn : playbook.summaryZh,
+      classicOrder: playbook.classicOrder,
+      score,
+    })),
     variantHint: input.variantHint ?? null,
-    locale: input.locale ?? 'zh-CN',
+    locale,
   };
 }
 

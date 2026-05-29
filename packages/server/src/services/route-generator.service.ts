@@ -27,6 +27,10 @@ import {
   retrieveAttractionsForPlanning,
 } from './attraction-rag.service.js';
 import { enrichRouteDraft } from './route-enricher.service.js';
+import {
+  retrievePlaybooksForPlanning,
+  type MatchedRoutePlaybook,
+} from './playbook-rag.service.js';
 
 export interface GenerateRouteInput {
   prompt: string;
@@ -40,6 +44,8 @@ export interface GenerateRouteInput {
   intent?: TravelIntentSnapshot;
   /** C3：RAG 候选景点（可选，未传则自动检索） */
   ragCandidates?: RagAttractionCandidate[];
+  /** H9-4：玩法动线（可选，未传则自动检索） */
+  playbookMatches?: MatchedRoutePlaybook[];
   /** C4：方案变体提示（经典/文化/休闲等） */
   variantHint?: string;
   variantKey?: string;
@@ -76,6 +82,18 @@ function resolveIntent(input: GenerateRouteInput): TravelIntentSnapshot {
   });
 }
 
+async function resolvePlaybookMatches(
+  input: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+): Promise<MatchedRoutePlaybook[]> {
+  if (input.playbookMatches) return input.playbookMatches;
+  return retrievePlaybooksForPlanning({
+    city: intent.city,
+    themes: intent.themes,
+    prompt: input.prompt,
+  });
+}
+
 async function resolveRagCandidates(
   input: GenerateRouteInput,
   intent: TravelIntentSnapshot,
@@ -102,12 +120,14 @@ async function finalizeRouteDraft(
   input: GenerateRouteInput,
   intent: TravelIntentSnapshot,
   ragCandidates: RagAttractionCandidate[],
+  playbookMatches: MatchedRoutePlaybook[],
 ): Promise<GeneratedRouteDraft> {
   const constrained = enforceRouteConstraints(draft, intent);
   const linked = applyRagToRouteDraft(constrained, ragCandidates);
   const enriched = await enrichRouteDraft(linked, {
     intent,
     locale: input.locale,
+    playbooks: playbookMatches,
   });
   return withRagMeta(enriched, enriched.ragMatchedCount ?? linked.ragMatchedCount ?? 0, enriched.ragCandidateCount ?? linked.ragCandidateCount ?? ragCandidates.length);
 }
@@ -133,18 +153,20 @@ export async function generateRoute(
 > {
   const intent = resolveIntent(input);
   const ragCandidates = await resolveRagCandidates(input, intent);
+  const playbookMatches = await resolvePlaybookMatches(input, intent);
   const enrichedInput = {
     ...input,
     days: intent.days ?? input.days,
     budget: intent.budget ?? input.budget,
     intent,
     ragCandidates,
+    playbookMatches,
   };
 
   if (canUseAiServiceForRoute()) {
     try {
       const draft = await generateRouteFromAiService(enrichedInput);
-      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates);
+      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates, playbookMatches);
       return {
         ...finalized,
         generationSource: 'llm',
@@ -162,7 +184,7 @@ export async function generateRoute(
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
-      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates);
+      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates, playbookMatches);
       return {
         ...finalized,
         generationSource: 'llm',
@@ -178,7 +200,7 @@ export async function generateRoute(
   }
 
   const templateDraft = generateRouteFromTemplate(enrichedInput, intent, ragCandidates);
-  const finalized = await finalizeRouteDraft(templateDraft, enrichedInput, intent, ragCandidates);
+  const finalized = await finalizeRouteDraft(templateDraft, enrichedInput, intent, ragCandidates, playbookMatches);
   return {
     ...finalized,
     generationSource: 'template',

@@ -40,3 +40,12 @@ export function getPolylineCacheTtlSec(): number {
   const raw = parseInt(trimEnv('AMAP_POLYLINE_CACHE_TTL_SEC') || '604800', 10);
   return Number.isFinite(raw) && raw > 0 ? raw : 604800;
 }
+
+/** H9-3：跨城班次缓存键前缀 */
+export const INTERCITY_CACHE_KEY_PREFIX = 'douxing:intercity:schedule:';
+
+/** 跨城班次缓存 TTL（秒），默认 6 小时 */
+export function getIntercityCacheTtlSec(): number {
+  const raw = parseInt(trimEnv('INTERCITY_CACHE_TTL_SEC') || '21600', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 21600;
+}
