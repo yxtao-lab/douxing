@@ -12,8 +12,15 @@
       </text>
     </view>
 
-    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
-    <view v-else-if="filteredList.length === 0" class="empty">{{ emptyHint }}</view>
+    <DouxingEmptyState v-if="loading" loading />
+    <DouxingEmptyState
+      v-else-if="filteredList.length === 0"
+      variant="orders"
+      :title="emptyHint"
+      :description="t('emptyState.ordersDesc')"
+      :action-label="activeTab === 'all' ? t('routes.goPlan') : undefined"
+      @action="goPlan"
+    />
 
     <view v-for="item in filteredList" :key="item.id" class="card">
       <view class="card-head">
@@ -48,6 +55,7 @@ import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-pa
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 type OrderTab = 'all' | 'pending' | 'done';
 
@@ -117,6 +125,10 @@ function formatTime(iso: string) {
 
 function goRouteDetail(routeId: number) {
   uni.navigateTo({ url: `/pages/routes/detail?id=${routeId}` });
+}
+
+function goPlan() {
+  uni.switchTab({ url: '/pages/plan/plan' });
 }
 
 async function loadOrders() {
@@ -203,12 +215,6 @@ onShow(async () => {
   color: #1677ff;
   font-weight: 600;
   background: #e6f4ff;
-}
-.empty {
-  text-align: center;
-  color: #9ca3af;
-  padding: 80rpx 0;
-  font-size: 28rpx;
 }
 .card {
   background: #fff;

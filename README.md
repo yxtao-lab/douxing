@@ -19,6 +19,7 @@
 |------|------|
 | 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含时间轴进度） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 

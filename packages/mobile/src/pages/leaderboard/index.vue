@@ -31,8 +31,13 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
-    <view v-else-if="entries.length === 0" class="empty">{{ t('leaderboard.empty') }}</view>
+    <DouxingEmptyState v-if="loading" loading />
+    <DouxingEmptyState
+      v-else-if="entries.length === 0"
+      variant="leaderboard"
+      :title="t('leaderboard.empty')"
+      :description="t('emptyState.leaderboardDesc')"
+    />
     <view v-else class="rank-list">
       <view
         v-for="item in entries"
@@ -62,6 +67,7 @@ import { fetchLeaderboard } from '@/api/leaderboard';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 usePageTitle('nav.leaderboard');
 const { t, tf } = useTf();
@@ -225,12 +231,6 @@ onShow(async () => {
 .filter-chip.active {
   background: #1677ff;
   color: #fff;
-}
-.empty {
-  color: #9ca3af;
-  font-size: 28rpx;
-  text-align: center;
-  padding: 80rpx 0;
 }
 .rank-list {
   display: flex;

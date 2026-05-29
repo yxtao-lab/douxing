@@ -18,7 +18,14 @@
       </view>
     </view>
 
-    <view v-if="filteredList.length === 0" class="empty">{{ t('checkins.listEmpty') }}</view>
+    <DouxingEmptyState
+      v-if="filteredList.length === 0"
+      variant="checkins"
+      :title="t('checkins.listEmpty')"
+      :description="t('emptyState.checkinsDesc')"
+      :action-label="t('routes.goPlan')"
+      @action="goPlan"
+    />
     <view v-for="item in filteredList" :key="item.id" class="card">
       <view class="card-head">
         <text class="place">{{ placeLabel(item) }}</text>
@@ -49,6 +56,7 @@ import { fetchCheckIns } from '@/api/checkins';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
@@ -93,6 +101,10 @@ function previewPhoto(photos: string[], index: number) {
 
 function goMap() {
   uni.navigateTo({ url: `/pages/checkins/map?range=${timeRange.value}` });
+}
+
+function goPlan() {
+  uni.switchTab({ url: '/pages/plan/plan' });
 }
 
 onLoad((query) => {
@@ -159,11 +171,6 @@ onShow(async () => {
   font-size: 24rpx;
   color: #1677ff;
   font-weight: 500;
-}
-.empty {
-  text-align: center;
-  color: #9ca3af;
-  padding: 80rpx 0;
 }
 .card {
   background: #fff;

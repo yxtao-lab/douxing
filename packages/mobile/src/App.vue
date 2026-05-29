@@ -19,10 +19,12 @@ function hideNativeTabBar() {
 
 <style>
 @import '@/static/iconfont/iconfont.css';
+@import '@/styles/theme.css';
 
 page {
-  background-color: #f5f7fa;
+  background-color: var(--dx-bg);
   font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  color: var(--dx-text);
 }
 
 /* Tab 页底部留白，避免被自定义 tabBar 遮挡（子页面 padding 简写会覆盖 bottom，需分边设置） */

@@ -29,8 +29,15 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
-    <view v-else-if="filteredAchievements.length === 0" class="empty">{{ t('achievements.emptyFilter') }}</view>
+    <DouxingEmptyState v-if="loading" loading />
+    <DouxingEmptyState
+      v-else-if="filteredAchievements.length === 0"
+      variant="achievements"
+      :title="t('achievements.emptyFilter')"
+      :description="t('emptyState.achievementsDesc')"
+      :secondary-action-label="t('emptyState.filterReset')"
+      @secondary-action="resetFilters"
+    />
     <view v-else class="achievement-list">
       <view
         v-for="item in filteredAchievements"
@@ -66,6 +73,7 @@ import { fetchAchievementCatalog } from '@/api/achievements';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 usePageTitle('nav.achievements');
 const { t, tf } = useTf();
@@ -126,6 +134,11 @@ function progressLabel(item: AchievementCatalogItem) {
     current: progress.current,
     target: progress.target,
   });
+}
+
+function resetFilters() {
+  activeCategory.value = 'all';
+  activeUnlockStatus.value = 'all';
 }
 
 onShow(async () => {
@@ -190,12 +203,6 @@ onShow(async () => {
 .filter-chip.active {
   background: #1677ff;
   color: #fff;
-}
-.empty {
-  color: #9ca3af;
-  font-size: 28rpx;
-  text-align: center;
-  padding: 80rpx 0;
 }
 .achievement-list {
   display: flex;

@@ -29,8 +29,15 @@
       </view>
     </scroll-view>
 
-    <view v-if="loading" class="empty">{{ t('common.loading') }}</view>
-    <view v-else-if="filteredBadges.length === 0" class="empty">{{ t('badges.emptyFilter') }}</view>
+    <DouxingEmptyState v-if="loading" loading />
+    <DouxingEmptyState
+      v-else-if="filteredBadges.length === 0"
+      variant="badges"
+      :title="t('badges.emptyFilter')"
+      :description="t('emptyState.badgesDesc')"
+      :secondary-action-label="t('emptyState.filterReset')"
+      @secondary-action="resetFilters"
+    />
     <view v-else class="badge-grid">
       <view
         v-for="item in filteredBadges"
@@ -65,6 +72,7 @@ import { fetchBadgeCatalog } from '@/api/badges';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 usePageTitle('nav.badges');
 const { t, tf } = useTf();
@@ -124,6 +132,11 @@ function progressLabel(item: BadgeCatalogItem) {
     current: progress.current,
     target: progress.target,
   });
+}
+
+function resetFilters() {
+  activeCategory.value = 'all';
+  activeUnlockStatus.value = 'all';
 }
 
 onShow(async () => {
@@ -188,12 +201,6 @@ onShow(async () => {
 .filter-chip.active {
   background: #1677ff;
   color: #fff;
-}
-.empty {
-  color: #9ca3af;
-  font-size: 28rpx;
-  text-align: center;
-  padding: 80rpx 0;
 }
 .badge-grid {
   display: flex;

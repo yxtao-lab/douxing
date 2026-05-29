@@ -26,16 +26,17 @@
 
     <scroll-view scroll-y class="scroll" enable-back-to-top>
       <view class="list-inner">
-        <view v-if="routes.length === 0" class="empty">
-          <text>{{ emptyText }}</text>
-          <text v-if="activeScope === 'mine' && currentUserLabel" class="empty-user">
-            {{ emptyAccountLine }}
-          </text>
-          <text v-if="activeScope === 'mine' && statusFilter !== undefined" class="empty-hint">
-            {{ emptyFilterHintLine }}
-          </text>
-          <button v-if="activeScope === 'mine'" class="btn" @click="goPlan">{{ t('routes.goPlan') }}</button>
-        </view>
+        <DouxingEmptyState
+          v-if="routes.length === 0"
+          :variant="emptyVariant"
+          :title="emptyText"
+          :description="emptyDescription"
+          :hints="emptyHints"
+          :action-label="emptyActionLabel"
+          :secondary-action-label="emptySecondaryActionLabel"
+          @action="handleEmptyAction"
+          @secondary-action="handleEmptySecondaryAction"
+        />
         <view v-for="item in routes" :key="item.id" class="card" @click="goDetail(item)">
           <view class="card-head">
             <text class="name">{{ item.name }}</text>
@@ -71,6 +72,8 @@ import { fetchRoutes } from '@/api/routes';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
+import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import type { DouxingEmptyVariant } from '@/components/douxing-empty-state/empty-state-variants';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
@@ -115,6 +118,64 @@ const emptyAccountLine = computed(() =>
 const emptyFilterHintLine = computed(() =>
   tf('routes.emptyFilterHint', { filter: statusFilterLabel.value }),
 );
+
+const emptyVariant = computed((): DouxingEmptyVariant => {
+  if (loadError.value) return 'error';
+  if (activeScope.value === 'plaza') return 'plaza';
+  if (activeScope.value === 'favorites') return 'favorites';
+  return 'routes';
+});
+
+const emptyDescription = computed(() => {
+  if (loadError.value) return '';
+  if (activeScope.value === 'plaza') return t('emptyState.routesPlazaDesc');
+  if (activeScope.value === 'favorites') return t('emptyState.routesFavoritesDesc');
+  return t('emptyState.routesMineDesc');
+});
+
+const emptyHints = computed(() => {
+  const hints: string[] = [];
+  if (loadError.value) return hints;
+  if (activeScope.value === 'mine' && currentUserLabel.value) {
+    hints.push(emptyAccountLine.value);
+  }
+  if (activeScope.value === 'mine' && statusFilter.value !== undefined) {
+    hints.push(emptyFilterHintLine.value);
+  }
+  return hints;
+});
+
+const emptyActionLabel = computed(() => {
+  if (loadError.value) return t('common.refresh');
+  if (activeScope.value === 'mine') return t('routes.goPlan');
+  if (activeScope.value === 'favorites') return t('emptyState.explorePlaza');
+  return t('routes.goPlan');
+});
+
+const emptySecondaryActionLabel = computed(() => {
+  if (activeScope.value === 'mine' && statusFilter.value !== undefined) {
+    return t('emptyState.filterReset');
+  }
+  return undefined;
+});
+
+function handleEmptyAction() {
+  if (loadError.value) {
+    void loadRoutes();
+    return;
+  }
+  if (activeScope.value === 'favorites') {
+    uni.setStorageSync('routes_initial_scope', 'plaza');
+    switchScope('plaza');
+    return;
+  }
+  goPlan();
+}
+
+function handleEmptySecondaryAction() {
+  statusFilter.value = undefined;
+  void loadRoutes();
+}
 
 function statusText(status: number) {
   if (status === RouteStatus.PUBLISHED) return t('routes.statusPublished');
@@ -172,6 +233,11 @@ onShow(async () => {
   if (!user) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
+  }
+  const pendingScope = uni.getStorageSync('routes_initial_scope');
+  if (pendingScope === 'plaza' || pendingScope === 'favorites') {
+    activeScope.value = pendingScope;
+    uni.removeStorageSync('routes_initial_scope');
   }
   currentUserLabel.value =
     user.nickname || user.username || tf('routes.userFallback', { id: user.id });
@@ -245,26 +311,6 @@ watch(statusFilter, () => {
   padding: 24rpx;
   padding-bottom: calc(32rpx + 120rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
-}
-
-.empty {
-  text-align: center;
-  padding: 80rpx 0;
-  color: #6b7280;
-}
-
-.empty-user,
-.empty-hint {
-  display: block;
-  font-size: 24rpx;
-  margin-top: 16rpx;
-  color: #9ca3af;
-}
-
-.btn {
-  margin-top: 24rpx;
-  background: #1677ff;
-  color: #fff;
 }
 
 .card {
