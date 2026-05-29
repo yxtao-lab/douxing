@@ -1,19 +1,31 @@
 <template>
-  <view class="page tab-page" :style="pageStyle">
+  <view class="page tab-page" :class="themeClass" :style="pageStyle">
     <view class="page-top">
-      <view class="header">
-      <view class="header-top">
-        <text class="title">{{ t('plan.title') }}</text>
-        <view v-if="sessionId || currentRouteId || previousSessionId" class="header-actions">
-          <text
-            v-if="previousSessionId && !sessionId"
-            class="header-route-link"
-            @click="restorePreviousSession"
-          >{{ t('plan.backToChat') }}</text>
-          <text v-if="sessionId" class="new-session" @click="startNewSession">{{ t('plan.newSession') }}</text>
+      <view
+        class="plan-hero"
+        :class="{ 'plan-hero--compact': sessionId || messages.length > 0 }"
+      >
+        <view class="hero-bg" />
+        <view class="hero-content">
+          <view class="header-top">
+            <view class="header-brand">
+              <view class="logo-mark">
+                <text class="iconfont icon-plan hero-icon" aria-hidden="true" />
+              </view>
+              <text class="title">{{ t('plan.title') }}</text>
+            </view>
+            <view v-if="sessionId || currentRouteId || previousSessionId" class="header-actions">
+              <text
+                v-if="previousSessionId && !sessionId"
+                class="header-route-link"
+                @click="restorePreviousSession"
+              >{{ t('plan.backToChat') }}</text>
+              <text v-if="sessionId" class="new-session" @click="startNewSession">{{ t('plan.newSession') }}</text>
+            </view>
+          </view>
+          <text v-if="!sessionId && messages.length === 0" class="desc">{{ t('plan.desc') }}</text>
         </view>
       </view>
-      <text class="desc">{{ t('plan.desc') }}</text>
       <view v-if="intentSummary" class="intent-bar">
         <text class="intent-label">{{ t('plan.intentLabel') }}</text>
         <text class="intent-value">{{ intentSummary }}{{ intentBarExtra }}</text>
@@ -27,7 +39,6 @@
       </view>
       <view v-if="showLlmStatus" class="llm-status warn">
         <text>{{ llmIssueMessage }}</text>
-      </view>
       </view>
 
       <view v-if="!sessionId" class="card setup-card">
@@ -210,6 +221,7 @@ import {
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
 } from '@douxing/shared';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -221,6 +233,7 @@ interface ChatMessage {
 }
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 const { currentLocale } = useInterestTagLabel();
 usePageTitle('nav.plan');
 
@@ -692,21 +705,40 @@ async function handleSend(text: string) {
   flex-direction: column;
   height: 100vh;
   overflow: hidden;
-  padding-top: 32rpx;
+  padding-top: 0;
   padding-left: var(--page-gutter);
   padding-right: var(--page-gutter);
   padding-bottom: calc(
     var(--tab-bar-offset) + var(--composer-tab-gap) + var(--composer-shell-height) +
       var(--candidate-dock-height) + 28rpx
   );
-  background: #f5f7fa;
+  background: var(--dx-bg);
   box-sizing: border-box;
 }
 .page-top {
   flex-shrink: 0;
 }
-.header {
-  margin-bottom: 0;
+.plan-hero {
+  position: relative;
+  margin: 0 calc(-1 * var(--page-gutter)) 20rpx;
+  padding: 24rpx var(--page-gutter) 28rpx;
+  overflow: hidden;
+  transition: padding 0.25s ease;
+}
+.plan-hero--compact {
+  padding-top: 16rpx;
+  padding-bottom: 20rpx;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
 }
 .header-top {
   display: flex;
@@ -714,48 +746,79 @@ async function handleSend(text: string) {
   justify-content: space-between;
   gap: 16rpx;
 }
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  flex: 1;
+  min-width: 0;
+}
+.logo-mark {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: width 0.25s ease, height 0.25s ease;
+}
+.plan-hero--compact .logo-mark {
+  width: 52rpx;
+  height: 52rpx;
+}
+.hero-icon {
+  color: var(--dx-text-inverse);
+  font-size: 32rpx;
+}
 .header-actions {
   display: flex;
   align-items: center;
   gap: 20rpx;
   flex-shrink: 0;
 }
-.header-route-link {
-  font-size: 26rpx;
-  color: #1677ff;
-}
-.title {
-  font-size: 40rpx;
-  font-weight: 600;
-  flex: 1;
-  min-width: 0;
-}
+.header-route-link,
 .new-session {
   font-size: 26rpx;
-  color: #1677ff;
+  color: rgba(255, 255, 255, 0.92);
+  font-weight: 500;
+}
+.title {
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+.plan-hero--compact .title {
+  font-size: 32rpx;
 }
 .desc {
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 26rpx;
   margin-top: 12rpx;
   display: block;
+  line-height: 1.45;
 }
 .intent-bar {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
-  background: #fff;
-  border-radius: 12rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-sm);
   padding: 14rpx 18rpx;
-  margin-top: 16rpx;
-  border-left: 6rpx solid #1677ff;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  margin-top: 0;
+  border-left: 6rpx solid var(--dx-primary);
+  box-shadow: var(--dx-shadow-sm);
 }
 .membership-bar {
   margin-top: 12rpx;
   padding: 10rpx 16rpx;
   background: linear-gradient(90deg, #fff7ed 0%, #fef3c7 100%);
-  border-radius: 8rpx;
+  border-radius: var(--dx-radius-sm);
 }
 .membership-label {
   font-size: 22rpx;
@@ -765,7 +828,7 @@ async function handleSend(text: string) {
   margin-top: 12rpx;
   padding: 12rpx 16rpx;
   background: #fef2f2;
-  border-radius: 8rpx;
+  border-radius: var(--dx-radius-sm);
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -779,19 +842,19 @@ async function handleSend(text: string) {
 }
 .append-locked-link {
   font-size: 22rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   flex-shrink: 0;
 }
 .llm-status {
   margin-top: 16rpx;
   padding: 12rpx 20rpx;
-  border-radius: 8rpx;
+  border-radius: var(--dx-radius-sm);
   font-size: 22rpx;
   line-height: 1.5;
 }
 .llm-status.pending {
   background: #f3f4f6;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .llm-status.ok {
   background: #ecfdf5;
@@ -802,15 +865,15 @@ async function handleSend(text: string) {
   color: #d97706;
 }
 .card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 24rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
-  margin-top: 24rpx;
+  box-shadow: var(--dx-shadow-sm);
+  margin-top: 20rpx;
 }
 .label {
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   display: block;
   margin-bottom: 16rpx;
 }
@@ -819,23 +882,23 @@ async function handleSend(text: string) {
   align-items: center;
   justify-content: space-between;
   padding: 20rpx 24rpx;
-  border: 2rpx solid #e5e7eb;
-  border-radius: 12rpx;
-  background: #fff;
+  border: 2rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+  background: var(--dx-surface);
   margin-bottom: 16rpx;
 }
 .provider-picker.disabled {
   opacity: 0.6;
-  background: #f9fafb;
+  background: var(--dx-bg);
 }
 .provider-picker-text {
   flex: 1;
   font-size: 28rpx;
-  color: #1f2937;
+  color: var(--dx-text);
 }
 .provider-picker-arrow {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   margin-left: 16rpx;
 }
 .chips {
@@ -844,19 +907,19 @@ async function handleSend(text: string) {
   gap: 16rpx;
 }
 .chip {
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
   padding: 12rpx 20rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
 }
 .intent-label {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .intent-value {
   font-size: 26rpx;
-  color: #1f2937;
+  color: var(--dx-text);
   font-weight: 500;
 }
 .chat-scroll {
@@ -914,30 +977,30 @@ async function handleSend(text: string) {
   flex-direction: column;
   box-sizing: border-box;
   padding: 20rpx;
-  background: #fff;
-  border-radius: 16rpx;
-  border: 2rpx solid #e5e7eb;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.04);
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  border: 2rpx solid var(--dx-border);
+  box-shadow: var(--dx-shadow-sm);
 }
 .candidate-card.active {
-  border-color: #1677ff;
-  background: #f0f7ff;
+  border-color: var(--dx-primary);
+  background: var(--dx-primary-light);
 }
 .candidate-label {
   font-size: 22rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   margin-bottom: 8rpx;
 }
 .candidate-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dx-text);
   margin-bottom: 8rpx;
   white-space: normal;
 }
 .candidate-meta {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .msg-row {
   display: flex;
@@ -968,7 +1031,7 @@ async function handleSend(text: string) {
   border-radius: 50%;
   flex-shrink: 0;
   overflow: hidden;
-  background: #1677ff;
+  background: var(--dx-primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -978,37 +1041,37 @@ async function handleSend(text: string) {
   height: 100%;
 }
 .msg-avatar-text {
-  color: #fff;
+  color: var(--dx-text-inverse);
   font-size: 28rpx;
   font-weight: 600;
   line-height: 1;
 }
 .assistant-avatar {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  background: linear-gradient(135deg, var(--dx-accent-dark) 0%, var(--dx-accent) 100%);
 }
 .assistant-icon {
-  color: #fff;
+  color: var(--dx-text-inverse);
   font-size: 36rpx;
 }
 .bubble {
   max-width: 100%;
   box-sizing: border-box;
   padding: 20rpx 24rpx;
-  border-radius: 16rpx;
+  border-radius: var(--dx-radius-md);
   font-size: 28rpx;
   line-height: 1.6;
   word-break: break-word;
 }
 .msg-content.user .bubble {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
   border-bottom-right-radius: 4rpx;
 }
 .msg-content.assistant .bubble {
-  background: #fff;
-  color: #1f2937;
+  background: var(--dx-surface);
+  color: var(--dx-text);
   border-bottom-left-radius: 4rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+  box-shadow: var(--dx-shadow-sm);
 }
 .route-detail-row {
   display: flex;
@@ -1026,10 +1089,10 @@ async function handleSend(text: string) {
   align-items: center;
   gap: 16rpx;
   padding: 24rpx;
-  background: linear-gradient(135deg, #f0f7ff 0%, #fff 100%);
-  border: 2rpx solid #1677ff;
-  border-radius: 16rpx;
-  box-shadow: 0 4rpx 20rpx rgba(22, 119, 255, 0.12);
+  background: linear-gradient(135deg, var(--dx-primary-light) 0%, var(--dx-surface) 100%);
+  border: 2rpx solid var(--dx-primary);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-md);
   box-sizing: border-box;
 }
 .route-detail-cta-main {
@@ -1042,28 +1105,28 @@ async function handleSend(text: string) {
 .route-detail-cta-title {
   font-size: 30rpx;
   font-weight: 600;
-  color: #1677ff;
+  color: var(--dx-primary);
 }
 .route-detail-cta-name {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dx-text);
   word-break: break-word;
 }
 .route-detail-cta-meta {
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .route-detail-cta-hint {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   margin-top: 4rpx;
 }
 .route-detail-cta-arrow {
   flex-shrink: 0;
   font-size: 40rpx;
   line-height: 1;
-  color: #1677ff;
+  color: var(--dx-primary);
   font-weight: 300;
 }
 </style>

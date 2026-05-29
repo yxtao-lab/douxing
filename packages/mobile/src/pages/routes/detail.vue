@@ -1,7 +1,9 @@
 <template>
   <AiPlanBlockingOverlay />
-  <view class="page" v-if="route">
+  <view class="page" :class="themeClass" v-if="route">
     <view class="hero">
+      <view class="hero-bg" />
+      <view class="hero-inner">
       <view class="hero-top">
         <view class="hero-title-wrap">
           <view class="title-row">
@@ -27,6 +29,7 @@
         <text class="stat">{{ statComments }}</text>
       </view>
       <text v-if="route.creatorNickname && !isOwner" class="author">{{ authorLine }}</text>
+      </view>
     </view>
 
     <view v-if="showShareSetting" class="card share-card">
@@ -188,10 +191,12 @@ import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 usePageTitle('nav.routeDetail');
 
 const { joinLabels } = useInterestTagLabel();
@@ -617,16 +622,29 @@ onLoad((query) => {
 
 <style scoped>
 .page {
-  padding: 24rpx;
-  background: #f5f7fa;
+  --page-gutter: 32rpx;
+  padding: 0 var(--page-gutter) 48rpx;
+  background: var(--dx-bg);
   min-height: 100vh;
+  box-sizing: border-box;
 }
 .hero {
-  background: linear-gradient(135deg, #1677ff, #69b1ff);
-  color: #fff;
-  padding: 40rpx 32rpx;
-  border-radius: 16rpx;
-  margin-bottom: 24rpx;
+  position: relative;
+  margin: 0 calc(-1 * var(--page-gutter)) 24rpx;
+  padding: 32rpx var(--page-gutter) 36rpx;
+  overflow: hidden;
+  color: var(--dx-text-inverse);
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-inner {
+  position: relative;
+  z-index: 1;
 }
 .hero-top {
   display: flex;
@@ -646,7 +664,8 @@ onLoad((query) => {
 }
 .title {
   font-size: 36rpx;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.35;
 }
 .status-badge {
   padding: 4rpx 14rpx;
@@ -666,6 +685,7 @@ onLoad((query) => {
   height: 64rpx;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.28);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -677,7 +697,7 @@ onLoad((query) => {
 }
 .meta {
   font-size: 24rpx;
-  opacity: 0.9;
+  opacity: 0.92;
   margin-top: 8rpx;
   display: block;
 }
@@ -686,12 +706,14 @@ onLoad((query) => {
   margin-top: 16rpx;
   display: block;
   line-height: 1.5;
+  opacity: 0.95;
 }
 .stats-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 24rpx;
   margin-top: 16rpx;
-  opacity: 0.9;
+  opacity: 0.92;
 }
 .stat {
   font-size: 22rpx;
@@ -710,17 +732,17 @@ onLoad((query) => {
 }
 .itinerary-day-heading {
   font-size: 26rpx;
-  color: #374151;
+  color: var(--dx-text);
   font-weight: 500;
   margin-bottom: 8rpx;
 }
 .itinerary-flow-divider {
   height: 1rpx;
-  background: #e5e7eb;
+  background: var(--dx-border);
   margin: 24rpx 0 8rpx;
 }
 .share-card {
-  border: 2rpx solid #e8f3ff;
+  border: 2rpx solid var(--dx-primary-light);
 }
 .share-row {
   display: flex;
@@ -731,12 +753,12 @@ onLoad((query) => {
 .share-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dx-text);
   display: block;
 }
 .share-hint {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   margin-top: 8rpx;
   display: block;
 }
@@ -746,13 +768,15 @@ onLoad((query) => {
 }
 .btn-interact {
   flex: 1;
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dx-bg);
+  color: var(--dx-text);
   font-size: 28rpx;
+  border-radius: var(--dx-radius-sm);
+  border: none;
 }
 .btn-interact.active {
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
 }
 .edit-modal-mask {
   position: fixed;
@@ -768,10 +792,10 @@ onLoad((query) => {
   width: 100%;
   max-width: 640rpx;
   max-height: 82vh;
-  background: #fff;
-  border-radius: 20rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-lg);
   padding: 32rpx;
-  box-shadow: 0 16rpx 48rpx rgba(15, 23, 42, 0.18);
+  box-shadow: var(--dx-shadow-md);
   display: flex;
   flex-direction: column;
   box-sizing: border-box;
@@ -785,7 +809,7 @@ onLoad((query) => {
 .edit-modal-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #111827;
+  color: var(--dx-text);
 }
 .edit-modal-close {
   width: 48rpx;
@@ -793,14 +817,14 @@ onLoad((query) => {
   line-height: 48rpx;
   text-align: center;
   font-size: 40rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
 }
 .edit-modal-hint {
   display: block;
   margin-top: 12rpx;
   margin-bottom: 16rpx;
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   line-height: 1.5;
 }
 .edit-modal-body {
@@ -819,7 +843,7 @@ onLoad((query) => {
   margin-bottom: 10rpx;
   font-size: 26rpx;
   font-weight: 600;
-  color: #374151;
+  color: var(--dx-text);
 }
 .edit-textarea {
   width: 100%;
@@ -827,8 +851,9 @@ onLoad((query) => {
   font-size: 26rpx;
   line-height: 1.6;
   padding: 16rpx;
-  background: #f9fafb;
-  border-radius: 8rpx;
+  background: var(--dx-bg);
+  border: 2rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
   box-sizing: border-box;
 }
 .edit-textarea--name {
@@ -847,15 +872,15 @@ onLoad((query) => {
   margin: 0;
   font-size: 28rpx;
   border: none;
-  border-radius: 12rpx;
+  border-radius: var(--dx-radius-sm);
 }
 .btn-edit-cancel {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dx-bg);
+  color: var(--dx-text);
 }
 .btn-save-draft {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
 }
 .comments-card {
   margin-bottom: 24rpx;
@@ -865,24 +890,25 @@ onLoad((query) => {
   font-weight: 600;
   display: block;
   margin-bottom: 16rpx;
+  color: var(--dx-text);
 }
 .comments-empty {
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   font-size: 24rpx;
   margin-bottom: 16rpx;
 }
 .comment-item {
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #f3f4f6;
+  border-bottom: 1rpx solid var(--dx-border);
 }
 .comment-user {
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   display: block;
 }
 .comment-content {
   font-size: 26rpx;
-  color: #374151;
+  color: var(--dx-text);
   margin-top: 8rpx;
   display: block;
   line-height: 1.5;
@@ -893,40 +919,47 @@ onLoad((query) => {
   margin-top: 16rpx;
   font-size: 26rpx;
   padding: 16rpx;
-  background: #f9fafb;
-  border-radius: 8rpx;
+  background: var(--dx-bg);
+  border: 2rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
   box-sizing: border-box;
 }
 .btn-comment {
   margin-top: 16rpx;
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
+  border-radius: var(--dx-radius-sm);
+  border: none;
 }
 .card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 28rpx;
   margin-bottom: 24rpx;
+  box-shadow: var(--dx-shadow-sm);
 }
 .lock-tip {
   display: block;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .price {
   font-size: 48rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   font-weight: 600;
   margin: 16rpx 0;
   display: block;
 }
 .btn-primary {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
+  border-radius: var(--dx-radius-lg);
+  border: none;
+  box-shadow: var(--dx-shadow-md);
 }
 .day-block {
   margin-bottom: 32rpx;
   padding-bottom: 24rpx;
-  border-bottom: 1rpx solid #f3f4f6;
+  border-bottom: 1rpx solid var(--dx-border);
 }
 .day-block:last-child {
   border-bottom: none;
@@ -940,13 +973,13 @@ onLoad((query) => {
   display: block;
   font-size: 24rpx;
   font-weight: 600;
-  color: #1677ff;
+  color: var(--dx-primary);
   margin-bottom: 12rpx;
   letter-spacing: 1rpx;
 }
 .transit-item {
-  background: #f9fafb;
-  border-radius: 12rpx;
+  background: var(--dx-bg);
+  border-radius: var(--dx-radius-sm);
   padding: 16rpx 20rpx;
   margin-bottom: 16rpx;
 }
@@ -954,12 +987,12 @@ onLoad((query) => {
   font-size: 26rpx;
   font-weight: 500;
   display: block;
-  color: #1f2937;
+  color: var(--dx-text);
 }
 .transit-meta,
 .transit-time {
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   display: block;
   margin-top: 4rpx;
 }
@@ -972,7 +1005,7 @@ onLoad((query) => {
 .transit-desc,
 .transit-demo-link {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   display: block;
   margin-top: 4rpx;
 }
@@ -994,9 +1027,10 @@ onLoad((query) => {
   font-size: 30rpx;
   display: block;
   margin-bottom: 16rpx;
+  color: var(--dx-text);
 }
 .spot {
-  border-left: 4rpx solid #1677ff;
+  border-left: 4rpx solid var(--dx-primary);
   padding-left: 20rpx;
   margin-bottom: 24rpx;
 }
@@ -1004,44 +1038,46 @@ onLoad((query) => {
   font-size: 28rpx;
   font-weight: 500;
   display: block;
+  color: var(--dx-text);
 }
 .spot-time {
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   font-size: 24rpx;
   display: block;
   margin-top: 4rpx;
 }
 .spot-desc {
-  color: #374151;
+  color: var(--dx-text);
   font-size: 24rpx;
   display: block;
   margin-top: 4rpx;
 }
 .btn-checkin {
   margin-top: 12rpx;
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
 }
 .actions {
   padding-bottom: 48rpx;
 }
 .btn-outline {
-  background: #fff;
-  color: #1677ff;
-  border: 1rpx solid #1677ff;
+  background: var(--dx-surface);
+  color: var(--dx-primary);
+  border: 2rpx solid var(--dx-primary);
+  border-radius: var(--dx-radius-lg);
 }
 .regenerate-card {
-  border: 2rpx dashed #d1d5db;
+  border: 2rpx dashed var(--dx-border);
 }
 .regenerate-title {
   font-size: 28rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dx-text);
   display: block;
 }
 .regenerate-hint {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   margin-top: 8rpx;
   display: block;
 }
@@ -1051,12 +1087,17 @@ onLoad((query) => {
   margin-top: 20rpx;
   font-size: 26rpx;
   line-height: 1.5;
+  padding: 16rpx;
+  background: var(--dx-bg);
+  border: 2rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+  box-sizing: border-box;
 }
 .btn-regenerate {
   margin-top: 24rpx;
   background: #fff7ed;
   color: #d97706;
   border: 1rpx solid #fcd34d;
-  border-radius: 12rpx;
+  border-radius: var(--dx-radius-sm);
 }
 </style>

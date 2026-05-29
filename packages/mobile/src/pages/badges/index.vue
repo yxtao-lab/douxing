@@ -1,63 +1,81 @@
 <template>
-  <view class="page">
-    <view class="summary">
-      <text class="summary-count">{{ unlockedCount }}/{{ badgeCatalog.length }}</text>
-      <text class="summary-label">{{ t('badges.unlockedSummary') }}</text>
+  <view class="page" :class="themeClass">
+    <view class="page-hero">
+      <view class="hero-bg" />
+      <view class="hero-content">
+        <view class="header-brand">
+          <view class="logo-mark">
+            <text class="hero-emoji">🎖️</text>
+          </view>
+          <view class="header-copy">
+            <text class="title">{{ t('nav.badges') }}</text>
+            <text class="hero-desc">{{ t('emptyState.badgesDesc') }}</text>
+          </view>
+        </view>
+        <view class="summary-stats">
+          <text class="summary-count">{{ unlockedCount }}/{{ badgeCatalog.length }}</text>
+          <text class="summary-label">{{ t('badges.unlockedSummary') }}</text>
+        </view>
+      </view>
     </view>
 
-    <scroll-view scroll-x class="filters" :show-scrollbar="false">
-      <view
-        v-for="opt in categoryOptions"
-        :key="opt.key"
-        class="filter-chip"
-        :class="{ active: activeCategory === opt.key }"
-        @click="activeCategory = opt.key"
-      >
-        {{ opt.label }}
-      </view>
-    </scroll-view>
-
-    <scroll-view scroll-x class="filters status-filters" :show-scrollbar="false">
-      <view
-        v-for="opt in unlockOptions"
-        :key="opt.key"
-        class="filter-chip"
-        :class="{ active: activeUnlockStatus === opt.key }"
-        @click="activeUnlockStatus = opt.key"
-      >
-        {{ opt.label }}
-      </view>
-    </scroll-view>
-
-    <DouxingEmptyState v-if="loading" loading />
-    <DouxingEmptyState
-      v-else-if="filteredBadges.length === 0"
-      variant="badges"
-      :title="t('badges.emptyFilter')"
-      :description="t('emptyState.badgesDesc')"
-      :secondary-action-label="t('emptyState.filterReset')"
-      @secondary-action="resetFilters"
-    />
-    <view v-else class="badge-grid">
-      <view
-        v-for="item in filteredBadges"
-        :key="item.id"
-        class="badge-item"
-        :class="{ locked: !isCompleted(item), unlocked: isCompleted(item) }"
-      >
-        <text class="badge-icon">{{ item.iconUrl || '🏅' }}</text>
-        <text class="badge-name">{{ item.name }}</text>
-        <text class="badge-desc">{{ item.description }}</text>
-        <view v-if="!isCompleted(item) && item.progress" class="progress-wrap">
-          <view class="progress-bar">
-            <view
-              class="progress-fill"
-              :style="{ width: progressPercent(item) + '%' }"
-            />
+    <view class="page-body">
+      <view class="filter-panel">
+        <scroll-view scroll-x class="filters" :show-scrollbar="false">
+          <view
+            v-for="opt in categoryOptions"
+            :key="opt.key"
+            class="filter-chip"
+            :class="{ active: activeCategory === opt.key }"
+            @click="activeCategory = opt.key"
+          >
+            {{ opt.label }}
           </view>
-          <text class="badge-progress">{{ progressLabel(item) }}</text>
+        </scroll-view>
+
+        <scroll-view scroll-x class="filters status-filters" :show-scrollbar="false">
+          <view
+            v-for="opt in unlockOptions"
+            :key="opt.key"
+            class="filter-chip"
+            :class="{ active: activeUnlockStatus === opt.key }"
+            @click="activeUnlockStatus = opt.key"
+          >
+            {{ opt.label }}
+          </view>
+        </scroll-view>
+      </view>
+
+      <DouxingEmptyState v-if="loading" loading />
+      <DouxingEmptyState
+        v-else-if="filteredBadges.length === 0"
+        variant="badges"
+        :title="t('badges.emptyFilter')"
+        :description="t('emptyState.badgesDesc')"
+        :secondary-action-label="t('emptyState.filterReset')"
+        @secondary-action="resetFilters"
+      />
+      <view v-else class="badge-grid">
+        <view
+          v-for="item in filteredBadges"
+          :key="item.id"
+          class="badge-item"
+          :class="{ locked: !isCompleted(item), unlocked: isCompleted(item) }"
+        >
+          <text class="badge-icon">{{ item.iconUrl || '🏅' }}</text>
+          <text class="badge-name">{{ item.name }}</text>
+          <text class="badge-desc">{{ item.description }}</text>
+          <view v-if="!isCompleted(item) && item.progress" class="progress-wrap">
+            <view class="progress-bar">
+              <view
+                class="progress-fill"
+                :style="{ width: progressPercent(item) + '%' }"
+              />
+            </view>
+            <text class="badge-progress">{{ progressLabel(item) }}</text>
+          </view>
+          <text v-else-if="isCompleted(item)" class="badge-unlocked">{{ t('common.statusUnlocked') }}</text>
         </view>
-        <text v-else-if="isCompleted(item)" class="badge-unlocked">{{ t('common.statusUnlocked') }}</text>
       </view>
     </view>
   </view>
@@ -71,11 +89,13 @@ import { BadgeCategory } from '@douxing/shared';
 import { fetchBadgeCatalog } from '@/api/badges';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 usePageTitle('nav.badges');
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 
 const categoryOptions = computed(() => [
   { key: 'all', label: t('common.filterAll') },
@@ -160,47 +180,111 @@ onShow(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 24rpx;
+  background: var(--dx-bg);
   box-sizing: border-box;
 }
-.summary {
-  background: linear-gradient(135deg, #1677ff, #4096ff);
-  border-radius: 16rpx;
-  padding: 40rpx 32rpx;
-  color: #fff;
-  margin-bottom: 24rpx;
+.page-hero {
+  position: relative;
+  padding: 24rpx var(--page-gutter) 28rpx;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+.header-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+.logo-mark {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-emoji {
+  font-size: 32rpx;
+  line-height: 1;
+}
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  line-height: 1.35;
+}
+.hero-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+}
+.summary-stats {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.22);
 }
 .summary-count {
   font-size: 56rpx;
   font-weight: 700;
   display: block;
   line-height: 1.2;
+  color: var(--dx-text-inverse);
 }
 .summary-label {
   font-size: 26rpx;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.9);
+  display: block;
+  margin-top: 6rpx;
+}
+.page-body {
+  padding: 0 var(--page-gutter) 32rpx;
+}
+.filter-panel {
+  margin-bottom: 20rpx;
+  padding: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-sm);
 }
 .filters {
   white-space: nowrap;
-  margin-bottom: 16rpx;
 }
 .status-filters {
-  margin-bottom: 24rpx;
+  margin-top: 12rpx;
 }
 .filter-chip {
   display: inline-block;
   padding: 12rpx 28rpx;
-  margin-right: 16rpx;
-  background: #fff;
+  margin-right: 12rpx;
+  background: var(--dx-bg);
   border-radius: 999rpx;
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .filter-chip.active {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
 }
 .badge-grid {
   display: flex;
@@ -211,24 +295,25 @@ onShow(async () => {
   position: relative;
   width: calc(50% - 8rpx);
   box-sizing: border-box;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 28rpx 20rpx;
   text-align: center;
-  border: 1rpx solid #eef0f3;
+  border: 1rpx solid var(--dx-border);
+  box-shadow: var(--dx-shadow-sm);
 }
 .badge-item.locked .badge-icon {
   opacity: 0.55;
 }
 .badge-item.locked .badge-name {
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .badge-item.locked .badge-desc {
-  color: #9ca3af;
+  color: var(--dx-text-muted);
 }
 .badge-item.unlocked {
-  border-color: #d4e8ff;
-  background: #fafcff;
+  border-color: rgba(22, 119, 255, 0.25);
+  background: var(--dx-primary-light);
 }
 .badge-icon {
   font-size: 56rpx;
@@ -240,18 +325,18 @@ onShow(async () => {
   font-weight: 600;
   display: block;
   line-height: 1.3;
+  color: var(--dx-text);
 }
 .badge-desc {
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   display: block;
   margin-top: 8rpx;
   line-height: 1.4;
 }
-.badge-progress,
-.badge-unlocked {
+.badge-progress {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   display: block;
   margin-top: 8rpx;
 }
@@ -260,14 +345,14 @@ onShow(async () => {
 }
 .progress-bar {
   height: 8rpx;
-  background: #e5e7eb;
+  background: var(--dx-border);
   border-radius: 999rpx;
   overflow: hidden;
   margin-bottom: 8rpx;
 }
 .progress-fill {
   height: 100%;
-  background: #bfdbfe;
+  background: var(--dx-primary);
   border-radius: 999rpx;
   transition: width 0.3s;
 }
@@ -276,8 +361,8 @@ onShow(async () => {
   margin-top: 12rpx;
   padding: 4rpx 16rpx;
   font-size: 20rpx;
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--dx-primary);
+  background: var(--dx-surface);
   border-radius: 999rpx;
   font-weight: 500;
 }

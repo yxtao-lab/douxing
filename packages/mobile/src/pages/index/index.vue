@@ -1,5 +1,5 @@
 <template>
-  <scroll-view scroll-y class="page tab-page" enable-back-to-top>
+  <scroll-view scroll-y class="page tab-page" :class="themeClass" enable-back-to-top>
     <view class="hero">
       <view class="hero-bg" />
       <view class="hero-content">
@@ -123,12 +123,14 @@ import { fetchPlazaRoutes } from '@/api/routes';
 import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
 const PLAZA_SCOPE_STORAGE_KEY = 'routes_initial_scope';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 usePageTitle('nav.index');
 
 const user = ref(getStoredUser());

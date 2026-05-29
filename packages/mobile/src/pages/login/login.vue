@@ -1,5 +1,5 @@
 <template>
-  <view class="login-page" :class="{ 'login-page--register': isRegisterMode }">
+  <view class="login-page" :class="[themeClass, { 'login-page--register': isRegisterMode }]">
     <view class="login-hero">
       <view class="hero-bg" />
       <view class="hero-safe" :style="heroSafeStyle">
@@ -123,9 +123,11 @@ import type { LoginResult } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
 import { buildCustomNavTopPadding } from '@/utils/safe-area';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
+import { useTheme } from '@/i18n/useTheme';
 import { useTf } from '@/i18n/useTf';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 // 登录页使用 custom 导航栏，不展示系统标题栏与返回按钮
 
 const showDemoAccount = isDevelopmentExperienceEnabled();

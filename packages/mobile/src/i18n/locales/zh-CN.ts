@@ -70,6 +70,9 @@ export const mobileZhCN = {
     planQuotaFollowUpYes: '支持追问调整',
     planQuotaFollowUpNo: '不支持追问',
     language: '语言',
+    theme: '主题',
+    themeBlue: '兜行蓝',
+    themeTeal: '探索青',
     languagePickerTitle: '选择语言',
     gridCheckins: '打卡记录',
     gridMap: '打卡地图',
@@ -201,6 +204,7 @@ export const mobileZhCN = {
     failed: '获取定位失败，请检查定位权限与 GPS 是否开启',
   },
   routes: {
+    pageDesc: '管理草稿、浏览广场、收藏心动行程',
     scopeMine: '我的',
     scopePlaza: '广场',
     scopeFavorites: '收藏',

@@ -1,6 +1,21 @@
 <template>
-  <view class="page">
-    <view class="toolbar">
+  <view class="page" :class="themeClass">
+    <view class="page-hero page-hero--compact">
+      <view class="hero-bg" />
+      <view class="hero-content">
+        <view class="header-brand">
+          <view class="logo-mark">
+            <text class="hero-emoji">🗺️</text>
+          </view>
+          <view class="header-copy">
+            <text class="title">{{ t('nav.checkinMap') }}</text>
+            <text class="hero-desc">{{ footprintStats }}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="filter-panel">
       <scroll-view scroll-x class="filters" :show-scrollbar="false">
         <view
           v-for="opt in timeRangeOptions"
@@ -13,8 +28,6 @@
         </view>
       </scroll-view>
       <view class="stats">
-        <text>{{ footprintStats }}</text>
-        <text class="dot">·</text>
         <text>{{ totalPoints }} {{ t('common.points') }}</text>
         <text v-if="hiddenCount > 0" class="hint">{{ hiddenHint }}</text>
       </view>
@@ -126,6 +139,7 @@ import type { CheckInInfo } from '@douxing/shared';
 import { fetchCheckIns } from '@/api/checkins';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import {
@@ -145,6 +159,7 @@ import {
 
 usePageTitle('nav.checkinMap');
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 
 const isMpWeixin = process.env.UNI_PLATFORM === 'mp-weixin';
 
@@ -306,15 +321,76 @@ onShow(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f5f7fa;
+  background: var(--dx-bg);
 }
-.toolbar {
-  padding: 20rpx 24rpx 12rpx;
-  background: #fff;
-  border-bottom: 1rpx solid #eef0f3;
+.page-hero {
+  position: relative;
+  flex-shrink: 0;
+  padding: 20rpx var(--page-gutter) 24rpx;
+  overflow: hidden;
+}
+.page-hero--compact .title {
+  font-size: 32rpx;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.logo-mark {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-emoji {
+  font-size: 28rpx;
+  line-height: 1;
+}
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  display: block;
+  font-size: 34rpx;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  line-height: 1.35;
+}
+.hero-desc {
+  display: block;
+  margin-top: 6rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.88);
+}
+.filter-panel {
+  flex-shrink: 0;
+  margin: 0 var(--page-gutter) 12rpx;
+  padding: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-sm);
 }
 .filters {
   white-space: nowrap;
@@ -325,25 +401,21 @@ onShow(async () => {
   margin-right: 12rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--dx-text-secondary);
+  background: var(--dx-bg);
 }
 .filter-chip.active {
-  color: #fff;
-  background: #1677ff;
+  color: var(--dx-text-inverse);
+  background: var(--dx-primary);
 }
 .stats {
   margin-top: 12rpx;
   font-size: 24rpx;
-  color: #374151;
-}
-.dot {
-  margin: 0 8rpx;
-  color: #9ca3af;
+  color: var(--dx-text);
 }
 .hint {
   margin-left: 8rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
 }
 .map-wrap {
   position: relative;
@@ -365,11 +437,11 @@ onShow(async () => {
   pointer-events: auto;
 }
 .detail-card {
-  margin: 16rpx 24rpx 0;
+  margin: 16rpx var(--page-gutter) 0;
   padding: 24rpx;
-  background: #fff;
-  border-radius: 12rpx;
-  box-shadow: 0 4rpx 16rpx rgba(22, 119, 255, 0.08);
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-md);
 }
 .detail-head {
   display: flex;
@@ -379,12 +451,12 @@ onShow(async () => {
 .detail-place {
   font-size: 30rpx;
   font-weight: 600;
-  color: #111827;
+  color: var(--dx-text);
   flex: 1;
 }
 .detail-points {
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   font-weight: 600;
 }
 .detail-meta,
@@ -392,7 +464,7 @@ onShow(async () => {
   display: block;
   margin-top: 8rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .detail-photos {
   display: flex;
@@ -402,36 +474,30 @@ onShow(async () => {
 .detail-photo {
   width: 120rpx;
   height: 120rpx;
-  border-radius: 8rpx;
+  border-radius: var(--dx-radius-sm);
 }
 .timeline {
   flex: 1;
-  padding: 16rpx 24rpx;
+  padding: 16rpx var(--page-gutter);
 }
 .timeline.compact {
   max-height: 220rpx;
-}
-.timeline-empty {
-  text-align: center;
-  color: #9ca3af;
-  padding: 40rpx 0;
-  font-size: 26rpx;
 }
 .timeline-item {
   display: flex;
   gap: 16rpx;
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #eef0f3;
+  border-bottom: 1rpx solid var(--dx-border);
 }
 .timeline-item.active .timeline-place {
-  color: #1677ff;
+  color: var(--dx-primary);
 }
 .timeline-dot {
   width: 16rpx;
   height: 16rpx;
   margin-top: 10rpx;
   border-radius: 50%;
-  background: #1677ff;
+  background: var(--dx-primary);
   flex-shrink: 0;
 }
 .timeline-body {
@@ -440,25 +506,25 @@ onShow(async () => {
 .timeline-place {
   display: block;
   font-size: 28rpx;
-  color: #111827;
+  color: var(--dx-text);
 }
 .timeline-meta {
   display: block;
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .footer-actions {
-  padding: 16rpx 24rpx calc(16rpx + env(safe-area-inset-bottom));
-  background: #fff;
-  border-top: 1rpx solid #eef0f3;
+  padding: 16rpx var(--page-gutter) calc(16rpx + env(safe-area-inset-bottom));
+  background: var(--dx-surface);
+  border-top: 1rpx solid var(--dx-border);
 }
 .btn-secondary {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dx-bg);
+  color: var(--dx-text);
   font-size: 28rpx;
   border: none;
-  border-radius: 12rpx;
+  border-radius: var(--dx-radius-sm);
 }
 </style>
 

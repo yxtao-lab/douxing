@@ -104,21 +104,21 @@ function onSwitch(pagePath: string, index: number) {
 
 .tab-icon {
   font-size: 44rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 
 .tab-icon.is-active {
-  color: #1677ff;
+  color: var(--dx-primary);
 }
 
 .tab-text {
   margin-top: 6rpx;
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 
 .tab-text.is-active {
-  color: #1677ff;
+  color: var(--dx-primary);
   font-weight: 500;
 }
 </style>

@@ -1,61 +1,74 @@
 <template>
-  <view class="page tab-page">
-    <view class="user-card" v-if="user" @click="goEdit">
-      <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
-      <view v-else class="avatar">{{ avatarText }}</view>
-      <view class="info">
-        <view class="name-row">
-          <text class="name">{{ user.nickname || user.username }}</text>
-          <view class="member-badge" :class="memberBadgeClass" @click.stop="goMembership">
-            <MemberLevelIcon :level="user.memberLevel ?? 0" size="sm" />
-            <text class="member-badge-text">{{ memberLevelLabel }}</text>
+  <view class="page tab-page" :class="themeClass">
+    <view class="profile-hero">
+      <view class="hero-bg" />
+      <view class="hero-content">
+        <view v-if="user" class="user-card" @click="goEdit">
+          <image v-if="user.avatar" class="avatar-img" :src="user.avatar" mode="aspectFill" />
+          <view v-else class="avatar">{{ avatarText }}</view>
+          <view class="info">
+            <view class="name-row">
+              <text class="name">{{ user.nickname || user.username }}</text>
+              <view class="member-badge" :class="memberBadgeClass" @click.stop="goMembership">
+                <MemberLevelIcon :level="user.memberLevel ?? 0" size="sm" />
+                <text class="member-badge-text">{{ memberLevelLabel }}</text>
+              </view>
+            </view>
+            <text class="sub">{{ planQuotaText }}</text>
+            <view v-if="user.interestTags?.length" class="tag-row">
+              <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
+            </view>
           </view>
+          <text class="edit-arrow">›</text>
         </view>
-        <text class="sub">@{{ planQuotaText }}</text>
-        <view v-if="user.interestTags?.length" class="tag-row">
-          <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
-        </view>
-      </view>
-      <text class="edit-arrow">›</text>
-    </view>
-    <view class="user-card guest-card" v-else>
-      <view class="guest-info">
-        <text class="guest-title">{{ t('profile.guestTitle') }}</text>
-        <text class="guest-desc">{{ t('profile.guestDesc') }}</text>
-      </view>
-      <button class="btn-login" @click="goLogin">{{ t('profile.loginRegister') }}</button>
-    </view>
 
-    <view class="section">
-      <text class="section-title">{{ t('profile.sectionPersonalize') }}</text>
-      <view class="grid-card">
-        <view
-          v-for="item in travelGridItems"
-          :key="item.key"
-          class="grid-item"
-          @click="handleGridTap(item)"
-        >
-          <view class="grid-icon-wrap" :style="{ background: item.bg }">
-            <text class="grid-icon">{{ item.icon }}</text>
+        <view v-else class="guest-block">
+          <view class="guest-brand">
+            <view class="logo-mark">
+              <text class="logo-text">兜</text>
+            </view>
+            <view class="guest-copy">
+              <text class="guest-title">{{ t('profile.guestTitle') }}</text>
+              <text class="guest-desc">{{ t('profile.guestDesc') }}</text>
+            </view>
           </view>
-          <text class="grid-label">{{ item.label }}</text>
+          <button class="btn-login" @click="goLogin">{{ t('profile.loginRegister') }}</button>
         </view>
       </view>
     </view>
 
-    <view class="section">
-      <text class="section-title">{{ t('profile.sectionAccount') }}</text>
-      <view class="action-card">
-        <button
-          v-for="action in userActions"
-          :key="action.key"
-          class="action-btn"
-          :class="action.variant"
-          @click="handleActionTap(action)"
-        >
-          {{ action.label }}
-        </button>
-        <button v-if="user" class="action-btn danger" @click="handleLogout">{{ t('common.logout') }}</button>
+    <view class="page-body">
+      <view class="section">
+        <text class="section-title">{{ t('profile.sectionPersonalize') }}</text>
+        <view class="grid-card">
+          <view
+            v-for="item in travelGridItems"
+            :key="item.key"
+            class="grid-item"
+            @click="handleGridTap(item)"
+          >
+            <view class="grid-icon-wrap" :style="{ background: item.bg }">
+              <text class="grid-icon">{{ item.icon }}</text>
+            </view>
+            <text class="grid-label">{{ item.label }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="section">
+        <text class="section-title">{{ t('profile.sectionAccount') }}</text>
+        <view class="action-card">
+          <button
+            v-for="action in userActions"
+            :key="action.key"
+            class="action-btn"
+            :class="action.variant"
+            @click="handleActionTap(action)"
+          >
+            {{ action.label }}
+          </button>
+          <button v-if="user" class="action-btn danger" @click="handleLogout">{{ t('common.logout') }}</button>
+        </view>
       </view>
     </view>
 
@@ -80,11 +93,13 @@ import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
 const { t, tf } = useTf();
 const { labelOf } = useInterestTagLabel();
 const { showLocalePicker } = useLocale();
+const { themeClass, showThemePicker } = useTheme();
 usePageTitle('nav.profile');
 
 interface GridItem {
@@ -131,8 +146,8 @@ const planQuotaText = computed(() => {
 const memberBadgeClass = computed(() => getMemberLevelBadgeClass(user.value?.memberLevel));
 
 const travelGridItems = computed<GridItem[]>(() => [
-  { key: 'checkins', icon: '📍', label: t('profile.gridCheckins'), bg: '#e6f4ff', action: goCheckins },
-  { key: 'map', icon: '🗺️', label: t('profile.gridMap'), bg: '#f0fdf4', needLogin: true, action: goCheckinMap },
+  { key: 'checkins', icon: '📍', label: t('profile.gridCheckins'), bg: 'var(--dx-primary-light)', action: goCheckins },
+  { key: 'map', icon: '🗺️', label: t('profile.gridMap'), bg: 'var(--dx-accent-soft)', needLogin: true, action: goCheckinMap },
   {
     key: 'achievements',
     icon: '🏅',
@@ -150,7 +165,8 @@ const travelGridItems = computed<GridItem[]>(() => [
     needLogin: true,
     action: goLeaderboard,
   },
-  { key: 'language', icon: '🌐', label: t('profile.language'), bg: '#eef2ff', action: showLocalePicker },
+  { key: 'language', icon: '🌐', label: t('profile.language'), bg: 'var(--dx-primary-light)', action: showLocalePicker },
+  { key: 'theme', icon: '🎨', label: t('profile.theme'), bg: 'var(--dx-accent-soft)', action: showThemePicker },
 ]);
 
 const userActions = computed<UserAction[]>(() => [
@@ -251,35 +267,83 @@ onShow(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   min-height: 100vh;
-  background: #f5f7fa;
-  padding-bottom: 24rpx;
+  background: var(--dx-bg);
+  box-sizing: border-box;
+}
+.profile-hero {
+  position: relative;
+  padding: 28rpx var(--page-gutter) 32rpx;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
 }
 .user-card {
-  background: #fff;
-  padding: 48rpx 32rpx;
   display: flex;
   align-items: center;
   gap: 24rpx;
 }
-.guest-card {
-  flex-direction: column;
-  align-items: stretch;
-  gap: 28rpx;
+.user-card:active {
+  opacity: 0.92;
 }
-.guest-info {
+.guest-block {
   display: flex;
-  flex-direction: column;
-  gap: 8rpx;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
+}
+.guest-brand {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+.logo-mark {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--dx-radius-lg);
+  background: rgba(255, 255, 255, 0.22);
+  border: 2rpx solid rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.logo-text {
+  color: var(--dx-text-inverse);
+  font-size: 36rpx;
+  font-weight: 700;
+  line-height: 1;
+}
+.guest-copy {
+  flex: 1;
+  min-width: 0;
 }
 .guest-title {
+  display: block;
   font-size: 34rpx;
-  font-weight: 600;
-  color: #111827;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  line-height: 1.35;
 }
 .guest-desc {
+  display: block;
+  margin-top: 8rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
 }
 .avatar,
 .avatar-img {
@@ -287,18 +351,21 @@ onShow(async () => {
   height: 96rpx;
   border-radius: 50%;
   flex-shrink: 0;
+  border: 3rpx solid rgba(255, 255, 255, 0.45);
 }
 .avatar {
   line-height: 96rpx;
   text-align: center;
-  background: #1677ff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--dx-text-inverse);
   font-size: 40rpx;
+  font-weight: 600;
 }
 .edit-arrow {
-  color: #9ca3af;
+  color: rgba(255, 255, 255, 0.85);
   font-size: 40rpx;
   margin-left: auto;
+  flex-shrink: 0;
 }
 .tag-row {
   display: flex;
@@ -308,8 +375,9 @@ onShow(async () => {
 }
 .user-tag {
   font-size: 22rpx;
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--dx-text-inverse);
+  background: rgba(255, 255, 255, 0.18);
+  border: 1rpx solid rgba(255, 255, 255, 0.28);
   padding: 4rpx 16rpx;
   border-radius: 999rpx;
 }
@@ -325,7 +393,8 @@ onShow(async () => {
 }
 .name {
   font-size: 34rpx;
-  font-weight: 600;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
 }
 .member-badge {
   display: inline-flex;
@@ -334,6 +403,7 @@ onShow(async () => {
   font-size: 20rpx;
   padding: 4rpx 12rpx 4rpx 6rpx;
   border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.92);
 }
 .member-badge-text {
   line-height: 1.2;
@@ -342,44 +412,44 @@ onShow(async () => {
   opacity: 0.75;
 }
 .member-badge.free {
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--dx-text-secondary);
 }
 .member-badge.silver {
   color: #475569;
-  background: #e2e8f0;
 }
 .member-badge.gold {
   color: #b45309;
-  background: #fef3c7;
 }
 .member-badge.vip {
   color: #7c3aed;
-  background: #ede9fe;
 }
 .sub {
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 24rpx;
   margin-top: 8rpx;
   display: block;
 }
+.page-body {
+  padding: 0 var(--page-gutter);
+}
 .section {
-  margin: 24rpx 24rpx 0;
+  margin-top: 24rpx;
 }
 .section-title {
   display: block;
   font-size: 28rpx;
   font-weight: 600;
-  color: #374151;
+  color: var(--dx-text);
   margin-bottom: 16rpx;
   padding-left: 4rpx;
 }
 .grid-card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 24rpx 8rpx 8rpx;
   display: flex;
   flex-wrap: wrap;
+  box-shadow: var(--dx-shadow-sm);
 }
 .grid-item {
   width: 33.33%;
@@ -396,7 +466,7 @@ onShow(async () => {
 .grid-icon-wrap {
   width: 96rpx;
   height: 96rpx;
-  border-radius: 24rpx;
+  border-radius: var(--dx-radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -407,48 +477,58 @@ onShow(async () => {
 }
 .grid-label {
   font-size: 24rpx;
-  color: #374151;
+  color: var(--dx-text);
   text-align: center;
 }
 .action-card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 24rpx;
   display: flex;
   flex-direction: column;
   gap: 16rpx;
+  box-shadow: var(--dx-shadow-sm);
 }
 .action-btn {
   width: 100%;
   height: 88rpx;
   line-height: 88rpx;
-  border-radius: 16rpx;
+  border-radius: var(--dx-radius-md);
   font-size: 30rpx;
   font-weight: 500;
   border: none;
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dx-bg);
+  color: var(--dx-text);
 }
 .action-btn::after {
   border: none;
 }
 .action-btn.primary {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
+  box-shadow: var(--dx-shadow-md);
 }
 .action-btn.danger {
-  background: #fff;
+  background: var(--dx-surface);
   color: #ef4444;
-  border: 1rpx solid #fecaca;
+  border: 2rpx solid #fecaca;
 }
 .btn-login {
-  background: #1677ff;
-  color: #fff;
-  border-radius: 16rpx;
-  font-size: 30rpx;
-  height: 88rpx;
-  line-height: 88rpx;
+  flex-shrink: 0;
+  width: auto;
+  min-width: 168rpx;
+  padding: 0 28rpx;
+  margin: 0;
+  background: var(--dx-surface);
+  color: var(--dx-primary);
+  border-radius: var(--dx-radius-lg);
+  font-size: 26rpx;
+  font-weight: 600;
+  height: 72rpx;
+  line-height: 72rpx;
   border: none;
+  box-shadow: var(--dx-shadow-md);
+  white-space: nowrap;
 }
 .btn-login::after {
   border: none;

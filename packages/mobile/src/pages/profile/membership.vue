@@ -1,100 +1,105 @@
 <template>
-  <view class="page">
+  <view class="page" :class="themeClass">
     <view v-if="loading" class="state-text">{{ t('common.loading') }}</view>
     <template v-else-if="membership">
-      <view class="current-card" :class="badgeClass(membership.level)">
-        <MemberLevelIcon :level="membership.level" size="lg" />
-        <view class="current-body">
-          <text class="current-label">{{ t('membership.currentLevel') }}</text>
-          <text class="current-name">{{ levelLabel(membership.level) }}</text>
-          <text class="current-meta">{{ currentSummary }}</text>
+      <view class="membership-hero">
+        <view class="hero-bg" />
+        <view class="current-card" :class="badgeClass(membership.level)">
+          <MemberLevelIcon :level="membership.level" size="lg" />
+          <view class="current-body">
+            <text class="current-label">{{ t('membership.currentLevel') }}</text>
+            <text class="current-name">{{ levelLabel(membership.level) }}</text>
+            <text class="current-meta">{{ currentSummary }}</text>
+          </view>
         </view>
       </view>
 
-      <view class="tier-icon-strip">
-        <view
-          v-for="tier in tiers"
-          :key="`strip-${tier.level}`"
-          class="tier-icon-item"
-          :class="{ active: tier.level === membership.level }"
-        >
-          <MemberLevelIcon :level="tier.level" size="md" />
-          <text class="tier-icon-label">{{ levelLabel(tier.level) }}</text>
+      <view class="page-body">
+        <view class="tier-icon-strip">
+          <view
+            v-for="tier in tiers"
+            :key="`strip-${tier.level}`"
+            class="tier-icon-item"
+            :class="{ active: tier.level === membership.level }"
+          >
+            <MemberLevelIcon :level="tier.level" size="md" />
+            <text class="tier-icon-label">{{ levelLabel(tier.level) }}</text>
+          </view>
         </view>
-      </view>
 
-      <view class="section">
-        <text class="section-title">{{ t('membership.compareTitle') }}</text>
-        <view class="compare-table">
-          <view class="compare-row compare-header">
-            <text class="feature-col feature-col--head">{{ t('membership.featureColumn') }}</text>
-            <view
-              v-for="tier in tiers"
-              :key="`head-${tier.level}`"
-              class="tier-col tier-col--head"
-              :class="{ active: tier.level === membership.level }"
-            >
-              <MemberLevelIcon :level="tier.level" size="sm" />
-              <text class="tier-head-name">{{ levelLabel(tier.level) }}</text>
+        <view class="section">
+          <text class="section-title">{{ t('membership.compareTitle') }}</text>
+          <view class="compare-table">
+            <view class="compare-row compare-header">
+              <text class="feature-col feature-col--head">{{ t('membership.featureColumn') }}</text>
+              <view
+                v-for="tier in tiers"
+                :key="`head-${tier.level}`"
+                class="tier-col tier-col--head"
+                :class="{ active: tier.level === membership.level }"
+              >
+                <MemberLevelIcon :level="tier.level" size="sm" />
+                <text class="tier-head-name">{{ levelLabel(tier.level) }}</text>
+              </view>
+            </view>
+
+            <view class="compare-row">
+              <text class="feature-col">{{ t('membership.featurePlanCount') }}</text>
+              <text
+                v-for="tier in tiers"
+                :key="`count-${tier.level}`"
+                class="tier-col"
+                :class="{ active: tier.level === membership.level }"
+              >
+                {{ tf('membership.planCountUnit', { count: tier.planCandidateCount }) }}
+              </text>
+            </view>
+
+            <view class="compare-row">
+              <text class="feature-col">{{ t('membership.featureFollowUp') }}</text>
+              <view
+                v-for="tier in tiers"
+                :key="`follow-${tier.level}`"
+                class="tier-col tier-col--follow"
+                :class="{ active: tier.level === membership.level, yes: tier.canAppendPlan, no: !tier.canAppendPlan }"
+              >
+                <text class="follow-icon">{{ tier.canAppendPlan ? '✓' : '✕' }}</text>
+                <text class="follow-text">
+                  {{ tier.canAppendPlan ? t('membership.followUpYes') : t('membership.followUpNo') }}
+                </text>
+              </view>
             </view>
           </view>
 
-          <view class="compare-row">
-            <text class="feature-col">{{ t('membership.featurePlanCount') }}</text>
-            <text
-              v-for="tier in tiers"
-              :key="`count-${tier.level}`"
-              class="tier-col"
-              :class="{ active: tier.level === membership.level }"
-            >
-              {{ tf('membership.planCountUnit', { count: tier.planCandidateCount }) }}
-            </text>
-          </view>
-
-          <view class="compare-row">
-            <text class="feature-col">{{ t('membership.featureFollowUp') }}</text>
+          <view class="tier-cards">
             <view
               v-for="tier in tiers"
-              :key="`follow-${tier.level}`"
-              class="tier-col tier-col--follow"
-              :class="{ active: tier.level === membership.level, yes: tier.canAppendPlan, no: !tier.canAppendPlan }"
+              :key="tier.level"
+              class="tier-card"
+              :class="[badgeClass(tier.level), { current: tier.level === membership.level }]"
             >
-              <text class="follow-icon">{{ tier.canAppendPlan ? '✓' : '✕' }}</text>
-              <text class="follow-text">
+              <view class="tier-card-head">
+                <MemberLevelIcon :level="tier.level" size="md" />
+                <view class="tier-card-title">
+                  <text class="tier-card-name">{{ levelLabel(tier.level) }}</text>
+                  <text v-if="tier.level === membership.level" class="tier-current-tag">
+                    {{ t('membership.currentBadge') }}
+                  </text>
+                </view>
+              </view>
+              <text class="tier-card-line">
+                {{ t('membership.featurePlanCount') }}：
+                {{ tf('membership.planCountUnit', { count: tier.planCandidateCount }) }}
+              </text>
+              <text class="tier-card-line">
+                {{ t('membership.featureFollowUp') }}：
                 {{ tier.canAppendPlan ? t('membership.followUpYes') : t('membership.followUpNo') }}
               </text>
             </view>
           </view>
-        </view>
 
-        <view class="tier-cards">
-          <view
-            v-for="tier in tiers"
-            :key="tier.level"
-            class="tier-card"
-            :class="[badgeClass(tier.level), { current: tier.level === membership.level }]"
-          >
-            <view class="tier-card-head">
-              <MemberLevelIcon :level="tier.level" size="md" />
-              <view class="tier-card-title">
-                <text class="tier-card-name">{{ levelLabel(tier.level) }}</text>
-                <text v-if="tier.level === membership.level" class="tier-current-tag">
-                  {{ t('membership.currentBadge') }}
-                </text>
-              </view>
-            </view>
-            <text class="tier-card-line">
-              {{ t('membership.featurePlanCount') }}：
-              {{ tf('membership.planCountUnit', { count: tier.planCandidateCount }) }}
-            </text>
-            <text class="tier-card-line">
-              {{ t('membership.featureFollowUp') }}：
-              {{ tier.canAppendPlan ? t('membership.followUpYes') : t('membership.followUpNo') }}
-            </text>
-          </view>
+          <text v-if="membership.nextLevel" class="upgrade-hint">{{ t('membership.upgradeHint') }}</text>
         </view>
-
-        <text v-if="membership.nextLevel" class="upgrade-hint">{{ t('membership.upgradeHint') }}</text>
       </view>
     </template>
     <view v-else class="state-text">{{ t('membership.loadFailed') }}</view>
@@ -113,10 +118,12 @@ import {
 import { fetchMembershipInfo } from '@/api/user';
 import { getStoredUser } from '@/utils/request';
 import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 usePageTitle('nav.membership');
 
 const loading = ref(true);
@@ -158,41 +165,57 @@ onShow(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 24rpx;
+  background: var(--dx-bg);
+  padding-bottom: 48rpx;
   box-sizing: border-box;
 }
 .state-text {
   padding: 80rpx 24rpx;
   text-align: center;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   font-size: 28rpx;
 }
-.current-card {
-  border-radius: 20rpx;
-  padding: 32rpx;
+.membership-hero {
+  position: relative;
+  padding: 24rpx var(--page-gutter) 28rpx;
   margin-bottom: 20rpx;
-  background: #fff;
-  border: 2rpx solid #e5e7eb;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.current-card {
+  position: relative;
+  z-index: 1;
+  border-radius: var(--dx-radius-md);
+  padding: 32rpx;
+  background: rgba(255, 255, 255, 0.96);
+  border: 2rpx solid rgba(255, 255, 255, 0.65);
+  box-shadow: var(--dx-shadow-md);
   display: flex;
   align-items: center;
   gap: 28rpx;
 }
 .current-card.free {
-  border-color: #d1d5db;
+  border-color: rgba(255, 255, 255, 0.75);
 }
 .current-card.silver {
   border-color: #94a3b8;
-  background: linear-gradient(135deg, #fff 0%, #f1f5f9 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, #f1f5f9 100%);
 }
 .current-card.gold {
   border-color: #fbbf24;
-  background: linear-gradient(135deg, #fff 0%, #fef3c7 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, #fef3c7 100%);
 }
 .current-card.vip {
   border-color: #a78bfa;
-  background: linear-gradient(135deg, #fff 0%, #ede9fe 100%);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, #ede9fe 100%);
 }
 .current-body {
   flex: 1;
@@ -201,20 +224,23 @@ onShow(async () => {
 .current-label {
   display: block;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .current-name {
   display: block;
   font-size: 40rpx;
   font-weight: 700;
-  color: #111827;
+  color: var(--dx-text);
   margin-top: 8rpx;
 }
 .current-meta {
   display: block;
   font-size: 26rpx;
-  color: #374151;
+  color: var(--dx-text);
   margin-top: 12rpx;
+}
+.page-body {
+  padding: 0 var(--page-gutter);
 }
 .tier-icon-strip {
   display: flex;
@@ -222,8 +248,9 @@ onShow(async () => {
   gap: 12rpx;
   margin-bottom: 20rpx;
   padding: 20rpx 16rpx;
-  background: #fff;
-  border-radius: 20rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-sm);
 }
 .tier-icon-item {
   flex: 1;
@@ -232,58 +259,59 @@ onShow(async () => {
   align-items: center;
   gap: 10rpx;
   padding: 12rpx 4rpx;
-  border-radius: 16rpx;
+  border-radius: var(--dx-radius-md);
   opacity: 0.55;
 }
 .tier-icon-item.active {
   opacity: 1;
-  background: #eff6ff;
-  box-shadow: inset 0 0 0 2rpx #bfdbfe;
+  background: var(--dx-primary-light);
+  box-shadow: inset 0 0 0 2rpx rgba(22, 119, 255, 0.25);
 }
 .tier-icon-label {
   font-size: 20rpx;
-  color: #374151;
+  color: var(--dx-text);
   text-align: center;
   line-height: 1.3;
 }
 .tier-icon-item.active .tier-icon-label {
-  color: #1677ff;
+  color: var(--dx-primary);
   font-weight: 600;
 }
 .section {
-  background: #fff;
-  border-radius: 20rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 28rpx 24rpx 32rpx;
+  box-shadow: var(--dx-shadow-sm);
 }
 .section-title {
   display: block;
   font-size: 30rpx;
   font-weight: 600;
-  color: #111827;
+  color: var(--dx-text);
   margin-bottom: 20rpx;
 }
 .compare-table {
-  border: 1rpx solid #e5e7eb;
-  border-radius: 12rpx;
+  border: 1rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
   overflow: hidden;
   margin-bottom: 24rpx;
 }
 .compare-row {
   display: flex;
-  border-bottom: 1rpx solid #e5e7eb;
+  border-bottom: 1rpx solid var(--dx-border);
 }
 .compare-row:last-child {
   border-bottom: none;
 }
 .compare-header {
-  background: #f9fafb;
+  background: var(--dx-bg);
 }
 .feature-col {
   flex: 1.2;
   padding: 18rpx 12rpx;
   font-size: 22rpx;
-  color: #374151;
-  border-right: 1rpx solid #e5e7eb;
+  color: var(--dx-text);
+  border-right: 1rpx solid var(--dx-border);
   box-sizing: border-box;
   display: flex;
   align-items: center;
@@ -295,9 +323,9 @@ onShow(async () => {
   flex: 1;
   padding: 18rpx 8rpx;
   font-size: 22rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   text-align: center;
-  border-right: 1rpx solid #e5e7eb;
+  border-right: 1rpx solid var(--dx-border);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
@@ -310,7 +338,7 @@ onShow(async () => {
 }
 .tier-col--head {
   font-weight: 600;
-  color: #374151;
+  color: var(--dx-text);
   padding-top: 14rpx;
   padding-bottom: 14rpx;
 }
@@ -320,8 +348,8 @@ onShow(async () => {
   text-align: center;
 }
 .tier-col.active {
-  background: #eff6ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
   font-weight: 600;
 }
 .tier-col--follow.yes .follow-icon {
@@ -345,28 +373,28 @@ onShow(async () => {
   gap: 16rpx;
 }
 .tier-card {
-  border-radius: 16rpx;
+  border-radius: var(--dx-radius-md);
   padding: 24rpx;
-  border: 2rpx solid #e5e7eb;
-  background: #fff;
+  border: 2rpx solid var(--dx-border);
+  background: var(--dx-surface);
 }
 .tier-card.current {
-  box-shadow: 0 4rpx 20rpx rgba(22, 119, 255, 0.12);
+  box-shadow: var(--dx-shadow-md);
 }
 .tier-card.free {
-  border-color: #e5e7eb;
+  border-color: var(--dx-border);
 }
 .tier-card.silver {
   border-color: #cbd5e1;
-  background: linear-gradient(135deg, #fff 60%, #f8fafc 100%);
+  background: linear-gradient(135deg, var(--dx-surface) 60%, #f8fafc 100%);
 }
 .tier-card.gold {
   border-color: #fcd34d;
-  background: linear-gradient(135deg, #fff 60%, #fffbeb 100%);
+  background: linear-gradient(135deg, var(--dx-surface) 60%, #fffbeb 100%);
 }
 .tier-card.vip {
   border-color: #c4b5fd;
-  background: linear-gradient(135deg, #fff 60%, #f5f3ff 100%);
+  background: linear-gradient(135deg, var(--dx-surface) 60%, #f5f3ff 100%);
 }
 .tier-card-head {
   display: flex;
@@ -385,19 +413,19 @@ onShow(async () => {
 .tier-card-name {
   font-size: 30rpx;
   font-weight: 600;
-  color: #111827;
+  color: var(--dx-text);
 }
 .tier-current-tag {
   font-size: 20rpx;
-  color: #1677ff;
-  background: #e6f4ff;
+  color: var(--dx-primary);
+  background: var(--dx-primary-light);
   padding: 4rpx 12rpx;
   border-radius: 999rpx;
 }
 .tier-card-line {
   display: block;
   font-size: 24rpx;
-  color: #4b5563;
+  color: var(--dx-text-secondary);
   line-height: 1.6;
   padding-left: 92rpx;
 }
@@ -405,7 +433,7 @@ onShow(async () => {
   display: block;
   margin-top: 24rpx;
   font-size: 24rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   line-height: 1.5;
 }
 </style>

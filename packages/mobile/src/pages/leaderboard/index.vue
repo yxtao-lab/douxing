@@ -1,58 +1,76 @@
 <template>
-  <view class="page">
-    <view class="summary">
-      <text class="summary-title">{{ periodLabel }} · {{ metricLabel }}</text>
-      <text v-if="myRank != null" class="summary-rank">{{ myRankText }}</text>
-      <text v-else class="summary-rank">{{ t('leaderboard.myRankEmpty') }}</text>
-      <text class="summary-value">{{ myValueText }}</text>
+  <view class="page" :class="themeClass">
+    <view class="page-hero">
+      <view class="hero-bg" />
+      <view class="hero-content">
+        <view class="header-brand">
+          <view class="logo-mark">
+            <text class="hero-emoji">🏆</text>
+          </view>
+          <view class="header-copy">
+            <text class="title">{{ t('nav.leaderboard') }}</text>
+            <text class="hero-desc">{{ t('emptyState.leaderboardDesc') }}</text>
+          </view>
+        </view>
+        <view class="summary-stats">
+          <text class="summary-title">{{ periodLabel }} · {{ metricLabel }}</text>
+          <text v-if="myRank != null" class="summary-rank">{{ myRankText }}</text>
+          <text v-else class="summary-rank">{{ t('leaderboard.myRankEmpty') }}</text>
+          <text class="summary-value">{{ myValueText }}</text>
+        </view>
+      </view>
     </view>
 
-    <scroll-view scroll-x class="filters" :show-scrollbar="false">
-      <view
-        v-for="opt in periodOptions"
-        :key="opt.key"
-        class="filter-chip"
-        :class="{ active: activePeriod === opt.key }"
-        @click="switchPeriod(opt.key)"
-      >
-        {{ opt.label }}
-      </view>
-    </scroll-view>
+    <view class="page-body">
+      <view class="filter-panel">
+        <scroll-view scroll-x class="filters" :show-scrollbar="false">
+          <view
+            v-for="opt in periodOptions"
+            :key="opt.key"
+            class="filter-chip"
+            :class="{ active: activePeriod === opt.key }"
+            @click="switchPeriod(opt.key)"
+          >
+            {{ opt.label }}
+          </view>
+        </scroll-view>
 
-    <scroll-view scroll-x class="filters status-filters" :show-scrollbar="false">
-      <view
-        v-for="opt in metricOptions"
-        :key="opt.key"
-        class="filter-chip"
-        :class="{ active: activeMetric === opt.key }"
-        @click="switchMetric(opt.key)"
-      >
-        {{ opt.label }}
+        <scroll-view scroll-x class="filters status-filters" :show-scrollbar="false">
+          <view
+            v-for="opt in metricOptions"
+            :key="opt.key"
+            class="filter-chip"
+            :class="{ active: activeMetric === opt.key }"
+            @click="switchMetric(opt.key)"
+          >
+            {{ opt.label }}
+          </view>
+        </scroll-view>
       </view>
-    </scroll-view>
 
-    <DouxingEmptyState v-if="loading" loading />
-    <DouxingEmptyState
-      v-else-if="entries.length === 0"
-      variant="leaderboard"
-      :title="t('leaderboard.empty')"
-      :description="t('emptyState.leaderboardDesc')"
-    />
-    <view v-else class="rank-list">
-      <view
-        v-for="item in entries"
-        :key="item.userId"
-        class="rank-item"
-        :class="{ me: item.isMe, top: item.rank <= 3 }"
-      >
-        <text class="rank-no" :class="'rank-' + item.rank">{{ formatRank(item.rank) }}</text>
-        <image v-if="item.avatar" class="avatar-img" :src="item.avatar" mode="aspectFill" />
-        <view v-else class="avatar">{{ avatarText(item.nickname) }}</view>
-        <view class="rank-body">
-          <text class="nickname">{{ item.nickname }}</text>
-          <text class="sub-stat">{{ userStatsText(item) }}</text>
+      <DouxingEmptyState v-if="loading" loading />
+      <DouxingEmptyState
+        v-else-if="entries.length === 0"
+        variant="leaderboard"
+        :title="t('leaderboard.empty')"
+        :description="t('emptyState.leaderboardDesc')"
+      />
+      <view v-else class="rank-list">
+        <view
+          v-for="item in entries"
+          :key="item.userId"
+          class="rank-item"
+          :class="{ me: item.isMe, top: item.rank <= 3 }"
+        >
+          <text class="rank-no" :class="'rank-' + item.rank">{{ formatRank(item.rank) }}</text>
+          <image v-if="item.avatar" class="avatar-img" :src="item.avatar" mode="aspectFill" />
+          <view v-else class="avatar">{{ avatarText(item.nickname) }}</view>
+          <view class="rank-body">
+            <text class="nickname">{{ item.nickname }}</text>
+            <text class="sub-stat">{{ userStatsText(item) }}</text>
+          </view>
+          <text class="rank-value">{{ item.value }}{{ metricUnit }}</text>
         </view>
-        <text class="rank-value">{{ item.value }}{{ metricUnit }}</text>
       </view>
     </view>
   </view>
@@ -66,11 +84,13 @@ import { LeaderboardMetric, LeaderboardPeriod } from '@douxing/shared';
 import { fetchLeaderboard } from '@/api/leaderboard';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
 usePageTitle('nav.leaderboard');
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 
 const periodOptions = computed(() => [
   { key: LeaderboardPeriod.WEEK, label: t('leaderboard.periodWeek') },
@@ -183,21 +203,73 @@ onShow(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   min-height: 100vh;
-  background: #f5f7fa;
-  padding: 24rpx;
+  background: var(--dx-bg);
   box-sizing: border-box;
 }
-.summary {
-  background: linear-gradient(135deg, #1677ff, #4096ff);
-  border-radius: 16rpx;
-  padding: 36rpx 32rpx;
-  color: #fff;
-  margin-bottom: 24rpx;
+.page-hero {
+  position: relative;
+  padding: 24rpx var(--page-gutter) 28rpx;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+.header-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+.logo-mark {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-emoji {
+  font-size: 32rpx;
+  line-height: 1;
+}
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  line-height: 1.35;
+}
+.hero-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+}
+.summary-stats {
+  margin-top: 24rpx;
+  padding-top: 20rpx;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.22);
 }
 .summary-title {
   font-size: 28rpx;
-  opacity: 0.95;
+  color: rgba(255, 255, 255, 0.92);
   display: block;
 }
 .summary-rank {
@@ -205,32 +277,42 @@ onShow(async () => {
   font-weight: 600;
   display: block;
   margin-top: 16rpx;
+  color: var(--dx-text-inverse);
 }
 .summary-value {
   font-size: 24rpx;
-  opacity: 0.9;
+  color: rgba(255, 255, 255, 0.88);
   display: block;
   margin-top: 8rpx;
 }
+.page-body {
+  padding: 0 var(--page-gutter) 32rpx;
+}
+.filter-panel {
+  margin-bottom: 20rpx;
+  padding: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-sm);
+}
 .filters {
   white-space: nowrap;
-  margin-bottom: 16rpx;
 }
 .status-filters {
-  margin-bottom: 24rpx;
+  margin-top: 12rpx;
 }
 .filter-chip {
   display: inline-block;
   padding: 12rpx 28rpx;
-  margin-right: 16rpx;
-  background: #fff;
+  margin-right: 12rpx;
+  background: var(--dx-bg);
   border-radius: 999rpx;
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
 }
 .filter-chip.active {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
 }
 .rank-list {
   display: flex;
@@ -241,14 +323,15 @@ onShow(async () => {
   display: flex;
   align-items: center;
   gap: 16rpx;
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 24rpx;
-  border: 1rpx solid #eef0f3;
+  border: 1rpx solid var(--dx-border);
+  box-shadow: var(--dx-shadow-sm);
 }
 .rank-item.me {
-  border-color: #91caff;
-  background: #fafcff;
+  border-color: rgba(22, 119, 255, 0.35);
+  background: var(--dx-primary-light);
 }
 .rank-item.top .rank-no {
   font-size: 36rpx;
@@ -258,7 +341,7 @@ onShow(async () => {
   text-align: center;
   font-size: 28rpx;
   font-weight: 600;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   flex-shrink: 0;
 }
 .avatar,
@@ -271,8 +354,8 @@ onShow(async () => {
 .avatar {
   line-height: 72rpx;
   text-align: center;
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
   font-size: 28rpx;
 }
 .rank-body {
@@ -283,17 +366,18 @@ onShow(async () => {
   font-size: 30rpx;
   font-weight: 600;
   display: block;
+  color: var(--dx-text);
 }
 .sub-stat {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   display: block;
   margin-top: 6rpx;
 }
 .rank-value {
   font-size: 32rpx;
   font-weight: 700;
-  color: #1677ff;
+  color: var(--dx-primary);
   flex-shrink: 0;
 }
 </style>

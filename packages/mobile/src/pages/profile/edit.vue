@@ -1,49 +1,54 @@
 <template>
-  <view class="page">
-    <view class="avatar-section" @click="chooseAvatar">
-      <image v-if="form.avatar" class="avatar-img" :src="form.avatar" mode="aspectFill" />
-      <view v-else class="avatar-placeholder">{{ avatarText }}</view>
-      <text class="avatar-hint">{{ t('profileEdit.avatarHint') }}</text>
-    </view>
-
-    <view class="form-card">
-      <view class="field">
-        <text class="label">{{ t('profileEdit.nickname') }}</text>
-        <input
-          v-model="form.nickname"
-          class="input"
-          maxlength="64"
-          :placeholder="t('profileEdit.nicknamePlaceholder')"
-        />
-      </view>
-      <view class="field">
-        <text class="label">{{ t('profileEdit.email') }}</text>
-        <input
-          v-model="form.email"
-          class="input"
-          type="text"
-          maxlength="128"
-          :placeholder="t('profileEdit.emailOptional')"
-        />
+  <view class="page" :class="themeClass">
+    <view class="edit-hero">
+      <view class="hero-bg" />
+      <view class="avatar-section" @click="chooseAvatar">
+        <image v-if="form.avatar" class="avatar-img" :src="form.avatar" mode="aspectFill" />
+        <view v-else class="avatar-placeholder">{{ avatarText }}</view>
+        <text class="avatar-hint">{{ t('profileEdit.avatarHint') }}</text>
       </view>
     </view>
 
-    <view class="form-card">
-      <text class="label block">{{ interestTagsTitle }}</text>
-      <view class="tags">
-        <text
-          v-for="tag in presets"
-          :key="tag"
-          class="tag"
-          :class="{ active: form.interestTags.includes(tag) }"
-          @click="toggleTag(tag)"
-        >
-          {{ labelOf(tag) }}
-        </text>
+    <view class="page-body">
+      <view class="form-card">
+        <view class="field">
+          <text class="label">{{ t('profileEdit.nickname') }}</text>
+          <input
+            v-model="form.nickname"
+            class="input"
+            maxlength="64"
+            :placeholder="t('profileEdit.nicknamePlaceholder')"
+          />
+        </view>
+        <view class="field">
+          <text class="label">{{ t('profileEdit.email') }}</text>
+          <input
+            v-model="form.email"
+            class="input"
+            type="text"
+            maxlength="128"
+            :placeholder="t('profileEdit.emailOptional')"
+          />
+        </view>
       </view>
-    </view>
 
-    <button class="save-btn" :loading="saving" @click="handleSave">{{ t('common.save') }}</button>
+      <view class="form-card">
+        <text class="label block">{{ interestTagsTitle }}</text>
+        <view class="tags">
+          <text
+            v-for="tag in presets"
+            :key="tag"
+            class="tag"
+            :class="{ active: form.interestTags.includes(tag) }"
+            @click="toggleTag(tag)"
+          >
+            {{ labelOf(tag) }}
+          </text>
+        </view>
+      </view>
+
+      <button class="save-btn" :loading="saving" @click="handleSave">{{ t('common.save') }}</button>
+    </view>
   </view>
 </template>
 
@@ -54,12 +59,14 @@ import type { UserInfo } from '@douxing/shared';
 import { USER_INTEREST_MAX } from '@douxing/shared';
 import { fetchCurrentUser, updateUserProfile, uploadUserAvatar } from '@/api/user';
 import { getStoredUser } from '@/utils/request';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 import { interestTagPresets } from '@/i18n/interest-tags';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 const { labelOf } = useInterestTagLabel();
 usePageTitle('nav.profileEdit');
 
@@ -190,13 +197,28 @@ onLoad(async () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   min-height: 100vh;
-  background: #f5f7fa;
+  background: var(--dx-bg);
   padding-bottom: 48rpx;
+  box-sizing: border-box;
+}
+.edit-hero {
+  position: relative;
+  margin-bottom: 24rpx;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
 }
 .avatar-section {
-  background: #fff;
-  padding: 48rpx;
+  position: relative;
+  z-index: 1;
+  padding: 48rpx var(--page-gutter) 40rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -207,23 +229,29 @@ onLoad(async () => {
   width: 160rpx;
   height: 160rpx;
   border-radius: 50%;
+  border: 4rpx solid rgba(255, 255, 255, 0.45);
 }
 .avatar-placeholder {
-  background: #1677ff;
-  color: #fff;
+  background: rgba(255, 255, 255, 0.22);
+  color: var(--dx-text-inverse);
   font-size: 56rpx;
+  font-weight: 600;
   line-height: 160rpx;
   text-align: center;
 }
 .avatar-hint {
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.88);
   font-size: 24rpx;
 }
+.page-body {
+  padding: 0 var(--page-gutter);
+}
 .form-card {
-  margin: 24rpx;
-  background: #fff;
-  border-radius: 16rpx;
+  margin-bottom: 24rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 28rpx;
+  box-shadow: var(--dx-shadow-sm);
 }
 .field {
   margin-bottom: 24rpx;
@@ -233,7 +261,7 @@ onLoad(async () => {
 }
 .label {
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   display: block;
   margin-bottom: 12rpx;
 }
@@ -241,10 +269,12 @@ onLoad(async () => {
   margin-bottom: 20rpx;
 }
 .input {
-  background: #f9fafb;
-  border-radius: 12rpx;
+  background: var(--dx-bg);
+  border: 2rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
   padding: 20rpx 24rpx;
   font-size: 28rpx;
+  color: var(--dx-text);
 }
 .tags {
   display: flex;
@@ -254,19 +284,26 @@ onLoad(async () => {
 .tag {
   padding: 12rpx 28rpx;
   border-radius: 999rpx;
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--dx-bg);
+  color: var(--dx-text);
   font-size: 26rpx;
 }
 .tag.active {
-  background: #e6f4ff;
-  color: #1677ff;
-  border: 1rpx solid #91caff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
+  border: 2rpx solid var(--dx-primary-light);
 }
 .save-btn {
-  margin: 32rpx 24rpx 0;
-  background: #1677ff;
-  color: #fff;
-  border-radius: 12rpx;
+  margin-top: 8rpx;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
+  border-radius: var(--dx-radius-lg);
+  border: none;
+  box-shadow: var(--dx-shadow-md);
+  font-size: 30rpx;
+  font-weight: 600;
+}
+.save-btn::after {
+  border: none;
 }
 </style>

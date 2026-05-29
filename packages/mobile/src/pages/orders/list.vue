@@ -1,5 +1,5 @@
 <template>
-  <view class="page">
+  <view class="page" :class="themeClass">
     <view class="tabs">
       <text
         v-for="tab in tabs"
@@ -54,6 +54,7 @@ import { fetchOrders, cancelOrder } from '@/api/orders';
 import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-payment';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 
@@ -61,6 +62,7 @@ type OrderTab = 'all' | 'pending' | 'done';
 
 usePageTitle('nav.orders');
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 
 const tabs = computed(() => [
   { key: 'all' as OrderTab, label: t('orders.tabAll') },

@@ -1,27 +1,46 @@
 <template>
-  <view class="page tab-page">
-    <view class="tabs">
-      <text
-        v-for="tab in scopeTabs"
-        :key="tab.id"
-        class="tab"
-        :class="{ active: activeScope === tab.id }"
-        @click="switchScope(tab.id)"
-      >
-        {{ tab.label }}
-      </text>
-    </view>
+  <view class="page tab-page" :class="themeClass">
+    <view class="page-header">
+      <view class="routes-hero">
+        <view class="hero-bg" />
+        <view class="hero-content">
+          <view class="header-brand">
+            <view class="logo-mark">
+              <text class="iconfont icon-routes hero-icon" aria-hidden="true" />
+            </view>
+            <view class="header-copy">
+              <text class="title">{{ t('nav.routes') }}</text>
+              <text class="hero-desc">{{ t('routes.pageDesc') }}</text>
+            </view>
+          </view>
+        </view>
+      </view>
 
-    <view v-if="activeScope === 'mine'" class="filters">
-      <text
-        v-for="f in statusFilters"
-        :key="String(f.value)"
-        class="chip"
-        :class="{ active: statusFilter === f.value }"
-        @click="statusFilter = f.value"
-      >
-        {{ f.label }}
-      </text>
+      <view class="scope-panel">
+        <view class="tabs">
+          <text
+            v-for="tab in scopeTabs"
+            :key="tab.id"
+            class="tab"
+            :class="{ active: activeScope === tab.id }"
+            @click="switchScope(tab.id)"
+          >
+            {{ tab.label }}
+          </text>
+        </view>
+
+        <view v-if="activeScope === 'mine'" class="filters">
+          <text
+            v-for="f in statusFilters"
+            :key="String(f.value)"
+            class="chip"
+            :class="{ active: statusFilter === f.value }"
+            @click="statusFilter = f.value"
+          >
+            {{ f.label }}
+          </text>
+        </view>
+      </view>
     </view>
 
     <scroll-view scroll-y class="scroll" enable-back-to-top>
@@ -74,10 +93,12 @@ import { getStoredUser } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import type { DouxingEmptyVariant } from '@/components/douxing-empty-state/empty-state-variants';
+import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
 const { t, tf } = useTf();
+const { themeClass } = useTheme();
 usePageTitle('nav.routes');
 
 const routes = ref<TravelRouteInfo[]>([]);
@@ -251,150 +272,197 @@ watch(statusFilter, () => {
 
 <style scoped>
 .page {
+  --page-gutter: 32rpx;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #f5f7fa;
+  background: var(--dx-bg);
   box-sizing: border-box;
   overflow: hidden;
 }
-
+.page-header {
+  flex-shrink: 0;
+}
+.routes-hero {
+  position: relative;
+  padding: 24rpx var(--page-gutter) 28rpx;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  background: var(--dx-gradient-hero);
+  border-radius: 0 0 var(--dx-radius-xl) var(--dx-radius-xl);
+  box-shadow: var(--dx-shadow-hero);
+}
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+.header-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+}
+.logo-mark {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.2);
+  border: 2rpx solid rgba(255, 255, 255, 0.32);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hero-icon {
+  color: var(--dx-text-inverse);
+  font-size: 32rpx;
+}
+.header-copy {
+  flex: 1;
+  min-width: 0;
+}
+.title {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 700;
+  color: var(--dx-text-inverse);
+  line-height: 1.35;
+}
+.hero-desc {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.45;
+}
+.scope-panel {
+  margin: 0 var(--page-gutter) 16rpx;
+  padding: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-sm);
+}
 .tabs {
   display: flex;
-  background: #fff;
-  padding: 16rpx 24rpx 0;
-  gap: 32rpx;
-  flex-shrink: 0;
+  background: var(--dx-bg);
+  padding: 8rpx;
+  border-radius: var(--dx-radius-lg);
+  gap: 8rpx;
 }
-
 .tab {
-  font-size: 28rpx;
-  color: #6b7280;
-  padding-bottom: 16rpx;
-  border-bottom: 4rpx solid transparent;
+  flex: 1;
+  text-align: center;
+  font-size: 26rpx;
+  color: var(--dx-text-secondary);
+  padding: 12rpx 8rpx;
+  border-radius: var(--dx-radius-md);
 }
-
 .tab.active {
-  color: #1677ff;
+  background: var(--dx-surface);
+  color: var(--dx-primary);
   font-weight: 600;
-  border-bottom-color: #1677ff;
+  box-shadow: var(--dx-shadow-sm);
 }
-
 .filters {
   display: flex;
-  gap: 16rpx;
-  padding: 16rpx 24rpx;
-  background: #fff;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
 }
-
 .chip {
   font-size: 24rpx;
-  color: #6b7280;
-  background: #f3f4f6;
+  color: var(--dx-text-secondary);
+  background: var(--dx-bg);
   padding: 8rpx 20rpx;
-  border-radius: 24rpx;
+  border-radius: 999rpx;
 }
-
 .chip.active {
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
 }
-
 .scroll {
   flex: 1;
   height: 0;
   width: 100%;
 }
-
 .list-inner {
-  padding: 24rpx;
+  padding: 0 var(--page-gutter) 24rpx;
   padding-bottom: calc(32rpx + 120rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
-
 .card {
-  background: #fff;
-  border-radius: 16rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
   padding: 28rpx;
   margin-bottom: 24rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.05);
+  box-shadow: var(--dx-shadow-sm);
 }
-
 .card:last-child {
   margin-bottom: 0;
 }
-
 .card-head {
   display: flex;
   align-items: center;
   gap: 12rpx;
 }
-
 .name {
   font-size: 32rpx;
   font-weight: 600;
   flex: 1;
+  color: var(--dx-text);
 }
-
 .tag {
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
   font-size: 20rpx;
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
   flex-shrink: 0;
 }
-
 .meta {
   display: block;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   font-size: 24rpx;
   margin-top: 8rpx;
 }
-
 .author {
   display: block;
-  color: #1677ff;
+  color: var(--dx-primary);
   font-size: 22rpx;
   margin-top: 6rpx;
 }
-
 .desc {
   display: block;
-  color: #374151;
+  color: var(--dx-text);
   font-size: 26rpx;
   margin-top: 12rpx;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
 .stats {
   display: flex;
   gap: 24rpx;
   margin-top: 12rpx;
 }
-
 .stat {
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
 }
-
 .footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-top: 16rpx;
 }
-
 .status {
-  color: #1677ff;
+  color: var(--dx-primary);
   font-size: 24rpx;
 }
-
 .arrow {
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   font-size: 24rpx;
 }
 </style>

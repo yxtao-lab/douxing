@@ -1,6 +1,7 @@
 /**
  * 兜行品牌设计 token（H1-a）
- * 旅行探索感：主色蓝 + 青绿点缀
+ * 默认：主色蓝 + 辅色青绿
+ * .theme-teal：主色青绿 + 辅色蓝
  */
 page {
   --dx-primary: #1677ff;
@@ -37,6 +38,37 @@ page {
   );
   --dx-shadow-hero-register: 0 12rpx 40rpx rgba(8, 151, 156, 0.28);
   --dx-shadow-md-register: 0 8rpx 32rpx rgba(8, 151, 156, 0.18);
+  --dx-gradient-soft: linear-gradient(
+    180deg,
+    var(--dx-primary-light) 0%,
+    var(--dx-bg) 100%
+  );
+}
+
+page.theme-teal,
+.theme-teal {
+  --dx-primary: #13c2c2;
+  --dx-primary-dark: #08979c;
+  --dx-primary-light: #e6fffb;
+  --dx-accent: #1677ff;
+  --dx-accent-dark: #0958d9;
+  --dx-accent-soft: #e8f3ff;
+  --dx-shadow-md: 0 8rpx 32rpx rgba(8, 151, 156, 0.12);
+  --dx-shadow-hero: 0 12rpx 40rpx rgba(8, 151, 156, 0.28);
+  --dx-gradient-hero: linear-gradient(
+    145deg,
+    var(--dx-primary-dark) 0%,
+    var(--dx-primary) 42%,
+    var(--dx-accent) 100%
+  );
+  --dx-gradient-hero-register: linear-gradient(
+    145deg,
+    var(--dx-accent-dark) 0%,
+    var(--dx-accent) 46%,
+    #4096ff 100%
+  );
+  --dx-shadow-hero-register: 0 12rpx 40rpx rgba(9, 88, 217, 0.28);
+  --dx-shadow-md-register: 0 8rpx 32rpx rgba(22, 119, 255, 0.18);
   --dx-gradient-soft: linear-gradient(
     180deg,
     var(--dx-primary-light) 0%,

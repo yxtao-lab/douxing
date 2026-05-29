@@ -70,6 +70,9 @@ export const mobileEnUS = {
     planQuotaFollowUpYes: 'refine in chat',
     planQuotaFollowUpNo: 'no chat refine',
     language: 'Language',
+    theme: 'Theme',
+    themeBlue: 'Douxing Blue',
+    themeTeal: 'Explorer Teal',
     languagePickerTitle: 'Choose language',
     gridCheckins: 'Check-ins',
     gridMap: 'Check-in map',
@@ -203,6 +206,7 @@ export const mobileEnUS = {
     failed: 'Could not get location—check permission and GPS',
   },
   routes: {
+    pageDesc: 'Manage drafts, explore the plaza, and save favorites',
     scopeMine: 'Mine',
     scopePlaza: 'Plaza',
     scopeFavorites: 'Saved',
