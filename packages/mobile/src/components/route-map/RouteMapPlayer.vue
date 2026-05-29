@@ -90,8 +90,16 @@ const displayMarkers = computed(() => {
 const displayPolylines = computed(() => buildRoutePolyline(animatedPolylinePoints.value));
 
 const hiddenHint = computed(() => {
-  if (!props.routePath || props.routePath.hiddenSpotCount <= 0) return '';
-  return tf('routeMap.hiddenSpots', { count: props.routePath.hiddenSpotCount });
+  if (!props.routePath) return '';
+  const hints: string[] = [];
+  if (props.routePath.hiddenSpotCount > 0) {
+    hints.push(tf('routeMap.hiddenSpots', { count: props.routePath.hiddenSpotCount }));
+  }
+  const hasEstimated = props.routePath.segments.some((segment) => segment.estimated);
+  if (hasEstimated) {
+    hints.push(t('routeMap.estimatedSegments'));
+  }
+  return hints.join(' · ');
 });
 
 function destroyAnimation() {

@@ -1,7 +1,4 @@
-import { and, eq } from 'drizzle-orm';
 import {
-  AttractionCategory,
-  AttractionStatus,
   PoiCategory,
   type LocaleCode,
   type LodgingTier,
@@ -12,8 +9,6 @@ import {
   type TravelIntentSnapshot,
   type TransportPreference,
 } from '@douxing/shared';
-import { getDb } from '../db/client.js';
-import { attractions } from '../db/schema/attractions.js';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import { findCityPairTemplate } from '../data/city-pair-transit.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
@@ -29,6 +24,7 @@ import {
   type LatLngPoint,
 } from './amap-direction.service.js';
 import { formatIntentConstraintsForEnricher } from './travel-intent.service.js';
+import { retrieveHotelsForLodging } from './attraction-rag.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 
@@ -103,38 +99,6 @@ async function geocodePlayPois(city: string, spots: RouteDayAttraction[]): Promi
   return result;
 }
 
-async function queryHotelsFromDb(city: string, area?: string | null) {
-  try {
-    const db = getDb();
-    const rows = await db
-      .select()
-      .from(attractions)
-      .where(
-        and(
-          eq(attractions.city, city),
-          eq(attractions.category, AttractionCategory.HOTEL),
-          eq(attractions.status, AttractionStatus.ACTIVE),
-        ),
-      )
-      .limit(20);
-
-    if (!area?.trim()) return rows;
-    const keyword = area.trim();
-    return rows.filter(
-      (row) =>
-        row.name.includes(keyword) ||
-        (row.description ?? '').includes(keyword) ||
-        row.tags.some((tag) => tag.includes(keyword)),
-    );
-  } catch (err) {
-    console.warn(
-      '[route-enricher] 酒店库查询失败，改用高德:',
-      err instanceof Error ? err.message : err,
-    );
-    return [];
-  }
-}
-
 async function searchHotelViaAmap(
   city: string,
   tier: Exclude<LodgingTier, 'any'>,
@@ -161,12 +125,6 @@ async function searchHotelViaAmap(
   return null;
 }
 
-function toNumber(value: string | number | null | undefined): number | null {
-  if (value == null) return null;
-  const n = typeof value === 'number' ? value : parseFloat(value);
-  return Number.isFinite(n) ? n : null;
-}
-
 async function assignLodgingForDay(
   city: string,
   poiPoints: LatLngPoint[],
@@ -176,37 +134,67 @@ async function assignLodgingForDay(
   const area = intent.lodgingArea;
   const center = centroid(poiPoints);
 
-  const dbHotels = await queryHotelsFromDb(city, area);
-  if (dbHotels.length > 0 && center) {
-    let best = dbHotels[0]!;
-    let bestDist = Infinity;
-    for (const row of dbHotels) {
-      const lat = toNumber(row.latitude);
-      const lng = toNumber(row.longitude);
-      if (lat == null || lng == null) continue;
-      const dist = Math.abs(lat - center.latitude) + Math.abs(lng - center.longitude);
-      if (dist < bestDist) {
-        bestDist = dist;
-        best = row;
+  const hotelCandidates = await retrieveHotelsForLodging({
+    city,
+    area,
+    tier,
+    themes: intent.themes,
+    limit: 16,
+  });
+
+  const withCoords = hotelCandidates.filter(
+    (hotel) => hotel.latitude != null && hotel.longitude != null,
+  );
+
+  if (withCoords.length > 0) {
+    let best = withCoords[0]!;
+    let bestScore = -Infinity;
+
+    for (const hotel of withCoords) {
+      let score = hotel.score;
+      const lat = hotel.latitude!;
+      const lng = hotel.longitude!;
+
+      if (center) {
+        const dist =
+          Math.abs(lat - center.latitude) + Math.abs(lng - center.longitude);
+        score += Math.max(0, 8 - dist * 100);
+      }
+
+      if (poiPoints.length > 0) {
+        const travelSum = poiPoints.reduce((sum, poi) => {
+          return (
+            sum +
+            Math.abs(lat - poi.latitude) +
+            Math.abs(lng - poi.longitude)
+          );
+        }, 0);
+        score += Math.max(0, 10 - travelSum * 50);
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        best = hotel;
       }
     }
-    const bestLat = toNumber(best.latitude);
-    const bestLng = toNumber(best.longitude);
-    if (bestLat != null && bestLng != null) {
-      return {
-        name: best.name,
-        area: area ?? undefined,
-        tier,
-        cost: best.ticketPrice > 0 ? best.ticketPrice : LODGING_TIER_COST[tier],
-        latitude: bestLat,
-        longitude: bestLng,
-        description: best.description ?? best.name,
-      };
-    }
+
+    return {
+      name: best.name,
+      area: area ?? undefined,
+      tier,
+      cost: best.ticketPrice > 0 ? best.ticketPrice : LODGING_TIER_COST[tier],
+      latitude: best.latitude!,
+      longitude: best.longitude!,
+      description: best.description ?? best.name,
+      attractionId: best.id,
+      source: 'content_library',
+    };
   }
 
   const fromAmap = await searchHotelViaAmap(city, tier, area);
-  if (fromAmap) return fromAmap;
+  if (fromAmap) {
+    return { ...fromAmap, source: 'amap_geocode' };
+  }
 
   const fallback: RouteDayLodging = {
     name: area ? `${area}附近酒店` : `${city}市中心酒店`,
@@ -214,6 +202,7 @@ async function assignLodgingForDay(
     tier,
     cost: LODGING_TIER_COST[tier],
     description: area ? `推荐入住${area}附近` : `推荐入住${city}市区`,
+    source: 'fallback',
   };
   const geo = await resolveCoordinatesFromAmap(fallback.name, city);
   if (geo) {

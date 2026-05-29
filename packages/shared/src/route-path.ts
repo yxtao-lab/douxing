@@ -20,6 +20,8 @@ export type RoutePathSegment = {
   to: LatLng;
   points: LatLng[];
   mode: RoutePathSegmentMode;
+  /** H9-2：高德不可用时为 true（直线/估算路段） */
+  estimated?: boolean;
 };
 
 export type RoutePath = {

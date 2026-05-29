@@ -1,6 +1,7 @@
 import { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { LocaleCode } from '@douxing/shared';
+import { ApiMessageKey } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail } from '../utils/response.js';
 import {
@@ -12,6 +13,10 @@ import {
   updateDraftRoute,
   setRoutePublicShare,
 } from '../services/route.service.js';
+import {
+  buildRouteMapPathFromDetail,
+  canAccessRouteMapPath,
+} from '../services/route-map-path.service.js';
 import {
   listRoutesForUser,
   toggleRouteLike,
@@ -323,6 +328,34 @@ router.post('/:id/favorite', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[routes/favorite]', err);
     return fail(res, '收藏操作失败', 500, 500);
+  }
+});
+
+router.get('/:id/map-path', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+
+    const route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
+    if (!route) return fail(res, ApiMessageKey.ROUTE_NOT_FOUND, 404, 404);
+    if (!canAccessRouteMapPath(route, req.auth!.userId)) {
+      return fail(res, ApiMessageKey.ROUTE_MAP_PATH_FORBIDDEN, 403, 403);
+    }
+
+    const mapPath = await buildRouteMapPathFromDetail(route.routeDetail, {
+      routeId: route.id,
+      name: route.name,
+    });
+    if (!mapPath) {
+      return fail(res, ApiMessageKey.ROUTE_MAP_PATH_EMPTY, 404, 404);
+    }
+
+    success(res, mapPath);
+  } catch (err) {
+    console.error('[routes/map-path]', err);
+    return fail(res, ApiMessageKey.ROUTE_MAP_PATH_FAILED, 500, 500);
   }
 });
 

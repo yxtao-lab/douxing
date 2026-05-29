@@ -52,6 +52,13 @@
             <text v-if="node.subtitle" class="flow-time">{{ node.subtitle }}</text>
             <text v-if="nodeMeta(node)" class="flow-meta">{{ nodeMeta(node) }}</text>
             <text v-if="node.description" class="flow-desc">{{ node.description }}</text>
+            <text
+              v-if="node.transit?.bookingUrl"
+              class="flow-booking-link"
+              @click.stop="openBookingUrl(node.transit!.bookingUrl!)"
+            >
+              {{ t('routes.transitBookDemo') }}
+            </text>
             <button
               v-if="showCheckIn && node.kind === 'play' && node.spot"
               size="mini"
@@ -139,6 +146,21 @@ function nodeMeta(node: RouteFlowNode): string {
     return `¥${node.meta}`;
   }
   return '';
+}
+
+function openBookingUrl(url: string) {
+  if (!url) return;
+  // #ifdef H5
+  window.open(url, '_blank', 'noopener,noreferrer');
+  // #endif
+  // #ifndef H5
+  uni.setClipboardData({
+    data: url,
+    success: () => {
+      uni.showToast({ title: t('routes.bookingLinkCopied'), icon: 'none' });
+    },
+  });
+  // #endif
 }
 </script>
 
@@ -326,6 +348,14 @@ function nodeMeta(node: RouteFlowNode): string {
   font-size: 24rpx;
   color: #4b5563;
   line-height: 1.5;
+}
+
+.flow-booking-link {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  color: #1677ff;
+  text-decoration: underline;
 }
 
 .btn-checkin {

@@ -7,7 +7,7 @@ import {
   AttractionStatus,
   PoiCategory,
 } from '@douxing/shared';
-import type { LocaleCode, RagAttractionCandidate } from '@douxing/shared';
+import type { LocaleCode, LodgingTier, RagAttractionCandidate } from '@douxing/shared';
 import {
   formatPlanVariantSuffix,
   formatRagRouteDescription,
@@ -21,7 +21,23 @@ import type { TravelIntentSnapshot } from '@douxing/shared';
 
 const DEFAULT_SLOTS_PER_DAY = 3;
 const MAX_CANDIDATES = 30;
+const MAX_HOTEL_CANDIDATES = 24;
 const DAY_TIME_SLOTS = ['09:00-11:30', '14:00-16:30', '18:00-20:00'];
+
+const LODGING_TIER_PRICE: Record<Exclude<LodgingTier, 'any'>, [number, number]> = {
+  budget: [0, 280],
+  comfort: [220, 650],
+  luxury: [500, 99999],
+};
+
+export interface HotelRetrievalInput {
+  city: string;
+  area?: string | null;
+  tier?: LodgingTier | null;
+  themes?: string[];
+  prompt?: string;
+  limit?: number;
+}
 
 export interface RagRetrievalInput {
   city?: string | null;
@@ -85,6 +101,42 @@ function scoreRow(
   return score;
 }
 
+function scoreHotelRow(
+  row: typeof attractions.$inferSelect,
+  themes: string[],
+  keywords: string[],
+  tier?: LodgingTier | null,
+  area?: string | null,
+): number {
+  let score = scoreRow(row, themes, keywords);
+
+  if (tier && tier !== 'any') {
+    const [minPrice, maxPrice] = LODGING_TIER_PRICE[tier];
+    if (row.ticketPrice >= minPrice && row.ticketPrice <= maxPrice) {
+      score += 4;
+    }
+    for (const tag of row.tags) {
+      if (tag.includes('经济') && tier === 'budget') score += 2;
+      if (tag.includes('舒适') && tier === 'comfort') score += 2;
+      if ((tag.includes('豪华') || tag.includes('五星')) && tier === 'luxury') score += 2;
+    }
+  }
+
+  if (area?.trim()) {
+    const keyword = area.trim();
+    if (
+      row.name.includes(keyword) ||
+      (row.description ?? '').includes(keyword) ||
+      row.tags.some((tag) => tag.includes(keyword))
+    ) {
+      score += 6;
+    }
+  }
+
+  if (row.category === AttractionCategory.HOTEL) score += 2;
+  return score;
+}
+
 function toCandidate(
   row: typeof attractions.$inferSelect,
   score: number,
@@ -143,6 +195,62 @@ export async function retrieveAttractionsForPlanning(
   }
 
   return rankCandidates(rows, themes, keywords, limit);
+}
+
+function rankHotelCandidates(
+  rows: typeof attractions.$inferSelect[],
+  themes: string[],
+  keywords: string[],
+  tier: LodgingTier | null | undefined,
+  area: string | null | undefined,
+  limit: number,
+): RagAttractionCandidate[] {
+  return rows
+    .map((row) => toCandidate(row, scoreHotelRow(row, themes, keywords, tier, area)))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'zh-CN'))
+    .slice(0, limit);
+}
+
+/** H9-2：按城市 + 区域/档次/主题从内容库检索酒店候选 */
+export async function retrieveHotelsForLodging(
+  input: HotelRetrievalInput,
+): Promise<RagAttractionCandidate[]> {
+  const city = input.city?.trim();
+  if (!city) return [];
+
+  const cityCode = resolveCityCode(city);
+  const themes = input.themes ?? [];
+  const keywords = extractPromptKeywords(input.prompt ?? input.area ?? '');
+  const limit = Math.min(Math.max(input.limit ?? 12, 4), MAX_HOTEL_CANDIDATES);
+
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(
+      and(
+        eq(attractions.status, AttractionStatus.ACTIVE),
+        eq(attractions.category, AttractionCategory.HOTEL),
+        eq(attractions.cityCode, cityCode),
+      ),
+    );
+
+  if (rows.length === 0) {
+    const byCityName = await db
+      .select()
+      .from(attractions)
+      .where(
+        and(
+          eq(attractions.status, AttractionStatus.ACTIVE),
+          eq(attractions.category, AttractionCategory.HOTEL),
+          eq(attractions.city, city),
+        ),
+      );
+    if (byCityName.length === 0) return [];
+    return rankHotelCandidates(byCityName, themes, keywords, input.tier, input.area, limit);
+  }
+
+  return rankHotelCandidates(rows, themes, keywords, input.tier, input.area, limit);
 }
 
 function rankCandidates(

@@ -31,3 +31,12 @@ export function getMatrixCacheTtlSec(): number {
   const raw = parseInt(trimEnv('AMAP_MATRIX_CACHE_TTL_SEC') || '604800', 10);
   return Number.isFinite(raw) && raw > 0 ? raw : 604800;
 }
+
+/** 高德 direction polyline 缓存键前缀 */
+export const POLYLINE_CACHE_KEY_PREFIX = 'douxing:amap:polyline:';
+
+/** polyline 缓存 TTL（秒），默认 7 天 */
+export function getPolylineCacheTtlSec(): number {
+  const raw = parseInt(trimEnv('AMAP_POLYLINE_CACHE_TTL_SEC') || '604800', 10);
+  return Number.isFinite(raw) && raw > 0 ? raw : 604800;
+}

@@ -241,6 +241,8 @@ export const mobileZhCN = {
     transitDuration: '{minutes} 分钟',
     transitEstimated: '参考耗时（估算）',
     transitDemoLink: '演示订票链接（非真实班次）',
+    transitBookDemo: '查看演示订票链接',
+    bookingLinkCopied: '链接已复制到剪贴板',
     transitMode_train: '高铁/火车',
     transitMode_flight: '飞机',
     transitMode_subway: '地铁',
@@ -290,6 +292,7 @@ export const mobileZhCN = {
     replay: '重播',
     animating: '路线预览中…',
     hiddenSpots: '{count} 个站点无坐标未展示',
+    estimatedSegments: '部分路段为估算路径',
   },
   checkins: {
     rangeAll: '全部',

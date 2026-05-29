@@ -1,4 +1,5 @@
 node_modules
+# 构建产物（含 packages/mobile/dist、各包 dist/）
 dist
 packages/mobile/dist
 packages/mobile/unpackage

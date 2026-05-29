@@ -1,12 +1,18 @@
-import { haversineDistanceMeters } from '@douxing/shared';
-import type { RouteTransitMode } from '@douxing/shared';
+import { haversineDistanceMeters, interpolateSegment } from '@douxing/shared';
+import type { RoutePathSegmentMode, RouteTransitMode } from '@douxing/shared';
 import { getAmapWebKey, getAmapGeocodeTimeoutMs, isAmapGeocodeEnabled } from '../config/amap.js';
 import {
   getCachedTravelDuration,
   setCachedTravelDuration,
 } from './matrix-cache.service.js';
+import {
+  getCachedDirectionPolyline,
+  setCachedDirectionPolyline,
+} from './polyline-cache.service.js';
 
 const AMAP_DISTANCE_URL = 'https://restapi.amap.com/v3/distance';
+const AMAP_WALKING_URL = 'https://restapi.amap.com/v3/direction/walking';
+const AMAP_DRIVING_URL = 'https://restapi.amap.com/v3/direction/driving';
 
 /** 步行距离阈值（米），低于此值优先步行 */
 export const WALK_DISTANCE_THRESHOLD_M = 800;
@@ -29,10 +35,36 @@ export interface TravelDurationResult {
   estimated: boolean;
 }
 
+export interface DirectionPolylineResult {
+  points: LatLngPoint[];
+  mode: RoutePathSegmentMode;
+  estimated: boolean;
+  distanceMeters?: number;
+  durationMinutes?: number;
+}
+
 interface AmapDistanceResponse {
   status?: string;
   info?: string;
   results?: Array<{ distance?: string; duration?: string }>;
+}
+
+interface AmapDirectionStep {
+  polyline?: string;
+}
+
+interface AmapDirectionPath {
+  distance?: string;
+  duration?: string;
+  steps?: AmapDirectionStep[];
+}
+
+interface AmapDirectionResponse {
+  status?: string;
+  info?: string;
+  route?: {
+    paths?: AmapDirectionPath[];
+  };
 }
 
 async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Response> {
@@ -308,4 +340,155 @@ export function formatMinutesToTime(minutes: number): string {
 
 export function formatTimeRange(startMinutes: number, endMinutes: number): string {
   return `${formatMinutesToTime(startMinutes)}-${formatMinutesToTime(endMinutes)}`;
+}
+
+function isIntercityTransitMode(mode?: RouteTransitMode | null): boolean {
+  return mode === 'train' || mode === 'flight';
+}
+
+function resolveDirectionApiMode(transitMode?: RouteTransitMode | null): 'walk' | 'drive' {
+  if (transitMode === 'walk') return 'walk';
+  return 'drive';
+}
+
+function resolveSegmentMode(transitMode?: RouteTransitMode | null): RoutePathSegmentMode {
+  if (transitMode === 'walk') return 'walk';
+  if (isIntercityTransitMode(transitMode)) return 'straight';
+  return 'drive';
+}
+
+/** 解析高德 direction steps 中的 polyline（lng,lat;lng,lat） */
+export function parseAmapPolyline(polyline: string): LatLngPoint[] {
+  const points: LatLngPoint[] = [];
+  for (const chunk of polyline.split(';')) {
+    const trimmed = chunk.trim();
+    if (!trimmed) continue;
+    const [lngRaw, latRaw] = trimmed.split(',');
+    const lng = parseFloat(lngRaw ?? '');
+    const lat = parseFloat(latRaw ?? '');
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+    const last = points[points.length - 1];
+    if (last && last.latitude === lat && last.longitude === lng) continue;
+    points.push({ latitude: lat, longitude: lng });
+  }
+  return points;
+}
+
+function buildStraightPolyline(from: LatLngPoint, to: LatLngPoint): DirectionPolylineResult {
+  const distanceMeters = haversineDistanceMeters(
+    from.latitude,
+    from.longitude,
+    to.latitude,
+    to.longitude,
+  );
+  return {
+    points: interpolateSegment(from, to, 20),
+    mode: 'straight',
+    estimated: true,
+    distanceMeters: Math.round(distanceMeters),
+  };
+}
+
+async function fetchDirectionPolylineFromAmap(
+  from: LatLngPoint,
+  to: LatLngPoint,
+  apiMode: 'walk' | 'drive',
+): Promise<DirectionPolylineResult | null> {
+  const key = getAmapWebKey();
+  if (!key || !isAmapGeocodeEnabled()) return null;
+
+  const origin = `${from.longitude},${from.latitude}`;
+  const destination = `${to.longitude},${to.latitude}`;
+  const baseUrl = apiMode === 'walk' ? AMAP_WALKING_URL : AMAP_DRIVING_URL;
+  const params = new URLSearchParams({ key, origin, destination });
+
+  try {
+    const timeoutMs = getAmapGeocodeTimeoutMs();
+    const res = await fetchWithTimeout(`${baseUrl}?${params}`, timeoutMs);
+    const data = (await res.json()) as AmapDirectionResponse;
+
+    if (data.status !== '1' || !data.route?.paths?.[0]) {
+      console.warn('[amap-direction] direction 无结果:', data.info ?? res.status);
+      return null;
+    }
+
+    const path = data.route.paths[0]!;
+    const points: LatLngPoint[] = [];
+    for (const step of path.steps ?? []) {
+      if (!step.polyline) continue;
+      for (const point of parseAmapPolyline(step.polyline)) {
+        const last = points[points.length - 1];
+        if (last && last.latitude === point.latitude && last.longitude === point.longitude) {
+          continue;
+        }
+        points.push(point);
+      }
+    }
+
+    if (points.length < 2) return null;
+
+    const distanceMeters = parseInt(path.distance ?? '0', 10);
+    const durationSec = parseInt(path.duration ?? '0', 10);
+
+    return {
+      points,
+      mode: apiMode,
+      estimated: false,
+      distanceMeters: Number.isFinite(distanceMeters) ? distanceMeters : undefined,
+      durationMinutes:
+        Number.isFinite(durationSec) && durationSec > 0
+          ? Math.max(1, Math.round(durationSec / 60))
+          : undefined,
+    };
+  } catch (err) {
+    console.warn(
+      '[amap-direction] direction 请求失败:',
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
+/**
+ * H9-2：查询两点间路网 polyline（步行/驾车 direction API，跨城降级直线）
+ */
+export async function getDirectionPolyline(
+  from: LatLngPoint,
+  to: LatLngPoint,
+  transitMode?: RouteTransitMode | null,
+): Promise<DirectionPolylineResult> {
+  if (isIntercityTransitMode(transitMode)) {
+    return buildStraightPolyline(from, to);
+  }
+
+  const apiMode = resolveDirectionApiMode(transitMode);
+  const segmentMode = resolveSegmentMode(transitMode);
+
+  const cached = await getCachedDirectionPolyline(
+    from.latitude,
+    from.longitude,
+    to.latitude,
+    to.longitude,
+    apiMode,
+  );
+  if (cached) {
+    return { ...cached, mode: segmentMode };
+  }
+
+  const fromAmap = await fetchDirectionPolylineFromAmap(from, to, apiMode);
+  if (fromAmap) {
+    const result: DirectionPolylineResult = { ...fromAmap, mode: segmentMode };
+    await setCachedDirectionPolyline(
+      from.latitude,
+      from.longitude,
+      to.latitude,
+      to.longitude,
+      apiMode,
+      result,
+    );
+    return result;
+  }
+
+  const fallback = buildStraightPolyline(from, to);
+  return { ...fallback, mode: segmentMode };
 }

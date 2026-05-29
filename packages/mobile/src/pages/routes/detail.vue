@@ -160,6 +160,7 @@ import type {
 import { buildRoutePathFromDetail } from '@douxing/shared';
 import {
   fetchRouteDetail,
+  fetchRouteMapPath,
   publishRoute,
   regenerateRoute,
   updateRouteDraft,
@@ -189,6 +190,7 @@ usePageTitle('nav.routeDetail');
 const { joinLabels } = useInterestTagLabel();
 
 const route = ref<TravelRouteInfo | null>(null);
+const routePath = ref<ReturnType<typeof buildRoutePathFromDetail>>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
 const routeUnlockPaymentRequired = ref(false);
@@ -304,13 +306,24 @@ const days = computed((): RouteDayPlan[] => {
   return detail?.days ?? [];
 });
 
-const routePath = computed(() => {
-  if (!route.value?.routeDetail) return null;
-  return buildRoutePathFromDetail(route.value.routeDetail as RouteDetailPayload, {
-    routeId: route.value.id,
-    name: route.value.name,
-  });
-});
+async function loadRouteMapPath() {
+  if (!route.value?.routeDetail || !isUnlocked.value) {
+    routePath.value = null;
+    return;
+  }
+
+  try {
+    routePath.value = await fetchRouteMapPath(routeId);
+  } catch {
+    routePath.value = buildRoutePathFromDetail(
+      route.value.routeDetail as unknown as RouteDetailPayload,
+      {
+        routeId: route.value.id,
+        name: route.value.name,
+      },
+    );
+  }
+}
 
 const editDescMinHeight = computed(() =>
   computeTextareaMinHeight(editDesc.value || '', { minRpx: 160, maxRpx: 560, charsPerLine: 18 }),
@@ -354,6 +367,7 @@ async function loadDetail() {
       regeneratePrompt.value = route.value?.description ?? '';
     }
     await loadComments();
+    await loadRouteMapPath();
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : t('routes.loadFailed'), icon: 'none' });
   }
@@ -475,6 +489,7 @@ async function handleRegenerate() {
     uni.showToast({ title: tip, icon: 'success' });
     route.value = result;
     regeneratePrompt.value = result.sourcePrompt ?? text;
+    await loadRouteMapPath();
   } catch (e) {
     const msg = e instanceof Error ? e.message : t('routes.regenerateFailed');
     if (!isAiPlanCancelledError(e)) {

@@ -78,6 +78,9 @@ export interface RouteTransitSegment {
 }
 
 /** H9：每日住宿（Enricher 产出） */
+/** H9-2：住宿数据来源 */
+export type RouteLodgingSource = 'content_library' | 'amap_geocode' | 'fallback';
+
 export interface RouteDayLodging {
   name: string;
   area?: string;
@@ -88,6 +91,10 @@ export interface RouteDayLodging {
   latitude?: number;
   longitude?: number;
   description?: string;
+  /** H9-2：来自内容库的酒店 ID */
+  attractionId?: number;
+  /** H9-2：住宿推荐来源 */
+  source?: RouteLodgingSource;
 }
 
 export interface RouteDayPlan {

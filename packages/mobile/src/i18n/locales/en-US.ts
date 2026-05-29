@@ -243,6 +243,8 @@ export const mobileEnUS = {
     transitDuration: '{minutes} min',
     transitEstimated: 'Reference time (estimated)',
     transitDemoLink: 'Demo booking link (not a real schedule)',
+    transitBookDemo: 'View demo booking link',
+    bookingLinkCopied: 'Link copied to clipboard',
     transitMode_train: 'Train',
     transitMode_flight: 'Flight',
     transitMode_subway: 'Subway',
@@ -292,6 +294,7 @@ export const mobileEnUS = {
     replay: 'Replay',
     animating: 'Previewing route…',
     hiddenSpots: '{count} stop(s) hidden (no coordinates)',
+    estimatedSegments: 'Some segments use estimated paths',
   },
   checkins: {
     rangeAll: 'All',

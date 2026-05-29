@@ -12,6 +12,7 @@ import type {
   SetRoutePublicShareRequest,
   RouteCommentInfo,
   CreateRouteCommentRequest,
+  RoutePath,
 } from '@douxing/shared';
 import { request, requestAiPlan } from '@/utils/request';
 
@@ -62,6 +63,10 @@ export function fetchHotRoutes(limit = 20) {
 
 export function fetchRouteDetail(id: number) {
   return request<TravelRouteInfo>(`/routes/${id}`);
+}
+
+export function fetchRouteMapPath(id: number) {
+  return request<RoutePath>(`/routes/${id}/map-path`);
 }
 
 export function publishRoute(id: number) {

@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.9  
-**更新日期**：2026-05-27  
+**文档版本**：3.10  
+**更新日期**：2026-05-28  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -29,8 +29,8 @@
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
-| **当前焦点** | **H9 Phase 1 已验收** · 阶段 D/E + 小程序正式发版 | Enricher MVP + 详情页行程流程图已落地；规划对话区不展示路径 |
-| **下一步建议** | **H9-2** 路网 polyline · **H8** 行中重规划 · **E2** 真支付 · **D2** 搭子 MVP | 见 [§2.3](#23-下一步时间节点计划)、[§5 H9 分 Phase](#h9-住宿与交通分-phase-实施) |
+| **当前焦点** | **H9 Phase 2 已验收** · 阶段 D/E + 小程序正式发版 | 路网 polyline + 酒店 RAG 已落地；下一步 H9-3 / H8 |
+| **下一步建议** | **H9-3** 真班次与开放时长 · **H8** 行中重规划 · **E2** 真支付 · **D2** 搭子 MVP | 见 [§2.3](#23-下一步时间节点计划)、[§5 H9 分 Phase](#h9-住宿与交通分-phase-实施) |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -111,6 +111,7 @@ gantt
 | v0.6.4 | 2026-05-27 | 国际化扫尾 | 移动子页/规划/登录/语音/定位/打卡地图/Web 管理端 View；`mobileT`；`getOrderStatusI18nKey`；后端 `ApiError` + 30+ `ApiMessageKey`；en-US 主流程手测通过 |
 | v0.6.5 | 2026-05-27 | H9 Phase 1 | Enricher MVP：schema、C2 交通/住宿意图、高德 Matrix 排程、跨城 mock、Prompt 收窄、详情行程展示 |
 | v0.6.6 | 2026-05-27 | H9-1 UI + 修复 | 详情页 `RouteDayFlowChart` 统一展示交通→游玩→住宿；`cloneRouteDaysForSync` 保留 enrich 字段；规划对话区不展示路径 |
+| v0.6.7 | 2026-05-28 | H9 Phase 2 | 高德 direction polyline + Redis 缓存；`GET /routes/:id/map-path`；酒店 RAG；详情地图接服务端路径 |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -125,8 +126,7 @@ gantt
 | 2026-05-26 | G9 | 国际化框架（vue-i18n + API messageKey）（已完成） |
 | 2026-05-27 | G9 扫尾 + 验收 | 全站硬编码文案迁移、Web 管理端、后端高频 `ApiError`；en-US 主流程手测通过 |
 | — | G9+ | 第三语言、LLM 输出语言跟随、配置类内部错误 i18n | 见 [国际化.md](./国际化.md) |
-| **2026-06 起** | **H9-2** | Phase 2 — 路网 polyline + 酒店 RAG | 高德 direction polyline；`buildRoutePathFromDetail` 接真实路段；地图与 Enricher 耗时一致 |
-| — | H9-3 | Phase 3 — 真班次与开放时长 | 12306/航班 API（可选）；attractions 开放时长；闭馆冲突自动提示 |
+| **2026-06 起** | **H9-3** | Phase 3 — 真班次与开放时长 | 12306/航班 API（可选）；attractions 开放时长；闭馆冲突自动提示 |
 | — | **H8** | 位置实时重规划 | 复用 Enricher `buildDailySchedule`；GPS + 剩余 POI 一键刷新 |
 | — | A3-3+ | 足迹页多路线合并动画 | `mergeRoutePaths` + H9-2 polyline |
 | — | E2 | 微信支付正式联调 | 依赖 [后期待办.md](./后期待办.md) 商户号与公司主体 |
@@ -171,6 +171,7 @@ gantt
 | 2026-05-26 | G9 国际化（i18n）框架 | [§ G9](./开发记录-重难点与亮点.md#g9-国际化i18n) |
 | 2026-05-27 | G9 国际化验收 | [§ G9](./开发记录-重难点与亮点.md#g9-国际化i18n)（en-US 主流程手测通过） |
 | 2026-05-27 | H9-1 Enricher MVP（Phase 1） | [§ H9-1](./开发记录-重难点与亮点.md#h9-1-enricher-mvpphase-1) |
+| 2026-05-28 | H9-2 路网 polyline + 酒店 RAG（Phase 2） | [§ H9-2](./开发记录-重难点与亮点.md#h9-2-路网-polyline-与酒店-ragphase-2) |
 | 2026-05-27 | H9-1 UI 行程流程图 + enrich 入库修复 | [§ H9-1 UI](./开发记录-重难点与亮点.md#h9-1-ui-行程流程图与展示策略) |
 | 2026-05-27 | H9 方案定稿（LLM 排 POI + Enricher） | [§ H9](./开发记录-重难点与亮点.md#h9-住宿与交通编排llm-排-poi--后端-enricher) |
 | 2026-05-26 | A3-3 路线详情地图预览动画 | [§ A3-3](./开发记录-重难点与亮点.md#a3-3-路线详情地图预览动画) |
@@ -189,7 +190,7 @@ gantt
 | 工程脚手架 | 2026-05-19 | pnpm Monorepo、Web / UniApp / Express、MySQL + Drizzle |
 | 用户认证 | 2026-05-20 | 注册、登录、JWT、`/auth/me`、RBAC；**手机验证码登录/注册**（`/auth/sms/send`、`/auth/sms/login`）；密码/验证码双模式登录页（Web + 移动端） |
 | AI 路线生成 | 2026-05-22 | **DeepSeek** / **LM Studio** / `auto` 模板降级；**多轮对话**；**意图解析**；**RAG 内容库检索** |
-| 路线管理 | 2026-05-27 | 生成、列表、详情、发布；解锁可选；**详情页地图预览** + **行程流程图**（交通→游玩→住宿）；规划对话区仅消息与候选卡片；草稿 **hero 编辑弹窗** |
+| 路线管理 | 2026-05-28 | 生成、列表、详情、发布；解锁可选；**详情页地图预览**（服务端 polyline）+ **行程流程图**；规划对话区仅消息与候选卡片；草稿 **hero 编辑弹窗** |
 | 打卡 | 2026-05-21 | 含城市/积分/照片/GPS 围栏；列表 + 地图足迹、时间筛选 |
 | 徽章 | 2026-05-22 | 11 种徽章（城市/成就/特殊）；打卡条件触发；移动端图鉴展示 |
 | 成就 | 2026-05-22 | 8 种配置化成就；打卡触发；独立图鉴页 |
@@ -228,6 +229,7 @@ POST /api/routes/:id/regenerate
 GET  /api/routes
 GET  /api/routes/hot
 GET  /api/routes/:id
+GET  /api/routes/:id/map-path
 PUT  /api/routes/:id
 POST /api/routes/:id/like
 POST /api/routes/:id/favorite
@@ -277,8 +279,8 @@ POST /api/speech/transcribe
 | 设计文档章节 | 模块 | 已实现 | 未实现 / 仅简化 |
 |-------------|------|--------|----------------|
 | §2 | 系统架构 | 单体 Express、多端脚本 | 微服务、K8s、API 网关、消息队列 |
-| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案；**语音输入（ASR）**；**H9-1** LLM 排 POI + Enricher 住/行/时刻 | H9-2 路网 polyline；H8 实时重规划；H3 角色扮演；H7 错过景点；多 Agent、向量库、图片输入 |
-| §4.3 | 打卡地图 | GPS 围栏、地图足迹、照片字段；**路线详情 POI 路径动画（MVP）** | 热力图、真实路网 direction、多路线合并足迹动画；**错过景点**检测与复盘（H7） |
+| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案；**语音输入（ASR）**；**H9-1/2** LLM 排 POI + Enricher 住/行 + 路网 polyline | H9-3 真班次/开放时长；H8 实时重规划；H3 角色扮演；H7 错过景点；多 Agent、向量库、图片输入 |
+| §4.3 | 打卡地图 | GPS 围栏、地图足迹、照片字段；**路线详情 POI 路径动画**（高德 direction polyline，失败降级直线） | 热力图；足迹页多路线 `mergeRoutePaths` 动画；**错过景点**检测与复盘（H7） |
 | §4.6 | 成就系统 | 8 种配置化成就 + 徽章 + 排行榜 | 事件驱动（Kafka）；**旅行游戏化**任务链/关卡（H4） |
 | §4.4 | 搭子匹配 | — | 发布需求、匹配算法、邀请组队；**社交 IM 聊天**（H5） |
 | §4.5 | 盲盒旅行 | — | 加权随机、揭晓、保底 |
@@ -431,7 +433,7 @@ POST /api/speech/transcribe
 | H9-1e | [x] | 2026-05-27 | 跨城大交通 mock | H9-1c | `city-pair` 模板 JSON；`kind=intercity` 段 + mock `bookingUrl`；i18n「参考耗时/演示链接」 | 跨城日有结构化大交通段；不误导为真实班次 |
 | H9-1f | [x] | 2026-05-27 | LLM Prompt 收窄 | H9-1c、C5 | Node `llm-client.service.ts` + Python `ai-service`：只排 POI；禁止编造 transit/lodging 时刻；笼统用餐仍 `poiType=meal` | Enricher 输出覆盖 LLM 内交通字段；双端 prompt 一致 |
 | H9-1g | [x] | 2026-05-27 | 详情页行程流程图 | H9-1c、G9 | `RouteDayFlowChart` + `buildRouteDayFlow`：按时刻合并 transit/play/lodging 竖向时间轴；多日 Tab；打卡按钮；**规划页对话区不展示**（进详情查看） | 解锁后可见完整路径；zh-CN/en-US；旧路线需重新生成才有 enrich 数据 |
-| **H9-2** | [ ] | — | **Phase 2 — 路网与酒店 RAG** | H9-1、A2 | 高德 direction polyline；酒店 RAG 加强；`buildRoutePathFromDetail` 接真实路段（替代直线 MVP） | 地图 polyline 与 Enricher 耗时一致；酒店来自内容库 |
+| **H9-2** | [x] | 2026-05-28 | **Phase 2 — 路网与酒店 RAG** | H9-1、A2 | 高德 direction polyline；`GET /routes/:id/map-path`；酒店 RAG 加强；详情页接服务端路径 | 地图 polyline 与 Enricher 耗时一致；酒店优先来自内容库 |
 | **H9-3** | [ ] | — | **Phase 3 — 真班次与开放时长** | H9-2 | 12306/航班 API（可选）；attractions 开放时长；可选 GA 从 RAG 大量候选选 POI | 大交通可订票向；闭馆时间冲突可自动提示 |
 
 **推荐实施顺序（Phase 1）**：`H9-1a → H9-1b → H9-1c → H9-1d ∥ H9-1e → H9-1f → H9-1g`（1d/1e 可在 1c 后并行）。
@@ -481,8 +483,9 @@ POST /api/speech/transcribe
 | 迭代 8 | 2026-07 起 | D2 + D3 | 搭子匹配 MVP |
 | 迭代 9 | 2026-07 起 | E2 + E3 | 真支付 + 盲盒 |
 | 迭代 10 | 2026-05-27 | **H9-1**（Enricher MVP） | **已完成** — Schema · C2 扩展 · Enricher · Matrix · mock 大交通 · Prompt · 详情流程图 |
-| 迭代 10b | 2026-06 起 | **H9-2** | 高德 direction polyline · 酒店 RAG · 地图与耗时一致 |
-| 迭代 10c | 2026-07 起 | H9-3 + H8 + H7 | 班次 API · 实时重规划 · 错过景点 |
+| 迭代 10b | 2026-05-28 | **H9-2** | 高德 direction polyline · 酒店 RAG · 地图与耗时一致 |
+| 迭代 10c | 2026-06 起 | **H9-3** | 12306/航班 API · 开放时长 · 闭馆冲突提示 |
+| 迭代 10d | 2026-07 起 | H9-3 + H8 + H7 | 班次 API · 实时重规划 · 错过景点 |
 | 迭代 11 | 2026-08 起 | H1 + H2 + H3 + H4 | 界面包装 · 海报 · 角色扮演 · 旅行游戏 |
 | 迭代 12 | 待定 | H5 + H6 | 社交 IM · 实名认证（依赖资质） |
 
@@ -490,7 +493,7 @@ POST /api/speech/transcribe
 
 | 优先级 | 步骤 | 理由 |
 |--------|------|------|
-| P0 | H9-2、H8 | H9-1 已交付；H9-2 让地图与交通耗时一致；H8 行中动态体验 |
+| P0 | H9-3、H8 | H9-2 已交付；H9-3 大交通真班次；H8 行中动态体验 |
 | P1 | H7、H2 | 行中补救 + 传播海报，利于留存与分享 |
 | P2 | H1、H3、H4 | 差异化体验与游戏化，可并行设计 |
 | P3 | H5 | 依赖 D 阶段社交关系链 |
@@ -561,7 +564,7 @@ POST /api/speech/transcribe
 | **H6 实名身份认证** | 满足监管与高信任场景 | 身份证 OCR + 人脸比对；状态字段与 API；门禁：服务者入驻、提现、部分社交能力；日志脱敏 |
 | **H7 错过景点** | 减少「白跑一趟」遗憾 | 计划 POI vs 实际打卡/轨迹对比；列表展示遗漏项；推荐替补时段或附近同类景点 |
 | **H8 位置实时重规划** | 临时改计划仍省心 | 监听/手动触发当前位置；AI 重排剩余时段 POI；用户确认后更新草稿；显著提示变更 diff |
-| **H9 住宿与交通** | 路线更可执行 | **LLM 排 POI + 后端 Enricher**；Phase 1（H9-1）**已完成**：schema、意图、Enricher、Matrix、跨城 mock、详情**行程流程图**；Phase 2～3：polyline、班次 API。见 [§5 H9](#h9-住宿与交通分-phase-实施) |
+| **H9 住宿与交通** | 路线更可执行 | **LLM 排 POI + 后端 Enricher**；Phase 1～2（H9-1/2）**已完成**：schema、意图、Enricher、Matrix、跨城 mock、详情**行程流程图**、**路网 polyline**、酒店 RAG；Phase 3：班次 API、开放时长。见 [§5 H9](#h9-住宿与交通分-phase-实施) |
 
 ### 9.3 与现有能力关系
 
@@ -626,4 +629,4 @@ POST /api/speech/transcribe
 
 ---
 
-*文档版本 3.9 · 最后更新：2026-05-27*
+*文档版本 3.10 · 最后更新：2026-05-28*
