@@ -27,6 +27,10 @@ export type RoutePathSegment = {
 export type RoutePath = {
   routeId?: number;
   name?: string;
+  /** 按天预览时的日程索引（0-based） */
+  dayIndex?: number;
+  /** 行程日期（ISO 或展示用字符串，便于与开放政策关联） */
+  date?: string;
   pois: RoutePathPoi[];
   segments: RoutePathSegment[];
   fullPoints: LatLng[];
@@ -124,6 +128,91 @@ function isMapPoi(spot: RouteDayAttraction): boolean {
   return type === 'attraction' || type === 'hotel';
 }
 
+type RoutePathBuildStats = {
+  totalSpotCount: number;
+  hiddenSpotCount: number;
+};
+
+function collectPoisForDay(
+  day: RouteDayPlan,
+  dayIndex: number,
+  stats: RoutePathBuildStats,
+): RoutePathPoi[] {
+  const pois: RoutePathPoi[] = [];
+  for (let spotIndex = 0; spotIndex < day.attractions.length; spotIndex += 1) {
+    const spot = day.attractions[spotIndex]!;
+    stats.totalSpotCount += 1;
+    if (!isMapPoi(spot)) {
+      stats.hiddenSpotCount += 1;
+      continue;
+    }
+    pois.push({
+      latitude: spot.latitude!,
+      longitude: spot.longitude!,
+      name: spot.name,
+      dayIndex,
+      spotIndex,
+      poiType: spot.poiType,
+    });
+  }
+  const lodging = day.lodging;
+  if (lodging?.latitude != null && lodging.longitude != null) {
+    stats.totalSpotCount += 1;
+    pois.push({
+      latitude: lodging.latitude,
+      longitude: lodging.longitude,
+      name: lodging.name,
+      dayIndex,
+      spotIndex: day.attractions.length,
+      poiType: 'hotel',
+    });
+  }
+  return pois;
+}
+
+function buildPathFromPois(
+  pois: RoutePathPoi[],
+  stats: RoutePathBuildStats,
+  options: BuildRoutePathOptions,
+  meta?: { dayIndex?: number; date?: string },
+): RoutePath | null {
+  if (pois.length < 2) return null;
+  const interpolateSteps = options.interpolateSteps ?? 20;
+  const segments = pois.slice(0, -1).map((from, index) => {
+    const to = pois[index + 1]!;
+    return buildStraightSegment(from, to, options.routeId, interpolateSteps);
+  });
+  return {
+    routeId: options.routeId,
+    name: options.name,
+    dayIndex: meta?.dayIndex,
+    date: meta?.date,
+    pois,
+    segments,
+    fullPoints: flattenSegmentPoints(segments),
+    hiddenSpotCount: stats.hiddenSpotCount,
+    totalSpotCount: stats.totalSpotCount,
+  };
+}
+
+/** 构建单日可播放路径（不含跨天连线） */
+export function buildRoutePathForDay(
+  routeDetail: RouteDetailPayload | Record<string, unknown> | null | undefined,
+  dayIndex: number,
+  options: BuildRoutePathOptions = {},
+): RoutePath | null {
+  const days = extractRouteDetailDays(routeDetail);
+  const day = days[dayIndex];
+  if (!day) return null;
+
+  const stats: RoutePathBuildStats = { totalSpotCount: 0, hiddenSpotCount: 0 };
+  const pois = collectPoisForDay(day, dayIndex, stats);
+  return buildPathFromPois(pois, stats, options, {
+    dayIndex,
+    date: day.date?.trim() || undefined,
+  });
+}
+
 /** 从单条路线 detail 构建可播放路径（MVP：POI 间直线插值；含有坐标 hotel） */
 export function buildRoutePathFromDetail(
   routeDetail: RouteDetailPayload | Record<string, unknown> | null | undefined,
@@ -132,60 +221,14 @@ export function buildRoutePathFromDetail(
   const days = extractRouteDetailDays(routeDetail);
   if (days.length === 0) return null;
 
-  const interpolateSteps = options.interpolateSteps ?? 20;
-  let totalSpotCount = 0;
-  let hiddenSpotCount = 0;
-
+  const stats: RoutePathBuildStats = { totalSpotCount: 0, hiddenSpotCount: 0 };
   const pois: RoutePathPoi[] = [];
 
   for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
-    const day = days[dayIndex]!;
-    for (let spotIndex = 0; spotIndex < day.attractions.length; spotIndex += 1) {
-      const spot = day.attractions[spotIndex]!;
-      totalSpotCount += 1;
-      if (!isMapPoi(spot)) {
-        hiddenSpotCount += 1;
-        continue;
-      }
-      pois.push({
-        latitude: spot.latitude!,
-        longitude: spot.longitude!,
-        name: spot.name,
-        dayIndex,
-        spotIndex,
-        poiType: spot.poiType,
-      });
-    }
-    const lodging = day.lodging;
-    if (lodging?.latitude != null && lodging.longitude != null) {
-      totalSpotCount += 1;
-      pois.push({
-        latitude: lodging.latitude,
-        longitude: lodging.longitude,
-        name: lodging.name,
-        dayIndex,
-        spotIndex: day.attractions.length,
-        poiType: 'hotel',
-      });
-    }
+    pois.push(...collectPoisForDay(days[dayIndex]!, dayIndex, stats));
   }
 
-  if (pois.length < 2) return null;
-
-  const segments = pois.slice(0, -1).map((from, index) => {
-    const to = pois[index + 1]!;
-    return buildStraightSegment(from, to, options.routeId, interpolateSteps);
-  });
-
-  return {
-    routeId: options.routeId,
-    name: options.name,
-    pois,
-    segments,
-    fullPoints: flattenSegmentPoints(segments),
-    hiddenSpotCount,
-    totalSpotCount,
-  };
+  return buildPathFromPois(pois, stats, options);
 }
 
 /** 合并多条路线为一条连续路径（后期「整体足迹动画」使用） */

@@ -65,8 +65,10 @@ export function fetchRouteDetail(id: number) {
   return request<TravelRouteInfo>(`/routes/${id}`);
 }
 
-export function fetchRouteMapPath(id: number) {
-  return request<RoutePath>(`/routes/${id}/map-path`);
+export function fetchRouteMapPath(id: number, dayIndex?: number) {
+  const query =
+    dayIndex !== undefined && Number.isFinite(dayIndex) ? `?day=${dayIndex}` : '';
+  return request<RoutePath>(`/routes/${id}/map-path${query}`);
 }
 
 export function publishRoute(id: number) {

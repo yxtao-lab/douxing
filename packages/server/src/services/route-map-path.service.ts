@@ -1,4 +1,5 @@
 import {
+  buildRoutePathForDay,
   buildRoutePathFromDetail,
   extractRouteDetailDays,
   type RouteDayPlan,
@@ -82,6 +83,32 @@ function flattenSegmentPoints(segments: RoutePathSegment[]) {
     }
   }
   return fullPoints;
+}
+
+/** H9-2：构建单日含高德 polyline 的路径（按天懒加载） */
+export async function buildRouteMapPathForDay(
+  routeDetail: RouteDetailPayload | Record<string, unknown> | null | undefined,
+  dayIndex: number,
+  options: BuildRouteMapPathOptions = {},
+): Promise<RoutePath | null> {
+  const base = buildRoutePathForDay(routeDetail, dayIndex, options);
+  if (!base || base.segments.length === 0) return base;
+
+  const days = extractRouteDetailDays(routeDetail);
+  const enrichedSegments = await Promise.all(
+    base.segments.map((segment, index) => {
+      const fromPoi = base.pois[index];
+      const toPoi = base.pois[index + 1];
+      if (!fromPoi || !toPoi) return Promise.resolve(segment);
+      return enrichSegmentWithPolyline(segment, days, fromPoi, toPoi);
+    }),
+  );
+
+  return {
+    ...base,
+    segments: enrichedSegments,
+    fullPoints: flattenSegmentPoints(enrichedSegments),
+  };
 }
 
 /** H9-2：基于 routeDetail 构建含高德 polyline 的可播放路径 */

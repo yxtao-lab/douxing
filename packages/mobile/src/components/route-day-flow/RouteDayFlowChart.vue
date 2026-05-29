@@ -5,7 +5,7 @@
     </view>
 
     <scroll-view
-      v-if="days.length > 1"
+      v-if="showDayTabs && days.length > 1"
       class="day-tabs"
       scroll-x
       enable-flex
@@ -15,8 +15,8 @@
         v-for="(day, index) in days"
         :key="index"
         class="day-tab"
-        :class="{ active: index === activeDayIndex }"
-        @click="activeDayIndex = index"
+        :class="{ active: index === resolvedActiveDayIndex }"
+        @click="setActiveDayIndex(index)"
       >
         <text>{{ dayTabLabel(day, index) }}</text>
       </view>
@@ -98,32 +98,50 @@ const props = withDefaults(
     showTitle?: boolean;
     showCheckIn?: boolean;
     initialDayIndex?: number;
+    activeDayIndex?: number;
+    showDayTabs?: boolean;
   }>(),
   {
     showTitle: true,
     showCheckIn: false,
     initialDayIndex: 0,
+    activeDayIndex: undefined,
+    showDayTabs: true,
   },
 );
 
 const emit = defineEmits<{
   'check-in': [spot: RouteDayAttraction];
+  'update:activeDayIndex': [index: number];
 }>();
 
 const { t, tf } = useTf();
 
-const activeDayIndex = ref(props.initialDayIndex);
+const internalActiveDayIndex = ref(props.initialDayIndex);
+
+const resolvedActiveDayIndex = computed(() =>
+  props.activeDayIndex !== undefined ? props.activeDayIndex : internalActiveDayIndex.value,
+);
+
+function setActiveDayIndex(index: number) {
+  if (index < 0 || index >= props.days.length) return;
+  if (props.activeDayIndex !== undefined) {
+    emit('update:activeDayIndex', index);
+    return;
+  }
+  internalActiveDayIndex.value = index;
+}
 
 watch(
   () => props.days.length,
   () => {
-    if (activeDayIndex.value >= props.days.length) {
-      activeDayIndex.value = 0;
+    if (resolvedActiveDayIndex.value >= props.days.length) {
+      setActiveDayIndex(0);
     }
   },
 );
 
-const activeDay = computed(() => props.days[activeDayIndex.value]);
+const activeDay = computed(() => props.days[resolvedActiveDayIndex.value]);
 
 const flowNodes = computed((): RouteFlowNode[] => {
   if (!activeDay.value) return [];

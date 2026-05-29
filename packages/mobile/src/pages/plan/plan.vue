@@ -10,7 +10,6 @@
             class="header-route-link"
             @click="restorePreviousSession"
           >{{ t('plan.backToChat') }}</text>
-          <text v-if="currentRouteId && sessionId" class="header-route-link" @click="openRouteDetail">{{ t('plan.routeDetail') }}</text>
           <text v-if="sessionId" class="new-session" @click="startNewSession">{{ t('plan.newSession') }}</text>
         </view>
       </view>
@@ -95,6 +94,30 @@
             </view>
           </view>
         </view>
+
+        <view
+          v-if="currentRouteId && sessionId"
+          class="route-detail-row"
+        >
+          <view class="msg-avatar-slot" />
+          <view
+            id="route-detail-cta"
+            class="route-detail-cta"
+            role="button"
+            @click="openRouteDetail"
+          >
+            <view class="route-detail-cta-main">
+              <text class="route-detail-cta-title">{{ t('plan.routeDetail') }}</text>
+              <text v-if="currentRoutePreview?.name" class="route-detail-cta-name">
+                {{ currentRoutePreview.name }}
+              </text>
+              <text class="route-detail-cta-meta">{{ currentRoutePreviewMeta }}</text>
+              <text class="route-detail-cta-hint">{{ t('plan.routeDetailCtaHint') }}</text>
+            </view>
+            <text class="route-detail-cta-arrow" aria-hidden="true">›</text>
+          </view>
+          <view class="msg-avatar-slot" />
+        </view>
       </view>
     </scroll-view>
 
@@ -177,6 +200,7 @@ import type {
   TravelIntentSnapshot,
   UserInfo,
   PlanRouteCandidate,
+  TravelRouteInfo,
 } from '@douxing/shared';
 import {
   LlmProvider,
@@ -206,6 +230,9 @@ const user = ref<UserInfo | null>(authStorage.getStoredUser());
 const sessionId = ref<number | null>(null);
 const previousSessionId = ref<number | null>(null);
 const currentRouteId = ref<number | null>(null);
+const currentRoutePreview = ref<Pick<TravelRouteInfo, 'name' | 'days' | 'budgetRange'> | null>(
+  null,
+);
 const intentSnapshot = ref<TravelIntentSnapshot | null>(null);
 const candidates = ref<PlanRouteCandidate[]>([]);
 const messages = ref<ChatMessage[]>([]);
@@ -270,6 +297,47 @@ function formatRouteDays(days: number | undefined | null): string {
   if (days == null) return '—';
   return `${days}${t('plan.daysUnit')}`;
 }
+
+function syncCurrentRoutePreview(
+  routeId: number | null,
+  route?: TravelRouteInfo | null,
+) {
+  if (!routeId) {
+    currentRoutePreview.value = null;
+    return;
+  }
+  if (route && route.id === routeId) {
+    currentRoutePreview.value = {
+      name: route.name,
+      days: route.days,
+      budgetRange: route.budgetRange,
+    };
+    return;
+  }
+  const hit = candidates.value.find((c) => c.routeId === routeId);
+  if (hit?.route) {
+    currentRoutePreview.value = {
+      name: hit.route.name,
+      days: hit.route.days,
+      budgetRange: hit.route.budgetRange,
+    };
+    return;
+  }
+  currentRoutePreview.value = null;
+}
+
+const currentRoutePreviewMeta = computed(() => {
+  const preview = currentRoutePreview.value;
+  if (!preview) return '';
+  const parts: string[] = [];
+  if (preview.days != null) {
+    parts.push(formatRouteDays(preview.days));
+  }
+  if (preview.budgetRange) {
+    parts.push(preview.budgetRange);
+  }
+  return parts.join(' · ');
+});
 
 function resolveProviderLabel(opt: LlmProviderOption): string {
   if (opt.id === LlmProvider.AUTO) return t('plan.providerAuto');
@@ -379,10 +447,14 @@ function mapMessages(list: PlanSessionMessageInfo[]): ChatMessage[] {
 }
 
 function scrollToBottom() {
-  const last = messages.value[messages.value.length - 1];
-  if (!last) return;
   scrollIntoView.value = '';
   nextTick(() => {
+    if (currentRouteId.value && sessionId.value) {
+      scrollIntoView.value = 'route-detail-cta';
+      return;
+    }
+    const last = messages.value[messages.value.length - 1];
+    if (!last) return;
     scrollIntoView.value = `msg-${last.id}`;
   });
 }
@@ -394,6 +466,7 @@ function resetComposerInput() {
 function clearSessionView() {
   sessionId.value = null;
   currentRouteId.value = null;
+  currentRoutePreview.value = null;
   intentSnapshot.value = null;
   ragMatchedCount.value = 0;
   candidates.value = [];
@@ -436,9 +509,10 @@ function goMembership() {
 async function loadSession(id: number) {
   const session = await fetchPlanSession(id);
   sessionId.value = session.id;
-  currentRouteId.value = session.routeId;
   intentSnapshot.value = session.intentSnapshot ?? null;
   candidates.value = session.candidates ?? [];
+  currentRouteId.value = session.routeId;
+  syncCurrentRoutePreview(session.routeId, session.route ?? null);
   ragMatchedCount.value =
     typeof (session.route?.routeDetail as Record<string, unknown> | undefined)?.ragMatchedCount ===
     'number'
@@ -457,6 +531,7 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
   try {
     const result = await selectPlanCandidate(sessionId.value, { routeId: item.routeId });
     currentRouteId.value = result.id;
+    syncCurrentRoutePreview(result.id, result);
     candidates.value = result.candidates ?? [];
     ragMatchedCount.value = result.ragMatchedCount ?? 0;
     uni.showToast({ title: t('plan.candidateSwitched'), icon: 'success' });
@@ -562,6 +637,7 @@ async function handleSend(text: string) {
       const planActionResult = await submitNewPlanSession(content);
       sessionId.value = planActionResult.sessionId;
       currentRouteId.value = planActionResult.id;
+      syncCurrentRoutePreview(planActionResult.id, planActionResult);
       intentSnapshot.value = planActionResult.intentSnapshot ?? null;
       ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
       candidates.value = planActionResult.candidates ?? [];
@@ -571,6 +647,8 @@ async function handleSend(text: string) {
       handleGenerationResult(planActionResult);
       const loadedSession = await fetchPlanSession(planActionResult.sessionId);
       messages.value = mapMessages(loadedSession.messages);
+      candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
+      syncCurrentRoutePreview(planActionResult.id, loadedSession.route ?? planActionResult);
       scrollToBottom();
       uni.showToast({ title: t('plan.plansGenerated'), icon: 'success' });
       return;
@@ -578,12 +656,14 @@ async function handleSend(text: string) {
 
     const planActionResult = await submitPlanFollowUp(sessionId.value, content);
     currentRouteId.value = planActionResult.id;
+    syncCurrentRoutePreview(planActionResult.id, planActionResult);
     intentSnapshot.value = planActionResult.intentSnapshot ?? null;
     ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
     handleGenerationResult(planActionResult);
     const loadedSession = await fetchPlanSession(sessionId.value);
     messages.value = mapMessages(loadedSession.messages);
     candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
+    syncCurrentRoutePreview(planActionResult.id, planActionResult);
     scrollToBottom();
     uni.showToast({ title: t('plan.planUpdated'), icon: 'success' });
   } catch (e) {
@@ -929,5 +1009,61 @@ async function handleSend(text: string) {
   color: #1f2937;
   border-bottom-left-radius: 4rpx;
   box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.06);
+}
+.route-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-top: 8rpx;
+  margin-bottom: 24rpx;
+  width: 100%;
+  box-sizing: border-box;
+}
+.route-detail-cta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 24rpx;
+  background: linear-gradient(135deg, #f0f7ff 0%, #fff 100%);
+  border: 2rpx solid #1677ff;
+  border-radius: 16rpx;
+  box-shadow: 0 4rpx 20rpx rgba(22, 119, 255, 0.12);
+  box-sizing: border-box;
+}
+.route-detail-cta-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+.route-detail-cta-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1677ff;
+}
+.route-detail-cta-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1f2937;
+  word-break: break-word;
+}
+.route-detail-cta-meta {
+  font-size: 24rpx;
+  color: #6b7280;
+}
+.route-detail-cta-hint {
+  font-size: 22rpx;
+  color: #6b7280;
+  margin-top: 4rpx;
+}
+.route-detail-cta-arrow {
+  flex-shrink: 0;
+  font-size: 40rpx;
+  line-height: 1;
+  color: #1677ff;
+  font-weight: 300;
 }
 </style>

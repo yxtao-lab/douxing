@@ -2,6 +2,53 @@ import type { LatLng, RoutePath, RoutePathPoi } from '@douxing/shared';
 
 export const ROUTE_TRAVELER_MARKER_ID = 900001;
 
+/** 微信 map 组件 polyline.color 仅支持 #RRGGBB */
+export const ROUTE_MAP_POLYLINE_COLOR = '#1677ff';
+
+/** 微信小程序 map 高频更新 polyline 易触发渲染层 maxSimplifyZoom 异常 */
+export function isMpWeixinMapPlatform(): boolean {
+  // #ifdef MP-WEIXIN
+  return true;
+  // #endif
+  return false;
+}
+
+export function isValidMapLatLng(point: LatLng): boolean {
+  return (
+    Number.isFinite(point.latitude) &&
+    Number.isFinite(point.longitude) &&
+    Math.abs(point.latitude) <= 90 &&
+    Math.abs(point.longitude) <= 180 &&
+    !(point.latitude === 0 && point.longitude === 0)
+  );
+}
+
+export function sanitizeMapPoints(points: LatLng[]): LatLng[] {
+  return points.filter(isValidMapLatLng);
+}
+
+/** 控制折线点数，避免微信 map 内部抽稀逻辑崩溃 */
+export function simplifyMapPolylinePoints(points: LatLng[], maxPoints = 120): LatLng[] {
+  const valid = sanitizeMapPoints(points);
+  if (valid.length <= maxPoints) return valid;
+  const step = Math.ceil(valid.length / maxPoints);
+  const simplified: LatLng[] = [];
+  for (let i = 0; i < valid.length; i += step) {
+    simplified.push(valid[i]!);
+  }
+  const last = valid[valid.length - 1]!;
+  const tail = simplified[simplified.length - 1];
+  if (tail?.latitude !== last.latitude || tail?.longitude !== last.longitude) {
+    simplified.push(last);
+  }
+  return simplified;
+}
+
+export function clampMapScale(scale: number): number {
+  if (!Number.isFinite(scale)) return DEFAULT_ROUTE_MAP_CENTER.scale;
+  return Math.min(20, Math.max(3, Math.round(scale)));
+}
+
 export type RouteMapMarker = {
   id: number;
   latitude: number;
@@ -44,7 +91,10 @@ function poiMarkerId(poi: RoutePathPoi): number {
 }
 
 export function buildRoutePoiMarkers(pois: RoutePathPoi[]): RouteMapMarker[] {
-  return pois.map((poi, index) => ({
+  const validPois = pois.filter((poi) =>
+    isValidMapLatLng({ latitude: poi.latitude, longitude: poi.longitude }),
+  );
+  return validPois.map((poi, index) => ({
     id: poiMarkerId(poi),
     latitude: poi.latitude,
     longitude: poi.longitude,
@@ -80,39 +130,46 @@ export function buildTravelerMarker(point: LatLng): RouteMapMarker {
   };
 }
 
-export function buildRoutePolyline(points: LatLng[], color = '#1677ff'): RouteMapPolyline[] {
-  if (points.length < 2) return [];
+export function buildRoutePolyline(
+  points: LatLng[],
+  color = ROUTE_MAP_POLYLINE_COLOR,
+  options?: { arrowLine?: boolean },
+): RouteMapPolyline[] {
+  const safePoints = simplifyMapPolylinePoints(points);
+  if (safePoints.length < 2) return [];
+  const arrowLine = options?.arrowLine ?? !isMpWeixinMapPlatform();
   return [
     {
-      points,
-      color: `${color}CC`,
+      points: safePoints,
+      color,
       width: 5,
-      arrowLine: true,
+      arrowLine,
     },
   ];
 }
 
 export function buildRouteIncludePoints(points: LatLng[]): LatLng[] {
-  return points.map((point) => ({
+  return sanitizeMapPoints(points).map((point) => ({
     latitude: point.latitude,
     longitude: point.longitude,
   }));
 }
 
 export function resolveRouteMapCenter(points: LatLng[]) {
-  if (points.length === 0) {
+  const safePoints = sanitizeMapPoints(points);
+  if (safePoints.length === 0) {
     return { ...DEFAULT_ROUTE_MAP_CENTER };
   }
-  if (points.length === 1) {
+  if (safePoints.length === 1) {
     return {
-      latitude: points[0]!.latitude,
-      longitude: points[0]!.longitude,
-      scale: 14,
+      latitude: safePoints[0]!.latitude,
+      longitude: safePoints[0]!.longitude,
+      scale: clampMapScale(14),
     };
   }
 
-  const latitudes = points.map((point) => point.latitude);
-  const longitudes = points.map((point) => point.longitude);
+  const latitudes = safePoints.map((point) => point.latitude);
+  const longitudes = safePoints.map((point) => point.longitude);
   const latMin = Math.min(...latitudes);
   const latMax = Math.max(...latitudes);
   const lngMin = Math.min(...longitudes);
@@ -128,13 +185,15 @@ export function resolveRouteMapCenter(points: LatLng[]) {
   return {
     latitude: latitudes.reduce((sum, lat) => sum + lat, 0) / latitudes.length,
     longitude: longitudes.reduce((sum, lng) => sum + lng, 0) / longitudes.length,
-    scale,
+    scale: clampMapScale(scale),
   };
 }
 
 export function getRoutePathAnchorPoints(routePath: RoutePath): LatLng[] {
-  return routePath.pois.map((poi) => ({
-    latitude: poi.latitude,
-    longitude: poi.longitude,
-  }));
+  return sanitizeMapPoints(
+    routePath.pois.map((poi) => ({
+      latitude: poi.latitude,
+      longitude: poi.longitude,
+    })),
+  );
 }

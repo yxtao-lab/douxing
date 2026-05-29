@@ -39,8 +39,29 @@
       </view>
     </view>
 
-    <view v-if="isUnlocked && routePath" class="card map-card">
-      <RouteMapPlayer :route-path="routePath" :auto-play="true" />
+    <view v-if="isUnlocked && days.length > 0" class="card itinerary-card">
+      <RouteDayTabs v-model:active-day-index="activeDayIndex" :days="days" />
+      <text v-if="activeDayHeading" class="itinerary-day-heading">{{ activeDayHeading }}</text>
+
+      <RouteMapByDay
+        v-model:active-day-index="activeDayIndex"
+        :route-id="routeId"
+        :days="days"
+        :route-detail="(route.routeDetail as Record<string, unknown>) ?? null"
+        :route-name="route.name"
+        :auto-play="true"
+        :show-day-tabs="false"
+      />
+
+      <view class="itinerary-flow-divider" />
+
+      <RouteDayFlowChart
+        v-model:active-day-index="activeDayIndex"
+        :days="days"
+        :show-day-tabs="false"
+        show-check-in
+        @check-in="handleCheckIn"
+      />
     </view>
 
     <view v-if="showInteraction" class="card interact-card">
@@ -98,14 +119,6 @@
       <button class="btn-primary" :loading="paying" @click="handleUnlock">{{ unlockPayLabel }}</button>
     </view>
 
-    <view class="card" v-else>
-      <RouteDayFlowChart
-        :days="days"
-        show-check-in
-        @check-in="handleCheckIn"
-      />
-    </view>
-
     <view v-if="canRegenerate" class="card regenerate-card">
       <text class="regenerate-title">{{ t('routes.regenerateTitle') }}</text>
       <text class="regenerate-hint">{{ regenerateHint }}</text>
@@ -143,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type {
   RouteDayAttraction,
@@ -152,10 +165,8 @@ import type {
   TravelRouteInfo,
   RouteCommentInfo,
 } from '@douxing/shared';
-import { buildRoutePathFromDetail } from '@douxing/shared';
 import {
   fetchRouteDetail,
-  fetchRouteMapPath,
   publishRoute,
   regenerateRoute,
   updateRouteDraft,
@@ -171,7 +182,8 @@ import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
-import RouteMapPlayer from '@/components/route-map/RouteMapPlayer.vue';
+import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
+import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser } from '@/utils/request';
@@ -185,7 +197,6 @@ usePageTitle('nav.routeDetail');
 const { joinLabels } = useInterestTagLabel();
 
 const route = ref<TravelRouteInfo | null>(null);
-const routePath = ref<ReturnType<typeof buildRoutePathFromDetail>>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
 const paying = ref(false);
 const routeUnlockPaymentRequired = ref(false);
@@ -200,6 +211,7 @@ const comments = ref<RouteCommentInfo[]>([]);
 const commentText = ref('');
 const postingComment = ref(false);
 const aiPlanning = computed(() => aiPlanLoadingState.active);
+const activeDayIndex = ref(0);
 let routeId = 0;
 
 const currentUserId = computed(() => getStoredUser()?.id ?? 0);
@@ -301,24 +313,29 @@ const days = computed((): RouteDayPlan[] => {
   return detail?.days ?? [];
 });
 
-async function loadRouteMapPath() {
-  if (!route.value?.routeDetail || !isUnlocked.value) {
-    routePath.value = null;
-    return;
-  }
+watch(
+  () => days.value.length,
+  () => {
+    if (activeDayIndex.value >= days.value.length) {
+      activeDayIndex.value = 0;
+    }
+  },
+);
 
-  try {
-    routePath.value = await fetchRouteMapPath(routeId);
-  } catch {
-    routePath.value = buildRoutePathFromDetail(
-      route.value.routeDetail as unknown as RouteDetailPayload,
-      {
-        routeId: route.value.id,
-        name: route.value.name,
-      },
-    );
-  }
+function resetActiveDayIndex() {
+  activeDayIndex.value = 0;
 }
+
+const activeDay = computed(() => days.value[activeDayIndex.value]);
+
+const activeDayHeading = computed(() => {
+  const day = activeDay.value;
+  if (!day || days.value.length <= 1) return '';
+  if (day.date && day.title) {
+    return tf('routes.dayTitle', { date: day.date, title: day.title });
+  }
+  return day.title || day.date || '';
+});
 
 const editDescMinHeight = computed(() =>
   computeTextareaMinHeight(editDesc.value || '', { minRpx: 160, maxRpx: 560, charsPerLine: 18 }),
@@ -353,6 +370,7 @@ async function loadComments() {
 
 async function loadDetail() {
   try {
+    resetActiveDayIndex();
     route.value = await fetchRouteDetail(routeId);
     editName.value = route.value?.name ?? '';
     editDesc.value = route.value?.description ?? '';
@@ -362,7 +380,6 @@ async function loadDetail() {
       regeneratePrompt.value = route.value?.description ?? '';
     }
     await loadComments();
-    await loadRouteMapPath();
   } catch (e) {
     uni.showToast({ title: e instanceof Error ? e.message : t('routes.loadFailed'), icon: 'none' });
   }
@@ -484,7 +501,7 @@ async function handleRegenerate() {
     uni.showToast({ title: tip, icon: 'success' });
     route.value = result;
     regeneratePrompt.value = result.sourcePrompt ?? text;
-    await loadRouteMapPath();
+    resetActiveDayIndex();
   } catch (e) {
     const msg = e instanceof Error ? e.message : t('routes.regenerateFailed');
     if (!isAiPlanCancelledError(e)) {
@@ -685,8 +702,22 @@ onLoad((query) => {
   font-size: 24rpx;
   opacity: 0.95;
 }
-.map-card {
+.itinerary-card {
   padding: 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+.itinerary-day-heading {
+  font-size: 26rpx;
+  color: #374151;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+.itinerary-flow-divider {
+  height: 1rpx;
+  background: #e5e7eb;
+  margin: 24rpx 0 8rpx;
 }
 .share-card {
   border: 2rpx solid #e8f3ff;

@@ -16,6 +16,7 @@ import {
 import {
   buildRouteMapPathFromDetail,
   canAccessRouteMapPath,
+  buildRouteMapPathForDay,
 } from '../services/route-map-path.service.js';
 import {
   listRoutesForUser,
@@ -344,10 +345,19 @@ router.get('/:id/map-path', authMiddleware, async (req, res) => {
       return fail(res, ApiMessageKey.ROUTE_MAP_PATH_FORBIDDEN, 403, 403);
     }
 
-    const mapPath = await buildRouteMapPathFromDetail(route.routeDetail, {
-      routeId: route.id,
-      name: route.name,
-    });
+    const dayRaw = req.query.day;
+    const pathOptions = { routeId: route.id, name: route.name };
+    let mapPath: Awaited<ReturnType<typeof buildRouteMapPathFromDetail>>;
+
+    if (dayRaw !== undefined && dayRaw !== '') {
+      const dayIndex = parseInt(String(dayRaw), 10);
+      if (Number.isNaN(dayIndex) || dayIndex < 0) {
+        return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+      }
+      mapPath = await buildRouteMapPathForDay(route.routeDetail, dayIndex, pathOptions);
+    } else {
+      mapPath = await buildRouteMapPathFromDetail(route.routeDetail, pathOptions);
+    }
     if (!mapPath) {
       return fail(res, ApiMessageKey.ROUTE_MAP_PATH_EMPTY, 404, 404);
     }
