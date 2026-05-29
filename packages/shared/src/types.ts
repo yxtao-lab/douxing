@@ -125,6 +125,10 @@ export interface RouteDetailPayload {
   ragMatchedCount?: number;
 }
 
+import type { AttractionOpenHours, AttractionOpenHoursWindow } from './open-hours.js';
+
+export type { AttractionOpenHours, AttractionOpenHoursWindow };
+
 export interface AttractionInfo {
   id: number;
   name: string;
@@ -138,6 +142,8 @@ export interface AttractionInfo {
   description: string | null;
   ticketPrice: number;
   aliases: string[] | null;
+  /** H9-3：景点开放时长；无则视为全天开放 */
+  openHours?: AttractionOpenHours | null;
   status: number;
   source: string;
   priceSource: string | null;

@@ -42,6 +42,10 @@ export {
   formatRouteDayTitle,
   formatRagRouteMetaSuffix,
 } from './plan-route-names.js';
+export {
+  formatEnricherWarning,
+  type EnricherWarningKey,
+} from './enricher-messages.js';
 
 import { MemberLevel } from '../constants.js';
 import type { LocaleCode } from './types.js';

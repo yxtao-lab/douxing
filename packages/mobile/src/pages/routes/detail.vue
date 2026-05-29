@@ -104,11 +104,6 @@
         show-check-in
         @check-in="handleCheckIn"
       />
-      <view v-for="(day, idx) in days" :key="`warn-${idx}`">
-        <view v-if="day.warnings?.length" class="day-warnings">
-          <text v-for="(warn, wi) in day.warnings" :key="`w-${wi}`" class="warning-text">{{ warn }}</text>
-        </view>
-      </view>
     </view>
 
     <view v-if="canRegenerate" class="card regenerate-card">

@@ -9,6 +9,7 @@ import {
   decimal,
   index,
 } from 'drizzle-orm/mysql-core';
+import type { AttractionOpenHours } from '@douxing/shared';
 
 /** 景点/内容基础库 */
 export const attractions = mysqlTable(
@@ -26,6 +27,8 @@ export const attractions = mysqlTable(
     description: text('description'),
     ticketPrice: int('ticket_price').notNull().default(0),
     aliases: json('aliases').$type<string[]>(),
+    /** H9-3：开放时长 JSON */
+    openHours: json('open_hours').$type<AttractionOpenHours>(),
     /** 0 禁用 1 已发布 2 待审核（AI 同步） */
     status: tinyint('status').notNull().default(1),
     /** seed | llm | manual | amap */

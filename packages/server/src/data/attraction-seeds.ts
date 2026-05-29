@@ -1,5 +1,7 @@
 /** 景点基础库种子数据（城市、坐标、标签） */
 
+import type { AttractionOpenHours } from '@douxing/shared';
+
 export interface AttractionSeed {
   name: string;
   city: string;
@@ -10,6 +12,8 @@ export interface AttractionSeed {
   description: string;
   ticketPrice: number;
   aliases?: string[];
+  /** H9-3：开放时长 */
+  openHours?: AttractionOpenHours;
 }
 
 export const ATTRACTION_SEEDS: AttractionSeed[] = [
@@ -34,6 +38,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['文化', '历史'],
     description: '登塔俯瞰西湖全景',
     ticketPrice: 40,
+    openHours: { windows: [{ open: '08:00', close: '17:30' }] },
   },
   {
     name: '河坊街',
@@ -54,6 +59,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['文化', '历史'],
     description: '千年古刹，飞来峰石窟',
     ticketPrice: 75,
+    openHours: { windows: [{ open: '07:30', close: '17:30' }] },
   },
   {
     name: '龙井村',
@@ -74,6 +80,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['自然', '户外'],
     description: '城市湿地氧吧，摇橹船体验',
     ticketPrice: 80,
+    openHours: { windows: [{ open: '08:30', close: '17:00' }] },
   },
   {
     name: '南宋御街',
@@ -94,6 +101,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['亲子', '娱乐'],
     description: '近距离观赏野生动物',
     ticketPrice: 220,
+    openHours: { windows: [{ open: '09:00', close: '16:30' }] },
   },
   {
     name: '湘湖',
@@ -114,6 +122,10 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['亲子', '文化'],
     description: '互动科普体验',
     ticketPrice: 0,
+    openHours: {
+      windows: [{ open: '09:00', close: '16:00' }],
+      closedWeekdays: [1],
+    },
   },
   {
     name: '杭州乐园',
@@ -176,6 +188,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['文化', '历史', '美食'],
     description: '江南古典园林',
     ticketPrice: 40,
+    openHours: { windows: [{ open: '08:30', close: '16:30' }] },
   },
   {
     name: '田子坊',
@@ -206,6 +219,10 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     tags: ['文化', '历史'],
     description: '国宝级馆藏',
     ticketPrice: 0,
+    openHours: {
+      windows: [{ open: '09:00', close: '17:00' }],
+      closedWeekdays: [1],
+    },
   },
   // 北京
   {
@@ -218,6 +235,10 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     description: '明清皇家宫殿，需提前预约',
     ticketPrice: 60,
     aliases: ['故宫', '紫禁城'],
+    openHours: {
+      windows: [{ open: '08:30', close: '17:00' }],
+      closedWeekdays: [1],
+    },
   },
   {
     name: '景山公园',
@@ -239,6 +260,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     description: '人少景美的长城段',
     ticketPrice: 180,
     aliases: ['长城', '慕田峪'],
+    openHours: { windows: [{ open: '08:00', close: '17:00' }] },
   },
   {
     name: '什刹海',
@@ -271,6 +293,7 @@ export const ATTRACTION_SEEDS: AttractionSeed[] = [
     description: '早去看熊猫进食',
     ticketPrice: 55,
     aliases: ['熊猫基地', '大熊猫基地'],
+    openHours: { windows: [{ open: '07:30', close: '17:30' }] },
   },
   {
     name: '宽窄巷子',

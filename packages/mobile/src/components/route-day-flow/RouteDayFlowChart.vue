@@ -29,7 +29,18 @@
         <text>{{ t('routes.flowChartEmpty') }}</text>
       </view>
 
-      <view v-else class="flow-track">
+      <view v-if="activeWarnings.length" class="flow-warnings">
+        <text class="flow-warnings-title">{{ t('routes.flowWarningsTitle') }}</text>
+        <text
+          v-for="(warn, wi) in activeWarnings"
+          :key="`warn-${wi}`"
+          class="flow-warning-item"
+        >
+          {{ warn }}
+        </text>
+      </view>
+
+      <view v-if="flowNodes.length > 0" class="flow-track">
         <view
           v-for="(node, index) in flowNodes"
           :key="`${node.kind}-${index}`"
@@ -118,6 +129,8 @@ const flowNodes = computed((): RouteFlowNode[] => {
   if (!activeDay.value) return [];
   return buildRouteDayFlow(activeDay.value);
 });
+
+const activeWarnings = computed(() => activeDay.value?.warnings ?? []);
 
 function dayTabLabel(day: RouteDayPlan, index: number): string {
   if (day.date?.trim()) return day.date;
@@ -214,6 +227,30 @@ function openBookingUrl(url: string) {
   padding: 24rpx 0;
   color: #9ca3af;
   font-size: 24rpx;
+}
+
+.flow-warnings {
+  margin-bottom: 20rpx;
+  padding: 16rpx 20rpx;
+  background: #fffbeb;
+  border-radius: 12rpx;
+  border: 1rpx solid #fde68a;
+}
+
+.flow-warnings-title {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #b45309;
+  margin-bottom: 8rpx;
+}
+
+.flow-warning-item {
+  display: block;
+  font-size: 22rpx;
+  color: #d97706;
+  line-height: 1.5;
+  margin-top: 4rpx;
 }
 
 .flow-track {

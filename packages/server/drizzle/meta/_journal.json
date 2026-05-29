@@ -120,6 +120,13 @@
       "when": 1748937600000,
       "tag": "0016_user_member_level",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "5",
+      "when": 1749024000000,
+      "tag": "0017_attraction_open_hours",
+      "breakpoints": true
     }
   ]
 }

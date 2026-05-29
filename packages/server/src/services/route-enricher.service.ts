@@ -1,5 +1,6 @@
 import {
   PoiCategory,
+  type AttractionOpenHours,
   type LocaleCode,
   type LodgingTier,
   type RouteDayAttraction,
@@ -8,6 +9,9 @@ import {
   type RouteTransitSegment,
   type TravelIntentSnapshot,
   type TransportPreference,
+  checkVisitOpenHours,
+  formatEnricherWarning,
+  parseWeekdayFromRouteDate,
 } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import { findCityPairTemplate } from '../data/city-pair-transit.js';
@@ -25,6 +29,7 @@ import {
 } from './amap-direction.service.js';
 import { formatIntentConstraintsForEnricher } from './travel-intent.service.js';
 import { retrieveHotelsForLodging } from './attraction-rag.service.js';
+import { getOpenHoursByAttractionIds } from './attraction.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 
@@ -319,13 +324,47 @@ function cursorEndFromSpots(spots: RouteDayAttraction[]): number {
   return parseTimeRangeEnd(lastTime) ?? DEFAULT_DAY_START_MINUTES + 12 * 60;
 }
 
+function appendOpenHoursWarning(
+  warnings: string[],
+  spot: RouteDayAttraction,
+  visitStart: number,
+  visitEnd: number,
+  openHours: AttractionOpenHours,
+  weekday: number | null,
+  locale: LocaleCode,
+): void {
+  const result = checkVisitOpenHours(visitStart, visitEnd, openHours, weekday);
+  if (!result.conflict || !result.kind) return;
+
+  const key =
+    result.kind === 'closed_day'
+      ? 'closedDay'
+      : result.kind === 'before_open'
+        ? 'beforeOpen'
+        : 'afterClose';
+
+  warnings.push(
+    formatEnricherWarning(key, locale, {
+      name: spot.name,
+      openMinutes: result.openMinutes,
+      closeMinutes: result.closeMinutes,
+    }),
+  );
+}
+
 async function scheduleDayPois(
   city: string,
   spots: RouteDayAttraction[],
   lodging: RouteDayLodging,
   locale: LocaleCode,
+  options: {
+    dayDate?: string;
+    openHoursMap: Map<number, AttractionOpenHours>;
+  },
 ): Promise<{ attractions: RouteDayAttraction[]; transit: RouteTransitSegment[]; warnings: string[] }> {
   const warnings: string[] = [];
+  const weekday = parseWeekdayFromRouteDate(options.dayDate);
+  const openHoursMap = options.openHoursMap;
   const geocoded = await geocodePlayPois(city, spots);
   const withCoords = geocoded.filter(hasCoords);
   const missingCoords = geocoded.filter((s) => !hasCoords(s));
@@ -391,11 +430,13 @@ async function scheduleDayPois(
     const visitStart = cursor;
     const visitEnd = visitStart + DEFAULT_VISIT_MINUTES;
     if (visitEnd > 21 * 60) {
-      warnings.push(
-        locale === 'en-US'
-          ? `Tight schedule at ${spot.name}`
-          : `${spot.name} 排程偏晚，建议调整`,
-      );
+      warnings.push(formatEnricherWarning('lateSchedule', locale, { name: spot.name }));
+    }
+    if (spot.attractionId != null) {
+      const openHours = openHoursMap.get(spot.attractionId);
+      if (openHours) {
+        appendOpenHoursWarning(warnings, spot, visitStart, visitEnd, openHours, weekday, locale);
+      }
     }
     scheduled.push({
       ...spot,
@@ -423,11 +464,7 @@ async function scheduleDayPois(
       time: formatTimeRange(cursor, cursor + DEFAULT_VISIT_MINUTES),
     });
     cursor += DEFAULT_VISIT_MINUTES + 15;
-    warnings.push(
-      locale === 'en-US'
-        ? `${spot.name} has no coordinates; order not optimized`
-        : `${spot.name} 无坐标，未参与路径优化`,
-    );
+    warnings.push(formatEnricherWarning('noCoords', locale, { name: spot.name }));
   }
 
   return { attractions: scheduled, transit, warnings };
@@ -464,8 +501,17 @@ export async function enrichRouteDraft(
 
     const lodging = await assignLodgingForDay(city, poiPointsForLodging, intent);
 
+    const openHoursMap = await getOpenHoursByAttractionIds(
+      playPois
+        .map((spot) => spot.attractionId)
+        .filter((id): id is number => id != null && id > 0),
+    );
+
     const { attractions: scheduledPois, transit: localTransit, warnings } =
-      await scheduleDayPois(city, playPois, lodging, locale);
+      await scheduleDayPois(city, playPois, lodging, locale, {
+        dayDate: day.date,
+        openHoursMap,
+      });
 
     lodging.time = formatMinutesToTime(
       Math.min(21 * 60, cursorEndFromSpots(scheduledPois) + 30),

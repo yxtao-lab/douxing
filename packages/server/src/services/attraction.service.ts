@@ -9,7 +9,7 @@ import {
   ApiError,
   ApiMessageKey,
 } from '@douxing/shared';
-import type { AttractionInfo, RouteDetailPayload } from '@douxing/shared';
+import type { AttractionInfo, AttractionOpenHours, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
 
 export { syncAttractionsFromRouteDetail } from './attraction-sync.service.js';
@@ -27,6 +27,7 @@ function toAttractionInfo(row: typeof attractions.$inferSelect): AttractionInfo 
     description: row.description,
     ticketPrice: row.ticketPrice,
     aliases: row.aliases ?? null,
+    openHours: row.openHours ?? null,
     status: row.status,
     source: row.source,
     priceSource: row.priceSource,
@@ -137,6 +138,36 @@ export async function getAttractionsByIds(ids: number[]) {
   return rows.map(toAttractionInfo);
 }
 
+/** H9-3：批量获取景点开放时长（Enricher 排程校验） */
+export async function getOpenHoursByAttractionIds(
+  ids: number[],
+): Promise<Map<number, AttractionOpenHours>> {
+  const uniqueIds = [...new Set(ids.filter((id) => Number.isFinite(id) && id > 0))];
+  if (uniqueIds.length === 0) return new Map();
+
+  const db = getDb();
+  const rows = await db
+    .select({
+      id: attractions.id,
+      openHours: attractions.openHours,
+    })
+    .from(attractions)
+    .where(
+      and(
+        inArray(attractions.id, uniqueIds),
+        inArray(attractions.status, [AttractionStatus.ACTIVE, AttractionStatus.PENDING]),
+      ),
+    );
+
+  const map = new Map<number, AttractionOpenHours>();
+  for (const row of rows) {
+    if (row.openHours?.windows?.length || row.openHours?.closedWeekdays?.length) {
+      map.set(row.id, row.openHours);
+    }
+  }
+  return map;
+}
+
 export async function listCitiesWithAttractions() {
   const db = getDb();
   const rows = await db
@@ -178,6 +209,7 @@ export async function seedAttractions() {
       description: seed.description,
       ticketPrice: seed.ticketPrice,
       aliases: seed.aliases ?? null,
+      openHours: seed.openHours ?? null,
       status: AttractionStatus.ACTIVE,
       source: AttractionSource.SEED,
       priceSource: AttractionPriceSource.SEED,

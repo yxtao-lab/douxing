@@ -6,3 +6,4 @@ export * from './geo.js';
 export * from './membership.js';
 export * from './checkin-map.js';
 export * from './route-path.js';
+export * from './open-hours.js';
