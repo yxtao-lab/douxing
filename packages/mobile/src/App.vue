@@ -22,6 +22,7 @@ function hideNativeTabBar() {
 <style>
 @import '@/static/iconfont/iconfont.css';
 @import '@/styles/theme.css';
+@import '@/styles/h5-viewport.css';
 
 page {
   background-color: var(--dx-bg);

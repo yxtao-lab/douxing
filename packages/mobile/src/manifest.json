@@ -13,6 +13,11 @@
     },
     "devServer": {
       "port": 5174
+    },
+    "rpx": {
+      "unit": "rem",
+      "unitRatio": 0.01,
+      "unitPrecision": 5
     }
   },
   "app-plus": {

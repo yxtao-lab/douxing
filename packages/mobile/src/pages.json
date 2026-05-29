@@ -115,6 +115,10 @@
     "navigationBarTextStyle": "black",
     "navigationBarTitleText": "兜行",
     "navigationBarBackgroundColor": "#ffffff",
-    "backgroundColor": "#f5f7fa"
+    "backgroundColor": "#f5f7fa",
+    "remCalcDesignWidth": 750,
+    "remCalcDesignFontSize": 100,
+    "rpxCalcMaxDeviceWidth": 960,
+    "rpxCalcBaseDeviceWidth": 375
   }
 }

@@ -1,0 +1,24 @@
+/* #ifdef H5 */
+/**
+ * H5 视口与 rem 配套样式（rpx→rem 由 manifest h5.rpx + globalStyle rem/rpx 计算配置驱动）
+ * - 宽屏：内容区居中，避免桌面浏览器拉满导致「假放大」
+ * - iOS：禁止 WebKit 自动放大字号破坏 rem 比例
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@media screen and (min-width: 481px) {
+  html {
+    background-color: var(--dx-bg, #f5f7fa);
+  }
+
+  body {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    box-shadow: 0 0 32px rgba(15, 23, 42, 0.08);
+  }
+}
+/* #endif */
