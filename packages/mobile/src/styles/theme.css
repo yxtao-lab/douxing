@@ -7,6 +7,8 @@ page {
   --dx-primary: #1677ff;
   --dx-primary-dark: #0958d9;
   --dx-primary-light: #e8f3ff;
+  --dx-primary-border: rgba(22, 119, 255, 0.25);
+  --dx-primary-ring: rgba(22, 119, 255, 0.15);
   --dx-accent: #13c2c2;
   --dx-accent-dark: #08979c;
   --dx-accent-soft: #e6fffb;
@@ -50,6 +52,8 @@ page.theme-teal,
   --dx-primary: #13c2c2;
   --dx-primary-dark: #08979c;
   --dx-primary-light: #e6fffb;
+  --dx-primary-border: rgba(19, 194, 194, 0.25);
+  --dx-primary-ring: rgba(19, 194, 194, 0.15);
   --dx-accent: #1677ff;
   --dx-accent-dark: #0958d9;
   --dx-accent-soft: #e8f3ff;

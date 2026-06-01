@@ -311,7 +311,7 @@ onShow(async () => {
   color: var(--dx-text-muted);
 }
 .badge-item.unlocked {
-  border-color: rgba(22, 119, 255, 0.25);
+  border-color: var(--dx-primary-border);
   background: var(--dx-primary-light);
 }
 .badge-icon {

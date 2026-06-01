@@ -233,8 +233,8 @@ watch(
 }
 
 .day-tab.active {
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
   font-weight: 600;
 }
 

@@ -1,9 +1,12 @@
 import type { LatLng, RoutePath, RoutePathPoi } from '@douxing/shared';
+import { getDxPrimaryColor } from '@/utils/theme-colors';
 
 export const ROUTE_TRAVELER_MARKER_ID = 900001;
 
-/** 微信 map 组件 polyline.color 仅支持 #RRGGBB */
-export const ROUTE_MAP_POLYLINE_COLOR = '#1677ff';
+/** 微信 map 组件 polyline.color 仅支持 #RRGGBB；随当前主题变化 */
+export function getRouteMapPolylineColor(): string {
+  return getDxPrimaryColor();
+}
 
 /** 微信小程序 map 高频更新 polyline 易触发渲染层 maxSimplifyZoom 异常 */
 export function isMpWeixinMapPlatform(): boolean {
@@ -105,7 +108,7 @@ export function buildRoutePoiMarkers(pois: RoutePathPoi[]): RouteMapMarker[] {
       content: String(index + 1),
       color: '#ffffff',
       fontSize: 11,
-      bgColor: '#1677ff',
+      bgColor: getDxPrimaryColor(),
       borderRadius: 10,
       padding: 4,
     },
@@ -132,7 +135,7 @@ export function buildTravelerMarker(point: LatLng): RouteMapMarker {
 
 export function buildRoutePolyline(
   points: LatLng[],
-  color = ROUTE_MAP_POLYLINE_COLOR,
+  color = getRouteMapPolylineColor(),
   options?: { arrowLine?: boolean },
 ): RouteMapPolyline[] {
   const safePoints = simplifyMapPolylinePoints(points);

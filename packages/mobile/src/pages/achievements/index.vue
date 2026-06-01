@@ -308,7 +308,7 @@ onShow(async () => {
   color: var(--dx-text-secondary);
 }
 .achievement-item.unlocked {
-  border-color: rgba(22, 119, 255, 0.25);
+  border-color: var(--dx-primary-border);
   background: var(--dx-primary-light);
 }
 .achievement-icon {

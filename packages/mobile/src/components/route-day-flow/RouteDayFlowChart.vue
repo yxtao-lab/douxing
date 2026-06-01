@@ -240,8 +240,8 @@ function openBookingUrl(url: string) {
 }
 
 .day-tab.active {
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
   font-weight: 600;
 }
 
@@ -312,8 +312,8 @@ function openBookingUrl(url: string) {
 }
 
 .flow-dot--transit {
-  background: #1677ff;
-  box-shadow: 0 0 0 6rpx rgba(22, 119, 255, 0.15);
+  background: var(--dx-primary);
+  box-shadow: 0 0 0 6rpx var(--dx-primary-light);
 }
 
 .flow-dot--play {
@@ -344,8 +344,8 @@ function openBookingUrl(url: string) {
 }
 
 .flow-card--transit {
-  border-left-color: #1677ff;
-  background: #f0f7ff;
+  border-left-color: var(--dx-primary);
+  background: var(--dx-primary-light);
 }
 
 .flow-card--play {
@@ -406,7 +406,7 @@ function openBookingUrl(url: string) {
   display: block;
   margin-top: 4rpx;
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
 }
 
 .flow-desc {
@@ -421,13 +421,13 @@ function openBookingUrl(url: string) {
   display: block;
   margin-top: 10rpx;
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   text-decoration: underline;
 }
 
 .btn-checkin {
   margin-top: 12rpx;
-  background: #e8f3ff;
-  color: #1677ff;
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
 }
 </style>

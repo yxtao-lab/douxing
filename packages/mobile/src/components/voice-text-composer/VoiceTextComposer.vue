@@ -490,8 +490,8 @@ defineExpose({ clear });
 }
 .hold-speak-btn--active {
   border-radius: 999rpx;
-  background: #1677ff;
-  box-shadow: 0 6rpx 20rpx rgba(22, 119, 255, 0.38);
+  background: var(--dx-primary);
+  box-shadow: var(--dx-shadow-md);
 }
 .hold-speak-btn--cancel {
   background: #ef4444;
@@ -680,8 +680,8 @@ defineExpose({ clear });
   height: var(--composer-row-height);
   line-height: var(--composer-row-height);
   padding: 0 28rpx;
-  background: #1677ff;
-  color: #fff;
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
   border-radius: 12rpx;
   font-size: 28rpx;
   margin: 0;

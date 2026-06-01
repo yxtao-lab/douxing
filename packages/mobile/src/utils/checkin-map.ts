@@ -1,5 +1,6 @@
 import type { CheckInInfo } from '@douxing/shared';
 import { mobileT } from '@/i18n/mobileT';
+import { getDxPrimaryColorAlpha } from '@/utils/theme-colors';
 
 export type CheckInTimeRange = 'all' | '7d' | '30d' | '90d';
 
@@ -137,7 +138,7 @@ export function buildMapPolyline(items: CheckInInfo[]): MapPolyline[] {
         latitude: item.location.latitude!,
         longitude: item.location.longitude!,
       })),
-      color: '#1677ffAA',
+      color: getDxPrimaryColorAlpha('AA'),
       width: 4,
       arrowLine: true,
     },

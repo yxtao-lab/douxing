@@ -149,7 +149,7 @@ const rootClass = computed(() => ({
 .dx-empty-spinner {
   width: 48rpx;
   height: 48rpx;
-  border: 4rpx solid rgba(22, 119, 255, 0.15);
+  border: 4rpx solid var(--dx-primary-ring);
   border-top-color: var(--dx-primary);
   border-radius: 50%;
   animation: dx-empty-spin 0.8s linear infinite;

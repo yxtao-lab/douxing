@@ -38,7 +38,12 @@
           <text class="share-title">{{ t('routes.shareTitle') }}</text>
           <text class="share-hint">{{ t('routes.shareHint') }}</text>
         </view>
-        <switch :checked="route.isPublic" :disabled="sharing" @change="handleShareToggle" color="#1677ff" />
+        <switch
+          :checked="route.isPublic"
+          :disabled="sharing"
+          :color="switchColor"
+          @change="handleShareToggle"
+        />
       </view>
     </view>
 
@@ -192,11 +197,13 @@ import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-load
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 import { useTheme } from '@/i18n/useTheme';
+import { getDxPrimaryColor } from '@/utils/theme-colors';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
 const { t, tf } = useTf();
-const { themeClass } = useTheme();
+const { themeClass, themeId } = useTheme();
+const switchColor = computed(() => getDxPrimaryColor(themeId.value));
 usePageTitle('nav.routeDetail');
 
 const { joinLabels } = useInterestTagLabel();

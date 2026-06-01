@@ -326,7 +326,7 @@ onShow(async () => {
   box-shadow: var(--dx-shadow-sm);
 }
 .rank-item.me {
-  border-color: rgba(22, 119, 255, 0.35);
+  border-color: var(--dx-primary-border);
   background: var(--dx-primary-light);
 }
 .rank-item.top .rank-no {

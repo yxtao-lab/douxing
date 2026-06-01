@@ -2,6 +2,7 @@
   <view
     v-if="aiPlanLoadingState.active"
     class="ai-plan-overlay"
+    :class="themeClass"
     @touchmove.stop.prevent
     @click.stop
   >
@@ -18,8 +19,10 @@
 <script setup lang="ts">
 import { aiPlanLoadingState, cancelAiPlanLoading } from '@/utils/ai-plan-loading';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 
 const { t } = useTf();
+const { themeClass } = useTheme();
 
 function handleCancel() {
   cancelAiPlanLoading();
@@ -45,20 +48,20 @@ function handleCancel() {
 .ai-plan-panel {
   width: 100%;
   max-width: 560rpx;
-  background: #fff;
-  border-radius: 24rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-lg);
   padding: 48rpx 40rpx 40rpx;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
+  box-shadow: var(--dx-shadow-md);
 }
 
 .ai-plan-spinner {
   width: 72rpx;
   height: 72rpx;
-  border: 6rpx solid #e5e7eb;
-  border-top-color: #1677ff;
+  border: 6rpx solid var(--dx-border);
+  border-top-color: var(--dx-primary);
   border-radius: 50%;
   animation: ai-plan-spin 0.9s linear infinite;
 }
@@ -73,21 +76,21 @@ function handleCancel() {
   margin-top: 32rpx;
   font-size: 32rpx;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--dx-text);
   text-align: center;
 }
 
 .ai-plan-hint {
   margin-top: 16rpx;
   font-size: 26rpx;
-  color: #6b7280;
+  color: var(--dx-text-secondary);
   text-align: center;
 }
 
 .ai-plan-tip {
   margin-top: 12rpx;
   font-size: 22rpx;
-  color: #9ca3af;
+  color: var(--dx-text-muted);
   text-align: center;
   line-height: 1.5;
 }
@@ -95,10 +98,10 @@ function handleCancel() {
 .ai-plan-cancel {
   margin-top: 40rpx;
   width: 100%;
-  background: #fff;
-  color: #6b7280;
-  border: 1rpx solid #d1d5db;
-  border-radius: 12rpx;
+  background: var(--dx-surface);
+  color: var(--dx-text-secondary);
+  border: 1rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
   font-size: 28rpx;
 }
 

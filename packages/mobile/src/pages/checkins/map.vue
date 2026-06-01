@@ -189,7 +189,11 @@ const displayMarkers = computed(() =>
   isMpWeixin ? markers.value : buildMapMarkersWithPhotoIcon(filteredList.value),
 );
 const photoCalloutMarkers = computed(() => getPhotoCalloutMarkers(markers.value));
-const polyline = computed(() => buildMapPolyline(filteredList.value));
+const { themeId } = useTheme();
+const polyline = computed(() => {
+  void themeId.value;
+  return buildMapPolyline(filteredList.value);
+});
 const includePoints = computed(() => buildIncludePoints(filteredList.value));
 const hiddenCount = computed(
   () => filteredList.value.length - getCheckInsWithCoords(filteredList.value).length,
@@ -544,7 +548,7 @@ onShow(async () => {
   background: #f3f4f6;
 }
 .photo-callout.active .photo-callout-img {
-  border-color: #1677ff;
+  border-color: var(--dx-primary);
 }
 .photo-callout-arrow {
   width: 0;
@@ -552,6 +556,6 @@ onShow(async () => {
   margin-top: 2px;
   border-left: 5px solid transparent;
   border-right: 5px solid transparent;
-  border-top: 6px solid #1677ff;
+  border-top: 6px solid var(--dx-primary);
 }
 </style>

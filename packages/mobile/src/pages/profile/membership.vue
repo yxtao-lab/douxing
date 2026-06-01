@@ -265,7 +265,7 @@ onShow(async () => {
 .tier-icon-item.active {
   opacity: 1;
   background: var(--dx-primary-light);
-  box-shadow: inset 0 0 0 2rpx rgba(22, 119, 255, 0.25);
+  box-shadow: inset 0 0 0 2rpx var(--dx-primary-border);
 }
 .tier-icon-label {
   font-size: 20rpx;

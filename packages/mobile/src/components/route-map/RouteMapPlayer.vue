@@ -120,6 +120,7 @@ import {
   simplifyMapPolylinePoints,
 } from '@/utils/route-map';
 import { useTf } from '@/i18n/useTf';
+import { useTheme } from '@/i18n/useTheme';
 
 const props = withDefaults(
   defineProps<{
@@ -134,6 +135,7 @@ const props = withDefaults(
 );
 
 const { t, tf } = useTf();
+const { themeId } = useTheme();
 
 const mpWeixinMap = isMpWeixinMapPlatform();
 const playing = ref(false);
@@ -162,9 +164,10 @@ const mapIncludePoints = computed(() => {
   return points.length >= 2 ? points : undefined;
 });
 
-const poiMarkers = computed(() =>
-  props.routePath ? buildRoutePoiMarkers(props.routePath.pois) : [],
-);
+const poiMarkers = computed(() => {
+  void themeId.value;
+  return props.routePath ? buildRoutePoiMarkers(props.routePath.pois) : [];
+});
 
 const displayMarkers = computed(() => {
   const markers = [...poiMarkers.value];
@@ -174,7 +177,10 @@ const displayMarkers = computed(() => {
   return markers;
 });
 
-const displayPolylines = computed(() => buildRoutePolyline(animatedPolylinePoints.value));
+const displayPolylines = computed(() => {
+  void themeId.value;
+  return buildRoutePolyline(animatedPolylinePoints.value);
+});
 
 const hiddenHint = computed(() => {
   if (!props.routePath) return '';
@@ -343,7 +349,7 @@ onUnmounted(() => {
 
 .map-date {
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   flex-shrink: 0;
 }
 
@@ -396,7 +402,7 @@ onUnmounted(() => {
 
 .status-text {
   font-size: 22rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
 }
 
 .map-fullscreen-root {
@@ -474,7 +480,7 @@ onUnmounted(() => {
 
 .map-tool-btn-text {
   font-size: 24rpx;
-  color: #1677ff;
+  color: var(--dx-primary);
   line-height: 1.2;
 }
 </style>
