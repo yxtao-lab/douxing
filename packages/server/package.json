@@ -12,6 +12,8 @@
     "db:reset": "tsx src/db/reset-database.ts && tsx src/db/migrate.ts && tsx src/db/seed.ts",
     "db:seed": "tsx src/db/seed.ts",
     "enricher:demo": "tsx src/scripts/enricher-demo.ts",
+    "ml:generate-dataset": "tsx src/scripts/generate-training-dataset.ts",
+    "ml:validate-dataset": "tsx src/scripts/validate-training-dataset.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

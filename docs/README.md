@@ -10,6 +10,7 @@
 | [后期待办.md](./后期待办.md) | **合规与资质类待办**（备案、支付、短信认证、公司注册等） |
 | [开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) | 开发思考过程、亮点与重难点（覆盖 M0/A/B/C 已验收步骤；文首有阶段速查表） |
 | [amap-geocoding.md](./amap-geocoding.md) | 高德 POI 搜索 / 地理编码接入与配置 |
+| [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) | **专属模型**：DeepSeek 造数据 → PAI LoRA → 百炼推理 → Debian 接入 |
 | [../scripts/app-native.md](../scripts/app-native.md) | iOS / Android 一键部署与单平台开发 |
 
 ## 阅读建议

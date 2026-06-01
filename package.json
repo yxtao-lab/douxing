@@ -37,6 +37,8 @@
     "db:seed": "pnpm --filter @douxing/server db:seed",
     "db:setup": "pnpm db:migrate && pnpm db:seed",
     "db:reset": "pnpm --filter @douxing/server db:reset",
+    "ml:generate-dataset": "pnpm --filter @douxing/server ml:generate-dataset",
+    "ml:validate-dataset": "pnpm --filter @douxing/server ml:validate-dataset",
     "bootstrap": "node scripts/deploy.mjs",
     "bootstrap:dev": "node scripts/deploy.mjs --skip-build --dev",
     "fix:mysql-password": "node scripts/fix-mysql-password.mjs",

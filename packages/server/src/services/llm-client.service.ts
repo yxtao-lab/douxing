@@ -283,26 +283,22 @@ export async function checkLlmAvailability(): Promise<{
   return { available: false, error: err || '无可用模型' };
 }
 
-async function chatCompletionWithProvider(
-  provider: LlmProviderId,
-  userPrompt: string,
-  options?: {
-    days?: number;
-    budget?: string;
-    history?: PlanChatMessage[];
-    intent?: TravelIntentSnapshot;
-    ragCandidates?: RagAttractionCandidate[];
-    playbookMatches?: MatchedRoutePlaybook[];
-    variantHint?: string;
-    locale?: LocaleCode;
-  },
-): Promise<LlmRoutePayload> {
-  const config = getProviderConfig(provider);
-  if (!config.configured) {
-    throw new Error(`${config.label} 未配置`);
-  }
+export interface RoutePlannerMessageOptions {
+  days?: number;
+  budget?: string;
+  history?: PlanChatMessage[];
+  intent?: TravelIntentSnapshot;
+  ragCandidates?: RagAttractionCandidate[];
+  playbookMatches?: MatchedRoutePlaybook[];
+  variantHint?: string;
+  locale?: LocaleCode;
+}
 
-  const model = await resolveModelId(provider);
+/** 与线上 LLM 调用一致的 messages（用于 SFT 数据集构造） */
+export function buildRoutePlannerMessages(
+  userPrompt: string,
+  options?: RoutePlannerMessageOptions,
+): ChatMessage[] {
   const locale = options?.locale ?? DEFAULT_LOCALE;
   const blocks: string[] = [];
   if (options?.intent) {
@@ -327,7 +323,7 @@ async function chatCompletionWithProvider(
       : userPrompt;
 
   const history = options?.history ?? [];
-  const messages: ChatMessage[] = [
+  return [
     { role: 'system', content: buildSystemPrompt(history.length > 0, locale) },
     ...history.map((item) => ({
       role: item.role,
@@ -335,6 +331,20 @@ async function chatCompletionWithProvider(
     })),
     { role: 'user', content: userContent },
   ];
+}
+
+async function chatCompletionWithProvider(
+  provider: LlmProviderId,
+  userPrompt: string,
+  options?: RoutePlannerMessageOptions,
+): Promise<LlmRoutePayload> {
+  const config = getProviderConfig(provider);
+  if (!config.configured) {
+    throw new Error(`${config.label} 未配置`);
+  }
+
+  const model = await resolveModelId(provider);
+  const messages = buildRoutePlannerMessages(userPrompt, options);
 
   const baseBody = {
     model,
