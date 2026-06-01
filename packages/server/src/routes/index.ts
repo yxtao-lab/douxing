@@ -11,6 +11,7 @@ import leaderboardRouter from './leaderboard.js';
 import usersRouter from './users.js';
 import attractionsRouter from './attractions.js';
 import speechRouter from './speech.js';
+import shareRouter from './share.js';
 
 const router = Router();
 
@@ -25,5 +26,6 @@ router.use(`${API_PREFIX}/achievements`, achievementsRouter);
 router.use(`${API_PREFIX}/badges`, badgesRouter);
 router.use(`${API_PREFIX}/leaderboard`, leaderboardRouter);
 router.use(`${API_PREFIX}/speech`, speechRouter);
+router.use(`${API_PREFIX}/share`, shareRouter);
 
 export default router;

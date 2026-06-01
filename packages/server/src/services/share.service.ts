@@ -1,0 +1,45 @@
+import { eq } from 'drizzle-orm';
+import { getDb } from '../db/client.js';
+import { travelRoutes } from '../db/schema/travel-routes.js';
+import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
+import type { TravelRouteInfo } from '@douxing/shared';
+import { toRouteInfo } from '../utils/route-info.util.js';
+import { enrichRoutesWithCreatorInfo } from './route-interaction.service.js';
+
+function stripSensitiveRouteDetail(detail: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!detail) return null;
+  const next: Record<string, unknown> = { ...detail, isUnlocked: true };
+  delete next.sourcePrompt;
+  delete next.llmProviderChoice;
+  return next;
+}
+
+/** 广场公开路线只读摘要（D5-a） */
+export async function getPublicSharedRoute(routeId: number): Promise<TravelRouteInfo | null> {
+  const db = getDb();
+  const rows = await db.select().from(travelRoutes).where(eq(travelRoutes.id, routeId)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (row.status !== RouteStatus.PUBLISHED || row.isPublic !== 1) {
+    return null;
+  }
+
+  let route = toRouteInfo(row);
+  route = {
+    ...route,
+    routeDetail: stripSensitiveRouteDetail(route.routeDetail as Record<string, unknown> | null),
+    isUnlocked: true,
+    sourcePrompt: null,
+  };
+
+  [route] = await enrichRoutesWithCreatorInfo([route]);
+  return route;
+}
+
+export async function assertPublicSharedRoute(routeId: number): Promise<TravelRouteInfo> {
+  const route = await getPublicSharedRoute(routeId);
+  if (!route) {
+    throw new ApiError(ApiMessageKey.SHARE_ROUTE_NOT_AVAILABLE);
+  }
+  return route;
+}

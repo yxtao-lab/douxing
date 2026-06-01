@@ -81,6 +81,12 @@
       </button>
     </view>
 
+    <view v-if="canGeneratePoster" class="card poster-card">
+      <text class="poster-card-title">{{ t('routes.poster.sheetTitle') }}</text>
+      <text class="poster-card-hint">{{ t('routes.poster.sheetHint') }}</text>
+      <button class="btn-poster" @click="openPosterSheet">{{ t('routes.generatePoster') }}</button>
+    </view>
+
     <view v-if="editModalVisible" class="edit-modal-mask" @click="closeEditModal">
       <view class="edit-modal" @click.stop>
         <view class="edit-modal-header">
@@ -160,12 +166,19 @@
     <view class="actions">
       <button v-if="route.status !== publishedStatus" class="btn-outline" @click="handlePublish">{{ t('routes.publishRoute') }}</button>
     </view>
+
+    <RoutePosterSheet
+      :visible="posterSheetVisible"
+      :route="route"
+      @close="posterSheetVisible = false"
+      @generated="handlePosterGenerated"
+    />
   </view>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
-import { onLoad } from '@dcloudio/uni-app';
+import { onLoad, onShareAppMessage } from '@dcloudio/uni-app';
 import type {
   RouteDayAttraction,
   RouteDayPlan,
@@ -193,6 +206,7 @@ import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanB
 import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
 import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
+import RoutePosterSheet from '@/components/route-poster/RoutePosterSheet.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -224,6 +238,8 @@ const commentText = ref('');
 const postingComment = ref(false);
 const aiPlanning = computed(() => aiPlanLoadingState.active);
 const activeDayIndex = ref(0);
+const posterSheetVisible = ref(false);
+const posterShareImagePath = ref('');
 let routeId = 0;
 
 const currentUserId = computed(() => getStoredUser()?.id ?? 0);
@@ -261,6 +277,13 @@ const showComments = computed(() => route.value?.isPublic === true);
 const canRegenerate = computed(
   () =>
     route.value?.isAiGenerated === true && route.value?.status === RouteStatus.DRAFT,
+);
+
+const canGeneratePoster = computed(
+  () =>
+    isUnlocked.value &&
+    days.value.length > 0 &&
+    route.value?.status === RouteStatus.PUBLISHED,
 );
 
 const isUnlocked = computed(() => {
@@ -547,6 +570,20 @@ async function handlePublish() {
   }
 }
 
+function openPosterSheet() {
+  posterSheetVisible.value = true;
+}
+
+function handlePosterGenerated(path: string) {
+  posterShareImagePath.value = path;
+}
+
+onShareAppMessage(() => ({
+  title: route.value?.name || t('routes.poster.shareCardTitle'),
+  path: `/pages/routes/detail?id=${routeId}`,
+  imageUrl: posterShareImagePath.value || undefined,
+}));
+
 async function handleCheckIn(spot: RouteDayAttraction) {
   try {
     uni.showActionSheet({
@@ -772,6 +809,29 @@ onLoad((query) => {
 .interact-card {
   display: flex;
   gap: 24rpx;
+}
+.poster-card {
+  border: 2rpx dashed var(--dx-primary-light);
+}
+.poster-card-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.poster-card-hint {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--dx-text-muted);
+  line-height: 1.5;
+}
+.btn-poster {
+  margin-top: 20rpx;
+  background: #fff7ed;
+  color: #b45309;
+  border: 2rpx solid #fcd34d;
+  border-radius: var(--dx-radius-sm);
 }
 .btn-interact {
   flex: 1;
