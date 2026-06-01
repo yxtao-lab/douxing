@@ -65,6 +65,7 @@ import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AttractionInfo } from '@douxing/shared';
 import { approveAttraction, fetchPendingAttractions } from '@/api/attractions';
+import { getAppErrorMessage } from '@/utils/error-message';
 
 const { t } = useI18n();
 const list = ref<AttractionInfo[]>([]);
@@ -106,7 +107,7 @@ async function loadList() {
     list.value = await fetchPendingAttractions();
   } catch (e) {
     list.value = [];
-    error.value = e instanceof Error ? e.message : t('common.loadFailed');
+    error.value = getAppErrorMessage(e, t('common.loadFailed'));
   } finally {
     loading.value = false;
   }
@@ -124,7 +125,7 @@ async function handleApprove(item: AttractionInfo) {
     await approveAttraction(item.id);
     list.value = list.value.filter((row) => row.id !== item.id);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('attractions.approveFailed');
+    error.value = getAppErrorMessage(e, t('attractions.approveFailed'));
   } finally {
     approvingId.value = null;
   }

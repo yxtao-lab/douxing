@@ -89,7 +89,7 @@ import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo, RouteListScope } from '@douxing/shared';
 import { fetchRoutes } from '@/api/routes';
 import { RouteStatus } from '@douxing/shared';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import type { DouxingEmptyVariant } from '@/components/douxing-empty-state/empty-state-variants';
@@ -234,9 +234,7 @@ async function loadRoutes() {
     });
   } catch (e) {
     routes.value = [];
-    const msg = e instanceof Error ? e.message : t('routes.loadFailed');
-    loadError.value = msg;
-    uni.showToast({ title: msg, icon: 'none' });
+    loadError.value = getAppErrorMessage(e, t('routes.loadFailed'));
   }
 }
 

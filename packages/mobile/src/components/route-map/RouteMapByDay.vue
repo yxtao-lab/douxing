@@ -47,6 +47,7 @@ import { computed, ref, watch } from 'vue';
 import type { RouteDayPlan, RoutePath } from '@douxing/shared';
 import { buildRoutePathForDay } from '@douxing/shared';
 import { fetchRouteMapPath } from '@/api/routes';
+import { getAppErrorMessage } from '@/utils/request';
 import RouteMapPlayer from '@/components/route-map/RouteMapPlayer.vue';
 import { useTf } from '@/i18n/useTf';
 
@@ -164,7 +165,7 @@ async function ensureDayPath(dayIndex: number, options?: { force?: boolean }) {
     pathByDay.value = { ...pathByDay.value, [dayIndex]: serverPath };
   } catch (e) {
     if (!localPath) {
-      dayLoadError.value = e instanceof Error ? e.message : t('routeMap.dayPathLoadFailed');
+      dayLoadError.value = getAppErrorMessage(e, t('routeMap.dayPathLoadFailed'));
       pathByDay.value = { ...pathByDay.value, [dayIndex]: null };
     }
   } finally {

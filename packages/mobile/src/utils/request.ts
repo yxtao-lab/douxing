@@ -1,5 +1,5 @@
 import type { ApiResponse } from '@douxing/shared';
-import { ApiMessageKey, resolveApiMessage } from '@douxing/shared';
+import { ApiMessageKey, resolveApiMessage, resolveClientRequestErrorMessage } from '@douxing/shared';
 import { getApiAcceptLanguage } from './api-locale-header';
 import { i18n } from '@/i18n';
 import { getApiBaseUrl } from './api-base';
@@ -16,6 +16,18 @@ import {
 export type AppRequestOptions = Omit<UniApp.RequestOptions, 'url'>;
 
 export { getStoredUser, setAuth, TOKEN_KEY };
+
+/** 将 catch 到的错误转为可展示的用户文案（过滤 request:fail 等系统信息） */
+export function getAppErrorMessage(err: unknown, fallback: string): string {
+  const locale = getApiAcceptLanguage();
+  if (typeof err === 'string') {
+    return resolveClientRequestErrorMessage(err, locale) || fallback;
+  }
+  if (!(err instanceof Error)) return fallback;
+  if (isRequestAbortedError(err.message)) return getAiPlanCancelledMessage();
+  if (err.message === getAiPlanCancelledMessage()) return err.message;
+  return resolveClientRequestErrorMessage(err.message, locale) || fallback;
+}
 
 function resolveApiErrorMessage(body: ApiResponse<unknown>): string {
   if (body.message?.trim()) return body.message;
@@ -42,6 +54,7 @@ function runRequest<T>(
       url,
       method: options.method || 'GET',
       data: options.data,
+      timeout: options.timeout ?? 15000,
       header: {
         'Content-Type': 'application/json',
         'Accept-Language': getApiAcceptLanguage(),
@@ -65,7 +78,12 @@ function runRequest<T>(
           reject(new Error(getAiPlanCancelledMessage()));
           return;
         }
-        reject(new Error(err.errMsg || resolveApiMessage(ApiMessageKey.NETWORK_ERROR, getApiAcceptLanguage())));
+        const raw =
+          err.errMsg ||
+          (typeof err === 'object' && err !== null && 'message' in err
+            ? String((err as { message?: unknown }).message ?? '')
+            : '');
+        reject(new Error(resolveClientRequestErrorMessage(raw, getApiAcceptLanguage())));
       },
     });
     if (trackForAbort) {

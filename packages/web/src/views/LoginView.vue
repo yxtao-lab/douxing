@@ -107,6 +107,7 @@ import type { LocaleCode } from '@douxing/shared';
 import { login, register, sendSmsCode, smsLogin } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
+import { getAppErrorMessage } from '@/utils/error-message';
 
 type LoginMode = 'sms' | 'password';
 
@@ -176,7 +177,7 @@ async function handleSendCode() {
     }
     startCountdown();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('login.sendFailed');
+    error.value = getAppErrorMessage(e, t('login.sendFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -195,7 +196,7 @@ async function handleSmsSubmit() {
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('login.loginFailed');
+    error.value = getAppErrorMessage(e, t('login.loginFailed'));
   } finally {
     loading.value = false;
   }
@@ -212,7 +213,7 @@ async function handlePasswordSubmit() {
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('common.operationFailed');
+    error.value = getAppErrorMessage(e, t('common.operationFailed'));
   } finally {
     loading.value = false;
   }

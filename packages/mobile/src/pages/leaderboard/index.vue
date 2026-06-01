@@ -166,14 +166,10 @@ async function loadLeaderboard() {
     entries.value = result.entries;
     myRank.value = result.myRank;
     myValue.value = result.myValue;
-  } catch (err) {
+  } catch {
     entries.value = [];
     myRank.value = null;
     myValue.value = null;
-    uni.showToast({
-      title: err instanceof Error ? err.message : t('common.loadFailed'),
-      icon: 'none',
-    });
   } finally {
     loading.value = false;
   }

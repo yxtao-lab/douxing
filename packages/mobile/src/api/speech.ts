@@ -1,5 +1,7 @@
 import { getApiBaseUrl } from '@/utils/api-base';
 import { getStoredToken } from '@/utils/auth-storage';
+import { resolveClientRequestErrorMessage } from '@douxing/shared';
+import { getApiAcceptLanguage } from '@/utils/api-locale-header';
 import { mobileT } from '@/i18n/mobileT';
 
 export function transcribeAudioFile(filePath: string): Promise<string> {
@@ -28,7 +30,7 @@ export function transcribeAudioFile(filePath: string): Promise<string> {
         }
       },
       fail: (err) => {
-        reject(new Error(err.errMsg || mobileT('common.uploadFailed')));
+        reject(new Error(resolveClientRequestErrorMessage(err.errMsg, getApiAcceptLanguage())));
       },
     });
   });

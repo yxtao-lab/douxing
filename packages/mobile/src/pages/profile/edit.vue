@@ -58,7 +58,7 @@ import { onLoad } from '@dcloudio/uni-app';
 import type { UserInfo } from '@douxing/shared';
 import { USER_INTEREST_MAX } from '@douxing/shared';
 import { fetchCurrentUser, updateUserProfile, uploadUserAvatar } from '@/api/user';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
@@ -132,7 +132,7 @@ async function chooseAvatar() {
     form.value.avatar = user.avatar;
     uni.showToast({ title: t('profileEdit.avatarUpdated'), icon: 'success' });
   } catch (err) {
-    const message = err instanceof Error ? err.message : t('profileEdit.uploadFailed');
+    const message = getAppErrorMessage(err, t('profileEdit.uploadFailed'));
     uni.showToast({ title: message, icon: 'none' });
   } finally {
     uploading.value = false;
@@ -173,7 +173,7 @@ async function handleSave() {
     uni.showToast({ title: t('profileEdit.saveSuccess'), icon: 'success' });
     setTimeout(() => uni.navigateBack(), 400);
   } catch (err) {
-    const message = err instanceof Error ? err.message : t('profileEdit.saveFailed');
+    const message = getAppErrorMessage(err, t('profileEdit.saveFailed'));
     uni.showToast({ title: message, icon: 'none' });
   } finally {
     saving.value = false;

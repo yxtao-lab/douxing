@@ -84,6 +84,7 @@ import {
   formatCheckInTime,
 } from '@douxing/shared';
 import { fetchAllCheckInsForMap } from '@/api/checkins';
+import { getAppErrorMessage } from '@/utils/error-message';
 import CheckInMap from '@/components/CheckInMap.vue';
 
 const { t } = useI18n();
@@ -136,7 +137,7 @@ async function loadList() {
     allList.value = await fetchAllCheckInsForMap();
   } catch (e) {
     allList.value = [];
-    error.value = e instanceof Error ? e.message : t('common.loadFailed');
+    error.value = getAppErrorMessage(e, t('common.loadFailed'));
   } finally {
     loading.value = false;
   }

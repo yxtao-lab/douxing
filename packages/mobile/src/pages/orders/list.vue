@@ -87,7 +87,7 @@ import type { OrderInfo } from '@douxing/shared';
 import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
 import { fetchOrders, cancelOrder } from '@/api/orders';
 import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-payment';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -186,7 +186,7 @@ async function handleContinuePay(item: OrderInfo) {
     uni.showToast({ title: t('orders.paySuccess'), icon: 'success' });
     await loadOrders();
   } catch (e) {
-    const msg = e instanceof Error ? e.message : t('routes.payFailed');
+    const msg = getAppErrorMessage(e, t('routes.payFailed'));
     if (msg !== t('routes.payCancelled')) {
       uni.showToast({ title: msg, icon: 'none' });
     }
@@ -212,7 +212,7 @@ async function handleCancel(item: OrderInfo) {
     uni.showToast({ title: t('orders.cancelSuccess'), icon: 'success' });
     await loadOrders();
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('orders.cancelFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('orders.cancelFailed')), icon: 'none' });
   } finally {
     cancellingId.value = null;
   }

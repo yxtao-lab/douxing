@@ -15,6 +15,10 @@ export {
 export { getLocaleFromAcceptLanguage } from './request-locale.js';
 export { ApiError, isApiError } from './api-error.js';
 export {
+  isSystemRequestErrorMessage,
+  resolveClientRequestErrorMessage,
+} from './client-request-error.js';
+export {
   formatInterestTagLabel,
   joinInterestTagLabels,
   getInterestTagSlug,

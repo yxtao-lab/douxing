@@ -171,7 +171,6 @@ onShow(async () => {
     badgeCatalog.value = await fetchBadgeCatalog();
   } catch {
     badgeCatalog.value = [];
-    uni.showToast({ title: t('common.loadFailed'), icon: 'none' });
   } finally {
     loading.value = false;
   }

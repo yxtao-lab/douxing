@@ -189,7 +189,7 @@ import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
 import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -386,7 +386,7 @@ async function loadDetail() {
     }
     await loadComments();
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('routes.loadFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.loadFailed')), icon: 'none' });
   }
 }
 
@@ -409,7 +409,7 @@ async function handleShareToggle(e: { detail: { value: boolean } }) {
     uni.showToast({ title: next ? t('routes.shareOn') : t('routes.shareOff'), icon: 'success' });
     await loadComments();
   } catch (err) {
-    uni.showToast({ title: err instanceof Error ? err.message : t('routes.shareSetFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(err, t('routes.shareSetFailed')), icon: 'none' });
     await loadDetail();
   } finally {
     sharing.value = false;
@@ -432,7 +432,7 @@ async function handlePostComment() {
     commentText.value = '';
     uni.showToast({ title: t('routes.commentSuccess'), icon: 'success' });
   } catch (err) {
-    uni.showToast({ title: err instanceof Error ? err.message : t('routes.commentFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(err, t('routes.commentFailed')), icon: 'none' });
   } finally {
     postingComment.value = false;
   }
@@ -446,7 +446,7 @@ async function handleLike() {
       route.value.likeCount = result.likeCount;
     }
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('routes.operationFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.operationFailed')), icon: 'none' });
   }
 }
 
@@ -458,7 +458,7 @@ async function handleFavorite() {
       route.value.collectCount = result.collectCount;
     }
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('routes.operationFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.operationFailed')), icon: 'none' });
   }
 }
 
@@ -477,7 +477,7 @@ async function handleSaveDraft() {
     uni.showToast({ title: t('routes.draftSaved'), icon: 'success' });
     editModalVisible.value = false;
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('routes.saveFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.saveFailed')), icon: 'none' });
   } finally {
     savingDraft.value = false;
   }
@@ -508,7 +508,7 @@ async function handleRegenerate() {
     regeneratePrompt.value = result.sourcePrompt ?? text;
     resetActiveDayIndex();
   } catch (e) {
-    const msg = e instanceof Error ? e.message : t('routes.regenerateFailed');
+    const msg = getAppErrorMessage(e, t('routes.regenerateFailed'));
     if (!isAiPlanCancelledError(e)) {
       uni.showToast({ title: msg, icon: 'none' });
     }
@@ -522,7 +522,7 @@ async function handleUnlock() {
     uni.showToast({ title: t('routes.unlockSuccess'), icon: 'success' });
     await loadDetail();
   } catch (e) {
-    const msg = e instanceof Error ? e.message : t('routes.payFailed');
+    const msg = getAppErrorMessage(e, t('routes.payFailed'));
     if (msg !== t('routes.payCancelled')) {
       uni.showToast({ title: msg, icon: 'none' });
     }
@@ -536,7 +536,7 @@ async function handlePublish() {
     route.value = await publishRoute(routeId);
     uni.showToast({ title: t('routes.publishSuccess'), icon: 'success' });
   } catch (e) {
-    uni.showToast({ title: e instanceof Error ? e.message : t('routes.publishFailed'), icon: 'none' });
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.publishFailed')), icon: 'none' });
   }
 }
 
@@ -594,7 +594,7 @@ async function handleCheckIn(spot: RouteDayAttraction) {
           }
           uni.showToast({ title: msg, icon: 'success' });
         } catch (e) {
-          uni.showToast({ title: e instanceof Error ? e.message : t('routes.checkInFailed'), icon: 'none' });
+          uni.showToast({ title: getAppErrorMessage(e, t('routes.checkInFailed')), icon: 'none' });
         } finally {
           uni.hideLoading();
         }

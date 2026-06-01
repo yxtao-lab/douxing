@@ -1,6 +1,8 @@
 import type { UserInfo, UpdateUserProfileRequest, MembershipInfo } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
+import { resolveClientRequestErrorMessage } from '@douxing/shared';
+import { getApiAcceptLanguage } from '@/utils/api-locale-header';
 import { mobileT } from '@/i18n/mobileT';
 
 const TOKEN_KEY = 'douxing_token';
@@ -56,7 +58,8 @@ export function uploadUserAvatar(filePath: string): Promise<UserInfo> {
           reject(new Error(mobileT('common.invalidResponse')));
         }
       },
-      fail: (err) => reject(new Error(err.errMsg || mobileT('common.uploadFailed'))),
+      fail: (err) =>
+        reject(new Error(resolveClientRequestErrorMessage(err.errMsg, getApiAcceptLanguage()))),
     });
   });
 }

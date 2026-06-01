@@ -173,7 +173,6 @@ onShow(async () => {
     achievementCatalog.value = await fetchAchievementCatalog();
   } catch {
     achievementCatalog.value = [];
-    uni.showToast({ title: t('common.loadFailed'), icon: 'none' });
   } finally {
     loading.value = false;
   }

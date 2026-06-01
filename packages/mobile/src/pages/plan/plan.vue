@@ -202,6 +202,7 @@ import * as authStorage from '@/utils/auth-storage';
 import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
+import { getAppErrorMessage } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
 import type {
@@ -504,7 +505,7 @@ async function restorePreviousSession() {
     previousSessionId.value = null;
   } catch (e) {
     uni.showToast({
-      title: e instanceof Error ? e.message : t('plan.restoreSessionFailed'),
+      title: getAppErrorMessage(e, t('plan.restoreSessionFailed')),
       icon: 'none',
     });
   }
@@ -550,7 +551,7 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
     uni.showToast({ title: t('plan.candidateSwitched'), icon: 'success' });
   } catch (e) {
     uni.showToast({
-      title: e instanceof Error ? e.message : t('plan.candidateSwitchFailed'),
+      title: getAppErrorMessage(e, t('plan.candidateSwitchFailed')),
       icon: 'none',
     });
   }
@@ -682,7 +683,7 @@ async function handleSend(text: string) {
   } catch (e) {
     messages.value = messages.value.filter((m) => m.id !== pendingId);
     if (!isAiPlanCancelledError(e)) {
-      const msg = e instanceof Error ? e.message : t('plan.sendFailed');
+      const msg = getAppErrorMessage(e, t('plan.sendFailed'));
       uni.showToast({ title: msg, icon: 'none' });
     }
     inputText.value = content;

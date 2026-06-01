@@ -145,7 +145,7 @@ import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import { useTheme } from '@/i18n/useTheme';
@@ -253,7 +253,7 @@ async function loadHotRoutes() {
     hotRoutes.value = await fetchPlazaRoutes(8, 'hot');
   } catch (e) {
     hotRoutes.value = [];
-    hotError.value = e instanceof Error ? e.message : t('home.hotRoutesLoadFailed');
+    hotError.value = getAppErrorMessage(e, t('home.hotRoutesLoadFailed'));
   } finally {
     hotLoading.value = false;
     void syncPageLayout();

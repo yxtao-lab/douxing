@@ -1,5 +1,6 @@
 import { transcribeAudioFile } from '@/api/speech';
 import { mobileT } from '@/i18n/mobileT';
+import { getAppErrorMessage } from '@/utils/request';
 import {
   bindSpeechSession,
   type SpeechToTextHandlers,
@@ -74,7 +75,7 @@ function ensureRecorderHooks() {
         handlers.onError(mobileT('speech.noSpeechRetry'));
       }
     } catch (e) {
-      handlers.onError(e instanceof Error ? e.message : mobileT('speech.transcribeFailed'));
+      handlers.onError(getAppErrorMessage(e, mobileT('speech.transcribeFailed')));
     } finally {
       uni.hideLoading();
       handlers.onEnd?.();
@@ -116,7 +117,7 @@ export async function startRecorderSpeechToText(
   try {
     await ensurePermission();
   } catch (e) {
-    handlers.onError(e instanceof Error ? e.message : mobileT('speech.micDenied'));
+    handlers.onError(getAppErrorMessage(e, mobileT('speech.micDenied')));
     handlers.onEnd?.();
     return null;
   }

@@ -6,6 +6,7 @@ import {
   DEFAULT_LOCALE,
   isLocaleCode,
   resolveApiMessage,
+  resolveClientRequestErrorMessage,
   type LocaleCode,
 } from '@douxing/shared';
 
@@ -49,7 +50,19 @@ http.interceptors.response.use(
     }
     return response;
   },
-  (error) => Promise.reject(error),
+  (error) => {
+    const locale = getApiAcceptLanguage();
+    if (axios.isAxiosError(error)) {
+      const body = error.response?.data as ApiResponse | undefined;
+      if (body && typeof body === 'object' && 'code' in body && body.code !== 0) {
+        return Promise.reject(new Error(resolveApiErrorMessage(body)));
+      }
+      const raw = error.message || error.code || '';
+      return Promise.reject(new Error(resolveClientRequestErrorMessage(raw, locale)));
+    }
+    const raw = error instanceof Error ? error.message : String(error);
+    return Promise.reject(new Error(resolveClientRequestErrorMessage(raw, locale)));
+  },
 );
 
 export default http;

@@ -120,7 +120,7 @@
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
 import type { LoginResult } from '@douxing/shared';
-import { request, setAuth } from '@/utils/request';
+import { request, setAuth, getAppErrorMessage } from '@/utils/request';
 import { buildCustomNavTopPadding } from '@/utils/safe-area';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
 import { useTheme } from '@/i18n/useTheme';
@@ -221,7 +221,7 @@ async function handleSendCode() {
     uni.showToast({ title: t('login.smsSent'), icon: 'success' });
     startCountdown();
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('login.sendFailed');
+    error.value = getAppErrorMessage(e, t('login.sendFailed'));
   } finally {
     sendingCode.value = false;
   }
@@ -250,7 +250,7 @@ async function handleSmsLogin() {
       uni.reLaunch({ url: '/pages/index/index' });
     }, 500);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('login.loginFailed');
+    error.value = getAppErrorMessage(e, t('login.loginFailed'));
   } finally {
     loading.value = false;
   }
@@ -274,7 +274,7 @@ async function handlePasswordSubmit() {
       uni.reLaunch({ url: '/pages/index/index' });
     }, 500);
   } catch (e) {
-    error.value = e instanceof Error ? e.message : t('common.operationFailed');
+    error.value = getAppErrorMessage(e, t('common.operationFailed'));
   } finally {
     loading.value = false;
   }

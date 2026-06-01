@@ -11,6 +11,7 @@ export const ApiMessageKey = {
   SERVER_ERROR: 'api.serverError',
   SERVER_CONFIG_ERROR: 'api.serverConfigError',
   NETWORK_ERROR: 'api.networkError',
+  REQUEST_TIMEOUT: 'api.requestTimeout',
   RESPONSE_FORMAT_ERROR: 'api.responseFormatError',
   REQUEST_FAILED: 'api.requestFailed',
 

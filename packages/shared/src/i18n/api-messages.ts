@@ -12,7 +12,8 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.NOT_FOUND]: '资源不存在',
   [ApiMessageKey.SERVER_ERROR]: '服务器错误',
   [ApiMessageKey.SERVER_CONFIG_ERROR]: '服务配置错误',
-  [ApiMessageKey.NETWORK_ERROR]: '网络错误',
+  [ApiMessageKey.NETWORK_ERROR]: '无法连接服务器，请检查网络或稍后重试',
+  [ApiMessageKey.REQUEST_TIMEOUT]: '连接超时，请检查网络后重试',
   [ApiMessageKey.RESPONSE_FORMAT_ERROR]: '响应格式错误',
   [ApiMessageKey.REQUEST_FAILED]: '请求失败',
 
@@ -152,7 +153,8 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.NOT_FOUND]: 'Not found',
   [ApiMessageKey.SERVER_ERROR]: 'Server error',
   [ApiMessageKey.SERVER_CONFIG_ERROR]: 'Server misconfigured',
-  [ApiMessageKey.NETWORK_ERROR]: 'Network error',
+  [ApiMessageKey.NETWORK_ERROR]: 'Unable to connect to the server. Check your network and try again.',
+  [ApiMessageKey.REQUEST_TIMEOUT]: 'Connection timed out. Check your network and try again.',
   [ApiMessageKey.RESPONSE_FORMAT_ERROR]: 'Invalid response format',
   [ApiMessageKey.REQUEST_FAILED]: 'Request failed',
 

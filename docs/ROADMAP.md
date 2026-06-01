@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.15  
-**更新日期**：2026-05-29  
+**文档版本**：3.16  
+**更新日期**：2026-06-01  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -30,8 +30,8 @@
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
-| **当前焦点** | **H1-c 全站视觉统一（进行中）** · 下一步 **H2-a** 路线海报 | Tab 页布局与主题切换已落地；地图 polyline 等待扫尾 |
-| **下一步建议** | 收尾 **H1-c** 硬编码色 → **H2-a** 路线海报 + **D5-a** 分享链路 | 宣传 Sprint 后再排 **H8** 行中重规划 · **E2** 真支付 · [H9+ 远期增强](#h9-远期增强phase-4-之后) |
+| **当前焦点** | **H1-c 全站视觉统一（收尾中）** · 下一步 **H2-a + D5-a** 路线海报与分享 | 主题 `initAppTheme` 已全局生效；**I1** 训练数据管线已落地；组件硬编码色待扫尾 |
+| **下一步建议** | ① 收尾 **H1-c**（地图/语音/遮罩 token 化）→ ② **H2-a + D5-a**（2026-06-10）→ ③ **I2** PAI 微调（可选并行） | 宣传 Sprint 后再排 **H8** · **E2** 真支付 · [H9+ 远期增强](#h9-远期增强phase-4-之后) |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -118,6 +118,8 @@ gantt
 | v0.7.1 | 2026-05-29 | H1-b 宣传 | `DouxingEmptyState` 组件；路线/成就/徽章/打卡/排行榜/订单/首页空态统一 |
 | v0.7.0 | 2026-05-29 | H1-a 宣传 | 品牌 CSS token；首页渐变 Hero + 价值主张 + 主 CTA；广场热门路线横向预览；去除「体验 MVP」文案 |
 | v0.7.2 | 2026-05-29 | H1-c 宣传（部分） | 全站 `--dx-*` 皮肤；`useTheme` 蓝/青主题切换；Tab 页 Header+内容区+TabBar 布局；首页 Cover Flow 热门路线轮播；子页 Hero+筛选面板；订单页包装 |
+| v0.7.3 | 2026-05-29 | H1-c 主题扫尾（部分） | `App.vue` `initAppTheme` 启动初始化；订单/个人资料页 i18n 与主题文案；`profile.theme*` 中英文 |
+| v0.8.0 | 2026-06-01 | I1 专属模型数据管线 | `pnpm ml:generate-dataset` / `ml:validate-dataset`；`training-data.service`；`packages/ml-training` 目录与 LoRA 配置；见 [阿里云专属模型](./阿里云-兜行专属模型训练与部署.md) |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -141,8 +143,10 @@ gantt
 | — | D2 + D3 | 搭子需求 + 匹配 MVP | 与 H5 社交 IM 前置 |
 | 2026-05-29 | **H1-a** | 宣传 Phase 1 — 首屏与品牌 token | **已完成** — CSS 变量；首页 Hero + 主 CTA + 广场热门预览；i18n 去 MVP 文案 |
 | 2026-05-29 | **H1-b** | 宣传 Phase 2 — 空状态与引导 | **已完成** — `DouxingEmptyState`；路线/成就/打卡/首页等复用 |
+| 2026-06-03 | **H1-c** | 宣传 Phase 4 — 全站视觉统一收尾 | **进行中** — Tab/Hero/主题切换已交付；待扫尾：`RouteMap*`、`VoiceTextComposer`、`AiPlanBlockingOverlay`、`RouteDayFlowChart`、原生 `switch` 等硬编码 `#1677ff` |
 | 2026-06-10 | **H2-a + D5-a** | 宣传 Phase 3 — 路线海报与分享链路 | Canvas 路线海报；`onShareAppMessage`；海报 H5 链接（短期）/ 小程序码（中期可选） |
-| 待定 | **H1-c** | 宣传 Phase 4 — 全站视觉统一 | **进行中（2026-05-29 部分交付）** — 规划/路线/我的/登录/订单/个性化子页 Hero；主题切换；Tab 页布局；首页轮播；待扫尾地图 polyline 等待组件硬编码色 |
+| 2026-06-01 | **I1** | 专属模型 — 训练数据生成与校验 | **已完成** — DeepSeek 批量造 SFT JSONL；Zod + POI 命中率校验；train/val 划分 |
+| 待定 | **I2 + I3** | 专属模型 — PAI 微调与百炼接入 | OSS 上传 → PAI LoRA → DashScope Endpoint → API `llmProvider` 切换；见 [阿里云专属模型](./阿里云-兜行专属模型训练与部署.md) |
 | 待定 | **H2-b** | 宣传 Phase 5 — 打卡/成就炫耀海报 | 打卡地图缩略 + 徽章成就模板 |
 | — | **H8 / H7** | 行中智能 | 位置实时重规划 · 错过景点；宣传 Sprint 后推进 |
 
@@ -189,6 +193,7 @@ gantt
 | 2026-05-27 | H9 方案定稿（LLM 排 POI + Enricher） | [§ H9](./开发记录-重难点与亮点.md#h9-住宿与交通编排llm-排-poi--后端-enricher) |
 | 2026-05-29 | H9-4 玩法 RAG（Phase 4） | [§ H9-4](./开发记录-重难点与亮点.md#h9-4-玩法-rag-与段间交通phase-4) |
 | 2026-05-29 | H1-c 全站视觉统一（部分） | [§ H1-c](./开发记录-重难点与亮点.md#h1-c-全站视觉统一部分) |
+| 2026-06-01 | I1 ML 训练数据生成与校验 | [§ I1](./开发记录-重难点与亮点.md#i1-ml-训练数据生成与校验) |
 | 2026-05-26 | A3-3 路线详情地图预览动画 | [§ A3-3](./开发记录-重难点与亮点.md#a3-3-路线详情地图预览动画) |
 | 2026-05-26 | A3+++ 草稿编辑弹窗 | [§ A3+++](./开发记录-重难点与亮点.md#a3-草稿编辑弹窗与发布状态) |
 
@@ -313,7 +318,7 @@ POST /api/speech/transcribe
 | §12 | 接口规范 | REST + **`Accept-Language` / `messageKey`**（G9 已落地，高频业务错误已 `ApiError`） | WebSocket、完整 v1 清单、配置类内部错误 i18n |
 | 国际化 | 界面与 API 多语言 | **G9 已验收**：全页 vue-i18n、shared 文案、locale 中间件、Web 管理端；en-US 主流程手测通过 | 第三语言、LLM 输出语言跟随 |
 | §13 | 前沿技术 | — | Web3、联邦学习等 |
-| 移动端 UX | iconfont TabBar、四 Tab | **H1-a/b 已完成**；**H1-c 进行中**（Hero、token、主题切换、Tab 页布局、子页筛选面板、首页 Cover Flow 轮播）；见 [§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | 地图 polyline / 部分组件硬编码色；成就解锁动效品牌化 |
+| 移动端 UX | iconfont TabBar、四 Tab | **H1-a/b 已完成**；**H1-c 收尾中**（Hero、token、`initAppTheme`、主题切换、Tab 布局、Cover Flow）；见 [§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | 地图/语音/流程图等组件硬编码色；成就解锁动效品牌化 |
 | 分享与传播 | 广场公开路线 | **宣传类目 H2-a～b + D5-a**（路线海报、小程序转发、H5 二维码）；[§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | D5 完整 H5 只读页 + 搭子链分享 |
 
 ---
@@ -361,6 +366,22 @@ POST /api/speech/transcribe
 | C3 | [x] | 2026-05-22 | RAG 景点检索（轻量） | §3.5 | MySQL 全文/标签检索或本地向量 | 景点来自内容库 |
 | C4 | [x] | 2026-05-22 | 多方案生成 | §3.7 | 一次返回 2～3 条候选路线 | 用户可选择方案 |
 | C5 | [x] | 2026-05-22 | Python AI 微服务（可选） | §1.4 | `packages/ai-service` + FastAPI/LangChain | Node 可调用，失败降级 |
+| C6 | [x] | 2026-06-01 | ML 训练数据管线 | §3、专属模型 | `ml:generate-dataset` / `ml:validate-dataset`；`training-data.service`；`packages/ml-training` | 种子 prompt → DeepSeek 造 SFT JSONL → Zod + POI 命中率校验 → train/val 划分 |
+
+---
+
+### 阶段 I：专属模型（§3 增强，2026-06-01 录入）
+
+> 与阶段 C/H9 并行；完整操作见 **[阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md)**。  
+> **目标**：在 RAG + Enricher 架构不变前提下，用 LoRA 微调提升 POI JSON 合法率与 RAG 命中率，降低延迟与推理成本。
+
+| 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
+|----|------|----------|------|------|----------|----------|
+| **I1** | [x] | 2026-06-01 | **训练数据生成与校验** | C2、C3、H9-4、DeepSeek | `generate-training-dataset.ts`；`validate-training-dataset.ts`；`buildTrainingSample` 复用线上 prompt 链；`packages/ml-training/datasets/` | `pnpm ml:generate-dataset` 产出 `raw.jsonl`；`pnpm ml:validate-dataset -- --split` 产出 train/val；无效样本被过滤 |
+| **I2** | [ ] | 待定 | **PAI LoRA 微调** | I1、阿里云 OSS | 上传 train/val 至 OSS；PAI Model Gallery 按 `distill-qwen-7b-lora.yaml` 训练 | 微调任务成功；模型 artifact 可下载或注册百炼 |
+| **I3** | [ ] | 待定 | **百炼推理接入与 A/B** | I2、G8 | DashScope Endpoint；server `llmProvider` 新增专属模型选项；失败降级 DeepSeek | 生产可切换 provider；JSON 合法率与 POI 命中率优于基线（见阿里云 doc §8） |
+
+**推荐实施顺序（专属模型）**：`I1`（已完成）→ 扩充 `prompts-seed.jsonl` 并批量造数 → `I2` → `I3`；与 **H2-a** 宣传 Sprint 可并行（不同人力线）。
 
 ---
 
@@ -493,7 +514,7 @@ POST /api/speech/transcribe
 | **H1-b** | [x] | 2026-05-29 | **Phase 2 — 空状态与引导** | H1-a | `DouxingEmptyState` 组件（插画位 + 标题 + 副文案 + 可选 CTA）；路线列表、成就、打卡、广场等空态复用 | 空列表不再仅一行字；引导按钮可跳转规划或登录 |
 | **H2-a** | [ ] | 2026-06-10 | **Phase 3 — 路线分享海报** | H1-a、A3 | 路线详情「生成海报」；Canvas 绘制（路线名 + 天数 + 亮点 POI + 品牌底栏 + 二维码位）；保存相册；微信小程序 `onShareAppMessage` 转发卡片 | 用户可生成 PNG 并保存/转发；好友点击卡片进入路线详情 |
 | **D5-a** | [ ] | 2026-06-10 | **分享链路最小版** | H2-a | 海报右下角 **H5 只读链接**（短期，配置 `VITE_H5_BASE_URL`）；中期可选服务端 **小程序码** API + 只读详情页（未登录可浏览已公开路线） | 扫码或打开 H5 链接可只读浏览路线摘要；与 H2-a 海报二维码打通 |
-| **H1-c** | [~] | 2026-05-29 | **Phase 4 — 全站视觉统一（进行中）** | H1-a、H1-b | 规划/路线/我的/登录/订单/打卡等子页 Hero + token；`useTheme` 蓝青切换；Tab 页 Header+内容区布局；首页 Cover Flow 热门路线；`DouxingTabBar` 随主题色 | 主流程视觉一致；内容够高时不滚动；待扫尾：地图 polyline、部分 switch/组件硬编码色、成就动效 |
+| **H1-c** | [~] | 2026-06-03 | **Phase 4 — 全站视觉统一（收尾中）** | H1-a、H1-b | 规划/路线/我的/登录/订单/打卡等子页 Hero + token；`initAppTheme` 启动初始化；`useTheme` 蓝青切换；Tab 页 Header+内容区布局；首页 Cover Flow 热门路线；`DouxingTabBar` 随主题色 | 主流程视觉一致；内容够高时不滚动；**待扫尾**：`RouteMap*`、`VoiceTextComposer`、`AiPlanBlockingOverlay`、`RouteDayFlowChart`、原生 `switch` 等硬编码色 |
 | **H2-b** | [ ] | 待定 | **Phase 5 — 打卡/成就炫耀海报** | H2-a、B3、B4 | 打卡地图缩略图海报；徽章/成就炫耀模板；成就页、打卡地图页入口 | 用户可生成打卡/成就炫耀图并分享 |
 
 **推荐实施顺序（宣传类目）**：`H1-a → H1-b ∥ H2-a + D5-a → H1-c → H2-b`。
@@ -528,7 +549,8 @@ POST /api/speech/transcribe
 | 商业化变现 | A4 → E1 → E2 → E3 |
 | 社交差异化 | D1 → D2 → D3 → **H5** → D5 + **H2** |
 | 智能行程升级 | **H9-1**（a→g）→ **H9-2** → **H9-4a**（止血）→ **H9-4b～d**（玩法 RAG）→ **H9-3** → **H8** → **H7** → C2/C3 增强 |
-| **大众接受 / 宣传传播** | **[H1-a](#宣传类目h1--h2--d5-最小版分-phase-实施) → H2-a + D5-a → H1-b → H1-c → H2-b** | 首屏品牌 → 分享海报 → 空状态 → 全站统一 |
+| **大众接受 / 宣传传播** | **[H1-c 收尾](#宣传类目h1--h2--d5-最小版分-phase-实施) → [H2-a](#宣传类目h1--h2--d5-最小版分-phase-实施) + D5-a → H2-b** | 全站 token 统一 → 分享海报 → 打卡炫耀 |
+| **专属模型降本增效** | **[I1](#阶段-i专属模型2026-06-01-录入)**（已完成）→ 扩充 seed → **I2** PAI → **I3** 百炼接入 | 与宣传 Sprint 可并行 |
 | 沉浸与传播（深化） | **H1-c** → **H3** → **H4** → **H2-b** |
 | 合规与安全 | **H6** → E2 → [后期待办](./后期待办.md) |
 | 工程可上线 | G8（已完成）→ G7 → G2 → E2 真支付 |
@@ -551,8 +573,10 @@ POST /api/speech/transcribe
 | 迭代 10b | 2026-05-28 | **H9-2** | 高德 direction polyline · 酒店 RAG · 地图与耗时一致 |
 | 迭代 10c | 2026-05-29 | **H9-3** | 班次库 Catalog 方案 · 可选 Juhe 实时 · 开放时长 · 闭馆冲突提示 |
 | 迭代 10d | 2026-05-29 | **H9-4** | **已完成** — 玩法 RAG · 段间交通比选 · 景区规则止血 |
-| 迭代 10e | 2026-06 起 | **宣传类目 Sprint** | **H1-a + H2-a + D5-a** — 首屏品牌 · 路线海报 · 小程序分享 |
-| 迭代 11a | 2026-06 上旬 | H1-b + H1-c | 空状态组件 · 全站视觉统一 |
+| 迭代 10e | 2026-06 上旬 | **宣传类目 Sprint** | **H1-c 收尾 + H2-a + D5-a** — 全站 token · 路线海报 · 小程序分享 |
+| 迭代 10f | 2026-06-01 | **I1** | **已完成** — ML 训练数据生成与校验管线 |
+| 迭代 10g | 待定 | **I2 + I3** | PAI LoRA 微调 · 百炼推理接入 · A/B 对比 |
+| 迭代 11a | 2026-06 上旬 | H1-b + H1-c | 空状态组件 · 全站视觉统一（H1-b 已完成；H1-c 收尾中） |
 | 迭代 11b | 待定 | H2-b | 打卡/成就炫耀海报 |
 | 迭代 11c | 2026-08 起 | H3 + H4 | 角色扮演 · 旅行游戏化 |
 | 迭代 10f | 2026-07 起 | H8 + H7 | 实时重规划 · 错过景点（宣传 Sprint 后） |
@@ -562,10 +586,11 @@ POST /api/speech/transcribe
 
 | 优先级 | 步骤 | 理由 |
 |--------|------|------|
-| **P0** | **[H1-a、H2-a、D5-a](#宣传类目h1--h2--d5-最小版分-phase-实施)** | **宣传类目第一 Sprint**：首屏品牌 + 路线海报 + 分享链路；提升大众接受度与拉新 |
+| **P0** | **[H1-c 收尾](#宣传类目h1--h2--d5-最小版分-phase-实施) + [H2-a、D5-a](#宣传类目h1--h2--d5-最小版分-phase-实施)** | 组件 token 化 → 路线海报 + 分享链路；目标 2026-06-10 可对外转发 |
 | P0 | H8、H7 | H9 四 Phase 已交付；宣传 Sprint 后推进行中智能 |
+| P0.5 | [I2、I3](#阶段-i专属模型2026-06-01-录入) | 专属模型 PAI 微调与百炼接入；I1 数据管线已就绪 |
 | P0.5 | [H9+-1、H9+-2](#h9-远期增强phase-4-之后) | Playbook 库扩充 + Web CRUD；见 H9+ 表 |
-| P1 | H1-b、H1-c、H2-b | 空状态、全站统一、打卡/成就海报；宣传类目后续 Phase |
+| P1 | H2-b | 打卡/成就炫耀海报；宣传类目 Phase 5 |
 | P1 | H9+-3、H9+-4、H9+-5 | POI 顺序对齐、出发日期、开放时长 |
 | P2 | H3、H4 | 差异化体验与游戏化，可并行设计 |
 | P3 | H5 | 依赖 D 阶段社交关系链 |
@@ -663,8 +688,10 @@ POST /api/speech/transcribe
 | 1 | H1-a | 品牌 token、首页 Hero、广场热门、对外文案 | 2026-05-29 ✓ |
 | 2 | H1-b | `DouxingEmptyState`、各页空态引导 | 2026-05-29 ✓ |
 | 3 | H2-a + D5-a | 路线 Canvas 海报、小程序转发、H5 二维码 | 2026-06-10 |
-| 4 | H1-c | 规划/路线/我的/登录/订单/子页 Hero；主题切换；Tab 布局；首页轮播 | **进行中**（2026-05-29 部分 ✓） |
+| 4 | H1-c | 规划/路线/我的/登录/订单/子页 Hero；`initAppTheme`；主题切换；Tab 布局；首页轮播 | **收尾中**（2026-06-03 目标） |
 | 5 | H2-b | 打卡地图、徽章/成就炫耀海报 | 待定 |
+| — | I1 | ML 训练数据 `generate` / `validate` / train·val 划分 | 2026-06-01 ✓ |
+| — | I2～I3 | PAI LoRA + 百炼 Endpoint + API 接入 | 待定 |
 
 **第一 Sprint 范围**：Phase 1 + Phase 3（`H1-a + H2-a + D5-a`），约 3～5 天。
 
@@ -683,7 +710,7 @@ POST /api/speech/transcribe
 | Web | Vue 3 + Element Plus | Vue 3 + Vite（无 Element Plus） |
 | 移动 | UniApp | UniApp Vue3；H5 / 微信小程序 / App；iconfont TabBar |
 | 后端 | Node + 独立 Python AI | Node Express + 可选 `packages/ai-service`；腾讯云短信 |
-| AI | Qwen + LangChain | **DeepSeek** + **LM Studio** + Python LangChain 微服务 + 模板降级 |
+| AI | Qwen + LangChain | **DeepSeek** + **LM Studio** + Python LangChain 微服务 + 模板降级；**I1** SFT 数据管线（LoRA 训练待 I2） |
 | 数据库 | MySQL + Redis + Milvus + Neo4j | MySQL only |
 | 部署 | Docker + K8s | Docker MySQL/Redis + PM2 + Nginx HTTPS + Debian 12 部署脚本 |
 
@@ -701,6 +728,7 @@ POST /api/speech/transcribe
 | 开发记录（重难点与亮点） | [docs/开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) |
 | 国际化（i18n） | [docs/国际化.md](./国际化.md) |
 | 品牌视觉规范（H1） | [docs/品牌视觉规范.md](./品牌视觉规范.md) |
+| 专属模型训练与部署 | [docs/阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) |
 | 后期待办（合规资质） | [docs/后期待办.md](./后期待办.md) |
 | 产品待办（H 阶段） | [ROADMAP.md §9](./ROADMAP.md#9-产品待办池新增关键点) |
 | 微信小程序 | [scripts/mp-weixin.md](../scripts/mp-weixin.md) |
@@ -720,4 +748,4 @@ POST /api/speech/transcribe
 
 ---
 
-*文档版本 3.15 · 最后更新：2026-05-29*
+*文档版本 3.16 · 最后更新：2026-06-01*
