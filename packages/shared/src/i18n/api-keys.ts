@@ -137,6 +137,8 @@ export const ApiMessageKey = {
   ROUTE_MAP_PATH_EMPTY: 'api.routeMapPathEmpty',
   SHARE_ROUTE_NOT_AVAILABLE: 'api.shareRouteNotAvailable',
   SHARE_ROUTE_LOAD_FAILED: 'api.shareRouteLoadFailed',
+  SHARE_WXACODE_FAILED: 'api.shareWxacodeFailed',
+  SHARE_WXACODE_NOT_CONFIGURED: 'api.shareWxacodeNotConfigured',
   ORDER_PAY_PENDING_CONFIRM: 'api.orderPayPendingConfirm',
   WECHAT_PAY_PARAMS_MISSING: 'api.wechatPayParamsMissing',
   SMS_SEND_RETRY: 'api.smsSendRetry',

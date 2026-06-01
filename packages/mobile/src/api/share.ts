@@ -5,3 +5,8 @@ import { request } from '@/utils/request';
 export function fetchSharedRoute(id: number) {
   return request<TravelRouteInfo>(`/share/routes/${id}`);
 }
+
+/** 海报 QR 兜底：微信 URL Link（无 H5 且小程序码图片加载失败时） */
+export function fetchRouteShareLink(id: number) {
+  return request<{ url: string }>(`/share/routes/${id}/link`);
+}

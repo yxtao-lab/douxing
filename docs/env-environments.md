@@ -174,3 +174,47 @@ pnpm dev:mp-weixin
 2. 微信公众平台 **downloadFile / uploadFile 合法域名**：`https://api.yxtao.site`
 3. 图片文件在服务器 `packages/server/uploads/` 目录，或小程序内重新上传
 4. 旧数据若仍存完整 localhost URL，读取时会自动规范化，下次保存会写入相对路径
+
+---
+
+## 8. 海报二维码配置
+
+手帐海报底栏 QR 按 **优先级** 选用：H5 链接 → 服务端小程序码 PNG → 微信 URL Link + 客户端 QR。详见 [开发记录 § D5 补全](./开发记录-重难点与亮点.md#d5-补全--海报二维码与行程全量展示)。
+
+### 8.1 前端（打包时写入小程序）
+
+在对应环境的 env 文件中配置（改后须 **重新编译** 小程序）：
+
+| 文件 | 场景 |
+|------|------|
+| `.env.development` | `pnpm dev:mp-weixin`（本地 H5 默认 `http://127.0.0.1:5174`） |
+| `.env.staging` | `pnpm build:mp-weixin:staging` |
+| `.env.production` | `pnpm build:mp-weixin` |
+
+```env
+# 移动端 H5 根地址（海报 H5 二维码：{base}/#/pages/share/route?id=…）
+VITE_H5_BASE_URL=https://你的H5域名
+```
+
+未配置时，小程序包仍可通过服务端微信 API 生成小程序码 / URL Link（见下）。
+
+### 8.2 后端（运行时，生成小程序码 / URL Link）
+
+写在 **根目录 `.env`**（本地 `pnpm dev:server`）或 **服务器 `.env`**（`api.yxtao.site`）：
+
+```env
+MP_WEIXIN_APPID=wx2c8d1e2b2e502819
+WECHAT_MINI_APP_SECRET=你的AppSecret
+# 可选：develop | trial | release（默认 development→develop，production→release）
+WECHAT_MINI_ENV_VERSION=release
+```
+
+改后须 **重启 API**。微信公众平台 → 开发 → 开发管理 → 开发设置 获取 AppSecret。
+
+### 8.3 相关 API
+
+| 接口 | 说明 |
+|------|------|
+| `GET /api/share/routes/:id` | H5 只读路线（须 **已发布 + 广场公开**） |
+| `GET /api/share/routes/:id/wxacode` | 小程序码 PNG（须 **已发布**，供海报生成） |
+| `GET /api/share/routes/:id/link` | 微信 URL Link JSON `{ url }`（QR 兜底） |

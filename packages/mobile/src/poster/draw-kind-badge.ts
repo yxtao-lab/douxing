@@ -103,7 +103,8 @@ export function measureItemTitleRowHeight(
   const titleMaxW = Math.max(40, maxW - badgeW - style.badgeGap);
   ctx.font = style.titleFont;
   const titleH = getWrapTextHeight(ctx, name, titleMaxW, style.titleLineHeight, style.titleMaxLines);
-  return Math.max(style.badgeBoxH, titleH) + 8;
+  // 与 drawItemTitleRow + wrapText 一致：baseline 偏移 + 文本高度
+  return style.titleLineHeight - 6 + titleH;
 }
 
 /** 标签 + 标题同一行（标题在标签右侧换行） */

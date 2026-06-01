@@ -1,6 +1,8 @@
 # 兜行 · 微信小程序部署
 
-AppID：`wx8bdbe398733ca0f0`
+AppID：`wx2c8d1e2b2e502819`
+
+海报 QR 与环境变量见 [docs/env-environments.md §8](../docs/env-environments.md#8-海报二维码配置)。
 
 ## 1. 开发调试
 

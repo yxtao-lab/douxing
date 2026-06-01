@@ -4,9 +4,6 @@ import { buildRouteShareUrl } from './share-url';
 import { MAX_HIGHLIGHT_IMAGES_PER_DAY } from './draw-poster-images';
 import { buildRouteDayFlow, type RouteFlowNode } from '@/utils/route-day-flow';
 
-const MAX_DISPLAY_DAYS = 5;
-const MAX_ITEMS_PER_DAY = 8;
-
 const DAY_THEME_COLORS = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#1d3557', '#457b9d'];
 
 function collectDayHighlightImages(nodes: RouteFlowNode[]): string[] {
@@ -43,8 +40,7 @@ function flowNodeToPosterItem(node: RouteFlowNode, labels: PosterLabels): Poster
 }
 
 function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: PosterLabels): PosterDayBlock[] {
-  const visibleDays = days.slice(0, MAX_DISPLAY_DAYS);
-  return visibleDays.map((day, index) => {
+  return days.map((day, index) => {
     const dayNo = index + 1;
     const label =
       day.title?.trim() ||
@@ -52,15 +48,14 @@ function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: Poster
       (locale === 'en-US' ? `${labels.dayPrefix} ${dayNo}` : `第 ${dayNo} 天`);
 
     const flowNodes = buildRouteDayFlow(day);
-    const visibleNodes = flowNodes.slice(0, MAX_ITEMS_PER_DAY);
-    const items = visibleNodes.map((node) => flowNodeToPosterItem(node, labels));
+    const items = flowNodes.map((node) => flowNodeToPosterItem(node, labels));
 
     return {
       label,
       themeColor: DAY_THEME_COLORS[index % DAY_THEME_COLORS.length]!,
       items,
       highlightImages: collectDayHighlightImages(flowNodes),
-      hiddenItemCount: Math.max(0, flowNodes.length - MAX_ITEMS_PER_DAY),
+      hiddenItemCount: 0,
     };
   });
 }
@@ -108,7 +103,6 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
   const city = detail?.matchedCity?.trim() || input.route.budgetRange?.trim() || '—';
   const dayCount = input.route.days || days.length;
   const labels = buildLabels(input.locale, dayCount);
-  const hiddenDayCount = Math.max(0, days.length - MAX_DISPLAY_DAYS);
 
   return {
     routeId: input.route.id,
@@ -117,7 +111,7 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
     subtitle: input.subtitle?.trim() || (input.route.description ?? '').trim(),
     dayCount,
     days: buildDayBlocks(days, input.locale, labels),
-    hiddenDayCount,
+    hiddenDayCount: 0,
     brand: {
       name: input.brandName,
       tagline: input.brandTagline,

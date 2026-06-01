@@ -17,8 +17,8 @@ import { POSTER_HEIGHT, POSTER_WIDTH, WRAP_LINES_UNLIMITED, getWrapTextHeight } 
 export { kindLabel } from './draw-kind-badge';
 
 export const FOOTER_RESERVE = 200;
-/** 微信小程序 canvas 高度上限约 4096，留余量 */
-const MAX_POSTER_HEIGHT = 4000;
+/** 微信小程序 canvas 高度上限约 4096px */
+const MAX_POSTER_HEIGHT = 4096;
 
 const DIARY_HEADER_GAP = 20;
 const DIARY_BLOCK_GAP = 20;
@@ -206,7 +206,7 @@ export function measureDiaryDayBlockHeight(
     if (item.time || item.meta) textY += 20;
     if (item.desc) {
       ctx.font = '16px sans-serif';
-      textY += getWrapTextHeight(ctx, item.desc, textMaxW, 20, WRAP_LINES_UNLIMITED) + 6;
+      textY += getWrapTextHeight(ctx, item.desc, textMaxW, 20, WRAP_LINES_UNLIMITED) + 4;
     }
     textY += 14;
   }

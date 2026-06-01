@@ -48,3 +48,13 @@ export async function assertPublicSharedRoute(routeId: number): Promise<TravelRo
   }
   return route;
 }
+
+/** 海报分享码：已发布路线即可（不要求广场公开，便于生成分享图） */
+export async function assertPublishedRouteForPoster(routeId: number): Promise<void> {
+  const db = getDb();
+  const rows = await db.select().from(travelRoutes).where(eq(travelRoutes.id, routeId)).limit(1);
+  const row = rows[0];
+  if (!row || row.status !== RouteStatus.PUBLISHED) {
+    throw new ApiError(ApiMessageKey.SHARE_ROUTE_NOT_AVAILABLE);
+  }
+}

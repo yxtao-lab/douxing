@@ -54,7 +54,7 @@
     }
   },
   "mp-weixin": {
-    "appid": "wx8bdbe398733ca0f0",
+    "appid": "wx2c8d1e2b2e502819",
     "requiredPrivateInfos": ["getLocation"],
     "permission": {
       "scope.userLocation": {

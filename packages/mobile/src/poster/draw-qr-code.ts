@@ -1,5 +1,7 @@
 import qrcode from 'qrcode-generator';
 import type { PosterCanvasContext } from './types';
+import type { PosterImageMap } from './load-poster-image';
+import { POSTER_WXACODE_KEY } from './load-poster-image';
 
 /** 在 Canvas 上绘制 QR 码（D5-a H5 链接） */
 export function drawQrCode(
@@ -27,6 +29,42 @@ export function drawQrCode(
     }
   }
   ctx.restore();
+}
+
+/** 绘制已加载的小程序码图片 */
+export function drawQrImage(
+  ctx: PosterCanvasContext,
+  image: CanvasImageSource,
+  x: number,
+  y: number,
+  size: number,
+) {
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x, y, size, size);
+  ctx.drawImage(image, x, y, size, size);
+  ctx.restore();
+}
+
+/** 海报底栏二维码：H5 链接优先，其次服务端小程序码，最后占位 */
+export function drawPosterQr(
+  ctx: PosterCanvasContext,
+  qrUrl: string | null,
+  imageMap: PosterImageMap | undefined,
+  x: number,
+  y: number,
+  size: number,
+) {
+  if (qrUrl) {
+    drawQrCode(ctx, qrUrl, x, y, size);
+    return;
+  }
+  const wxacode = imageMap?.get(POSTER_WXACODE_KEY);
+  if (wxacode) {
+    drawQrImage(ctx, wxacode, x, y, size);
+    return;
+  }
+  drawQrPlaceholder(ctx, x, y, size);
 }
 
 /** 无 H5 链接时的占位方块 */

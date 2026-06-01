@@ -22,7 +22,7 @@ import {
   roundRect,
   wrapText,
 } from '../draw-utils';
-import { drawQrCode, drawQrPlaceholder } from '../draw-qr-code';
+import { drawPosterQr } from '../draw-qr-code';
 
 function formatMoreDays(payload: PosterPayload): string | null {
   if (payload.hiddenDayCount <= 0) return null;
@@ -202,11 +202,7 @@ export function renderTimelineColumnsPoster(
     payload.brand.scanHint,
     112,
     (qrX, qrY, qrSize) => {
-      if (payload.qrUrl) {
-        drawQrCode(ctx, payload.qrUrl, qrX, qrY, qrSize);
-      } else {
-        drawQrPlaceholder(ctx, qrX, qrY, qrSize);
-      }
+      drawPosterQr(ctx, payload.qrUrl, imageMap, qrX, qrY, qrSize);
     },
   );
 

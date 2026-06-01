@@ -81,7 +81,8 @@ import {
   POSTER_TEMPLATES,
   renderPoster,
 } from '@/poster/registry';
-import { loadPosterImages } from '@/poster/load-poster-image';
+import { loadPosterImages, loadPosterWxacode, POSTER_WXACODE_KEY } from '@/poster/load-poster-image';
+import { fetchRouteShareLink } from '@/api/share';
 import { getAppErrorMessage } from '@/utils/request';
 
 const props = defineProps<{
@@ -155,7 +156,32 @@ async function generatePreview() {
         : await queryPosterCanvas('routePosterCanvas', componentInstance, canvasHeight);
     surface.ctx.clearRect(0, 0, surface.width, surface.height);
     const imageMap = await loadPosterImages(surface.canvas, payload);
-    renderPoster(selectedTemplate.value, surface.ctx, payload, imageMap, canvasHeight);
+    let qrUrl = payload.qrUrl;
+    if (!qrUrl) {
+      await loadPosterWxacode(surface.canvas, payload.routeId, imageMap);
+      if (!imageMap.has(POSTER_WXACODE_KEY)) {
+        try {
+          const link = await fetchRouteShareLink(payload.routeId);
+          if (link.url?.trim()) {
+            qrUrl = link.url.trim();
+          }
+        } catch {
+          /* URL Link 失败时仍尝试占位 */
+        }
+      }
+    }
+    const renderPayload = {
+      ...payload,
+      qrUrl,
+      brand: {
+        ...payload.brand,
+        scanHint:
+          qrUrl || imageMap.has(POSTER_WXACODE_KEY)
+            ? t('routes.poster.scanHint')
+            : t('routes.poster.scanHintMpOnly'),
+      },
+    };
+    renderPoster(selectedTemplate.value, surface.ctx, renderPayload, imageMap, canvasHeight);
     const path = await exportPosterCanvas(surface);
     previewPath.value = path;
     emit('generated', path);
@@ -171,7 +197,8 @@ async function generatePreview() {
 
 function payloadScanHint(): string {
   const base = import.meta.env.VITE_H5_BASE_URL?.trim();
-  return base ? t('routes.poster.scanHint') : t('routes.poster.scanHintMpOnly');
+  if (base) return t('routes.poster.scanHint');
+  return t('routes.poster.scanHintMpOnly');
 }
 
 function handleClose() {

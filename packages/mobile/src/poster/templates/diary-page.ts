@@ -16,7 +16,7 @@ import {
   roundRect,
   wrapText,
 } from '../draw-utils';
-import { drawQrCode, drawQrPlaceholder } from '../draw-qr-code';
+import { drawPosterQr } from '../draw-qr-code';
 
 const DIARY_CARD_PAD_BOTTOM = 20;
 
@@ -97,9 +97,8 @@ export function renderDiaryPagePoster(
     const labelEndY = wrapText(ctx, day.label, 56, cursorY + 36, textMaxW, 28, 2);
 
     let textY = labelEndY + 14;
-    let photoStripH = 0;
     if (day.highlightImages.length > 0) {
-      photoStripH = drawDiaryPhotoStrip(
+      const photoStripH = drawDiaryPhotoStrip(
         ctx,
         day.highlightImages,
         imageMap,
@@ -149,7 +148,7 @@ export function renderDiaryPagePoster(
       ctx.fillText(
         payload.labels.moreItems.replace('{count}', String(day.hiddenItemCount)),
         56,
-        cursorY + blockH - DIARY_CARD_PAD_BOTTOM - 4,
+        textY + 4,
       );
     }
 
@@ -177,11 +176,7 @@ export function renderDiaryPagePoster(
     payload.brand.scanHint,
     112,
     (qrX, qrY, qrSize) => {
-      if (payload.qrUrl) {
-        drawQrCode(ctx, payload.qrUrl, qrX, qrY, qrSize);
-      } else {
-        drawQrPlaceholder(ctx, qrX, qrY, qrSize);
-      }
+      drawPosterQr(ctx, payload.qrUrl, imageMap, qrX, qrY, qrSize);
     },
   );
 

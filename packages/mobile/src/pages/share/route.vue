@@ -100,6 +100,21 @@ function dayTitle(day: RouteDayPlan, index: number) {
   return tf('routes.flowDayTab', { day: index + 1 });
 }
 
+function parseRouteIdFromQuery(query: Record<string, string | undefined> | undefined): number {
+  const direct = parseInt(String(query?.id ?? ''), 10);
+  if (direct > 0) return direct;
+
+  const scene = query?.scene;
+  if (!scene) return 0;
+
+  const decoded = decodeURIComponent(String(scene));
+  const idMatch = decoded.match(/(?:^|&?)id=(\d+)/);
+  if (idMatch?.[1]) return parseInt(idMatch[1], 10);
+
+  const plain = decoded.match(/^(\d+)$/);
+  return plain?.[1] ? parseInt(plain[1], 10) : 0;
+}
+
 async function loadRoute() {
   loading.value = true;
   error.value = '';
@@ -123,7 +138,7 @@ function openApp() {
 }
 
 onLoad((query) => {
-  routeId = parseInt(String(query?.id ?? '0'), 10);
+  routeId = parseRouteIdFromQuery(query as Record<string, string | undefined>);
   if (routeId) {
     void loadRoute();
   } else {
