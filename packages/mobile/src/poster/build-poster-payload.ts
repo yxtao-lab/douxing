@@ -1,17 +1,45 @@
 import type { LocaleCode, RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
-import type { PosterDayBlock, PosterLabels, PosterPayload } from './types';
+import type { PosterDayBlock, PosterLabels, PosterPayload, PosterPoiItem } from './types';
 import { buildRouteShareUrl } from './share-url';
+import { MAX_HIGHLIGHT_IMAGES_PER_DAY } from './draw-poster-images';
+import { buildRouteDayFlow, type RouteFlowNode } from '@/utils/route-day-flow';
 
-const MAX_DISPLAY_DAYS = 4;
-const MAX_POI_PER_DAY = 3;
-const MAX_DESC_LEN = 48;
+const MAX_DISPLAY_DAYS = 5;
+const MAX_ITEMS_PER_DAY = 8;
 
 const DAY_THEME_COLORS = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#1d3557', '#457b9d'];
 
-function truncateText(text: string, maxLen: number): string {
-  const trimmed = text.trim();
-  if (trimmed.length <= maxLen) return trimmed;
-  return `${trimmed.slice(0, maxLen - 1)}…`;
+function collectDayHighlightImages(nodes: RouteFlowNode[]): string[] {
+  const urls: string[] = [];
+  const seen = new Set<string>();
+  for (const node of nodes) {
+    if (node.kind !== 'play') continue;
+    const url = node.spot?.coverImageUrl?.trim();
+    if (!url || seen.has(url)) continue;
+    seen.add(url);
+    urls.push(url);
+    if (urls.length >= MAX_HIGHLIGHT_IMAGES_PER_DAY) break;
+  }
+  return urls;
+}
+
+function flowNodeToPosterItem(node: RouteFlowNode, labels: PosterLabels): PosterPoiItem {
+  let meta: string | undefined;
+  if (node.kind === 'transit' && node.transit) {
+    meta = labels.transitDuration.replace('{minutes}', String(node.transit.durationMinutes));
+  } else if (node.meta && (node.kind === 'play' || node.kind === 'lodging')) {
+    meta = `¥${node.meta}`;
+  }
+
+  return {
+    kind: node.kind,
+    time: node.subtitle?.trim() || undefined,
+    name: node.title.trim() || '—',
+    desc: (node.description ?? '').trim(),
+    meta,
+    poiType: node.spot?.poiType,
+    imageUrl: node.spot?.coverImageUrl,
+  };
 }
 
 function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: PosterLabels): PosterDayBlock[] {
@@ -20,18 +48,19 @@ function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: Poster
     const dayNo = index + 1;
     const label =
       day.title?.trim() ||
+      day.date?.trim() ||
       (locale === 'en-US' ? `${labels.dayPrefix} ${dayNo}` : `第 ${dayNo} 天`);
-    const items = (day.attractions ?? []).slice(0, MAX_POI_PER_DAY).map((spot) => ({
-      time: spot.time?.trim() || undefined,
-      name: spot.name?.trim() || '—',
-      desc: truncateText(spot.description ?? '', MAX_DESC_LEN),
-      poiType: spot.poiType,
-      imageUrl: spot.coverImageUrl,
-    }));
+
+    const flowNodes = buildRouteDayFlow(day);
+    const visibleNodes = flowNodes.slice(0, MAX_ITEMS_PER_DAY);
+    const items = visibleNodes.map((node) => flowNodeToPosterItem(node, labels));
+
     return {
       label,
       themeColor: DAY_THEME_COLORS[index % DAY_THEME_COLORS.length]!,
       items,
+      highlightImages: collectDayHighlightImages(flowNodes),
+      hiddenItemCount: Math.max(0, flowNodes.length - MAX_ITEMS_PER_DAY),
     };
   });
 }
@@ -41,13 +70,23 @@ function buildLabels(locale: LocaleCode, dayCount: number): PosterLabels {
     return {
       dayCount: dayCount === 1 ? '1 day' : `${dayCount} days`,
       moreDays: '+{count} more days',
+      moreItems: '+{count} more stops',
       dayPrefix: 'Day',
+      sectionPlay: 'Sightseeing',
+      sectionTransit: 'Transit',
+      sectionLodging: 'Lodging',
+      transitDuration: '{minutes} min',
     };
   }
   return {
     dayCount: `${dayCount} 天`,
     moreDays: '还有 {count} 天',
+    moreItems: '还有 {count} 项',
     dayPrefix: '第',
+    sectionPlay: '游玩',
+    sectionTransit: '交通',
+    sectionLodging: '住宿',
+    transitDuration: '{minutes} 分钟',
   };
 }
 
@@ -60,7 +99,7 @@ export interface BuildPosterPayloadInput {
   subtitle?: string;
 }
 
-/** 从路线详情抽取统一 PosterPayload */
+/** 从路线详情抽取统一 PosterPayload（含交通 / 游玩 / 住宿，与行程路径一致） */
 export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayload | null {
   const detail = input.route.routeDetail as RouteDetailPayload | null;
   const days = detail?.days ?? [];
@@ -75,7 +114,7 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
     routeId: input.route.id,
     city,
     title: input.route.name?.trim() || '—',
-    subtitle: input.subtitle?.trim() || truncateText(input.route.description ?? '', 64),
+    subtitle: input.subtitle?.trim() || (input.route.description ?? '').trim(),
     dayCount,
     days: buildDayBlocks(days, input.locale, labels),
     hiddenDayCount,

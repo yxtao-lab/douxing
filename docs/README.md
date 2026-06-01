@@ -7,9 +7,11 @@
 | [env-environments.md](./env-environments.md) | 三套环境变量与打包 env 说明 |
 | [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划 |
+| [下一步工作.md](./下一步工作.md) | **当前建议先做什么**（精简排期，不重复 ROADMAP 全文） |
 | [后期待办.md](./后期待办.md) | **合规与资质类待办**（备案、支付、短信认证、公司注册等） |
 | [开发记录-重难点与亮点.md](./开发记录-重难点与亮点.md) | 开发思考过程、亮点与重难点（覆盖 M0/A/B/C 已验收步骤；文首有阶段速查表） |
-| [amap-geocoding.md](./amap-geocoding.md) | 高德 POI 搜索 / 地理编码接入与配置 |
+| [amap-geocoding.md](./amap-geocoding.md) | 高德 POI 搜索 / 地理编码 / **封面拉图** 接入与配置 |
+| [代码解析与审核.md](./代码解析与审核.md) | **功能代码解析模板** + 实现原理 / 运行步骤 / Review 清单（含景点封面 POI 拉图示例） |
 | [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) | **专属模型**：DeepSeek 造数据 → PAI LoRA → 百炼推理 → Debian 接入 |
 | [../scripts/app-native.md](../scripts/app-native.md) | iOS / Android 一键部署与单平台开发 |
 

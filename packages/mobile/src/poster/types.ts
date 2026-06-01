@@ -3,10 +3,15 @@ import type { LocaleCode } from '@douxing/shared';
 /** H2-a MVP 手帐海报模板 ID */
 export type PosterTemplateId = 'timeline-columns' | 'diary-page';
 
+export type PosterPoiKind = 'transit' | 'play' | 'lodging';
+
 export interface PosterPoiItem {
+  kind: PosterPoiKind;
   time?: string;
   name: string;
   desc: string;
+  /** 交通耗时 / 参考费用等 */
+  meta?: string;
   poiType?: string;
   imageUrl?: string;
 }
@@ -15,6 +20,10 @@ export interface PosterDayBlock {
   label: string;
   themeColor: string;
   items: PosterPoiItem[];
+  /** 当天精选封面（最多 3 张，去重） */
+  highlightImages: string[];
+  /** 当天超出展示上限的节点数 */
+  hiddenItemCount: number;
 }
 
 export interface PosterBrandInfo {
@@ -26,7 +35,12 @@ export interface PosterBrandInfo {
 export interface PosterLabels {
   dayCount: string;
   moreDays: string;
+  moreItems: string;
   dayPrefix: string;
+  sectionPlay: string;
+  sectionTransit: string;
+  sectionLodging: string;
+  transitDuration: string;
 }
 
 /** 统一海报数据层（ROADMAP §5 H2-a） */

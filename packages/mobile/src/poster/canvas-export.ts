@@ -13,6 +13,7 @@ export interface PosterCanvasSurface {
 export function queryPosterCanvas(
   canvasId: string,
   componentInstance?: unknown,
+  canvasHeight = POSTER_HEIGHT,
 ): Promise<PosterCanvasSurface> {
   return new Promise((resolve, reject) => {
     let query = uni.createSelectorQuery();
@@ -29,7 +30,7 @@ export function queryPosterCanvas(
           return;
         }
         const width = POSTER_WIDTH;
-        const height = POSTER_HEIGHT;
+        const height = canvasHeight;
         const dpr = uni.getSystemInfoSync().pixelRatio || 2;
         canvas.width = width * dpr;
         canvas.height = height * dpr;

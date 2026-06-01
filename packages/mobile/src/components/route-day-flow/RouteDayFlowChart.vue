@@ -60,12 +60,19 @@
               </text>
             </view>
             <view class="flow-card-body">
-              <image
+              <view
                 v-if="node.kind === 'play' && node.spot?.coverImageUrl"
-                class="flow-thumb"
-                :src="node.spot.coverImageUrl"
-                mode="aspectFill"
-              />
+                class="flow-thumb-wrap"
+                role="button"
+                :aria-label="t('routes.coverImagePreview')"
+                @click.stop="previewCoverImage(node.spot!.coverImageUrl!)"
+              >
+                <image
+                  class="flow-thumb"
+                  :src="node.spot.coverImageUrl"
+                  mode="aspectFill"
+                />
+              </view>
               <view class="flow-card-main">
                 <text class="flow-title">{{ node.title }}</text>
                 <text v-if="node.subtitle" class="flow-time">{{ node.subtitle }}</text>
@@ -159,6 +166,18 @@ const flowNodes = computed((): RouteFlowNode[] => {
 });
 
 const activeWarnings = computed(() => activeDay.value?.warnings ?? []);
+
+const coverPreviewUrls = computed((): string[] =>
+  flowNodes.value
+    .filter((node) => node.kind === 'play' && node.spot?.coverImageUrl)
+    .map((node) => node.spot!.coverImageUrl!),
+);
+
+function previewCoverImage(url: string) {
+  if (!url) return;
+  const urls = coverPreviewUrls.value.length > 0 ? coverPreviewUrls.value : [url];
+  uni.previewImage({ urls, current: url });
+}
 
 function dayTabLabel(day: RouteDayPlan, index: number): string {
   if (day.date?.trim()) return day.date;
@@ -384,11 +403,21 @@ function openBookingUrl(url: string) {
   align-items: flex-start;
 }
 
+.flow-thumb-wrap {
+  flex-shrink: 0;
+  border-radius: 12rpx;
+  overflow: hidden;
+}
+
+.flow-thumb-wrap:active {
+  opacity: 0.85;
+}
+
 .flow-thumb {
   width: 96rpx;
   height: 96rpx;
   border-radius: 12rpx;
-  flex-shrink: 0;
+  display: block;
   background: #e5e7eb;
 }
 

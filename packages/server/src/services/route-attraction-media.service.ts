@@ -1,5 +1,10 @@
 import type { RouteDetailPayload } from '@douxing/shared';
-import { getAttractionsByIds, extractAttractionIdsFromRouteDetail } from './attraction.service.js';
+import { isAmapImageEnrichEnabled } from '../config/amap.js';
+import {
+  getAttractionsByIdsForRouteMedia,
+  extractAttractionIdsFromRouteDetail,
+} from './attraction.service.js';
+import { enrichAttractionCoversForIds } from './attraction-image-enricher.service.js';
 
 /** 为路线详情 POI 注入景点封面（只读展示，不写回 DB） */
 export async function enrichRouteDetailWithAttractionCovers(
@@ -10,7 +15,14 @@ export async function enrichRouteDetailWithAttractionCovers(
   const ids = extractAttractionIdsFromRouteDetail(routeDetail as unknown as RouteDetailPayload);
   if (ids.length === 0) return routeDetail;
 
-  const catalog = await getAttractionsByIds(ids);
+  let catalog = await getAttractionsByIdsForRouteMedia(ids);
+
+  const missingCoverIds = catalog.filter((item) => !item.coverImageUrl).map((item) => item.id);
+  if (missingCoverIds.length > 0 && isAmapImageEnrichEnabled()) {
+    await enrichAttractionCoversForIds(missingCoverIds, { delayMs: 100, maxCount: 16 });
+    catalog = await getAttractionsByIdsForRouteMedia(ids);
+  }
+
   const coverById = new Map<number, string>();
   for (const item of catalog) {
     if (item.coverImageUrl) {

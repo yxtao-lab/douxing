@@ -37,6 +37,39 @@ export function roundRect(
   ctx.closePath();
 }
 
+/** maxLines <= 0 表示不限制行数、不省略 */
+export const WRAP_LINES_UNLIMITED = 0;
+
+/** 计算换行占用高度（不绘制），与 wrapText 断行规则一致 */
+export function getWrapTextHeight(
+  ctx: PosterCanvasContext,
+  text: string,
+  maxWidth: number,
+  lineHeight: number,
+  maxLines = 3,
+): number {
+  if (!text) return 0;
+  const unlimited = maxLines <= 0;
+  const chars = [...text];
+  let line = '';
+  let lineCount = 0;
+
+  for (let i = 0; i < chars.length; i += 1) {
+    const testLine = line + chars[i];
+    if (ctx.measureText(testLine).width > maxWidth && line) {
+      line = chars[i] ?? '';
+      lineCount += 1;
+      if (!unlimited && lineCount >= maxLines - 1) {
+        return maxLines * lineHeight;
+      }
+    } else {
+      line = testLine;
+    }
+  }
+  const lines = line ? lineCount + 1 : Math.max(lineCount, 1);
+  return Math.max(1, lines) * lineHeight;
+}
+
 export function wrapText(
   ctx: PosterCanvasContext,
   text: string,
@@ -47,6 +80,7 @@ export function wrapText(
   maxLines = 3,
 ): number {
   if (!text) return y;
+  const unlimited = maxLines <= 0;
   const chars = [...text];
   let line = '';
   let lineCount = 0;
@@ -59,7 +93,7 @@ export function wrapText(
       line = chars[i] ?? '';
       cursorY += lineHeight;
       lineCount += 1;
-      if (lineCount >= maxLines - 1) {
+      if (!unlimited && lineCount >= maxLines - 1) {
         const rest = text.slice(i);
         const clipped = rest.length > 0 ? `${rest.slice(0, 12)}…` : line;
         ctx.fillText(clipped, x, cursorY);

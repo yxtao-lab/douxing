@@ -114,8 +114,10 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
   });
 
   const id = Number(result.insertId);
-  const rows = await db.select().from(travelRoutes).where(eq(travelRoutes.id, id)).limit(1);
-  const route = toRouteInfo(rows[0]!, { viewerId: userId });
+  const route = await getRouteById(id, userId, { recordView: false });
+  if (!route) {
+    throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
+  }
   return {
     route,
     generationSource: draft.generationSource,

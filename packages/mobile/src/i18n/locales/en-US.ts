@@ -265,6 +265,7 @@ export const mobileEnUS = {
     payCancelled: 'Payment cancelled',
     flowChartTitle: 'Itinerary flow',
     flowChartEmpty: 'No structured itinerary nodes yet',
+    coverImagePreview: 'Tap to view full image',
     flowWarningsTitle: 'Schedule notes',
     flowDayTab: 'Day {day}',
     flowIntercity: 'Intercity',

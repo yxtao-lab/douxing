@@ -39,6 +39,7 @@
     "db:reset": "pnpm --filter @douxing/server db:reset",
     "ml:generate-dataset": "pnpm --filter @douxing/server ml:generate-dataset",
     "ml:validate-dataset": "pnpm --filter @douxing/server ml:validate-dataset",
+    "enrich:attraction-images": "pnpm --filter @douxing/server enrich:attraction-images",
     "bootstrap": "node scripts/deploy.mjs",
     "bootstrap:dev": "node scripts/deploy.mjs --skip-build --dev",
     "fix:mysql-password": "node scripts/fix-mysql-password.mjs",

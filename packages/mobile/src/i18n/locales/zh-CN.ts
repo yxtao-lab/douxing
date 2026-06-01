@@ -263,6 +263,7 @@ export const mobileZhCN = {
     payCancelled: '已取消支付',
     flowChartTitle: '行程路径',
     flowChartEmpty: '暂无结构化行程节点',
+    coverImagePreview: '点击查看大图',
     flowWarningsTitle: '行程提示',
     flowDayTab: '第 {day} 天',
     flowIntercity: '跨城',

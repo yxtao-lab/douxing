@@ -12,6 +12,7 @@ import {
 import type { AttractionInfo, AttractionOpenHours, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
 import { resolvePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
+import { tryDeleteAttractionCoverFile } from '../utils/local-upload.util.js';
 
 export { syncAttractionsFromRouteDetail } from './attraction-sync.service.js';
 
@@ -113,6 +114,22 @@ export async function getAttractionById(id: number) {
   return rows[0] ? toAttractionInfo(rows[0]) : null;
 }
 
+/** 封面补全等后台任务：含 active + pending，排除已禁用 */
+export async function getAttractionForCoverEnrich(id: number) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(
+      and(
+        eq(attractions.id, id),
+        inArray(attractions.status, [AttractionStatus.ACTIVE, AttractionStatus.PENDING]),
+      ),
+    )
+    .limit(1);
+  return rows[0] ? toAttractionInfo(rows[0]) : null;
+}
+
 /** 打卡等业务使用：允许已发布与待审核景点，排除已禁用 */
 export async function getAttractionForCheckIn(id: number) {
   const db = getDb();
@@ -139,6 +156,22 @@ export async function getAttractionsByIds(ids: number[]) {
       and(
         inArray(attractions.id, ids),
         eq(attractions.status, AttractionStatus.ACTIVE),
+      ),
+    );
+  return rows.map(toAttractionInfo);
+}
+
+/** 路线详情 / 手帐封面注入：含 active + pending（AI 同步新建多为 pending） */
+export async function getAttractionsByIdsForRouteMedia(ids: number[]) {
+  if (ids.length === 0) return [];
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(
+      and(
+        inArray(attractions.id, ids),
+        inArray(attractions.status, [AttractionStatus.ACTIVE, AttractionStatus.PENDING]),
       ),
     );
   return rows.map(toAttractionInfo);
@@ -313,6 +346,8 @@ export async function updateAttractionCoverImage(
     throw new ApiError(ApiMessageKey.ATTRACTION_COVER_INVALID);
   }
 
+  const previousPath = row.coverImageUrl;
+
   const now = new Date();
   await db
     .update(attractions)
@@ -324,6 +359,10 @@ export async function updateAttractionCoverImage(
       imageFetchedAt: now,
     })
     .where(eq(attractions.id, id));
+
+  if (previousPath && previousPath !== storedPath) {
+    tryDeleteAttractionCoverFile(previousPath);
+  }
 
   const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
   return updated[0] ? toAttractionInfo(updated[0]) : null;

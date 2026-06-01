@@ -32,6 +32,9 @@ export async function loadPosterImages(
 ): Promise<PosterImageMap> {
   const urls = new Set<string>();
   for (const day of payload.days) {
+    for (const url of day.highlightImages) {
+      urls.add(url);
+    }
     for (const item of day.items) {
       if (item.imageUrl) urls.add(item.imageUrl);
     }

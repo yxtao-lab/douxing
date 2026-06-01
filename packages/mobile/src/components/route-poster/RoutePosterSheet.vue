@@ -72,7 +72,9 @@ import {
   queryPosterCanvas,
   savePosterToAlbum,
 } from '@/poster/canvas-export';
-import { POSTER_HEIGHT, POSTER_WIDTH } from '@/poster/draw-utils';
+import { POSTER_WIDTH } from '@/poster/draw-utils';
+import { POSTER_HEIGHT } from '@/poster/draw-utils';
+import { measurePosterHeight } from '@/poster/poster-layout';
 import type { PosterTemplateId } from '@/poster/types';
 import {
   getDefaultPosterTemplateId,
@@ -101,9 +103,10 @@ const selectedTemplate = ref<PosterTemplateId>(getDefaultPosterTemplateId());
 const previewPath = ref('');
 const generating = ref(false);
 const saving = ref(false);
+const posterCanvasHeight = ref(1334);
 
 const canvasStyle = computed(
-  () => `width:${POSTER_WIDTH}px;height:${POSTER_HEIGHT}px;`,
+  () => `width:${POSTER_WIDTH}px;height:${posterCanvasHeight.value}px;`,
 );
 
 watch(
@@ -140,11 +143,19 @@ async function generatePreview() {
 
   generating.value = true;
   try {
+    posterCanvasHeight.value = POSTER_HEIGHT;
     await nextTick();
-    const surface = await queryPosterCanvas('routePosterCanvas', componentInstance);
+    const probe = await queryPosterCanvas('routePosterCanvas', componentInstance, POSTER_HEIGHT);
+    const canvasHeight = measurePosterHeight(probe.ctx, payload, selectedTemplate.value);
+    posterCanvasHeight.value = canvasHeight;
+    await nextTick();
+    const surface =
+      canvasHeight === POSTER_HEIGHT
+        ? probe
+        : await queryPosterCanvas('routePosterCanvas', componentInstance, canvasHeight);
     surface.ctx.clearRect(0, 0, surface.width, surface.height);
     const imageMap = await loadPosterImages(surface.canvas, payload);
-    renderPoster(selectedTemplate.value, surface.ctx, payload, imageMap);
+    renderPoster(selectedTemplate.value, surface.ctx, payload, imageMap, canvasHeight);
     const path = await exportPosterCanvas(surface);
     previewPath.value = path;
     emit('generated', path);

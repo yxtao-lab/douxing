@@ -7,6 +7,7 @@ export type PosterTemplateRenderer = (
   ctx: PosterCanvasContext,
   payload: PosterPayload,
   imageMap?: PosterImageMap,
+  canvasHeight?: number,
 ) => PosterRenderResult;
 
 export const POSTER_TEMPLATES: PosterTemplateMeta[] = [
@@ -32,9 +33,10 @@ export function renderPoster(
   ctx: PosterCanvasContext,
   payload: PosterPayload,
   imageMap?: PosterImageMap,
+  canvasHeight?: number,
 ): PosterRenderResult {
   const renderer = RENDERERS[templateId];
-  return renderer(ctx, payload, imageMap);
+  return renderer(ctx, payload, imageMap, canvasHeight);
 }
 
 export function getDefaultPosterTemplateId(): PosterTemplateId {

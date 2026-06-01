@@ -127,6 +127,13 @@
       "when": 1749024000000,
       "tag": "0017_attraction_open_hours",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "5",
+      "when": 1749110400000,
+      "tag": "0018_attraction_cover_image",
+      "breakpoints": true
     }
   ]
 }

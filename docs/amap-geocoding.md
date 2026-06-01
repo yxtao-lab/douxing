@@ -119,7 +119,26 @@ curl "https://restapi.amap.com/v3/place/text?key=KEY&keywords=雷峰塔&city=杭
 | place 无结果 | 检查 `city` 是否与高德城市名一致（如「杭州」）；尝试 geocode 回退 |
 | 仍不入库 | 笼统「午餐」等 `poiType=meal` 本来就不入库，与 geocoding 无关 |
 
-## 9. 相关文档
+## 9. 景点封面 POI 图（A2+++ Phase 1）
+
+除坐标外，同一 Web 服务 Key 可用于 **POI 详情图**拉取（`extensions=all` 返回 `photos`）。
+
+| 环境变量 | 说明 |
+|----------|------|
+| `AMAP_IMAGE_ENRICH_ENABLED` | 默认跟随 `AMAP_ENABLED`；`false` 关闭自动拉图 |
+| `AMAP_IMAGE_FETCH_DELAY_MS` | 批量/队列间隔，默认 `300` |
+
+**触发时机**：
+
+1. AI 路线 `syncAttractionsFromRouteDetail` 结束后 **await** 批量拉图  
+2. 打开路线详情时，对仍无封面的景点兜底补拉  
+3. 手动：`pnpm enrich:attraction-images`（`--dry-run` 预览）
+
+**存储**：`packages/server/uploads/attractions/{id}-amap.jpg`（每景点最多 1 张，覆盖式，不占内存）。详见 [代码解析与审核.md](./代码解析与审核.md) §2。
+
+控制台 Key 需有 **搜索服务** 配额；`place/detail` 与 `place/text` 共用。
+
+## 10. 相关文档
 
 - [搜索 POI](https://lbs.amap.com/api/webservice/guide/api/search)  
 - [地理/逆地理编码](https://lbs.amap.com/api/webservice/guide/api/georegeo)  

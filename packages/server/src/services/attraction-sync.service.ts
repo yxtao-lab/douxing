@@ -20,6 +20,7 @@ import {
   defaultTagsForCategory,
 } from '../utils/poi-classifier.js';
 import { resolveCoordinatesFromAmap } from './amap-geocode.service.js';
+import { scheduleAttractionCoverEnrichment, enrichAttractionCoversForIds } from './attraction-image-enricher.service.js';
 
 export type AttractionMatchType = 'exact_name' | 'exact_alias' | 'fuzzy';
 
@@ -269,6 +270,7 @@ export async function syncAttractionsFromRouteDetail(
 ): Promise<{ days: Array<RouteDayPlan & { attractions: RouteDayAttraction[] }> }> {
   const city = options.city?.trim() || '未知';
   const routeTags = options.interestTags ?? [];
+  const pendingCoverIds: number[] = [];
 
   const days = await Promise.all(
     routeDetail.days.map(async (day) => ({
@@ -291,6 +293,10 @@ export async function syncAttractionsFromRouteDetail(
               routeTags,
               dbCategory,
             });
+            if (!match.row.coverImageUrl) {
+              pendingCoverIds.push(attractionId);
+              scheduleAttractionCoverEnrichment(attractionId);
+            }
             return {
               ...workingSpot,
               poiType: poiCategory,
@@ -310,6 +316,8 @@ export async function syncAttractionsFromRouteDetail(
             routeTags,
             dbCategory,
           );
+          pendingCoverIds.push(attractionId);
+          scheduleAttractionCoverEnrichment(attractionId);
 
           return {
             ...workingSpot,
@@ -320,6 +328,16 @@ export async function syncAttractionsFromRouteDetail(
       ),
     })),
   );
+
+  if (pendingCoverIds.length > 0) {
+    const { updated, skipped } = await enrichAttractionCoversForIds(pendingCoverIds, {
+      delayMs: 120,
+      maxCount: 24,
+    });
+    if (updated > 0) {
+      console.log(`[attraction-sync] 封面补全 ${updated} 个，跳过 ${skipped} 个`);
+    }
+  }
 
   return { days };
 }

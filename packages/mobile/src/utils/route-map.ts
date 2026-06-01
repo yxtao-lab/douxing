@@ -69,10 +69,15 @@ export type RouteMapMarker = {
   };
   callout?: {
     content: string;
-    display: 'BYCLICK';
+    display: 'BYCLICK' | 'ALWAYS';
     padding: number;
     borderRadius: number;
     fontSize: number;
+    color?: string;
+    bgColor?: string;
+    borderWidth?: number;
+    borderColor?: string;
+    textAlign?: 'left' | 'center' | 'right';
   };
 };
 
@@ -93,6 +98,16 @@ function poiMarkerId(poi: RoutePathPoi): number {
   return poi.dayIndex * 1000 + poi.spotIndex + 1;
 }
 
+/** 地图气泡文案：序号 + 景点名，过长时截断避免遮挡 */
+function formatPoiMarkerCallout(name: string, order: number, maxLen = 28): string {
+  const trimmed = name.trim() || '—';
+  const prefix = `${order}. `;
+  const full = `${prefix}${trimmed}`;
+  if (full.length <= maxLen) return full;
+  const nameBudget = Math.max(4, maxLen - prefix.length - 1);
+  return `${prefix}${trimmed.slice(0, nameBudget)}…`;
+}
+
 export function buildRoutePoiMarkers(pois: RoutePathPoi[]): RouteMapMarker[] {
   const validPois = pois.filter((poi) =>
     isValidMapLatLng({ latitude: poi.latitude, longitude: poi.longitude }),
@@ -102,8 +117,8 @@ export function buildRoutePoiMarkers(pois: RoutePathPoi[]): RouteMapMarker[] {
     latitude: poi.latitude,
     longitude: poi.longitude,
     title: poi.name,
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     label: {
       content: String(index + 1),
       color: '#ffffff',
@@ -113,11 +128,16 @@ export function buildRoutePoiMarkers(pois: RoutePathPoi[]): RouteMapMarker[] {
       padding: 4,
     },
     callout: {
-      content: poi.name,
-      display: 'BYCLICK',
-      padding: 8,
-      borderRadius: 6,
-      fontSize: 12,
+      content: formatPoiMarkerCallout(poi.name, index + 1),
+      display: 'ALWAYS',
+      padding: 6,
+      borderRadius: 8,
+      fontSize: 11,
+      color: '#111827',
+      bgColor: '#ffffff',
+      borderWidth: 1,
+      borderColor: '#e5e7eb',
+      textAlign: 'center',
     },
   }));
 }
