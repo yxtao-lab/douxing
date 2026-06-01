@@ -59,25 +59,35 @@
                 {{ t('routes.transitEstimated') }}
               </text>
             </view>
-            <text class="flow-title">{{ node.title }}</text>
-            <text v-if="node.subtitle" class="flow-time">{{ node.subtitle }}</text>
-            <text v-if="nodeMeta(node)" class="flow-meta">{{ nodeMeta(node) }}</text>
-            <text v-if="node.description" class="flow-desc">{{ node.description }}</text>
-            <text
-              v-if="node.transit?.bookingUrl"
-              class="flow-booking-link"
-              @click.stop="openBookingUrl(node.transit!.bookingUrl!)"
-            >
-              {{ bookingLinkLabel(node.transit) }}
-            </text>
-            <button
-              v-if="showCheckIn && node.kind === 'play' && node.spot"
-              size="mini"
-              class="btn-checkin"
-              @click="emit('check-in', node.spot)"
-            >
-              {{ t('routes.checkInHere') }}
-            </button>
+            <view class="flow-card-body">
+              <image
+                v-if="node.kind === 'play' && node.spot?.coverImageUrl"
+                class="flow-thumb"
+                :src="node.spot.coverImageUrl"
+                mode="aspectFill"
+              />
+              <view class="flow-card-main">
+                <text class="flow-title">{{ node.title }}</text>
+                <text v-if="node.subtitle" class="flow-time">{{ node.subtitle }}</text>
+                <text v-if="nodeMeta(node)" class="flow-meta">{{ nodeMeta(node) }}</text>
+                <text v-if="node.description" class="flow-desc">{{ node.description }}</text>
+                <text
+                  v-if="node.transit?.bookingUrl"
+                  class="flow-booking-link"
+                  @click.stop="openBookingUrl(node.transit!.bookingUrl!)"
+                >
+                  {{ bookingLinkLabel(node.transit) }}
+                </text>
+                <button
+                  v-if="showCheckIn && node.kind === 'play' && node.spot"
+                  size="mini"
+                  class="btn-checkin"
+                  @click="emit('check-in', node.spot)"
+                >
+                  {{ t('routes.checkInHere') }}
+                </button>
+              </view>
+            </view>
           </view>
         </view>
       </view>
@@ -365,6 +375,26 @@ function openBookingUrl(url: string) {
   align-items: center;
   gap: 8rpx;
   margin-bottom: 8rpx;
+}
+
+.flow-card-body {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  align-items: flex-start;
+}
+
+.flow-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+  background: #e5e7eb;
+}
+
+.flow-card-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .flow-kind {

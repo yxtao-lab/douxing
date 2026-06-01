@@ -26,6 +26,7 @@ function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: Poster
       name: spot.name?.trim() || '—',
       desc: truncateText(spot.description ?? '', MAX_DESC_LEN),
       poiType: spot.poiType,
+      imageUrl: spot.coverImageUrl,
     }));
     return {
       label,

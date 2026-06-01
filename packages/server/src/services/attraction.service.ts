@@ -11,6 +11,7 @@ import {
 } from '@douxing/shared';
 import type { AttractionInfo, AttractionOpenHours, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
+import { resolvePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 
 export { syncAttractionsFromRouteDetail } from './attraction-sync.service.js';
 
@@ -34,6 +35,11 @@ function toAttractionInfo(row: typeof attractions.$inferSelect): AttractionInfo 
     matchConfidence: row.matchConfidence != null ? Number(row.matchConfidence) : null,
     priceUpdatedAt: row.priceUpdatedAt?.toISOString() ?? null,
     verifiedAt: row.verifiedAt?.toISOString() ?? null,
+    coverImageUrl: resolvePublicAssetUrl(row.coverImageUrl),
+    imageSource: row.imageSource ?? null,
+    imageLicense: row.imageLicense ?? null,
+    imageAttribution: row.imageAttribution ?? null,
+    imageFetchedAt: row.imageFetchedAt?.toISOString() ?? null,
   };
 }
 
@@ -251,6 +257,71 @@ export async function approveAttraction(id: number) {
     .set({
       status: AttractionStatus.ACTIVE,
       verifiedAt: now,
+    })
+    .where(eq(attractions.id, id));
+
+  const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
+  return updated[0] ? toAttractionInfo(updated[0]) : null;
+}
+
+export async function listAttractionsForAdmin(options: {
+  city?: string;
+  keyword?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const db = getDb();
+  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
+  const offset = Math.max(options.offset ?? 0, 0);
+  const conditions = [eq(attractions.status, AttractionStatus.ACTIVE)];
+
+  if (options.city?.trim()) {
+    conditions.push(eq(attractions.city, options.city.trim()));
+  }
+  if (options.keyword?.trim()) {
+    const kw = `%${options.keyword.trim()}%`;
+    conditions.push(or(like(attractions.name, kw), like(attractions.description, kw))!);
+  }
+
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(and(...conditions))
+    .orderBy(attractions.city, attractions.name)
+    .limit(limit)
+    .offset(offset);
+
+  return rows.map(toAttractionInfo);
+}
+
+export async function updateAttractionCoverImage(
+  id: number,
+  input: {
+    coverImageUrl: string;
+    imageSource: string;
+    imageLicense?: string | null;
+    imageAttribution?: string | null;
+  },
+) {
+  const db = getDb();
+  const rows = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+
+  const storedPath = normalizeStoredAssetPath(input.coverImageUrl);
+  if (!storedPath) {
+    throw new ApiError(ApiMessageKey.ATTRACTION_COVER_INVALID);
+  }
+
+  const now = new Date();
+  await db
+    .update(attractions)
+    .set({
+      coverImageUrl: storedPath,
+      imageSource: input.imageSource,
+      imageLicense: input.imageLicense ?? null,
+      imageAttribution: input.imageAttribution ?? null,
+      imageFetchedAt: now,
     })
     .where(eq(attractions.id, id));
 

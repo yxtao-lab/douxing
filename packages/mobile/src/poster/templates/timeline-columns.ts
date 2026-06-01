@@ -1,4 +1,5 @@
 import type { PosterCanvasContext, PosterPayload, PosterRenderResult } from '../types';
+import type { PosterImageMap } from '../load-poster-image';
 import {
   POSTER_COLORS,
   POSTER_HEIGHT,
@@ -18,6 +19,7 @@ function formatMoreDays(payload: PosterPayload): string | null {
 export function renderTimelineColumnsPoster(
   ctx: PosterCanvasContext,
   payload: PosterPayload,
+  _imageMap?: PosterImageMap,
 ): PosterRenderResult {
   const width = POSTER_WIDTH;
   const height = POSTER_HEIGHT;

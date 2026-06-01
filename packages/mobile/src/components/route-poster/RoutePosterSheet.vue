@@ -79,6 +79,7 @@ import {
   POSTER_TEMPLATES,
   renderPoster,
 } from '@/poster/registry';
+import { loadPosterImages } from '@/poster/load-poster-image';
 import { getAppErrorMessage } from '@/utils/request';
 
 const props = defineProps<{
@@ -142,7 +143,8 @@ async function generatePreview() {
     await nextTick();
     const surface = await queryPosterCanvas('routePosterCanvas', componentInstance);
     surface.ctx.clearRect(0, 0, surface.width, surface.height);
-    renderPoster(selectedTemplate.value, surface.ctx, payload);
+    const imageMap = await loadPosterImages(surface.canvas, payload);
+    renderPoster(selectedTemplate.value, surface.ctx, payload, imageMap);
     const path = await exportPosterCanvas(surface);
     previewPath.value = path;
     emit('generated', path);

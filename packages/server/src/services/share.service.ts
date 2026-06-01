@@ -5,6 +5,7 @@ import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { toRouteInfo } from '../utils/route-info.util.js';
 import { enrichRoutesWithCreatorInfo } from './route-interaction.service.js';
+import { enrichRouteDetailWithAttractionCovers } from './route-attraction-media.service.js';
 
 function stripSensitiveRouteDetail(detail: Record<string, unknown> | null): Record<string, unknown> | null {
   if (!detail) return null;
@@ -33,6 +34,10 @@ export async function getPublicSharedRoute(routeId: number): Promise<TravelRoute
   };
 
   [route] = await enrichRoutesWithCreatorInfo([route]);
+  if (route.routeDetail) {
+    route.routeDetail =
+      (await enrichRouteDetailWithAttractionCovers(route.routeDetail)) ?? route.routeDetail;
+  }
   return route;
 }
 

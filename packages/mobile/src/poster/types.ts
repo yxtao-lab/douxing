@@ -8,6 +8,7 @@ export interface PosterPoiItem {
   name: string;
   desc: string;
   poiType?: string;
+  imageUrl?: string;
 }
 
 export interface PosterDayBlock {

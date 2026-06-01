@@ -19,8 +19,16 @@
         <view v-for="(day, index) in previewDays" :key="index" class="day-block">
           <text class="day-title">{{ dayTitle(day, index) }}</text>
           <view v-for="(spot, spotIndex) in day.attractions.slice(0, 3)" :key="spotIndex" class="spot">
-            <text class="spot-name">{{ spot.name }}</text>
-            <text v-if="spot.time" class="spot-time">{{ spot.time }}</text>
+            <image
+              v-if="spot.coverImageUrl"
+              class="spot-thumb"
+              :src="spot.coverImageUrl"
+              mode="aspectFill"
+            />
+            <view class="spot-text">
+              <text class="spot-name">{{ spot.name }}</text>
+              <text v-if="spot.time" class="spot-time">{{ spot.time }}</text>
+            </view>
           </view>
         </view>
         <text v-if="hiddenDayCount > 0" class="more-days">{{ moreDaysText }}</text>
@@ -211,9 +219,24 @@ onLoad((query) => {
   margin-bottom: 12rpx;
 }
 .spot {
+  display: flex;
+  flex-direction: row;
+  gap: 16rpx;
+  align-items: flex-start;
   padding-left: 16rpx;
   border-left: 4rpx solid var(--dx-primary-light);
   margin-bottom: 16rpx;
+}
+.spot-thumb {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: 12rpx;
+  flex-shrink: 0;
+  background: var(--dx-bg);
+}
+.spot-text {
+  flex: 1;
+  min-width: 0;
 }
 .spot-name {
   display: block;

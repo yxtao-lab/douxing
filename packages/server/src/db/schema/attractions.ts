@@ -39,6 +39,13 @@ export const attractions = mysqlTable(
     matchConfidence: decimal('match_confidence', { precision: 4, scale: 3 }),
     priceUpdatedAt: timestamp('price_updated_at'),
     verifiedAt: timestamp('verified_at'),
+    /** Phase 0：封面图（相对路径 /uploads/attractions/… 或合规外链） */
+    coverImageUrl: varchar('cover_image_url', { length: 512 }),
+    /** manual | amap | wikimedia | ugc | generated */
+    imageSource: varchar('image_source', { length: 32 }),
+    imageLicense: varchar('image_license', { length: 128 }),
+    imageAttribution: varchar('image_attribution', { length: 256 }),
+    imageFetchedAt: timestamp('image_fetched_at'),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
   },

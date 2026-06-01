@@ -23,6 +23,7 @@ export const sharedEnUS = {
     unknownCity: 'Unknown city',
     points: 'Points',
     refresh: 'Refresh',
+    search: 'Search',
     operationFailed: 'Action failed',
     goSettings: 'Open settings',
     uploadFailed: 'Upload failed',
@@ -92,6 +93,7 @@ export const sharedEnUS = {
     checkins: 'Check-ins',
     checkinMap: 'Map',
     attractionsPending: 'Attraction Review',
+    attractionsManage: 'Attraction Covers',
     logout: 'Sign out',
   },
 } as const;

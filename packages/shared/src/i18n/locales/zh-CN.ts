@@ -23,6 +23,7 @@ export const sharedZhCN = {
     unknownCity: '未知城市',
     points: '积分',
     refresh: '刷新',
+    search: '搜索',
     operationFailed: '操作失败',
     goSettings: '去设置',
     uploadFailed: '上传失败',
@@ -92,6 +93,7 @@ export const sharedZhCN = {
     checkins: '打卡',
     checkinMap: '打卡地图',
     attractionsPending: '景点审核',
+    attractionsManage: '景点封面',
     logout: '退出',
   },
 } as const;

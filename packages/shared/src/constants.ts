@@ -107,6 +107,15 @@ export const AttractionSource = {
   AMAP: 'amap',
 } as const;
 
+/** 景点封面图来源（attractions.image_source） */
+export const AttractionImageSource = {
+  MANUAL: 'manual',
+  AMAP: 'amap',
+  WIKIMEDIA: 'wikimedia',
+  UGC: 'ugc',
+  GENERATED: 'generated',
+} as const;
+
 /** 门票/参考价来源（attractions.price_source） */
 export const AttractionPriceSource = {
   SEED: 'seed',

@@ -92,6 +92,9 @@ export const ApiMessageKey = {
   ATTRACTION_CITIES_FAILED: 'api.attractionCitiesFailed',
   ATTRACTION_LIST_FAILED: 'api.attractionListFailed',
   ATTRACTION_DETAIL_FAILED: 'api.attractionDetailFailed',
+  ATTRACTION_COVER_INVALID: 'api.attractionCoverInvalid',
+  ATTRACTION_COVER_UPLOAD_FAILED: 'api.attractionCoverUploadFailed',
+  ATTRACTION_COVER_UPLOAD_SUCCESS: 'api.attractionCoverUploadSuccess',
 
   ACHIEVEMENT_LIST_FAILED: 'api.achievementListFailed',
   ACHIEVEMENT_MINE_FAILED: 'api.achievementMineFailed',

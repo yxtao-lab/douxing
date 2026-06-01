@@ -45,6 +45,8 @@ export interface RouteDayAttraction {
   poiType?: string;
   latitude?: number;
   longitude?: number;
+  /** 展示用封面（路线详情 API 注入，不入库 JSON） */
+  coverImageUrl?: string;
 }
 
 /** H9：交通段类型 */
@@ -157,6 +159,13 @@ export interface AttractionInfo {
   matchConfidence: number | null;
   priceUpdatedAt: string | null;
   verifiedAt: string | null;
+  /** 封面图公网 URL */
+  coverImageUrl?: string | null;
+  /** manual | amap | wikimedia | ugc | generated */
+  imageSource?: string | null;
+  imageLicense?: string | null;
+  imageAttribution?: string | null;
+  imageFetchedAt?: string | null;
 }
 
 export interface AttractionCitySummary {

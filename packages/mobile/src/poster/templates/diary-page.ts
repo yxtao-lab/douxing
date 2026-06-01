@@ -1,4 +1,5 @@
 import type { PosterCanvasContext, PosterPayload, PosterRenderResult } from '../types';
+import type { PosterImageMap } from '../load-poster-image';
 import {
   POSTER_COLORS,
   POSTER_HEIGHT,
@@ -22,6 +23,7 @@ function drawTape(ctx: PosterCanvasContext, x: number, y: number, w: number) {
 export function renderDiaryPagePoster(
   ctx: PosterCanvasContext,
   payload: PosterPayload,
+  imageMap?: PosterImageMap,
 ): PosterRenderResult {
   const width = POSTER_WIDTH;
   const height = POSTER_HEIGHT;
@@ -64,22 +66,27 @@ export function renderDiaryPagePoster(
     ctx.font = 'bold 24px sans-serif';
     ctx.fillText(day.label, 56, cursorY + 40);
 
+    const first = day.items[0];
     const polaroidW = 148;
     const polaroidH = 118;
     const polaroidX = width - 80 - polaroidW - 16;
     const polaroidY = cursorY + 52;
     ctx.fillStyle = '#fafafa';
     ctx.fillRect(polaroidX, polaroidY, polaroidW, polaroidH);
-    ctx.strokeStyle = '#e5e7eb';
-    ctx.strokeRect(polaroidX, polaroidY, polaroidW, polaroidH);
-    ctx.fillStyle = day.themeColor;
-    ctx.font = '48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('📍', polaroidX + polaroidW / 2, polaroidY + 72);
-    ctx.textAlign = 'left';
+    const firstImage = first?.imageUrl ? imageMap?.get(first.imageUrl) : undefined;
+    if (firstImage) {
+      ctx.drawImage(firstImage, polaroidX + 8, polaroidY + 8, polaroidW - 16, polaroidH - 28);
+    } else {
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.strokeRect(polaroidX, polaroidY, polaroidW, polaroidH);
+      ctx.fillStyle = day.themeColor;
+      ctx.font = '48px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📍', polaroidX + polaroidW / 2, polaroidY + 72);
+      ctx.textAlign = 'left';
+    }
 
     let textY = cursorY + 72;
-    const first = day.items[0];
     if (first) {
       ctx.fillStyle = POSTER_COLORS.ink;
       ctx.font = 'bold 22px sans-serif';

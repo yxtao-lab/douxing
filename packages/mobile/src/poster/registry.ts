@@ -1,16 +1,12 @@
-import type {
-  PosterCanvasContext,
-  PosterPayload,
-  PosterRenderResult,
-  PosterTemplateId,
-  PosterTemplateMeta,
-} from './types';
+import type { PosterCanvasContext, PosterPayload, PosterRenderResult, PosterTemplateId, PosterTemplateMeta } from './types';
+import type { PosterImageMap } from './load-poster-image';
 import { renderTimelineColumnsPoster } from './templates/timeline-columns';
 import { renderDiaryPagePoster } from './templates/diary-page';
 
 export type PosterTemplateRenderer = (
   ctx: PosterCanvasContext,
   payload: PosterPayload,
+  imageMap?: PosterImageMap,
 ) => PosterRenderResult;
 
 export const POSTER_TEMPLATES: PosterTemplateMeta[] = [
@@ -35,9 +31,10 @@ export function renderPoster(
   templateId: PosterTemplateId,
   ctx: PosterCanvasContext,
   payload: PosterPayload,
+  imageMap?: PosterImageMap,
 ): PosterRenderResult {
   const renderer = RENDERERS[templateId];
-  return renderer(ctx, payload);
+  return renderer(ctx, payload, imageMap);
 }
 
 export function getDefaultPosterTemplateId(): PosterTemplateId {
