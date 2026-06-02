@@ -1,21 +1,20 @@
-import path from 'node:path';
-import { and, inArray, isNull, eq } from 'drizzle-orm';
 import {
   AttractionImageSource,
   AttractionStatus,
   type AttractionInfo,
 } from '@douxing/shared';
+import { and, inArray, isNull, eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { attractions } from '../db/schema/attractions.js';
 import { getAmapImageFetchDelayMs, isAmapImageEnrichEnabled } from '../config/amap.js';
+import { isWikimediaImageEnrichEnabled } from '../config/oss.js';
 import { fetchAmapPoiCoverImage } from './amap-poi-image.service.js';
 import { getAttractionForCoverEnrich, updateAttractionCoverImage } from './attraction.service.js';
-import { attractionCoversDir } from '../routes/attractions.js';
-import { downloadImageToFile } from '../utils/download-asset.util.js';
 import {
-  tryDeleteAmapCoverVariants,
-  tryDeleteAttractionCoverFile,
-} from '../utils/local-upload.util.js';
+  persistAttractionCoverFromRemote,
+  type AttractionCoverVariant,
+} from './attraction-cover-storage.service.js';
+import { fetchWikimediaCoverImage } from './wikimedia-cover.service.js';
 
 const AMAP_ATTRIBUTION = '高德地图 POI';
 const AMAP_LICENSE = 'amap_poi';
@@ -30,74 +29,116 @@ function shouldSkipEnrichment(
 ): boolean {
   if (options?.force) return false;
   if (!attraction.coverImageUrl) return false;
-  // 已有手动上传封面时不覆盖
   return attraction.imageSource === AttractionImageSource.MANUAL;
 }
 
-async function persistAmapCoverImage(
+async function persistCoverFromRemote(
   attractionId: number,
   remoteUrl: string,
-  meta: { title?: string; poiId?: string; poiName?: string },
+  variant: AttractionCoverVariant,
+  meta: {
+    imageSource: string;
+    imageLicense: string;
+    imageAttribution: string;
+  },
   dryRun: boolean,
 ): Promise<string | null> {
   if (dryRun) return remoteUrl;
 
-  // 固定文件名：每个景点最多保留 1 张 amap 封面，重复拉取覆盖而非堆叠
-  tryDeleteAmapCoverVariants(attractionId);
-
-  const baseName = `${attractionId}-amap`;
-  const destWithoutExt = path.join(attractionCoversDir, baseName);
-
-  const downloaded = await downloadImageToFile(remoteUrl, destWithoutExt);
-  const filename = path.basename(downloaded.filePath);
-  const relativePath = `/uploads/attractions/${filename}`;
-
-  const attributionParts = [AMAP_ATTRIBUTION];
-  if (meta.poiName) attributionParts.push(meta.poiName);
-  if (meta.poiId) attributionParts.push(`POI:${meta.poiId}`);
+  const { storedUrl } = await persistAttractionCoverFromRemote(attractionId, remoteUrl, variant);
 
   await updateAttractionCoverImage(attractionId, {
-    coverImageUrl: relativePath,
-    imageSource: AttractionImageSource.AMAP,
-    imageLicense: AMAP_LICENSE,
-    imageAttribution: attributionParts.join(' · '),
+    coverImageUrl: storedUrl,
+    imageSource: meta.imageSource,
+    imageLicense: meta.imageLicense,
+    imageAttribution: meta.imageAttribution,
   });
 
-  void meta.title;
-  return relativePath;
+  return storedUrl;
+}
+
+async function tryAmapCover(
+  attraction: AttractionInfo,
+  dryRun: boolean,
+): Promise<AttractionInfo | null> {
+  if (!isAmapImageEnrichEnabled()) return null;
+
+  const poiResult = await fetchAmapPoiCoverImage(attraction.name, attraction.city);
+  if (!poiResult?.photo.url) return null;
+
+  const attributionParts = [AMAP_ATTRIBUTION];
+  if (poiResult.poiName) attributionParts.push(poiResult.poiName);
+  if (poiResult.poiId) attributionParts.push(`POI:${poiResult.poiId}`);
+
+  const stored = await persistCoverFromRemote(
+    attraction.id,
+    poiResult.photo.url,
+    'amap',
+    {
+      imageSource: AttractionImageSource.AMAP,
+      imageLicense: AMAP_LICENSE,
+      imageAttribution: attributionParts.join(' · '),
+    },
+    dryRun,
+  );
+
+  if (!stored) return null;
+  if (dryRun) {
+    return { ...attraction, coverImageUrl: poiResult.photo.url, imageSource: AttractionImageSource.AMAP };
+  }
+
+  return getAttractionForCoverEnrich(attraction.id);
+}
+
+async function tryWikimediaCover(
+  attraction: AttractionInfo,
+  dryRun: boolean,
+): Promise<AttractionInfo | null> {
+  if (!isWikimediaImageEnrichEnabled()) return null;
+
+  const wikiResult = await fetchWikimediaCoverImage(attraction.name, attraction.city);
+  if (!wikiResult?.imageUrl) return null;
+
+  const stored = await persistCoverFromRemote(
+    attraction.id,
+    wikiResult.imageUrl,
+    'wikimedia',
+    {
+      imageSource: AttractionImageSource.WIKIMEDIA,
+      imageLicense: wikiResult.license,
+      imageAttribution: wikiResult.attribution,
+    },
+    dryRun,
+  );
+
+  if (!stored) return null;
+  if (dryRun) {
+    return {
+      ...attraction,
+      coverImageUrl: wikiResult.imageUrl,
+      imageSource: AttractionImageSource.WIKIMEDIA,
+    };
+  }
+
+  return getAttractionForCoverEnrich(attraction.id);
 }
 
 /**
- * 为单个景点从高德 POI 拉取封面并持久化到 uploads。
+ * 为单个景点从外部来源拉取封面并持久化（高德 → Wikimedia 兜底）。
  */
 export async function enrichAttractionCoverFromExternalSources(
   attraction: AttractionInfo,
   options?: { dryRun?: boolean; force?: boolean },
 ): Promise<AttractionInfo | null> {
-  if (!isAmapImageEnrichEnabled()) return null;
   if (shouldSkipEnrichment(attraction, options)) return null;
   if (attraction.coverImageUrl && !options?.force) return null;
 
-  const poiResult = await fetchAmapPoiCoverImage(attraction.name, attraction.city);
-  if (!poiResult?.photo.url) return null;
+  const dryRun = options?.dryRun ?? false;
 
-  const stored = await persistAmapCoverImage(
-    attraction.id,
-    poiResult.photo.url,
-    {
-      title: poiResult.photo.title,
-      poiId: poiResult.poiId,
-      poiName: poiResult.poiName,
-    },
-    options?.dryRun ?? false,
-  );
+  const fromAmap = await tryAmapCover(attraction, dryRun);
+  if (fromAmap) return fromAmap;
 
-  if (!stored) return null;
-  if (options?.dryRun) {
-    return { ...attraction, coverImageUrl: poiResult.photo.url, imageSource: AttractionImageSource.AMAP };
-  }
-
-  return getAttractionForCoverEnrich(attraction.id);
+  return tryWikimediaCover(attraction, dryRun);
 }
 
 /** 按 ID 补全封面（供异步队列 / CLI 单条调用） */
@@ -123,8 +164,8 @@ export async function enrichMissingAttractionCovers(options?: {
   dryRun?: boolean;
   delayMs?: number;
 }): Promise<EnrichMissingCoversResult> {
-  if (!isAmapImageEnrichEnabled()) {
-    console.warn('[attraction-image] 高德封面补全未启用（检查 AMAP_WEB_KEY / AMAP_ENABLED）');
+  if (!isAmapImageEnrichEnabled() && !isWikimediaImageEnrichEnabled()) {
+    console.warn('[attraction-image] 封面补全未启用（检查 AMAP_WEB_KEY / WIKIMEDIA_IMAGE_ENRICH_ENABLED）');
     return { scanned: 0, updated: 0, failed: 0, skipped: 0 };
   }
 
@@ -181,7 +222,7 @@ export async function enrichMissingAttractionCovers(options?: {
       if (result) {
         updated += 1;
         console.log(
-          `[attraction-image] ${dryRun ? 'would update' : 'updated'} #${row.id} ${row.name} (${row.city})`,
+          `[attraction-image] ${dryRun ? 'would update' : 'updated'} #${row.id} ${row.name} (${row.city}) source=${result.imageSource ?? '?'}`,
         );
       } else {
         skipped += 1;
@@ -207,7 +248,7 @@ export async function enrichAttractionCoversForIds(
   ids: number[],
   options?: { delayMs?: number; maxCount?: number },
 ): Promise<{ updated: number; skipped: number }> {
-  if (!isAmapImageEnrichEnabled()) {
+  if (!isAmapImageEnrichEnabled() && !isWikimediaImageEnrichEnabled()) {
     return { updated: 0, skipped: ids.length };
   }
 
@@ -256,7 +297,11 @@ async function enqueueCoverEnrichment(attractionId: number): Promise<void> {
 
 /** 路线同步后触发（串行限流；同步链路应优先 await enrichAttractionCoversForIds） */
 export function scheduleAttractionCoverEnrichment(attractionId: number): void {
-  if (!isAmapImageEnrichEnabled() || !Number.isFinite(attractionId) || attractionId <= 0) {
+  if (
+    (!isAmapImageEnrichEnabled() && !isWikimediaImageEnrichEnabled()) ||
+    !Number.isFinite(attractionId) ||
+    attractionId <= 0
+  ) {
     return;
   }
   enrichQueue = enrichQueue
@@ -270,7 +315,7 @@ export function scheduleAttractionCoverEnrichment(attractionId: number): void {
     });
 }
 
-/** 管理端强制对单个景点重新拉取（覆盖非 manual 封面） */
+/** 管理端强制对单个景点重新拉取（覆盖非 manual 封面；优先高德） */
 export async function refreshAttractionCoverFromAmap(
   id: number,
   options?: { dryRun?: boolean },

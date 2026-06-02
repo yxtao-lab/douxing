@@ -12,7 +12,7 @@ import {
 import type { AttractionInfo, AttractionOpenHours, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
 import { resolvePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
-import { tryDeleteAttractionCoverFile } from '../utils/local-upload.util.js';
+import { deleteStoredAttractionCover } from './attraction-cover-storage.service.js';
 
 export { syncAttractionsFromRouteDetail } from './attraction-sync.service.js';
 
@@ -361,7 +361,7 @@ export async function updateAttractionCoverImage(
     .where(eq(attractions.id, id));
 
   if (previousPath && previousPath !== storedPath) {
-    tryDeleteAttractionCoverFile(previousPath);
+    await deleteStoredAttractionCover(previousPath);
   }
 
   const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);

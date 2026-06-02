@@ -43,3 +43,10 @@ export async function uploadAttractionCover(id: number, file: File) {
   );
   return data.data;
 }
+
+export async function refreshAttractionCoverFromAmap(id: number) {
+  const { data } = await http.post<ApiResponse<AttractionInfo>>(
+    `/attractions/admin/${id}/cover/refresh-amap`,
+  );
+  return data.data;
+}

@@ -32,6 +32,52 @@ export interface DownloadImageResult {
   bytes: number;
 }
 
+export interface DownloadImageBufferResult {
+  buffer: Buffer;
+  contentType: string;
+  bytes: number;
+}
+
+/**
+ * 下载远程图片到内存（带超时与体积上限）。
+ */
+export async function downloadImageToBuffer(
+  imageUrl: string,
+  options?: { timeoutMs?: number; maxBytes?: number },
+): Promise<DownloadImageBufferResult> {
+  const timeoutMs = options?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const maxBytes = options?.maxBytes ?? DEFAULT_MAX_BYTES;
+
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(imageUrl, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+
+  const contentType = response.headers.get('content-type') ?? 'image/jpeg';
+  if (!contentType.startsWith('image/')) {
+    throw new Error(`invalid content-type: ${contentType}`);
+  }
+
+  const buffer = Buffer.from(await response.arrayBuffer());
+  if (buffer.byteLength === 0) {
+    throw new Error('empty image body');
+  }
+  if (buffer.byteLength > maxBytes) {
+    throw new Error(`image too large: ${buffer.byteLength} bytes`);
+  }
+
+  return { buffer, contentType, bytes: buffer.byteLength };
+}
+
 /**
  * 下载远程图片到本地文件（带超时与体积上限）。
  */

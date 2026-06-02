@@ -1,5 +1,5 @@
 /**
- * 景点封面批量补全（高德 POI 图 → 本地 uploads）。
+ * 景点封面批量补全（高德 POI 图 → Wikimedia 兜底 → OSS 或本地 uploads）。
  *
  * 用法：
  *   pnpm --filter @douxing/server enrich:attraction-images

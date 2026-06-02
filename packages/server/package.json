@@ -13,12 +13,15 @@
     "db:seed": "tsx src/db/seed.ts",
     "enricher:demo": "tsx src/scripts/enricher-demo.ts",
     "enrich:attraction-images": "tsx src/scripts/enrich-attraction-images.ts",
+    "cleanup:orphan-covers": "tsx src/scripts/cleanup-orphan-attraction-covers.ts",
+    "migrate:covers-to-oss": "tsx src/scripts/migrate-attraction-covers-to-oss.ts",
     "ml:generate-dataset": "tsx src/scripts/generate-training-dataset.ts",
     "ml:validate-dataset": "tsx src/scripts/validate-training-dataset.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@douxing/shared": "workspace:*",
+    "ali-oss": "^6.23.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -33,6 +36,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@types/ali-oss": "^6.23.3",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",

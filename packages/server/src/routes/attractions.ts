@@ -4,6 +4,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
+import '../config/env.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail } from '../utils/response.js';
 import { getUserWithRoles } from '../services/user.service.js';
@@ -17,6 +18,9 @@ import {
   listAttractionsForAdmin,
   updateAttractionCoverImage,
 } from '../services/attraction.service.js';
+import { refreshAttractionCoverFromAmap } from '../services/attraction-image-enricher.service.js';
+import { persistAttractionCoverBuffer } from '../services/attraction-cover-storage.service.js';
+import { isOssEnabled } from '../config/oss.js';
 import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 const router = Router();
@@ -31,24 +35,26 @@ function ensureAttractionCoversDir() {
 }
 
 const coverUpload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      ensureAttractionCoversDir();
-      cb(null, attractionCoversDir);
-    },
-    filename: (req, file, cb) => {
-      const ext = path.extname(file.originalname) || '.jpg';
-      const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext.toLowerCase())
-        ? ext.toLowerCase()
-        : '.jpg';
-      const id = parseInt(String(req.params.id), 10);
-      cb(null, `${id}-${Date.now()}${safeExt}`);
-    },
-  }),
+  storage: isOssEnabled()
+    ? multer.memoryStorage()
+    : multer.diskStorage({
+        destination: (_req, _file, cb) => {
+          ensureAttractionCoversDir();
+          cb(null, attractionCoversDir);
+        },
+        filename: (req, file, cb) => {
+          const ext = path.extname(file.originalname) || '.jpg';
+          const safeExt = ['.jpg', '.jpeg', '.png', '.webp', '.gif'].includes(ext.toLowerCase())
+            ? ext.toLowerCase()
+            : '.jpg';
+          const id = parseInt(String(req.params.id), 10);
+          cb(null, `${id}-${Date.now()}${safeExt}`);
+        },
+      }),
   limits: { fileSize: 3 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     if (!file.mimetype.startsWith('image/')) {
-      cb(new Error('仅支持图片文件'));
+      cb(new Error(ApiMessageKey.IMAGE_ONLY));
       return;
     }
     cb(null, true);
@@ -134,7 +140,19 @@ router.post('/admin/:id/cover', authMiddleware, (req, res, next) => {
       return fail(res, ApiMessageKey.ATTRACTION_COVER_UPLOAD_FAILED);
     }
 
-    const relativePath = `/uploads/attractions/${req.file.filename}`;
+    let relativePath: string;
+    if (isOssEnabled() && req.file.buffer) {
+      const { storedUrl } = await persistAttractionCoverBuffer(
+        id,
+        req.file.buffer,
+        req.file.mimetype,
+        'manual',
+      );
+      relativePath = storedUrl;
+    } else {
+      relativePath = `/uploads/attractions/${req.file.filename}`;
+    }
+
     const item = await updateAttractionCoverImage(id, {
       coverImageUrl: relativePath,
       imageSource: AttractionImageSource.MANUAL,
@@ -153,6 +171,39 @@ router.post('/admin/:id/cover', authMiddleware, (req, res, next) => {
     }
     console.error('[attractions/admin/cover]', err);
     return fail(res, ApiMessageKey.ATTRACTION_COVER_UPLOAD_FAILED, 500, 500);
+  }
+});
+
+router.post('/admin/:id/cover/refresh-amap', authMiddleware, async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id) || id <= 0) {
+      return fail(res, ApiMessageKey.ATTRACTION_INVALID_ID);
+    }
+
+    const existing = await getAttractionById(id);
+    if (!existing) {
+      return fail(res, ApiMessageKey.ATTRACTION_NOT_FOUND, 404, 404);
+    }
+    if (existing.imageSource === AttractionImageSource.MANUAL) {
+      return fail(res, ApiMessageKey.ATTRACTION_COVER_REFRESH_MANUAL_SKIP);
+    }
+
+    const item = await refreshAttractionCoverFromAmap(id);
+    if (!item?.coverImageUrl) {
+      return fail(res, ApiMessageKey.ATTRACTION_COVER_REFRESH_FAILED);
+    }
+
+    const publicBase = resolvePublicBaseFromRequest(req);
+    const coverImageUrl = resolvePublicAssetUrl(item.coverImageUrl, { publicBase }) ?? item.coverImageUrl;
+    success(res, { ...item, coverImageUrl }, ApiMessageKey.ATTRACTION_COVER_REFRESH_SUCCESS);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return fail(res, err.messageKey);
+    }
+    console.error('[attractions/admin/cover/refresh-amap]', err);
+    return fail(res, ApiMessageKey.ATTRACTION_COVER_REFRESH_FAILED, 500, 500);
   }
 });
 

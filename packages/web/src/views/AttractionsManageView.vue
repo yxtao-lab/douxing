@@ -47,20 +47,35 @@
           <td>{{ item.city }}</td>
           <td>{{ imageSourceLabel(item.imageSource) }}</td>
           <td>
-            <label class="btn-upload">
-              <input
-                type="file"
-                accept="image/*"
-                class="file-input"
-                :disabled="uploadingId === item.id"
-                @change="(e) => handleUpload(item, e)"
-              />
-              {{
-                uploadingId === item.id
-                  ? t('attractions.uploadingCover')
-                  : t('attractions.uploadCover')
-              }}
-            </label>
+            <div class="action-cell">
+              <label class="btn-upload">
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="file-input"
+                  :disabled="uploadingId === item.id || refreshingId === item.id"
+                  @change="(e) => handleUpload(item, e)"
+                />
+                {{
+                  uploadingId === item.id
+                    ? t('attractions.uploadingCover')
+                    : t('attractions.uploadCover')
+                }}
+              </label>
+              <button
+                v-if="item.imageSource !== 'manual'"
+                class="btn-refresh-cover"
+                type="button"
+                :disabled="uploadingId === item.id || refreshingId === item.id"
+                @click="handleRefreshCover(item)"
+              >
+                {{
+                  refreshingId === item.id
+                    ? t('attractions.refreshingCover')
+                    : t('attractions.refreshCover')
+                }}
+              </button>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -75,7 +90,7 @@
 import { onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { AttractionInfo } from '@douxing/shared';
-import { fetchAdminAttractionCatalog, uploadAttractionCover } from '@/api/attractions';
+import { fetchAdminAttractionCatalog, uploadAttractionCover, refreshAttractionCoverFromAmap } from '@/api/attractions';
 import { getAppErrorMessage } from '@/utils/error-message';
 
 const { t } = useI18n();
@@ -84,6 +99,7 @@ const loading = ref(false);
 const error = ref('');
 const keyword = ref('');
 const uploadingId = ref<number | null>(null);
+const refreshingId = ref<number | null>(null);
 
 function imageSourceLabel(source?: string | null) {
   if (!source) return t('attractions.imageSourceNone');
@@ -110,6 +126,19 @@ async function loadList() {
     error.value = getAppErrorMessage(e, t('common.loadFailed'));
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleRefreshCover(item: AttractionInfo) {
+  refreshingId.value = item.id;
+  error.value = '';
+  try {
+    const updated = await refreshAttractionCoverFromAmap(item.id);
+    list.value = list.value.map((row) => (row.id === item.id ? updated : row));
+  } catch (e) {
+    error.value = getAppErrorMessage(e, t('attractions.refreshCoverFailed'));
+  } finally {
+    refreshingId.value = null;
   }
 }
 
@@ -217,6 +246,25 @@ th {
   color: #6b7280;
   font-size: 12px;
   line-height: 1.4;
+}
+.action-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+.btn-refresh-cover {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  font-size: 13px;
+}
+.btn-refresh-cover:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 .btn-upload {
   display: inline-block;

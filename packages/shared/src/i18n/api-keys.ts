@@ -95,6 +95,9 @@ export const ApiMessageKey = {
   ATTRACTION_COVER_INVALID: 'api.attractionCoverInvalid',
   ATTRACTION_COVER_UPLOAD_FAILED: 'api.attractionCoverUploadFailed',
   ATTRACTION_COVER_UPLOAD_SUCCESS: 'api.attractionCoverUploadSuccess',
+  ATTRACTION_COVER_REFRESH_SUCCESS: 'api.attractionCoverRefreshSuccess',
+  ATTRACTION_COVER_REFRESH_FAILED: 'api.attractionCoverRefreshFailed',
+  ATTRACTION_COVER_REFRESH_MANUAL_SKIP: 'api.attractionCoverRefreshManualSkip',
 
   ACHIEVEMENT_LIST_FAILED: 'api.achievementListFailed',
   ACHIEVEMENT_MINE_FAILED: 'api.achievementMineFailed',
