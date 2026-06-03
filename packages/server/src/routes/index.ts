@@ -13,6 +13,8 @@ import attractionsRouter from './attractions.js';
 import speechRouter from './speech.js';
 import shareRouter from './share.js';
 
+import playbooksRouter from './playbooks.js';
+
 const router = Router();
 
 router.use(`${API_PREFIX}/health`, healthRouter);
@@ -27,5 +29,6 @@ router.use(`${API_PREFIX}/badges`, badgesRouter);
 router.use(`${API_PREFIX}/leaderboard`, leaderboardRouter);
 router.use(`${API_PREFIX}/speech`, speechRouter);
 router.use(`${API_PREFIX}/share`, shareRouter);
+router.use(`${API_PREFIX}/playbooks`, playbooksRouter);
 
 export default router;

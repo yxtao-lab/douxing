@@ -1,10 +1,12 @@
 import type { LocaleCode, RouteTransitMode } from '@douxing/shared';
-import {
-  ROUTE_PLAYBOOKS,
-  type PlaybookSegmentEdge,
-  type PlaybookTransitReasonKey,
-  type RoutePlaybook,
+import type {
+  PlaybookTransitReasonKey,
+  RoutePlaybook,
+  RoutePlaybookSegmentEdge as PlaybookSegmentEdge,
 } from '../data/route-playbooks.js';
+import { loadEnabledRoutePlaybooks } from './playbook.service.js';
+
+export type { RoutePlaybook };
 
 export interface PlaybookRetrievalInput {
   city?: string | null;
@@ -86,20 +88,22 @@ function scorePlaybook(
   return score;
 }
 
-/** H9-4b：检索玩法动线 */
-export function retrievePlaybooksForPlanning(
+/** H9-4b：检索玩法动线（DB 启用项 + 内存缓存） */
+export async function retrievePlaybooksForPlanning(
   input: PlaybookRetrievalInput,
-): MatchedRoutePlaybook[] {
+): Promise<MatchedRoutePlaybook[]> {
+  const playbooks = await loadEnabledRoutePlaybooks();
   const themes = input.themes ?? [];
   const promptKeywords = extractKeywords(input.prompt ?? '');
   const titleKeywords = extractKeywords(input.dayTitle ?? '');
   const keywords = [...new Set([...promptKeywords, ...titleKeywords])];
   const limit = input.limit ?? 3;
 
-  const scored = ROUTE_PLAYBOOKS.map((playbook) => ({
-    playbook,
-    score: scorePlaybook(playbook, input.city, themes, keywords),
-  }))
+  const scored = playbooks
+    .map((playbook) => ({
+      playbook,
+      score: scorePlaybook(playbook, input.city, themes, keywords),
+    }))
     .filter((item) => item.score > 0)
     .sort((a, b) => b.score - a.score);
 

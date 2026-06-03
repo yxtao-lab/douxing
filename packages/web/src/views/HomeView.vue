@@ -10,6 +10,7 @@
         <router-link to="/checkins/map">{{ t('web.checkinMap') }}</router-link>
         <router-link to="/attractions/pending">{{ t('web.attractionsPending') }}</router-link>
         <router-link to="/attractions/manage">{{ t('web.attractionsManage') }}</router-link>
+        <router-link to="/playbooks/manage">{{ t('web.playbooksManage') }}</router-link>
       </div>
       <ul class="info-list">
         <li><strong>{{ t('home.role') }}：</strong>{{ userStore.user?.roles?.join('、') || '-' }}</li>

@@ -237,7 +237,7 @@ console.log(`[enricher-demo] 模式: ${offline ? 'offline（无高德）' : 'ful
 console.log(`[enricher-demo] locale: ${locale}`);
 
 const playbooks = playbookDemo
-  ? retrievePlaybooksForPlanning({
+  ? await retrievePlaybooksForPlanning({
       city: intent.city,
       themes: intent.themes,
       prompt: '杭州西湖经典一日游',

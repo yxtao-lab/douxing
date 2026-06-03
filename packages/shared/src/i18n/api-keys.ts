@@ -147,6 +147,21 @@ export const ApiMessageKey = {
   SMS_SEND_RETRY: 'api.smsSendRetry',
   AI_SERVICE_DISABLED: 'api.aiServiceDisabled',
 
+  PLAYBOOK_LIST_SUCCESS: 'api.playbookListSuccess',
+  PLAYBOOK_LIST_FAILED: 'api.playbookListFailed',
+  PLAYBOOK_DETAIL_SUCCESS: 'api.playbookDetailSuccess',
+  PLAYBOOK_DETAIL_FAILED: 'api.playbookDetailFailed',
+  PLAYBOOK_NOT_FOUND: 'api.playbookNotFound',
+  PLAYBOOK_INVALID_ID: 'api.playbookInvalidId',
+  PLAYBOOK_VALIDATION_FAILED: 'api.playbookValidationFailed',
+  PLAYBOOK_ID_EXISTS: 'api.playbookIdExists',
+  PLAYBOOK_CREATE_SUCCESS: 'api.playbookCreateSuccess',
+  PLAYBOOK_CREATE_FAILED: 'api.playbookCreateFailed',
+  PLAYBOOK_UPDATE_SUCCESS: 'api.playbookUpdateSuccess',
+  PLAYBOOK_UPDATE_FAILED: 'api.playbookUpdateFailed',
+  PLAYBOOK_DELETE_SUCCESS: 'api.playbookDeleteSuccess',
+  PLAYBOOK_DELETE_FAILED: 'api.playbookDeleteFailed',
+
   SERVER_RUNNING: 'api.serverRunning',
 } as const;
 

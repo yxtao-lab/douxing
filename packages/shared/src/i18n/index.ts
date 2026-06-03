@@ -52,8 +52,8 @@ export {
   formatPlaybookTransitDescription,
   type EnricherWarningKey,
   type IntercityDescriptionKey,
-  type PlaybookTransitReasonKey,
 } from './enricher-messages.js';
+export type { PlaybookTransitReasonKey } from '../types.js';
 
 import { MemberLevel } from '../constants.js';
 import type { LocaleCode } from './types.js';

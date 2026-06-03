@@ -24,6 +24,9 @@ export const sharedEnUS = {
     points: 'Points',
     refresh: 'Refresh',
     search: 'Search',
+    edit: 'Edit',
+    delete: 'Delete',
+    saving: 'Saving…',
     operationFailed: 'Action failed',
     goSettings: 'Open settings',
     uploadFailed: 'Upload failed',
@@ -94,6 +97,7 @@ export const sharedEnUS = {
     checkinMap: 'Map',
     attractionsPending: 'Attraction Review',
     attractionsManage: 'Attraction Covers',
+    playbooksManage: 'Route Playbooks',
     logout: 'Sign out',
   },
 } as const;

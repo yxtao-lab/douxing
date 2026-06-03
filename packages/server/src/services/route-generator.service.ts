@@ -87,7 +87,7 @@ async function resolvePlaybookMatches(
   intent: TravelIntentSnapshot,
 ): Promise<MatchedRoutePlaybook[]> {
   if (input.playbookMatches) return input.playbookMatches;
-  return retrievePlaybooksForPlanning({
+  return await retrievePlaybooksForPlanning({
     city: intent.city,
     themes: intent.themes,
     prompt: input.prompt,

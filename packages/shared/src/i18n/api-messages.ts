@@ -149,6 +149,21 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.SMS_SEND_RETRY]: '短信发送失败，请稍后重试',
   [ApiMessageKey.AI_SERVICE_DISABLED]: 'Python AI 微服务未启用',
 
+  [ApiMessageKey.PLAYBOOK_LIST_SUCCESS]: '玩法动线列表已加载',
+  [ApiMessageKey.PLAYBOOK_LIST_FAILED]: '获取玩法动线列表失败',
+  [ApiMessageKey.PLAYBOOK_DETAIL_SUCCESS]: '玩法动线详情已加载',
+  [ApiMessageKey.PLAYBOOK_DETAIL_FAILED]: '获取玩法动线详情失败',
+  [ApiMessageKey.PLAYBOOK_NOT_FOUND]: '玩法动线不存在',
+  [ApiMessageKey.PLAYBOOK_INVALID_ID]: '无效的玩法动线 ID',
+  [ApiMessageKey.PLAYBOOK_VALIDATION_FAILED]: '玩法动线数据校验失败',
+  [ApiMessageKey.PLAYBOOK_ID_EXISTS]: '玩法动线 ID 已存在',
+  [ApiMessageKey.PLAYBOOK_CREATE_SUCCESS]: '玩法动线已创建',
+  [ApiMessageKey.PLAYBOOK_CREATE_FAILED]: '创建玩法动线失败',
+  [ApiMessageKey.PLAYBOOK_UPDATE_SUCCESS]: '玩法动线已更新',
+  [ApiMessageKey.PLAYBOOK_UPDATE_FAILED]: '更新玩法动线失败',
+  [ApiMessageKey.PLAYBOOK_DELETE_SUCCESS]: '玩法动线已删除',
+  [ApiMessageKey.PLAYBOOK_DELETE_FAILED]: '删除玩法动线失败',
+
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
 };
 
@@ -304,6 +319,21 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.WECHAT_PAY_PARAMS_MISSING]: 'WeChat Pay parameters missing',
   [ApiMessageKey.SMS_SEND_RETRY]: 'Failed to send SMS, try again later',
   [ApiMessageKey.AI_SERVICE_DISABLED]: 'Python AI microservice is disabled',
+
+  [ApiMessageKey.PLAYBOOK_LIST_SUCCESS]: 'Playbooks loaded',
+  [ApiMessageKey.PLAYBOOK_LIST_FAILED]: 'Failed to load playbooks',
+  [ApiMessageKey.PLAYBOOK_DETAIL_SUCCESS]: 'Playbook loaded',
+  [ApiMessageKey.PLAYBOOK_DETAIL_FAILED]: 'Failed to load playbook',
+  [ApiMessageKey.PLAYBOOK_NOT_FOUND]: 'Playbook not found',
+  [ApiMessageKey.PLAYBOOK_INVALID_ID]: 'Invalid playbook ID',
+  [ApiMessageKey.PLAYBOOK_VALIDATION_FAILED]: 'Playbook validation failed',
+  [ApiMessageKey.PLAYBOOK_ID_EXISTS]: 'Playbook ID already exists',
+  [ApiMessageKey.PLAYBOOK_CREATE_SUCCESS]: 'Playbook created',
+  [ApiMessageKey.PLAYBOOK_CREATE_FAILED]: 'Failed to create playbook',
+  [ApiMessageKey.PLAYBOOK_UPDATE_SUCCESS]: 'Playbook updated',
+  [ApiMessageKey.PLAYBOOK_UPDATE_FAILED]: 'Failed to update playbook',
+  [ApiMessageKey.PLAYBOOK_DELETE_SUCCESS]: 'Playbook deleted',
+  [ApiMessageKey.PLAYBOOK_DELETE_FAILED]: 'Failed to delete playbook',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
 };

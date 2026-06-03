@@ -62,6 +62,39 @@ export type RouteTransitMode =
   | 'walk'
   | 'drive';
 
+/** H9-4 / H9+：玩法段间交通理由键 */
+export type PlaybookTransitReasonKey =
+  | 'classicWalk'
+  | 'scenicWalk'
+  | 'sightseeingBus'
+  | 'ferry'
+  | 'taxiShort';
+
+/** H9+：玩法段间边 */
+export interface RoutePlaybookSegmentEdge {
+  from: string;
+  to: string;
+  mode: RouteTransitMode;
+  reasonKey: PlaybookTransitReasonKey;
+  fromAliases?: string[];
+  toAliases?: string[];
+}
+
+/** H9+：经典玩法动线（DB / 管理端） */
+export interface RoutePlaybookInfo {
+  id: string;
+  city: string;
+  scope: string;
+  keywords: string[];
+  themes: string[];
+  classicOrder: string[];
+  segments: RoutePlaybookSegmentEdge[];
+  summaryZh: string;
+  summaryEn: string;
+  enabled: boolean;
+  sortOrder: number;
+}
+
 /** H9-3：跨城班次数据来源 */
 export type RouteScheduleSource = 'api' | 'catalog' | 'template';
 

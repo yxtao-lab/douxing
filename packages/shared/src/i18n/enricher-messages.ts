@@ -1,4 +1,5 @@
 import type { LocaleCode } from './types.js';
+import type { PlaybookTransitReasonKey } from '../types.js';
 import { DEFAULT_LOCALE } from './constants.js';
 import { formatMessage } from './format-message.js';
 import { formatMinutesAsTime } from '../open-hours.js';
@@ -91,13 +92,6 @@ export function formatIntercitySegmentDescription(
     scheduleNo: params?.scheduleNo?.trim() ?? '',
   });
 }
-
-export type PlaybookTransitReasonKey =
-  | 'classicWalk'
-  | 'scenicWalk'
-  | 'sightseeingBus'
-  | 'ferry'
-  | 'taxiShort';
 
 /** H9-4：玩法段间交通推荐理由 */
 export function formatPlaybookTransitDescription(

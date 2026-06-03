@@ -12,6 +12,7 @@
         <router-link to="/checkins">{{ t('web.checkins') }}</router-link>
         <router-link to="/checkins/map">{{ t('web.checkinMap') }}</router-link>
         <router-link to="/attractions/pending">{{ t('web.attractionsPending') }}</router-link>
+        <router-link to="/playbooks/manage">{{ t('web.playbooksManage') }}</router-link>
         <a href="#" @click.prevent="handleLogout">{{ t('web.logout') }}</a>
       </nav>
       <label v-if="userStore.token" class="locale-switch">

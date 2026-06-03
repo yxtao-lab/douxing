@@ -7,6 +7,7 @@ import { users, roles, userRoles, systemConfig, travelRoutes } from './schema/in
 import { seedAttractions, syncAttractionsFromRouteDetail } from '../services/attraction.service.js';
 import { seedBadges } from '../services/badge.service.js';
 import { seedAchievementDefinitions } from '../services/achievement.service.js';
+import { seedRoutePlaybooks } from '../services/playbook.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
 
@@ -169,6 +170,7 @@ async function main() {
   await seedAttractions();
   await seedBadges();
   await seedAchievementDefinitions();
+  await seedRoutePlaybooks();
   await seedSampleRoutes(demoUserId);
   await seedSystemConfig();
   console.log('[seed] Done');
