@@ -1,11 +1,11 @@
-import { eq, desc, and, sql, inArray } from 'drizzle-orm';
+import { eq, desc, and, sql, inArray, count } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { routeLikes } from '../db/schema/route-likes.js';
 import { routeFavorites } from '../db/schema/route-favorites.js';
 import { users } from '../db/schema/users.js';
-import { RouteStatus } from '@douxing/shared';
-import type { RouteListQuery, TravelRouteInfo } from '@douxing/shared';
+import { RouteStatus, buildPaginatedResult } from '@douxing/shared';
+import type { PaginatedResult, RouteListQuery, TravelRouteInfo } from '@douxing/shared';
 import { toRouteInfo } from '../utils/route-info.util.js';
 import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
@@ -81,51 +81,71 @@ async function finalizeRouteList(routes: TravelRouteInfo[], userId: number, with
   return result;
 }
 
-export async function listRoutesForUser(userId: number, query: RouteListQuery = {}) {
+export async function listRoutesForUser(
+  userId: number,
+  query: RouteListQuery = {},
+): Promise<PaginatedResult<TravelRouteInfo>> {
   const db = getDb();
   const scope = query.scope ?? 'mine';
-  const limit = Math.min(Math.max(query.limit ?? 50, 1), 100);
+  const page = query.page && query.page >= 1 ? Math.floor(query.page) : 1;
+  const pageSize = Math.min(
+    Math.max(query.pageSize ?? query.limit ?? 50, 1),
+    100,
+  );
+  const offset = (page - 1) * pageSize;
   const orderBy = resolveOrderBy(query.sort, scope);
 
   if (scope === 'plaza' || scope === 'hot') {
+    const where = and(eq(travelRoutes.status, RouteStatus.PUBLISHED), eq(travelRoutes.isPublic, 1));
+    const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);
     const rows = await db
       .select()
       .from(travelRoutes)
-      .where(
-        and(eq(travelRoutes.status, RouteStatus.PUBLISHED), eq(travelRoutes.isPublic, 1)),
-      )
+      .where(where)
       .orderBy(orderBy)
-      .limit(limit);
+      .limit(pageSize)
+      .offset(offset);
     const routes = mapRowsForViewer(rows, userId);
-    return finalizeRouteList(routes, userId, true);
+    const items = await finalizeRouteList(routes, userId, true);
+    return buildPaginatedResult(items, Number(total ?? 0), page, pageSize);
   }
 
   if (scope === 'favorites') {
+    const where = eq(routeFavorites.userId, userId);
+    const [{ value: total }] = await db
+      .select({ value: count() })
+      .from(routeFavorites)
+      .where(where);
     const rows = await db
       .select({ route: travelRoutes })
       .from(routeFavorites)
       .innerJoin(travelRoutes, eq(routeFavorites.routeId, travelRoutes.id))
-      .where(eq(routeFavorites.userId, userId))
+      .where(where)
       .orderBy(desc(routeFavorites.createdAt))
-      .limit(limit);
+      .limit(pageSize)
+      .offset(offset);
     const routes = rows.map((r) => toRouteInfo(r.route, { viewerId: userId }));
-    return finalizeRouteList(routes, userId, true);
+    const items = await finalizeRouteList(routes, userId, true);
+    return buildPaginatedResult(items, Number(total ?? 0), page, pageSize);
   }
 
   const conditions = [eq(travelRoutes.creatorId, userId)];
   if (query.status !== undefined && !Number.isNaN(query.status)) {
     conditions.push(eq(travelRoutes.status, query.status));
   }
-
+  const where = and(...conditions);
+  const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);
   const rows = await db
     .select()
     .from(travelRoutes)
-    .where(and(...conditions))
+    .where(where)
     .orderBy(orderBy)
-    .limit(limit);
+    .limit(pageSize)
+    .offset(offset);
 
   const routes = mapRowsForViewer(rows, userId);
-  return finalizeRouteList(routes, userId, false);
+  const items = await finalizeRouteList(routes, userId, false);
+  return buildPaginatedResult(items, Number(total ?? 0), page, pageSize);
 }
 
 export async function incrementRouteViewCount(routeId: number) {

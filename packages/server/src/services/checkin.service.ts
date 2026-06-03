@@ -1,4 +1,4 @@
-import { eq, desc, and, inArray, sql } from 'drizzle-orm';
+import { eq, desc, and, inArray, sql, count, gte } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { checkIns, type CheckInLocation } from '../db/schema/check-ins.js';
 import { attractions } from '../db/schema/attractions.js';
@@ -9,7 +9,8 @@ import {
   CHECKIN_FIRST_ATTRACTION_BONUS,
   CHECKIN_MAX_PHOTOS,
 } from '@douxing/shared';
-import type { CheckInInfo } from '@douxing/shared';
+import type { CheckInInfo, CheckInTimeRange, PaginatedResult } from '@douxing/shared';
+import { buildPaginatedResult } from '@douxing/shared';
 import { evaluateAchievements } from './achievement.service.js';
 import { evaluateBadges } from './badge.service.js';
 import { getAttractionForCheckIn } from './attraction.service.js';
@@ -172,29 +173,53 @@ export async function createCheckIn(
   return { checkIn, newAchievements, newBadges };
 }
 
-export async function listUserCheckIns(userId: number) {
+function resolveCheckInSince(range?: CheckInTimeRange) {
+  if (!range || range === 'all') return undefined;
+  const daysMap = { '7d': 7, '30d': 30, '90d': 90 } as const;
+  const days = daysMap[range];
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
+
+async function paginateCheckIns(
+  where: ReturnType<typeof and> | undefined,
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<CheckInInfo>> {
   const db = getDb();
+  const [{ value: total }] = await db.select({ value: count() }).from(checkIns).where(where);
+  const offset = (page - 1) * pageSize;
   const rows = await db
     .select()
     .from(checkIns)
-    .where(eq(checkIns.userId, userId))
-    .orderBy(desc(checkIns.checkedAt));
-  return mapRowsToCheckInInfo(rows);
+    .where(where)
+    .orderBy(desc(checkIns.checkedAt))
+    .limit(pageSize)
+    .offset(offset);
+  const items = await mapRowsToCheckInInfo(rows);
+  return buildPaginatedResult(items, Number(total ?? 0), page, pageSize);
 }
 
-export async function listRouteCheckIns(routeId: number, userId: number) {
-  const db = getDb();
-  const rows = await db
-    .select()
-    .from(checkIns)
-    .where(and(eq(checkIns.routeId, routeId), eq(checkIns.userId, userId)))
-    .orderBy(desc(checkIns.checkedAt));
-  return mapRowsToCheckInInfo(rows);
+export async function listUserCheckInsPaginated(
+  userId: number,
+  page: number,
+  pageSize: number,
+  range?: CheckInTimeRange,
+) {
+  const since = resolveCheckInSince(range);
+  const conditions = [eq(checkIns.userId, userId)];
+  if (since) conditions.push(gte(checkIns.checkedAt, since));
+  return paginateCheckIns(and(...conditions), page, pageSize);
 }
 
-export async function listAllCheckInsForAdmin(limit = 500) {
-  const db = getDb();
-  const safeLimit = Math.min(Math.max(limit, 1), 1000);
-  const rows = await db.select().from(checkIns).orderBy(desc(checkIns.checkedAt)).limit(safeLimit);
-  return mapRowsToCheckInInfo(rows);
+export async function listRouteCheckInsPaginated(
+  routeId: number,
+  userId: number,
+  page: number,
+  pageSize: number,
+) {
+  return paginateCheckIns(and(eq(checkIns.routeId, routeId), eq(checkIns.userId, userId)), page, pageSize);
+}
+
+export async function listAllCheckInsForAdminPaginated(page: number, pageSize: number) {
+  return paginateCheckIns(undefined, page, pageSize);
 }

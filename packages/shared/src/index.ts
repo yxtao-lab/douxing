@@ -4,6 +4,8 @@ export * from './i18n/index.js';
 export * from './order-state.js';
 export * from './geo.js';
 export * from './membership.js';
+export * from './pagination.js';
 export * from './checkin-map.js';
+export * from './city-regions.js';
 export * from './route-path.js';
 export * from './open-hours.js';

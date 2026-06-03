@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view class="page" :class="themeClass">
     <view class="page-hero page-hero--compact">
       <view class="hero-bg" />
@@ -148,7 +148,7 @@
 import { computed, ref, watch } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import type { CheckInInfo } from '@douxing/shared';
-import { fetchCheckIns } from '@/api/checkins';
+import { fetchAllCheckInsForMap } from '@/api/checkins';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
@@ -304,7 +304,7 @@ watch(
 
 async function loadCheckIns() {
   try {
-    allList.value = await fetchCheckIns();
+    allList.value = await fetchAllCheckInsForMap(timeRange.value);
   } catch {
     allList.value = [];
   }

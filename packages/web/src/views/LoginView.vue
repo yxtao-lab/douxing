@@ -1,124 +1,81 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="login-card-head">
-        <h1>{{ isRegister ? t('common.register') : t('common.login') }} {{ t('app.name') }}</h1>
-        <select class="locale-select" :value="currentLocale" @change="onLocaleChange">
-          <option v-for="item in localeOptions" :key="item.code" :value="item.code">
-            {{ item.label }}
-          </option>
-        </select>
-      </div>
-
-      <div class="login-tabs">
-        <button
-          type="button"
-          class="login-tab"
-          :class="{ active: loginMode === 'sms' }"
-          @click="loginMode = 'sms'"
-        >
-          {{ t('login.smsTab') }}
-        </button>
-        <button
-          type="button"
-          class="login-tab"
-          :class="{ active: loginMode === 'password' }"
-          @click="loginMode = 'password'"
-        >
-          {{ t('login.passwordTab') }}
-        </button>
-      </div>
-
-      <form v-if="loginMode === 'sms'" @submit.prevent="handleSmsSubmit">
-        <label>
-          <span>{{ t('login.phone') }}</span>
-          <input
-            v-model="smsForm.phone"
-            type="tel"
-            maxlength="11"
-            :placeholder="t('login.phonePlaceholder')"
-            required
-          />
-        </label>
-        <label class="code-label">
-          <span>{{ t('login.code') }}</span>
-          <div class="code-row">
-            <input
-              v-model="smsForm.code"
-              type="text"
-              maxlength="6"
-              :placeholder="t('login.codePlaceholder')"
-              required
-            />
-            <button
-              type="button"
-              class="code-btn"
-              :disabled="sendingCode || countdown > 0"
-              @click="handleSendCode"
-            >
-              {{ codeButtonLabel }}
-            </button>
-          </div>
-        </label>
-        <p v-if="devCodeHint" class="dev-hint">{{ t('login.devCodeHint', { code: devCodeHint }) }}</p>
-        <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading">
-          {{ loading ? t('login.signingIn') : t('login.smsSubmit') }}
-        </button>
-        <p class="hint">{{ t('login.smsHint') }}</p>
-      </form>
-
-      <form v-else @submit.prevent="handlePasswordSubmit">
-        <label>
-          <span>{{ t('login.username') }}</span>
-          <input v-model="form.username" type="text" placeholder="admin" required />
-        </label>
-        <label>
-          <span>{{ t('login.password') }}</span>
-          <input v-model="form.password" type="password" placeholder="admin123" required />
-        </label>
-        <p v-if="error" class="error">{{ error }}</p>
-        <button type="submit" :disabled="loading">
-          {{
-            loading
-              ? isRegister
-                ? t('login.signingUp')
-                : t('login.signingIn')
-              : isRegister
-                ? t('common.register')
-                : t('common.login')
-          }}
-        </button>
-        <p class="switch-link">
-          <a href="#" @click.prevent="isRegister = !isRegister">
-            {{ isRegister ? t('login.toggleToLogin') : t('login.toggleToRegister') }}
-          </a>
-        </p>
-        <p class="hint">{{ t('login.demoHint') }}</p>
-      </form>
+  <div class="login-view">
+    <div class="login-head">
+      <h2>{{ isRegister ? t('common.register') : t('layout.loginTitle') }}</h2>
+      <p class="subtitle">{{ t('layout.loginSubtitle') }}</p>
     </div>
+
+    <a-tabs v-model:activeKey="loginMode">
+      <a-tab-pane key="sms" :tab="t('login.smsTab')">
+        <a-form layout="vertical" :model="smsForm" @finish="handleSmsSubmit">
+          <a-form-item :label="t('login.phone')" name="phone" :rules="[{ required: true }]">
+            <a-input
+              v-model:value="smsForm.phone"
+              type="tel"
+              :maxlength="11"
+              :placeholder="t('login.phonePlaceholder')"
+            />
+          </a-form-item>
+          <a-form-item :label="t('login.code')" name="code" :rules="[{ required: true }]">
+            <div class="code-row">
+              <a-input
+                v-model:value="smsForm.code"
+                :maxlength="6"
+                :placeholder="t('login.codePlaceholder')"
+              />
+              <a-button :disabled="sendingCode || countdown > 0" @click="handleSendCode">
+                {{ codeButtonLabel }}
+              </a-button>
+            </div>
+          </a-form-item>
+          <a-alert v-if="devCodeHint" type="warning" :message="t('login.devCodeHint', { code: devCodeHint })" show-icon />
+          <a-alert v-if="error" type="error" :message="error" show-icon class="form-alert" />
+          <a-button type="primary" html-type="submit" block :loading="loading">
+            {{ t('login.smsSubmit') }}
+          </a-button>
+          <p class="hint">{{ t('login.smsHint') }}</p>
+        </a-form>
+      </a-tab-pane>
+
+      <a-tab-pane key="password" :tab="t('login.passwordTab')">
+        <a-form layout="vertical" :model="form" @finish="handlePasswordSubmit">
+          <a-form-item :label="t('login.username')" name="username" :rules="[{ required: true }]">
+            <a-input v-model:value="form.username" :placeholder="t('login.usernamePlaceholder')" />
+          </a-form-item>
+          <a-form-item :label="t('login.password')" name="password" :rules="[{ required: true }]">
+            <a-input-password v-model:value="form.password" :placeholder="t('login.passwordPlaceholder')" />
+          </a-form-item>
+          <a-alert v-if="error" type="error" :message="error" show-icon class="form-alert" />
+          <a-button type="primary" html-type="submit" block :loading="loading">
+            {{ isRegister ? t('common.register') : t('common.login') }}
+          </a-button>
+          <p class="switch-link">
+            <a @click.prevent="isRegister = !isRegister">
+              {{ isRegister ? t('login.toggleToLogin') : t('login.toggleToRegister') }}
+            </a>
+          </p>
+          <p v-if="showDevHint" class="hint">{{ t('login.demoHint') }}</p>
+        </a-form>
+      </a-tab-pane>
+    </a-tabs>
   </div>
 </template>
 
 <script setup lang="ts">
 import { reactive, ref, computed, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import type { LocaleCode } from '@douxing/shared';
 import { login, register, sendSmsCode, smsLogin } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
+import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
 
 type LoginMode = 'sms' | 'password';
 
 const router = useRouter();
 const route = useRoute();
 const userStore = useUserStore();
-const { t, currentLocale, localeOptions, setLocale } = useLocale();
-
-function onLocaleChange(event: Event) {
-  setLocale((event.target as HTMLSelectElement).value as LocaleCode);
-}
+const { t } = useLocale();
 
 const codeButtonLabel = computed(() => {
   if (countdown.value > 0) {
@@ -128,9 +85,13 @@ const codeButtonLabel = computed(() => {
   return t('login.getCode');
 });
 
-const loginMode = ref<LoginMode>('sms');
+const loginMode = ref<LoginMode>('password');
 const isRegister = ref(false);
-const form = reactive({ username: 'admin', password: 'admin123' });
+const showDevHint = isDevelopmentExperienceEnabled();
+const form = reactive({
+  username: showDevHint ? 'admin' : '',
+  password: showDevHint ? 'admin123' : '',
+});
 const smsForm = reactive({ phone: '', code: '' });
 const loading = ref(false);
 const sendingCode = ref(false);
@@ -219,3 +180,44 @@ async function handlePasswordSubmit() {
   }
 }
 </script>
+
+<style scoped>
+.login-head {
+  margin-bottom: 24px;
+}
+
+.login-head h2 {
+  margin: 0 0 8px;
+  font-size: 1.5rem;
+}
+
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+}
+
+.form-alert {
+  margin-bottom: 16px;
+}
+
+.hint {
+  margin-top: 12px;
+  text-align: center;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.switch-link {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.code-row .ant-input {
+  flex: 1;
+}
+</style>

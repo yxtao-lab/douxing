@@ -1,75 +1,72 @@
 <template>
-  <div class="page">
-    <div class="page-head">
-      <div>
-        <h2>{{ t('attractions.title') }}</h2>
-        <p class="desc">{{ t('attractions.desc') }}</p>
-      </div>
-      <button class="btn-refresh" :disabled="loading" @click="loadList">{{ t('common.refresh') }}</button>
-    </div>
+  <PageContainer :title="t('attractions.title')" :description="t('attractions.desc')">
+    <template #extra>
+      <a-button :loading="loading" @click="loadList">{{ t('common.refresh') }}</a-button>
+    </template>
 
-    <p v-if="error" class="error">{{ error }}</p>
-
-    <table class="table" v-if="list.length">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>{{ t('attractions.colName') }}</th>
-          <th>{{ t('attractions.colCity') }}</th>
-          <th>{{ t('attractions.colType') }}</th>
-          <th>{{ t('attractions.colCoord') }}</th>
-          <th>{{ t('attractions.colSource') }}</th>
-          <th>{{ t('attractions.colPrice') }}</th>
-          <th>{{ t('attractions.colAction') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in list" :key="item.id">
-          <td>{{ item.id }}</td>
-          <td>
-            <div class="name-cell">
-              <span>{{ item.name }}</span>
-              <small v-if="item.description" class="sub">{{ item.description }}</small>
-            </div>
-          </td>
-          <td>{{ item.city }}</td>
-          <td>{{ categoryLabel(item.category) }}</td>
-          <td>
-            <span v-if="hasCoords(item)" class="coord ok">
-              {{ formatCoord(item.latitude!) }}, {{ formatCoord(item.longitude!) }}
-            </span>
-            <span v-else class="coord warn">{{ t('attractions.missingCoord') }}</span>
-          </td>
-          <td>{{ sourceLabel(item.source) }}</td>
-          <td>{{ item.ticketPrice > 0 ? `¥${item.ticketPrice}` : '-' }}</td>
-          <td>
-            <button
-              class="btn-approve"
-              :disabled="approvingId === item.id"
-              @click="handleApprove(item)"
-            >
-              {{ approvingId === item.id ? t('attractions.approving') : t('attractions.approve') }}
-            </button>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <p v-else-if="!loading && !error" class="empty">{{ t('attractions.empty') }}</p>
-    <p v-if="loading" class="loading">{{ t('common.loading') }}</p>
-  </div>
+    <DouxingAdminTable
+      :columns="columns"
+      :data-source="list"
+      :loading="loading"
+      :error="error"
+      :empty-text="t('attractions.empty')"
+      row-key="id"
+      :pagination="pagination"
+      @change="handleTableChange"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'name'">
+          <div>{{ record.name }}</div>
+          <div v-if="record.description" class="sub">{{ record.description }}</div>
+        </template>
+        <template v-else-if="column.key === 'coord'">
+          <a-tag v-if="hasCoords(record)" color="success">
+            {{ formatCoord(record.latitude!) }}, {{ formatCoord(record.longitude!) }}
+          </a-tag>
+          <a-tag v-else color="warning">{{ t('attractions.missingCoord') }}</a-tag>
+        </template>
+        <template v-else-if="column.key === 'category'">
+          {{ categoryLabel(record.category) }}
+        </template>
+        <template v-else-if="column.key === 'source'">
+          {{ sourceLabel(record.source) }}
+        </template>
+        <template v-else-if="column.key === 'price'">
+          {{ record.ticketPrice > 0 ? `¥${record.ticketPrice}` : '-' }}
+        </template>
+        <template v-else-if="column.key === 'action'">
+          <a-button
+            type="primary"
+            size="small"
+            :loading="approvingId === record.id"
+            @click="handleApprove(record)"
+          >
+            {{ approvingId === record.id ? t('attractions.approving') : t('attractions.approve') }}
+          </a-button>
+        </template>
+      </template>
+    </DouxingAdminTable>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Modal } from 'ant-design-vue';
+import type { TableColumnsType } from 'ant-design-vue';
 import type { AttractionInfo } from '@douxing/shared';
-import { approveAttraction, fetchPendingAttractions } from '@/api/attractions';
+import { approveAttraction, fetchPendingAttractionsPage } from '@/api/attractions';
+import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
+import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import PageContainer from '@/layouts/components/PageContainer.vue';
+import { usePageTitle } from '@/i18n/usePageTitle';
+
+usePageTitle('web.attractionsPending');
 
 const { t } = useI18n();
-const list = ref<AttractionInfo[]>([]);
-const loading = ref(false);
+const { items: list, loading, pagination, load, reload, handleTableChange } =
+  useServerTablePagination(fetchPendingAttractionsPage);
 const error = ref('');
 const approvingId = ref<number | null>(null);
 
@@ -101,29 +98,27 @@ function formatCoord(value: number) {
 }
 
 async function loadList() {
-  loading.value = true;
-  error.value = '';
-  try {
-    list.value = await fetchPendingAttractions();
-  } catch (e) {
-    list.value = [];
-    error.value = getAppErrorMessage(e, t('common.loadFailed'));
-  } finally {
-    loading.value = false;
-  }
+  reload();
 }
 
 async function handleApprove(item: AttractionInfo) {
   if (!hasCoords(item)) {
-    const ok = window.confirm(t('attractions.approveConfirm', { name: item.name }));
-    if (!ok) return;
+    Modal.confirm({
+      title: t('attractions.approve'),
+      content: t('attractions.approveConfirm', { name: item.name }),
+      onOk: () => doApprove(item),
+    });
+    return;
   }
+  await doApprove(item);
+}
 
+async function doApprove(item: AttractionInfo) {
   approvingId.value = item.id;
   error.value = '';
   try {
     await approveAttraction(item.id);
-    list.value = list.value.filter((row) => row.id !== item.id);
+    await load();
   } catch (e) {
     error.value = getAppErrorMessage(e, t('attractions.approveFailed'));
   } finally {
@@ -131,91 +126,23 @@ async function handleApprove(item: AttractionInfo) {
   }
 }
 
-onMounted(loadList);
+const columns = computed<TableColumnsType<AttractionInfo>>(() => [
+  { title: 'ID', dataIndex: 'id', width: 80 },
+  { title: t('attractions.colName'), key: 'name', dataIndex: 'name', ellipsis: true },
+  { title: t('attractions.colCity'), dataIndex: 'city', width: 100 },
+  { title: t('attractions.colType'), key: 'category', width: 100 },
+  { title: t('attractions.colCoord'), key: 'coord', width: 180 },
+  { title: t('attractions.colSource'), key: 'source', width: 100 },
+  { title: t('attractions.colPrice'), key: 'price', width: 100 },
+  { title: t('attractions.colAction'), key: 'action', width: 120 },
+]);
+
+onMounted(load);
 </script>
 
 <style scoped>
-.page {
-  max-width: 1100px;
-}
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.desc {
-  color: #6b7280;
-  margin-top: 8px;
-}
-.btn-refresh {
-  padding: 8px 16px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
-}
-.btn-refresh:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-th,
-td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f3f4f6;
-  font-size: 14px;
-  vertical-align: top;
-}
-th {
-  background: #f9fafb;
-  font-weight: 600;
-}
-.name-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
 .sub {
   color: #6b7280;
   font-size: 12px;
-  line-height: 1.4;
-}
-.coord.ok {
-  color: #059669;
-}
-.coord.warn {
-  color: #d97706;
-  font-weight: 500;
-}
-.btn-approve {
-  padding: 6px 14px;
-  border: none;
-  border-radius: 6px;
-  background: #1677ff;
-  color: #fff;
-  cursor: pointer;
-  font-size: 13px;
-}
-.btn-approve:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.error {
-  color: #dc2626;
-  margin-bottom: 16px;
-}
-.empty,
-.loading {
-  color: #9ca3af;
 }
 </style>

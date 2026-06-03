@@ -1,4 +1,4 @@
-import type { CheckInInfo, CheckInResult } from '@douxing/shared';
+import type { CheckInInfo, CheckInResult, CheckInTimeRange, PaginatedResult } from '@douxing/shared';
 import { request } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
 import { resolveClientRequestErrorMessage } from '@douxing/shared';
@@ -27,9 +27,41 @@ export function createCheckIn(data: {
   return request<CheckInResult>('/checkins', { method: 'POST', data });
 }
 
-export function fetchCheckIns(routeId?: number) {
-  const query = routeId ? `?routeId=${routeId}` : '';
-  return request<CheckInInfo[]>(`/checkins${query}`);
+function buildCheckInsQuery(params: {
+  page: number;
+  pageSize: number;
+  routeId?: number;
+  range?: CheckInTimeRange;
+}) {
+  const parts = [
+    `page=${params.page}`,
+    `pageSize=${params.pageSize}`,
+  ];
+  if (params.routeId != null) parts.push(`routeId=${params.routeId}`);
+  if (params.range && params.range !== 'all') parts.push(`range=${params.range}`);
+  return `?${parts.join('&')}`;
+}
+
+export function fetchCheckInsPage(params: {
+  page: number;
+  pageSize: number;
+  routeId?: number;
+  range?: CheckInTimeRange;
+}) {
+  return request<PaginatedResult<CheckInInfo>>(`/checkins${buildCheckInsQuery(params)}`);
+}
+
+export async function fetchAllCheckInsForMap(range?: CheckInTimeRange) {
+  const items: CheckInInfo[] = [];
+  let page = 1;
+  const pageSize = 50;
+  while (true) {
+    const result = await fetchCheckInsPage({ page, pageSize, range });
+    items.push(...result.items);
+    if (!result.hasMore) break;
+    page += 1;
+  }
+  return items;
 }
 
 export function uploadCheckInPhoto(filePath: string): Promise<string> {

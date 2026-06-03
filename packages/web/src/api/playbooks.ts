@@ -1,19 +1,23 @@
 import http from './http';
-import type { ApiResponse, RoutePlaybookInfo } from '@douxing/shared';
+import type { ApiResponse, PaginatedResult, RoutePlaybookInfo } from '@douxing/shared';
 
-export async function fetchAdminPlaybooks(params?: {
+export async function fetchAdminPlaybooksPage(params: {
+  page: number;
+  pageSize: number;
   city?: string;
   keyword?: string;
   enabled?: boolean;
-  limit?: number;
 }) {
-  const query = new URLSearchParams();
-  if (params?.city) query.set('city', params.city);
-  if (params?.keyword) query.set('keyword', params.keyword);
-  if (params?.enabled != null) query.set('enabled', String(params.enabled));
-  if (params?.limit != null) query.set('limit', String(params.limit));
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  const { data } = await http.get<ApiResponse<RoutePlaybookInfo[]>>(`/playbooks/admin${suffix}`);
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.city) query.set('city', params.city);
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.enabled != null) query.set('enabled', String(params.enabled));
+  const { data } = await http.get<ApiResponse<PaginatedResult<RoutePlaybookInfo>>>(
+    `/playbooks/admin?${query.toString()}`,
+  );
   return data.data;
 }
 

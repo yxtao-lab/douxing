@@ -13,14 +13,15 @@ import {
   listAttractions,
   getAttractionById,
   listCitiesWithAttractions,
-  listPendingAttractions,
+  listPendingAttractionsPaginated,
   approveAttraction,
-  listAttractionsForAdmin,
+  listAttractionsForAdminPaginated,
   updateAttractionCoverImage,
 } from '../services/attraction.service.js';
 import { refreshAttractionCoverFromAmap } from '../services/attraction-image-enricher.service.js';
 import { persistAttractionCoverBuffer } from '../services/attraction-cover-storage.service.js';
 import { isOssEnabled } from '../config/oss.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
 import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 const router = Router();
@@ -90,16 +91,16 @@ const listQuerySchema = z.object({
 const adminCatalogSchema = z.object({
   city: z.string().max(64).optional(),
   keyword: z.string().max(64).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  offset: z.coerce.number().int().min(0).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 router.get('/admin/pending', authMiddleware, async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 50;
-    const list = await listPendingAttractions(Number.isNaN(limit) ? 50 : limit);
-    success(res, list);
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const result = await listPendingAttractionsPaginated(page, pageSize);
+    success(res, result);
   } catch (err) {
     console.error('[attractions/admin/pending]', err);
     return fail(res, ApiMessageKey.ATTRACTION_PENDING_FAILED, 500, 500);
@@ -113,8 +114,17 @@ router.get('/admin/catalog', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
     }
-    const list = await listAttractionsForAdmin(parsed.data);
-    success(res, list);
+    const { page, pageSize } = parsePaginationQuery({
+      page: parsed.data.page,
+      pageSize: parsed.data.pageSize,
+    });
+    const result = await listAttractionsForAdminPaginated({
+      city: parsed.data.city,
+      keyword: parsed.data.keyword,
+      page,
+      pageSize,
+    });
+    success(res, result);
   } catch (err) {
     console.error('[attractions/admin/catalog]', err);
     return fail(res, ApiMessageKey.ATTRACTION_LIST_FAILED, 500, 500);

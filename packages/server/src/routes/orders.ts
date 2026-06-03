@@ -7,9 +7,11 @@ import {
   payOrder,
   cancelOrder,
   getOrderById,
-  listUserOrders,
-  listAllOrdersForAdmin,
+  listUserOrdersPaginated,
+  listAllOrdersForAdminPaginated,
 } from '../services/order.service.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
+import type { OrderListTab } from '@douxing/shared';
 import { createOrderPrepay } from '../services/payment.service.js';
 import { getPaymentMode, isWechatPayConfigured } from '../config/payment.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
@@ -49,13 +51,17 @@ router.get('/payment-config', authMiddleware, async (_req, res) => {
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const list = await listAllOrdersForAdmin();
-      return success(res, list);
+      const result = await listAllOrdersForAdminPaginated(page, pageSize);
+      return success(res, result);
     }
-    const list = await listUserOrders(req.auth!.userId);
-    success(res, list);
+    const tabRaw = typeof req.query.tab === 'string' ? req.query.tab : 'all';
+    const tab: OrderListTab =
+      tabRaw === 'pending' || tabRaw === 'done' ? tabRaw : 'all';
+    const result = await listUserOrdersPaginated(req.auth!.userId, page, pageSize, tab);
+    success(res, result);
   } catch (err) {
     console.error('[orders/list]', err);
     return fail(res, '获取订单失败', 500, 500);

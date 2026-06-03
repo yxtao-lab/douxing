@@ -23,7 +23,10 @@ export const sharedEnUS = {
     unknownCity: 'Unknown city',
     points: 'Points',
     refresh: 'Refresh',
+    reset: 'Reset',
     search: 'Search',
+    loadMore: 'Loading more…',
+    noMore: 'No more data',
     edit: 'Edit',
     delete: 'Delete',
     saving: 'Saving…',
@@ -90,7 +93,7 @@ export const sharedEnUS = {
     vip: 'VIP',
   },
   web: {
-    home: 'Home',
+    home: 'Workbench',
     routes: 'Routes',
     orders: 'Orders',
     checkins: 'Check-ins',
@@ -99,5 +102,18 @@ export const sharedEnUS = {
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
     logout: 'Sign out',
+    menu: {
+      biz: 'Operations',
+      content: 'Content',
+    },
+    layout: {
+      breadcrumbHome: 'Home',
+      userFallback: 'Admin',
+    },
+    tabs: {
+      close: 'Close',
+      closeOthers: 'Close others',
+      closeAll: 'Close all',
+    },
   },
 } as const;

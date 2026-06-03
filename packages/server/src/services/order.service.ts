@@ -1,13 +1,14 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, count, or } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { orders } from '../db/schema/orders.js';
+import type { OrderInfo, OrderListTab, PaginatedResult } from '@douxing/shared';
 import {
   OrderStatus,
   OrderType,
   shouldAutoCompleteAfterPay,
   isOrderTerminalStatus,
+  buildPaginatedResult,
 } from '@douxing/shared';
-import type { OrderInfo } from '@douxing/shared';
 import { getRouteById, unlockRoute } from './route.service.js';
 import { applyOrderStatusTransition } from './order-transition.service.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
@@ -187,18 +188,45 @@ export async function cancelOrder(orderId: number, userId: number) {
   return { order: toOrderInfo(updated[0]!) };
 }
 
-export async function listUserOrders(userId: number) {
+function buildUserOrderWhere(userId: number, tab: OrderListTab = 'all') {
+  const conditions = [eq(orders.userId, userId)];
+  if (tab === 'pending') {
+    conditions.push(eq(orders.status, OrderStatus.PENDING));
+  } else if (tab === 'done') {
+    conditions.push(
+      or(eq(orders.status, OrderStatus.PAID), eq(orders.status, OrderStatus.COMPLETED))!,
+    );
+  }
+  return and(...conditions);
+}
+
+async function paginateOrders(
+  where: ReturnType<typeof and> | undefined,
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<OrderInfo>> {
   const db = getDb();
+  const [{ value: total }] = await db.select({ value: count() }).from(orders).where(where);
+  const offset = (page - 1) * pageSize;
   const rows = await db
     .select()
     .from(orders)
-    .where(eq(orders.userId, userId))
-    .orderBy(desc(orders.createdAt));
-  return rows.map(toOrderInfo);
+    .where(where)
+    .orderBy(desc(orders.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+  return buildPaginatedResult(rows.map(toOrderInfo), Number(total ?? 0), page, pageSize);
 }
 
-export async function listAllOrdersForAdmin() {
-  const db = getDb();
-  const rows = await db.select().from(orders).orderBy(desc(orders.createdAt)).limit(100);
-  return rows.map(toOrderInfo);
+export async function listUserOrdersPaginated(
+  userId: number,
+  page: number,
+  pageSize: number,
+  tab: OrderListTab = 'all',
+) {
+  return paginateOrders(buildUserOrderWhere(userId, tab), page, pageSize);
+}
+
+export async function listAllOrdersForAdminPaginated(page: number, pageSize: number) {
+  return paginateOrders(undefined, page, pageSize);
 }

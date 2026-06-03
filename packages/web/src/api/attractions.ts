@@ -1,9 +1,9 @@
 import http from './http';
-import type { ApiResponse, AttractionInfo } from '@douxing/shared';
+import type { ApiResponse, AttractionInfo, PaginatedResult } from '@douxing/shared';
 
-export async function fetchPendingAttractions(limit = 50) {
-  const { data } = await http.get<ApiResponse<AttractionInfo[]>>(
-    `/attractions/admin/pending?limit=${limit}`,
+export async function fetchPendingAttractionsPage(page: number, pageSize: number) {
+  const { data } = await http.get<ApiResponse<PaginatedResult<AttractionInfo>>>(
+    `/attractions/admin/pending?page=${page}&pageSize=${pageSize}`,
   );
   return data.data;
 }
@@ -15,20 +15,20 @@ export async function approveAttraction(id: number) {
   return data.data;
 }
 
-export async function fetchAdminAttractionCatalog(params?: {
+export async function fetchAdminAttractionCatalogPage(params: {
+  page: number;
+  pageSize: number;
   city?: string;
   keyword?: string;
-  limit?: number;
-  offset?: number;
 }) {
-  const query = new URLSearchParams();
-  if (params?.city) query.set('city', params.city);
-  if (params?.keyword) query.set('keyword', params.keyword);
-  if (params?.limit != null) query.set('limit', String(params.limit));
-  if (params?.offset != null) query.set('offset', String(params.offset));
-  const suffix = query.toString() ? `?${query.toString()}` : '';
-  const { data } = await http.get<ApiResponse<AttractionInfo[]>>(
-    `/attractions/admin/catalog${suffix}`,
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.city) query.set('city', params.city);
+  if (params.keyword) query.set('keyword', params.keyword);
+  const { data } = await http.get<ApiResponse<PaginatedResult<AttractionInfo>>>(
+    `/attractions/admin/catalog?${query.toString()}`,
   );
   return data.data;
 }

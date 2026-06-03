@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view class="page" :class="themeClass">
     <view class="page-hero">
       <view class="hero-bg" />
@@ -36,14 +36,14 @@
       </view>
 
       <DouxingEmptyState
-        v-if="filteredList.length === 0"
+        v-if="!loading && items.length === 0"
         variant="checkins"
         :title="t('checkins.listEmpty')"
         :description="t('emptyState.checkinsDesc')"
         :action-label="t('routes.goPlan')"
         @action="goPlan"
       />
-      <view v-for="item in filteredList" :key="item.id" class="card">
+      <view v-for="item in items" :key="item.id" class="card">
         <view class="card-head">
           <text class="place">{{ placeLabel(item) }}</text>
           <text class="points">{{ pointsLabel(item.pointsEarned) }}</text>
@@ -62,20 +62,24 @@
           />
         </view>
       </view>
+
+      <view v-if="loadingMore" class="list-footer">{{ t('common.loadMore') }}</view>
+      <view v-else-if="!hasMore && items.length > 0" class="list-footer muted">{{ t('common.noMore') }}</view>
     </view>
     <CheckInPosterSheet
       :visible="posterVisible"
-      :checkins="filteredList"
+      :checkins="items"
       @close="posterVisible = false"
     />
   </view>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { onLoad, onShow } from '@dcloudio/uni-app';
+import { computed, ref, watch } from 'vue';
+import { onLoad, onReachBottom, onShow } from '@dcloudio/uni-app';
 import type { CheckInInfo } from '@douxing/shared';
-import { fetchCheckIns } from '@/api/checkins';
+import { fetchCheckInsPage } from '@/api/checkins';
+import { useInfiniteList } from '@/composables/useInfiniteList';
 import { getStoredUser } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
@@ -85,7 +89,6 @@ import CheckInPosterSheet from '@/components/checkin-poster/CheckInPosterSheet.v
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
-  filterCheckInsByTimeRange,
   sumCheckInPoints,
   formatCheckInTime,
 } from '@/utils/checkin-map';
@@ -100,14 +103,17 @@ const timeRangeOptions = computed(() =>
     label: t(opt.labelKey),
   })),
 );
-const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
 const posterVisible = ref(false);
 
-const filteredList = computed(() => filterCheckInsByTimeRange(allList.value, timeRange.value));
-const totalPoints = computed(() => sumCheckInPoints(filteredList.value));
+const { items, loading, loadingMore, hasMore, total, loadInitial, loadMore } = useInfiniteList(
+  (page, pageSize) =>
+    fetchCheckInsPage({ page, pageSize, range: timeRange.value }),
+);
+
+const totalPoints = computed(() => sumCheckInPoints(items.value));
 const statsLine = computed(() =>
-  tf('checkins.statsLine', { count: filteredList.value.length, points: totalPoints.value }),
+  tf('checkins.statsLine', { count: total.value, points: totalPoints.value }),
 );
 
 function placeLabel(item: CheckInInfo) {
@@ -145,16 +151,20 @@ onLoad((query) => {
   }
 });
 
+watch(timeRange, () => {
+  void loadInitial();
+});
+
+onReachBottom(() => {
+  void loadMore();
+});
+
 onShow(async () => {
   if (!getStoredUser()) {
     uni.navigateTo({ url: '/pages/login/login' });
     return;
   }
-  try {
-    allList.value = await fetchCheckIns();
-  } catch {
-    allList.value = [];
-  }
+  await loadInitial();
 });
 </script>
 
@@ -322,5 +332,14 @@ onShow(async () => {
   width: 160rpx;
   height: 160rpx;
   border-radius: var(--dx-radius-sm);
+}
+.list-footer {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+}
+.list-footer.muted {
+  color: var(--dx-text-muted, #9ca3af);
 }
 </style>

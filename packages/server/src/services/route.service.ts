@@ -1,8 +1,8 @@
-import { eq, desc, and } from 'drizzle-orm';
+import { eq, desc, and, count } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
-import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
-import type { TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
+import { RouteStatus, ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
+import type { PaginatedResult, TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
 import type { RouteDayPlan } from '@douxing/shared';
@@ -276,10 +276,20 @@ export async function unlockRoute(routeId: number, userId: number) {
   return getRouteById(routeId, userId);
 }
 
-export async function listAllRoutesForAdmin() {
+export async function listAllRoutesForAdminPaginated(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<TravelRouteInfo>> {
   const db = getDb();
-  const rows = await db.select().from(travelRoutes).orderBy(desc(travelRoutes.createdAt));
-  return rows.map((row) => toRouteInfo(row));
+  const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes);
+  const offset = (page - 1) * pageSize;
+  const rows = await db
+    .select()
+    .from(travelRoutes)
+    .orderBy(desc(travelRoutes.createdAt))
+    .limit(pageSize)
+    .offset(offset);
+  return buildPaginatedResult(rows.map((row) => toRouteInfo(row)), Number(total ?? 0), page, pageSize);
 }
 
 export async function regenerateRouteFromPrompt(

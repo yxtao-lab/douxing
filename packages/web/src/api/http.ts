@@ -15,6 +15,12 @@ const http = axios.create({
   timeout: 15000,
 });
 
+let unauthorizedHandler: (() => void) | null = null;
+
+export function setUnauthorizedHandler(handler: () => void) {
+  unauthorizedHandler = handler;
+}
+
 function getApiAcceptLanguage(): LocaleCode {
   try {
     const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
@@ -31,6 +37,17 @@ function resolveApiErrorMessage(body: ApiResponse<unknown>): string {
     return resolveApiMessage(body.messageKey, getApiAcceptLanguage());
   }
   return resolveApiMessage(ApiMessageKey.REQUEST_FAILED, getApiAcceptLanguage());
+}
+
+function isAuthLoginRequest(url?: string): boolean {
+  if (!url) return false;
+  return /\/auth\/(login|register|sms\/login)(?:\?|$)/.test(url);
+}
+
+function shouldHandleUnauthorized(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || error.response?.status !== 401) return false;
+  if (isAuthLoginRequest(error.config?.url)) return false;
+  return Boolean(error.config?.headers?.Authorization);
 }
 
 http.interceptors.request.use((config) => {
@@ -51,6 +68,10 @@ http.interceptors.response.use(
     return response;
   },
   (error) => {
+    if (shouldHandleUnauthorized(error)) {
+      unauthorizedHandler?.();
+    }
+
     const locale = getApiAcceptLanguage();
     if (axios.isAxiosError(error)) {
       const body = error.response?.data as ApiResponse | undefined;

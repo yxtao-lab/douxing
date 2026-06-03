@@ -6,6 +6,7 @@ import type {
   LlmProviderOption,
   RouteListQuery,
   RouteListSort,
+  PaginatedResult,
   UpdateRouteDraftRequest,
   RouteLikeResult,
   RouteFavoriteResult,
@@ -44,16 +45,30 @@ function buildRouteListQuery(query?: RouteListQuery): string {
     parts.push(`status=${query.status}`);
   }
   if (query?.sort) parts.push(`sort=${encodeURIComponent(query.sort)}`);
-  if (query?.limit !== undefined) parts.push(`limit=${query.limit}`);
+  if (query?.page != null) parts.push(`page=${query.page}`);
+  if (query?.pageSize != null) parts.push(`pageSize=${query.pageSize}`);
+  else if (query?.limit !== undefined) parts.push(`pageSize=${query.limit}`);
   return parts.length > 0 ? `?${parts.join('&')}` : '';
 }
 
-export function fetchRoutes(query?: RouteListQuery) {
-  return request<TravelRouteInfo[]>(`/routes${buildRouteListQuery(query)}`);
+export function fetchRoutesPage(query?: RouteListQuery) {
+  return request<PaginatedResult<TravelRouteInfo>>(`/routes${buildRouteListQuery(query)}`);
 }
 
+/** @deprecated 请使用 fetchRoutesPage */
+export function fetchRoutes(query?: RouteListQuery) {
+  return fetchRoutesPage(query);
+}
+
+export function fetchPlazaRoutesPage(page = 1, pageSize = 20, sort: RouteListSort = 'hot') {
+  return request<PaginatedResult<TravelRouteInfo>>(
+    `/routes/plaza?page=${page}&pageSize=${pageSize}&sort=${sort}`,
+  );
+}
+
+/** @deprecated 使用 fetchPlazaRoutesPage */
 export function fetchPlazaRoutes(limit = 20, sort: RouteListSort = 'hot') {
-  return request<TravelRouteInfo[]>(`/routes/plaza?limit=${limit}&sort=${sort}`);
+  return fetchPlazaRoutesPage(1, limit, sort);
 }
 
 /** @deprecated 使用 fetchPlazaRoutes */

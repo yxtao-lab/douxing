@@ -12,9 +12,10 @@ import {
   createRoutePlaybook,
   deleteRoutePlaybook,
   getRoutePlaybookById,
-  listRoutePlaybooksForAdmin,
+  listRoutePlaybooksForAdminPaginated,
   updateRoutePlaybook,
 } from '../services/playbook.service.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
 
 const router = Router();
 
@@ -90,11 +91,19 @@ router.get('/admin', authMiddleware, async (req, res) => {
     const enabledRaw = req.query.enabled;
     const enabled =
       enabledRaw === 'true' ? true : enabledRaw === 'false' ? false : undefined;
-    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : undefined;
-    const offset = req.query.offset ? parseInt(String(req.query.offset), 10) : undefined;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
 
-    const list = await listRoutePlaybooksForAdmin({ city, keyword, enabled, limit, offset });
-    success(res, list.map(toApiPlaybook), ApiMessageKey.PLAYBOOK_LIST_SUCCESS);
+    const result = await listRoutePlaybooksForAdminPaginated({
+      city,
+      keyword,
+      enabled,
+      page,
+      pageSize,
+    });
+    success(res, {
+      ...result,
+      items: result.items.map(toApiPlaybook),
+    }, ApiMessageKey.PLAYBOOK_LIST_SUCCESS);
   } catch (err) {
     console.error('[playbooks/admin/list]', err);
     fail(res, ApiMessageKey.PLAYBOOK_LIST_FAILED, 500, 500);

@@ -1,4 +1,4 @@
-import type { OrderInfo, OrderPrepayResult } from '@douxing/shared';
+import type { OrderInfo, OrderListTab, OrderPrepayResult, PaginatedResult } from '@douxing/shared';
 import { request } from '@/utils/request';
 
 export function createUnlockOrder(routeId: number) {
@@ -24,8 +24,9 @@ export function cancelOrder(orderId: number) {
   return request<OrderInfo>(`/orders/${orderId}/cancel`, { method: 'POST' });
 }
 
-export function fetchOrders() {
-  return request<OrderInfo[]>('/orders');
+export function fetchOrdersPage(page: number, pageSize: number, tab: OrderListTab = 'all') {
+  const tabQuery = tab === 'all' ? '' : `&tab=${tab}`;
+  return request<PaginatedResult<OrderInfo>>(`/orders?page=${page}&pageSize=${pageSize}${tabQuery}`);
 }
 
 export interface OrderPaymentConfig {

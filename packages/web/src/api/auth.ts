@@ -32,3 +32,8 @@ export async function smsLogin(phone: string, code: string) {
   });
   return data.data;
 }
+
+export async function fetchCurrentUser() {
+  const { data } = await http.get<ApiResponse<LoginResult['user']>>('/auth/me');
+  return data.data;
+}

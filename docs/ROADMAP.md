@@ -341,7 +341,8 @@ POST /api/speech/transcribe
 | §12 | 接口规范 | REST + **`Accept-Language` / `messageKey`**（G9 已落地，高频业务错误已 `ApiError`） | WebSocket、完整 v1 清单、配置类内部错误 i18n |
 | 国际化 | 界面与 API 多语言 | **G9 已验收**：全页 vue-i18n、shared 文案、locale 中间件、Web 管理端；en-US 主流程手测通过 | 第三语言、LLM 输出语言跟随 |
 | §13 | 前沿技术 | — | Web3、联邦学习等 |
-| 移动端 UX | iconfont TabBar、四 Tab | **H1-a/b/c 已完成**；全站 `--dx-*` token + 双主题；**H2-a 手帐海报** 已落地；见 [§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | Web 管理端视觉未纳入 |
+| 移动端 UX | iconfont TabBar、四 Tab | **H1-a/b/c 已完成**；全站 `--dx-*` token + 双主题；**H2-a 手帐海报** 已落地；见 [§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | — |
+| Web 管理端 UX | Ant Design Vue 4 左右布局 | **W1 已完成**（2026-06-03）：侧栏+Logo+多标签页、全页 Ant Design 组件、按需加载 | G4 数据分析 Dashboard |
 | 分享与传播 | 广场公开路线 | **H2-a + D5-a 已完成**；**H2-a+ / H2-b / H2-c** 待续；远期 **H10** UGC 视频+热评增强可信度 | D5 完整 H5 只读页 + 搭子链分享 |
 
 ---
@@ -843,7 +844,7 @@ POST /api/speech/transcribe
 
 | 层级 | 设计文档 | 当前实现（截至 2026-05-20） |
 |------|----------|---------------------------|
-| Web | Vue 3 + Element Plus | Vue 3 + Vite（无 Element Plus） |
+| Web | Vue 3 + Ant Design Vue 4 + Vite | 左右布局 · 多标签页 · 按需加载（`unplugin-vue-components`） |
 | 移动 | UniApp | UniApp Vue3；H5 / 微信小程序 / App；iconfont TabBar |
 | 后端 | Node + 独立 Python AI | Node Express + 可选 `packages/ai-service`；腾讯云短信 |
 | AI | Qwen + LangChain | **DeepSeek** + **LM Studio** + Python LangChain 微服务 + 模板降级；**I1** SFT 数据管线（LoRA 训练待 I2） |

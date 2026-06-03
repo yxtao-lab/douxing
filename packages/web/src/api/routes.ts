@@ -1,7 +1,9 @@
 import http from './http';
-import type { ApiResponse, TravelRouteInfo } from '@douxing/shared';
+import type { ApiResponse, PaginatedResult, TravelRouteInfo } from '@douxing/shared';
 
-export async function fetchAllRoutes() {
-  const { data } = await http.get<ApiResponse<TravelRouteInfo[]>>('/routes?all=1');
+export async function fetchRoutesPage(page: number, pageSize: number) {
+  const { data } = await http.get<ApiResponse<PaginatedResult<TravelRouteInfo>>>(
+    `/routes?all=1&page=${page}&pageSize=${pageSize}`,
+  );
   return data.data;
 }

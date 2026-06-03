@@ -1,4 +1,5 @@
 import type { CheckInInfo } from './types.js';
+import { isKnownPresetCityCode, OTHER_PROVINCE_CODE } from './city-regions.js';
 
 export type CheckInTimeRange = 'all' | '7d' | '30d' | '90d';
 
@@ -23,6 +24,94 @@ export function filterCheckInsByTimeRange(
   const days = RANGE_DAYS[range];
   const since = Date.now() - days * 24 * 60 * 60 * 1000;
   return items.filter((item) => new Date(item.checkedAt).getTime() >= since);
+}
+
+export interface CheckInMapFilterQuery {
+  provinceCode?: string;
+  cityCode?: string;
+  cityName?: string;
+  placeName?: string;
+  timeStart?: string;
+  timeEnd?: string;
+}
+
+function normalizeFuzzyKeyword(keyword: string) {
+  return keyword.trim().toLowerCase();
+}
+
+function matchesFuzzy(text: string | null | undefined, keyword: string) {
+  if (!keyword) return true;
+  if (!text) return false;
+  return text.toLowerCase().includes(keyword);
+}
+
+function parseFilterDateBoundary(value: string | undefined, boundary: 'start' | 'end') {
+  if (!value?.trim()) return null;
+  const trimmed = value.trim();
+  const dateOnly = /^\d{4}-\d{2}-\d{2}$/.test(trimmed);
+  if (dateOnly) {
+    const [year, month, day] = trimmed.split('-').map(Number);
+    if (boundary === 'start') {
+      return new Date(year, month - 1, day, 0, 0, 0, 0).getTime();
+    }
+    return new Date(year, month - 1, day, 23, 59, 59, 999).getTime();
+  }
+  const ts = new Date(trimmed).getTime();
+  return Number.isNaN(ts) ? null : ts;
+}
+
+function matchesCityFilter(
+  item: CheckInInfo,
+  query: Pick<CheckInMapFilterQuery, 'provinceCode' | 'cityCode' | 'cityName'>,
+  provinceCityCodes: string[],
+) {
+  if (query.cityCode) {
+    if (item.cityCode === query.cityCode) return true;
+    if (query.cityName && matchesFuzzy(item.city, query.cityName)) return true;
+    return false;
+  }
+
+  if (query.provinceCode) {
+    if (query.provinceCode === OTHER_PROVINCE_CODE) {
+      return Boolean(item.cityCode && !isKnownPresetCityCode(item.cityCode));
+    }
+    if (item.cityCode && provinceCityCodes.includes(item.cityCode)) return true;
+    return false;
+  }
+
+  return true;
+}
+
+/** 按城市、景点、起止时间过滤（AND 组合，空字段忽略；时间可只填起始或结束） */
+export function filterCheckInsByMapQuery(
+  items: CheckInInfo[],
+  query: CheckInMapFilterQuery,
+  provinceCityCodes: string[] = [],
+): CheckInInfo[] {
+  const placeKeyword = normalizeFuzzyKeyword(query.placeName ?? '');
+  const timeStart = parseFilterDateBoundary(query.timeStart, 'start');
+  const timeEnd = parseFilterDateBoundary(query.timeEnd, 'end');
+  const hasCityFilter = Boolean(query.cityCode || query.provinceCode);
+
+  if (!hasCityFilter && !placeKeyword && timeStart == null && timeEnd == null) {
+    return [...items];
+  }
+
+  return items.filter((item) => {
+    if (hasCityFilter && !matchesCityFilter(item, query, provinceCityCodes)) {
+      return false;
+    }
+
+    if (placeKeyword && !matchesFuzzy(item.location.placeName, placeKeyword)) {
+      return false;
+    }
+
+    const checkedAt = new Date(item.checkedAt).getTime();
+    if (timeStart != null && checkedAt < timeStart) return false;
+    if (timeEnd != null && checkedAt > timeEnd) return false;
+
+    return true;
+  });
 }
 
 export function getCheckInsWithCoords(items: CheckInInfo[]) {

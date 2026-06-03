@@ -33,7 +33,7 @@
       <DouxingEmptyState v-if="loading" loading embedded compact />
 
       <DouxingEmptyState
-        v-else-if="filteredList.length === 0"
+        v-else-if="items.length === 0"
         variant="orders"
         embedded
         :title="emptyHint"
@@ -43,7 +43,7 @@
       />
 
       <view v-else class="order-list">
-        <view v-for="item in filteredList" :key="item.id" class="card">
+        <view v-for="item in items" :key="item.id" class="card">
           <view class="card-head">
             <text class="product">{{ item.productName }}</text>
             <text class="status" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</text>
@@ -76,16 +76,20 @@
           </view>
         </view>
       </view>
+
+      <view v-if="loadingMore" class="list-footer">{{ t('common.loadMore') }}</view>
+      <view v-else-if="!hasMore && items.length > 0" class="list-footer muted">{{ t('common.noMore') }}</view>
     </view>
   </view>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
-import { onShow } from '@dcloudio/uni-app';
-import type { OrderInfo } from '@douxing/shared';
+import { ref, computed, watch } from 'vue';
+import { onReachBottom, onShow } from '@dcloudio/uni-app';
+import type { OrderInfo, OrderListTab } from '@douxing/shared';
 import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
-import { fetchOrders, cancelOrder } from '@/api/orders';
+import { fetchOrdersPage, cancelOrder } from '@/api/orders';
+import { useInfiniteList } from '@/composables/useInfiniteList';
 import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-payment';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useTf } from '@/i18n/useTf';
@@ -106,23 +110,13 @@ const tabs = computed(() => [
 ]);
 
 const activeTab = ref<OrderTab>('all');
-const list = ref<OrderInfo[]>([]);
-const loading = ref(false);
 const payingId = ref<number | null>(null);
 const cancellingId = ref<number | null>(null);
 const continuePayLabel = computed(() => getContinuePayButtonLabel());
 
-const filteredList = computed(() => {
-  if (activeTab.value === 'pending') {
-    return list.value.filter((o) => o.status === OrderStatus.PENDING);
-  }
-  if (activeTab.value === 'done') {
-    return list.value.filter(
-      (o) => o.status === OrderStatus.COMPLETED || o.status === OrderStatus.PAID,
-    );
-  }
-  return list.value;
-});
+const { items, loading, loadingMore, hasMore, loadInitial, loadMore } = useInfiniteList(
+  (page, pageSize) => fetchOrdersPage(page, pageSize, activeTab.value as OrderListTab),
+);
 
 const emptyHint = computed(() => {
   if (activeTab.value === 'pending') return t('orders.emptyPending');
@@ -169,14 +163,7 @@ function goPlan() {
 }
 
 async function loadOrders() {
-  loading.value = true;
-  try {
-    list.value = await fetchOrders();
-  } catch {
-    list.value = [];
-  } finally {
-    loading.value = false;
-  }
+  await loadInitial();
 }
 
 async function handleContinuePay(item: OrderInfo) {
@@ -217,6 +204,14 @@ async function handleCancel(item: OrderInfo) {
     cancellingId.value = null;
   }
 }
+
+watch(activeTab, () => {
+  void loadInitial();
+});
+
+onReachBottom(() => {
+  void loadMore();
+});
 
 onShow(async () => {
   if (!getStoredUser()) {
@@ -410,5 +405,16 @@ onShow(async () => {
 
 .btn-outline::after {
   border: none;
+}
+
+.list-footer {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+}
+
+.list-footer.muted {
+  color: var(--dx-text-muted, #9ca3af);
 }
 </style>

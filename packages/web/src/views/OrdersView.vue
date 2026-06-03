@@ -1,84 +1,63 @@
 <template>
-  <div class="orders-page">
-    <h2>{{ t('orders.title') }}</h2>
-    <p class="desc">{{ t('orders.desc') }}</p>
-    <table class="table" v-if="orders.length">
-      <thead>
-        <tr>
-          <th>{{ t('orders.colOrderNo') }}</th>
-          <th>{{ t('orders.colProduct') }}</th>
-          <th>{{ t('orders.colAmount') }}</th>
-          <th>{{ t('orders.colStatus') }}</th>
-          <th>{{ t('orders.colUser') }}</th>
-          <th>{{ t('orders.colTime') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="o in orders" :key="o.id">
-          <td>{{ o.orderNo }}</td>
-          <td>{{ o.productName }}</td>
-          <td>¥{{ o.totalAmount }}</td>
-          <td>{{ orderStatusLabel(o.status) }}</td>
-          <td>{{ o.userId }}</td>
-          <td>{{ o.createdAt.slice(0, 16).replace('T', ' ') }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <p v-else class="empty">{{ t('orders.empty') }}</p>
-  </div>
+  <PageContainer :title="t('orders.title')" :description="t('orders.desc')">
+    <DouxingAdminTable
+      :columns="columns"
+      :data-source="items"
+      :loading="loading"
+      :empty-text="t('orders.empty')"
+      row-key="id"
+      :pagination="pagination"
+      @change="handleTableChange"
+    />
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { TableColumnsType } from 'ant-design-vue';
 import type { OrderInfo } from '@douxing/shared';
 import { getOrderStatusI18nKey } from '@douxing/shared';
-import { fetchAllOrders } from '@/api/orders';
+import { fetchOrdersPage } from '@/api/orders';
+import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import PageContainer from '@/layouts/components/PageContainer.vue';
+import { usePageTitle } from '@/i18n/usePageTitle';
+
+usePageTitle('web.orders');
 
 const { t } = useI18n();
-const orders = ref<OrderInfo[]>([]);
+const { items, loading, pagination, load, handleTableChange } = useServerTablePagination<OrderInfo>(
+  fetchOrdersPage,
+);
 
 function orderStatusLabel(status: number) {
   return t(getOrderStatusI18nKey(status));
 }
 
-onMounted(async () => {
-  try {
-    orders.value = await fetchAllOrders();
-  } catch {
-    orders.value = [];
-  }
-});
-</script>
+const columns = computed<TableColumnsType<OrderInfo>>(() => [
+  { title: t('orders.colOrderNo'), dataIndex: 'orderNo', ellipsis: true },
+  { title: t('orders.colProduct'), dataIndex: 'productName', ellipsis: true },
+  {
+    title: t('orders.colAmount'),
+    dataIndex: 'totalAmount',
+    width: 120,
+    customRender: ({ text }) => `¥${text}`,
+  },
+  {
+    title: t('orders.colStatus'),
+    dataIndex: 'status',
+    width: 120,
+    customRender: ({ record }) => orderStatusLabel(record.status),
+  },
+  { title: t('orders.colUser'), dataIndex: 'userId', width: 100 },
+  {
+    title: t('orders.colTime'),
+    dataIndex: 'createdAt',
+    width: 160,
+    customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
+  },
+]);
 
-<style scoped>
-.orders-page {
-  max-width: 960px;
-}
-.desc {
-  color: #6b7280;
-  margin-bottom: 24px;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-th,
-td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #f3f4f6;
-  font-size: 14px;
-}
-th {
-  background: #f9fafb;
-  font-weight: 600;
-}
-.empty {
-  color: #9ca3af;
-}
-</style>
+onMounted(load);
+</script>

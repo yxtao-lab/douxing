@@ -1,147 +1,181 @@
 <template>
-  <div class="page">
-    <div class="page-head">
-      <div>
-        <h2>{{ t('playbooks.title') }}</h2>
-        <p class="desc">{{ t('playbooks.desc') }}</p>
-      </div>
-      <div class="head-actions">
-        <button class="btn-secondary" :disabled="loading" @click="loadList">{{ t('common.refresh') }}</button>
-        <button class="btn-primary" @click="openCreate">{{ t('playbooks.create') }}</button>
-      </div>
-    </div>
+  <PageContainer :title="t('playbooks.title')" :description="t('playbooks.desc')">
+    <template #extra>
+      <a-space>
+        <a-button :loading="loading" @click="loadList">{{ t('common.refresh') }}</a-button>
+        <a-button type="primary" @click="openCreate">{{ t('playbooks.create') }}</a-button>
+      </a-space>
+    </template>
 
-    <div class="filters">
-      <input
-        v-model="keyword"
-        class="filter-input"
+    <a-space class="filters" wrap>
+      <a-input-search
+        v-model:value="keyword"
         :placeholder="t('playbooks.searchPlaceholder')"
-        @keyup.enter="loadList"
+        style="width: 280px"
+        @search="loadList"
       />
-      <input v-model="cityFilter" class="filter-input narrow" :placeholder="t('playbooks.cityFilter')" />
-      <button class="btn-search" :disabled="loading" @click="loadList">{{ t('common.search') }}</button>
-    </div>
+      <a-input
+        v-model:value="cityFilter"
+        :placeholder="t('playbooks.cityFilter')"
+        style="width: 140px"
+        @press-enter="loadList"
+      />
+      <a-button :loading="loading" @click="loadList">{{ t('common.search') }}</a-button>
+    </a-space>
 
-    <p v-if="error" class="error">{{ error }}</p>
+    <DouxingAdminTable
+      :columns="columns"
+      :data-source="list"
+      :loading="loading"
+      :error="error"
+      :empty-text="t('playbooks.empty')"
+      row-key="id"
+      :pagination="pagination"
+      @change="handleTableChange"
+    >
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.key === 'id'">
+          <code>{{ record.id }}</code>
+        </template>
+        <template v-else-if="column.key === 'themes'">
+          {{ record.themes.join('、') }}
+        </template>
+        <template v-else-if="column.key === 'order'">
+          {{ record.classicOrder.length }}
+        </template>
+        <template v-else-if="column.key === 'enabled'">
+          <a-tag :color="record.enabled ? 'success' : 'default'">
+            {{ record.enabled ? t('playbooks.enabledYes') : t('playbooks.enabledNo') }}
+          </a-tag>
+        </template>
+        <template v-else-if="column.key === 'action'">
+          <a-space>
+            <a-button type="link" size="small" @click="openEdit(record)">
+              {{ t('common.edit') }}
+            </a-button>
+            <a-popconfirm
+              :title="t('playbooks.deleteConfirm', { id: record.id })"
+              @confirm="handleDelete(record)"
+            >
+              <a-button type="link" size="small" danger>{{ t('common.delete') }}</a-button>
+            </a-popconfirm>
+          </a-space>
+        </template>
+      </template>
+    </DouxingAdminTable>
 
-    <table class="table" v-if="list.length">
-      <thead>
-        <tr>
-          <th>{{ t('playbooks.colId') }}</th>
-          <th>{{ t('playbooks.colCity') }}</th>
-          <th>{{ t('playbooks.colScope') }}</th>
-          <th>{{ t('playbooks.colThemes') }}</th>
-          <th>{{ t('playbooks.colOrder') }}</th>
-          <th>{{ t('playbooks.colEnabled') }}</th>
-          <th>{{ t('playbooks.colAction') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr v-for="item in list" :key="item.id">
-          <td><code>{{ item.id }}</code></td>
-          <td>{{ item.city }}</td>
-          <td>{{ item.scope }}</td>
-          <td>{{ item.themes.join('、') }}</td>
-          <td>{{ item.classicOrder.length }}</td>
-          <td>{{ item.enabled ? t('playbooks.enabledYes') : t('playbooks.enabledNo') }}</td>
-          <td>
-            <div class="action-cell">
-              <button class="btn-link" type="button" @click="openEdit(item)">{{ t('common.edit') }}</button>
-              <button class="btn-link danger" type="button" @click="handleDelete(item)">
-                {{ t('common.delete') }}
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <a-modal
+      v-model:open="editorOpen"
+      :title="editingId ? t('playbooks.editTitle') : t('playbooks.createTitle')"
+      width="640px"
+      :footer="null"
+      @cancel="closeEditor"
+    >
+      <a-steps :current="formStep" size="small" class="form-steps">
+        <a-step :title="t('playbooks.stepBasic')" />
+        <a-step :title="t('playbooks.stepContent')" />
+        <a-step :title="t('playbooks.stepAdvanced')" />
+      </a-steps>
 
-    <p v-else-if="!loading && !error" class="empty">{{ t('playbooks.empty') }}</p>
-    <p v-if="loading" class="loading">{{ t('common.loading') }}</p>
+      <a-form layout="vertical" class="form-body">
+        <template v-if="formStep === 0">
+          <a-form-item v-if="!editingId" :label="t('playbooks.fieldId')" required>
+            <a-input v-model:value="form.id" :placeholder="t('playbooks.fieldIdHint')" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldCity')" required>
+            <a-input v-model:value="form.city" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldScope')" required>
+            <a-input v-model:value="form.scope" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldKeywords')">
+            <a-input v-model:value="form.keywordsText" :placeholder="t('playbooks.commaSeparated')" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldThemes')">
+            <a-input v-model:value="form.themesText" :placeholder="t('playbooks.commaSeparated')" />
+          </a-form-item>
+        </template>
 
-    <div v-if="editorOpen" class="modal-backdrop" @click.self="closeEditor">
-      <div class="modal">
-        <h3>{{ editingId ? t('playbooks.editTitle') : t('playbooks.createTitle') }}</h3>
-        <form class="form" @submit.prevent="handleSave">
-          <label v-if="!editingId">
-            <span>{{ t('playbooks.fieldId') }}</span>
-            <input v-model="form.id" required pattern="[a-z0-9-]+" :placeholder="t('playbooks.fieldIdHint')" />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldCity') }}</span>
-            <input v-model="form.city" required />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldScope') }}</span>
-            <input v-model="form.scope" required />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldKeywords') }}</span>
-            <input v-model="form.keywordsText" :placeholder="t('playbooks.commaSeparated')" />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldThemes') }}</span>
-            <input v-model="form.themesText" :placeholder="t('playbooks.commaSeparated')" />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldClassicOrder') }}</span>
-            <textarea v-model="form.classicOrderText" rows="4" required />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldSummaryZh') }}</span>
-            <textarea v-model="form.summaryZh" rows="3" required />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldSummaryEn') }}</span>
-            <textarea v-model="form.summaryEn" rows="3" required />
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldSegments') }}</span>
-            <textarea v-model="form.segmentsJson" rows="8" :placeholder="t('playbooks.segmentsHint')" />
-          </label>
-          <label class="inline">
-            <input v-model="form.enabled" type="checkbox" />
-            <span>{{ t('playbooks.fieldEnabled') }}</span>
-          </label>
-          <label>
-            <span>{{ t('playbooks.fieldSortOrder') }}</span>
-            <input v-model.number="form.sortOrder" type="number" min="0" />
-          </label>
-          <p v-if="formError" class="error">{{ formError }}</p>
-          <div class="modal-actions">
-            <button type="button" class="btn-secondary" @click="closeEditor">{{ t('common.cancel') }}</button>
-            <button type="submit" class="btn-primary" :disabled="saving">
-              {{ saving ? t('common.saving') : t('common.save') }}
-            </button>
-          </div>
-        </form>
+        <template v-else-if="formStep === 1">
+          <a-form-item :label="t('playbooks.fieldClassicOrder')" required>
+            <a-textarea v-model:value="form.classicOrderText" :rows="5" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldSummaryZh')" required>
+            <a-textarea v-model:value="form.summaryZh" :rows="4" />
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldSummaryEn')" required>
+            <a-textarea v-model:value="form.summaryEn" :rows="4" />
+          </a-form-item>
+        </template>
+
+        <template v-else>
+          <a-form-item :label="t('playbooks.fieldSegments')">
+            <a-textarea v-model:value="form.segmentsJson" :rows="8" :placeholder="t('playbooks.segmentsHint')" />
+          </a-form-item>
+          <a-form-item>
+            <a-checkbox v-model:checked="form.enabled">{{ t('playbooks.fieldEnabled') }}</a-checkbox>
+          </a-form-item>
+          <a-form-item :label="t('playbooks.fieldSortOrder')">
+            <a-input-number v-model:value="form.sortOrder" :min="0" style="width: 100%" />
+          </a-form-item>
+        </template>
+
+        <a-alert v-if="formError" type="error" :message="formError" show-icon />
+      </a-form>
+
+      <div class="modal-footer">
+        <a-space>
+          <a-button v-if="formStep > 0" @click="formStep -= 1">{{ t('playbooks.stepPrev') }}</a-button>
+          <a-button @click="closeEditor">{{ t('common.cancel') }}</a-button>
+          <a-button v-if="formStep < 2" type="primary" @click="formStep += 1">
+            {{ t('playbooks.stepNext') }}
+          </a-button>
+          <a-button v-else type="primary" :loading="saving" @click="handleSave">
+            {{ t('common.save') }}
+          </a-button>
+        </a-space>
       </div>
-    </div>
-  </div>
+    </a-modal>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import type { TableColumnsType } from 'ant-design-vue';
 import type { RoutePlaybookInfo, RoutePlaybookSegmentEdge } from '@douxing/shared';
 import {
   createPlaybook,
   deletePlaybook,
-  fetchAdminPlaybooks,
+  fetchAdminPlaybooksPage,
   updatePlaybook,
 } from '@/api/playbooks';
+import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
+import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import PageContainer from '@/layouts/components/PageContainer.vue';
+import { usePageTitle } from '@/i18n/usePageTitle';
+
+usePageTitle('web.playbooksManage');
 
 const { t } = useI18n();
-const list = ref<RoutePlaybookInfo[]>([]);
-const loading = ref(false);
+const keyword = ref('');
+const cityFilter = ref('');
+const { items: list, loading, pagination, load, reload, handleTableChange } =
+  useServerTablePagination((page, pageSize) =>
+    fetchAdminPlaybooksPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      city: cityFilter.value.trim() || undefined,
+    }),
+  );
 const saving = ref(false);
 const error = ref('');
 const formError = ref('');
-const keyword = ref('');
-const cityFilter = ref('');
 const editorOpen = ref(false);
 const editingId = ref<string | null>(null);
+const formStep = ref(0);
 
 const form = reactive({
   id: '',
@@ -184,6 +218,7 @@ function resetForm() {
   form.enabled = true;
   form.sortOrder = 0;
   formError.value = '';
+  formStep.value = 0;
 }
 
 function fillForm(item: RoutePlaybookInfo) {
@@ -198,6 +233,7 @@ function fillForm(item: RoutePlaybookInfo) {
   form.segmentsJson = JSON.stringify(item.segments, null, 2);
   form.enabled = item.enabled;
   form.sortOrder = item.sortOrder;
+  formStep.value = 0;
 }
 
 function openCreate() {
@@ -215,23 +251,12 @@ function openEdit(item: RoutePlaybookInfo) {
 function closeEditor() {
   editorOpen.value = false;
   formError.value = '';
+  formStep.value = 0;
 }
 
 async function loadList() {
-  loading.value = true;
   error.value = '';
-  try {
-    list.value = await fetchAdminPlaybooks({
-      keyword: keyword.value.trim() || undefined,
-      city: cityFilter.value.trim() || undefined,
-      limit: 100,
-    });
-  } catch (e) {
-    list.value = [];
-    error.value = getAppErrorMessage(e, t('common.loadFailed'));
-  } finally {
-    loading.value = false;
-  }
+  reload();
 }
 
 function buildPayload(): RoutePlaybookInfo | null {
@@ -288,7 +313,6 @@ async function handleSave() {
 }
 
 async function handleDelete(item: RoutePlaybookInfo) {
-  if (!window.confirm(t('playbooks.deleteConfirm', { id: item.id }))) return;
   error.value = '';
   try {
     await deletePlaybook(item.id);
@@ -298,136 +322,37 @@ async function handleDelete(item: RoutePlaybookInfo) {
   }
 }
 
-onMounted(loadList);
+const columns = computed<TableColumnsType<RoutePlaybookInfo>>(() => [
+  { title: t('playbooks.colId'), key: 'id', width: 160 },
+  { title: t('playbooks.colCity'), dataIndex: 'city', width: 100 },
+  { title: t('playbooks.colScope'), dataIndex: 'scope', ellipsis: true },
+  { title: t('playbooks.colThemes'), key: 'themes', ellipsis: true },
+  { title: t('playbooks.colOrder'), key: 'order', width: 80 },
+  { title: t('playbooks.colEnabled'), key: 'enabled', width: 80 },
+  { title: t('playbooks.colAction'), key: 'action', width: 140 },
+]);
+
+onMounted(load);
 </script>
 
 <style scoped>
-.page {
-  max-width: 1200px;
-}
-.page-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+.filters {
   margin-bottom: 16px;
 }
-.head-actions {
-  display: flex;
-  gap: 8px;
-}
-.desc {
-  color: #6b7280;
-  margin-top: 8px;
-}
-.filters {
-  display: flex;
-  gap: 12px;
+
+.form-steps {
   margin-bottom: 20px;
 }
-.filter-input {
-  flex: 1;
-  max-width: 320px;
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+
+.form-body {
+  min-height: 280px;
 }
-.filter-input.narrow {
-  max-width: 140px;
-}
-.btn-search,
-.btn-primary,
-.btn-secondary {
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  border: 1px solid #d1d5db;
-}
-.btn-primary {
-  background: #1677ff;
-  color: #fff;
-  border-color: #1677ff;
-}
-.btn-secondary {
-  background: #fff;
-}
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-.table th,
-.table td {
-  padding: 12px;
-  border-bottom: 1px solid #f3f4f6;
-  text-align: left;
-  vertical-align: top;
-}
-.action-cell {
-  display: flex;
-  gap: 12px;
-}
-.btn-link {
-  background: none;
-  border: none;
-  color: #1677ff;
-  cursor: pointer;
-  padding: 0;
-}
-.btn-link.danger {
-  color: #dc2626;
-}
-.error {
-  color: #dc2626;
-  margin-bottom: 12px;
-}
-.empty,
-.loading {
-  color: #6b7280;
-}
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-  padding: 24px;
-}
-.modal {
-  background: #fff;
-  border-radius: 12px;
-  padding: 24px;
-  width: min(640px, 100%);
-  max-height: 90vh;
-  overflow: auto;
-}
-.form label {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 12px;
-  font-size: 14px;
-}
-.form label.inline {
-  flex-direction: row;
-  align-items: center;
-}
-.form input,
-.form textarea {
-  padding: 8px 12px;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font: inherit;
-}
-.modal-actions {
+
+.modal-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  margin-top: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
 }
 </style>

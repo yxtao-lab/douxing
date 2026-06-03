@@ -1,9 +1,9 @@
 <template>
-  <div ref="mapRoot" class="checkin-map-root" />
+  <div ref="mapRoot" class="checkin-map-root" :style="rootStyle" />
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import L from 'leaflet';
 import type { CheckInInfo } from '@douxing/shared';
 import {
@@ -23,6 +23,7 @@ import 'leaflet/dist/leaflet.css';
 const props = defineProps<{
   items: CheckInInfo[];
   selectedId: number | null;
+  height?: number;
 }>();
 
 const emit = defineEmits<{
@@ -33,6 +34,14 @@ const mapRoot = ref<HTMLElement | null>(null);
 let map: L.Map | null = null;
 let markerLayer: L.LayerGroup | null = null;
 let polyline: L.Polyline | null = null;
+let resizeObserver: ResizeObserver | null = null;
+
+const rootStyle = computed(() => {
+  if (props.height && props.height > 0) {
+    return { height: `${props.height}px` };
+  }
+  return undefined;
+});
 
 function applyChinaView(animate = false) {
   if (!map) return;
@@ -116,16 +125,26 @@ function focusSelected() {
   });
 }
 
-async function refreshMapSize() {
+async function syncMapSize() {
   await nextTick();
+  const el = mapRoot.value;
+  if (!el || el.clientWidth < 1 || el.clientHeight < 1) return;
+
+  if (!map) {
+    initMap();
+  }
   map?.invalidateSize(true);
 }
 
 watch(
   () => props.items,
   () => {
+    if (!map) {
+      void syncMapSize();
+      return;
+    }
     renderLayers();
-    refreshMapSize();
+    void syncMapSize();
   },
   { deep: true },
 );
@@ -133,6 +152,7 @@ watch(
 watch(
   () => props.selectedId,
   (id) => {
+    if (!map) return;
     renderMarkers();
     if (id == null) {
       applyChinaView(true);
@@ -142,14 +162,28 @@ watch(
   },
 );
 
+watch(
+  () => props.height,
+  () => {
+    void syncMapSize();
+  },
+);
+
 onMounted(async () => {
   await nextTick();
-  initMap();
-  await refreshMapSize();
-  window.setTimeout(() => map?.invalidateSize(true), 200);
+  if (!mapRoot.value) return;
+
+  resizeObserver = new ResizeObserver(() => {
+    void syncMapSize();
+  });
+  resizeObserver.observe(mapRoot.value);
+  await syncMapSize();
+  window.setTimeout(() => void syncMapSize(), 200);
+  window.setTimeout(() => void syncMapSize(), 600);
 });
 
 onUnmounted(() => {
+  resizeObserver?.disconnect();
   polyline?.remove();
   map?.remove();
   map = null;
@@ -161,8 +195,7 @@ onUnmounted(() => {
 <style scoped>
 .checkin-map-root {
   width: 100%;
-  height: calc(100vh - 240px);
-  min-height: 640px;
+  min-height: 320px;
   border-radius: 8px;
   overflow: hidden;
   background: #e5e7eb;

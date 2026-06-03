@@ -1,5 +1,6 @@
-import { and, asc, eq, like, or, sql } from 'drizzle-orm';
-import type { RoutePlaybookInfo } from '@douxing/shared';
+import { and, asc, eq, like, or, sql, count } from 'drizzle-orm';
+import type { PaginatedResult, RoutePlaybookInfo } from '@douxing/shared';
+import { buildPaginatedResult } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { routePlaybooks } from '../db/schema/route-playbooks.js';
 import {
@@ -81,16 +82,17 @@ export interface ListPlaybooksQuery {
   city?: string;
   keyword?: string;
   enabled?: boolean;
-  limit?: number;
-  offset?: number;
+  page?: number;
+  pageSize?: number;
 }
 
-export async function listRoutePlaybooksForAdmin(
+export async function listRoutePlaybooksForAdminPaginated(
   query: ListPlaybooksQuery = {},
-): Promise<RoutePlaybookInfo[]> {
+): Promise<PaginatedResult<RoutePlaybookInfo>> {
   const db = getDb();
-  const limit = Math.min(Math.max(query.limit ?? 100, 1), 200);
-  const offset = Math.max(query.offset ?? 0, 0);
+  const page = query.page && query.page >= 1 ? Math.floor(query.page) : 1;
+  const pageSize = Math.min(Math.max(query.pageSize ?? 20, 1), 200);
+  const offset = (page - 1) * pageSize;
 
   const conditions = [];
   if (query.city?.trim()) {
@@ -111,15 +113,17 @@ export async function listRoutePlaybooksForAdmin(
     );
   }
 
+  const where = conditions.length ? and(...conditions) : undefined;
+  const [{ value: total }] = await db.select({ value: count() }).from(routePlaybooks).where(where);
   const rows = await db
     .select()
     .from(routePlaybooks)
-    .where(conditions.length ? and(...conditions) : undefined)
+    .where(where)
     .orderBy(asc(routePlaybooks.sortOrder), asc(routePlaybooks.city))
-    .limit(limit)
+    .limit(pageSize)
     .offset(offset);
 
-  return rows.map(rowToPlaybook);
+  return buildPaginatedResult(rows.map(rowToPlaybook), Number(total ?? 0), page, pageSize);
 }
 
 export async function getRoutePlaybookById(id: string): Promise<RoutePlaybookInfo | null> {

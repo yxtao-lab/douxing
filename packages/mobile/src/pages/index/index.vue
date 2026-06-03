@@ -250,7 +250,7 @@ async function loadHotRoutes() {
   hotLoading.value = true;
   hotError.value = '';
   try {
-    hotRoutes.value = await fetchPlazaRoutes(8, 'hot');
+    hotRoutes.value = (await fetchPlazaRoutes(8, 'hot')).items;
   } catch (e) {
     hotRoutes.value = [];
     hotError.value = getAppErrorMessage(e, t('home.hotRoutesLoadFailed'));

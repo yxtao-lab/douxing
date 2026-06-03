@@ -43,10 +43,10 @@
       </view>
     </view>
 
-    <scroll-view scroll-y class="scroll" enable-back-to-top>
+    <scroll-view scroll-y class="scroll" enable-back-to-top @scrolltolower="loadMore">
       <view class="list-inner">
         <DouxingEmptyState
-          v-if="routes.length === 0"
+          v-if="!loading && routes.length === 0"
           :variant="emptyVariant"
           :title="emptyText"
           :description="emptyDescription"
@@ -77,6 +77,9 @@
             <text class="arrow">{{ t('routes.viewDetail') }}</text>
           </view>
         </view>
+
+        <view v-if="loadingMore" class="list-footer">{{ t('common.loadMore') }}</view>
+        <view v-else-if="!hasMore && routes.length > 0" class="list-footer muted">{{ t('common.noMore') }}</view>
       </view>
     </scroll-view>
     <DouxingTabBar :current="2" />
@@ -87,7 +90,8 @@
 import { ref, computed, watch } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo, RouteListScope } from '@douxing/shared';
-import { fetchRoutes } from '@/api/routes';
+import { fetchRoutesPage } from '@/api/routes';
+import { useInfiniteList } from '@/composables/useInfiniteList';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
@@ -101,11 +105,21 @@ const { t, tf } = useTf();
 const { themeClass } = useTheme();
 usePageTitle('nav.routes');
 
-const routes = ref<TravelRouteInfo[]>([]);
 const activeScope = ref<RouteListScope>('mine');
 const statusFilter = ref<number | undefined>(undefined);
 const currentUserLabel = ref('');
 const loadError = ref('');
+
+const { items: routes, loading, loadingMore, hasMore, loadInitial, loadMore } = useInfiniteList(
+  (page, pageSize) =>
+    fetchRoutesPage({
+      scope: activeScope.value,
+      status: activeScope.value === 'mine' ? statusFilter.value : undefined,
+      sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
+      page,
+      pageSize,
+    }),
+);
 
 const scopeTabs = computed(() => [
   { id: 'mine' as RouteListScope, label: t('routes.scopeMine') },
@@ -227,13 +241,8 @@ function goPlan() {
 async function loadRoutes() {
   loadError.value = '';
   try {
-    routes.value = await fetchRoutes({
-      scope: activeScope.value,
-      status: activeScope.value === 'mine' ? statusFilter.value : undefined,
-      sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
-    });
+    await loadInitial();
   } catch (e) {
-    routes.value = [];
     loadError.value = getAppErrorMessage(e, t('routes.loadFailed'));
   }
 }
@@ -462,5 +471,14 @@ watch(statusFilter, () => {
 .arrow {
   color: var(--dx-text-muted);
   font-size: 24rpx;
+}
+.list-footer {
+  padding: 24rpx 0 8rpx;
+  text-align: center;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+}
+.list-footer.muted {
+  color: var(--dx-text-muted, #9ca3af);
 }
 </style>

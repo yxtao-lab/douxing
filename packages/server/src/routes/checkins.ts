@@ -8,10 +8,12 @@ import { authMiddleware } from '../middleware/auth.js';
 import { success, fail } from '../utils/response.js';
 import {
   createCheckIn,
-  listUserCheckIns,
-  listRouteCheckIns,
-  listAllCheckInsForAdmin,
+  listUserCheckInsPaginated,
+  listRouteCheckInsPaginated,
+  listAllCheckInsForAdminPaginated,
 } from '../services/checkin.service.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
+import type { CheckInTimeRange } from '@douxing/shared';
 import { getUserWithRoles } from '../services/user.service.js';
 import { RoleCode, CHECKIN_MAX_PHOTOS } from '@douxing/shared';
 import { isCheckinValidationError } from '../utils/checkin-errors.js';
@@ -112,20 +114,25 @@ router.post('/', authMiddleware, async (req, res) => {
 
 router.get('/', authMiddleware, async (req, res) => {
   try {
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const rangeRaw = typeof req.query.range === 'string' ? req.query.range : undefined;
+    const range =
+      rangeRaw === '7d' || rangeRaw === '30d' || rangeRaw === '90d' || rangeRaw === 'all'
+        ? (rangeRaw as CheckInTimeRange)
+        : undefined;
+
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const limitRaw = req.query.limit ? parseInt(String(req.query.limit), 10) : 500;
-      const limit = Number.isNaN(limitRaw) ? 500 : limitRaw;
-      const list = await listAllCheckInsForAdmin(limit);
-      return success(res, list);
+      const result = await listAllCheckInsForAdminPaginated(page, pageSize);
+      return success(res, result);
     }
     const routeId = req.query.routeId ? parseInt(String(req.query.routeId), 10) : null;
     if (routeId && !Number.isNaN(routeId)) {
-      const list = await listRouteCheckIns(routeId, req.auth!.userId);
-      return success(res, list);
+      const result = await listRouteCheckInsPaginated(routeId, req.auth!.userId, page, pageSize);
+      return success(res, result);
     }
-    const list = await listUserCheckIns(req.auth!.userId);
-    success(res, list);
+    const result = await listUserCheckInsPaginated(req.auth!.userId, page, pageSize, range);
+    success(res, result);
   } catch (err) {
     console.error('[checkins/list]', err);
     return fail(res, '获取打卡记录失败', 500, 500);

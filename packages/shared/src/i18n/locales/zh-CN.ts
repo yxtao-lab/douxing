@@ -23,7 +23,10 @@ export const sharedZhCN = {
     unknownCity: '未知城市',
     points: '积分',
     refresh: '刷新',
+    reset: '重置',
     search: '搜索',
+    loadMore: '加载更多…',
+    noMore: '没有更多了',
     edit: '编辑',
     delete: '删除',
     saving: '保存中…',
@@ -90,7 +93,7 @@ export const sharedZhCN = {
     vip: 'VIP 会员',
   },
   web: {
-    home: '首页',
+    home: '工作台',
     routes: '路线',
     orders: '订单',
     checkins: '打卡',
@@ -99,5 +102,18 @@ export const sharedZhCN = {
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
     logout: '退出',
+    menu: {
+      biz: '业务管理',
+      content: '内容运营',
+    },
+    layout: {
+      breadcrumbHome: '首页',
+      userFallback: '管理员',
+    },
+    tabs: {
+      close: '关闭',
+      closeOthers: '关闭其他',
+      closeAll: '关闭全部',
+    },
   },
 } as const;

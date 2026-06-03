@@ -249,8 +249,14 @@ export interface RouteListQuery {
   scope?: RouteListScope;
   status?: number;
   sort?: RouteListSort;
+  /** @deprecated 请使用 pageSize */
   limit?: number;
+  page?: number;
+  pageSize?: number;
 }
+
+/** 移动端订单列表 Tab 筛选 */
+export type OrderListTab = 'all' | 'pending' | 'done';
 
 /** 草稿路线编辑（PUT /routes/:id，仅 status=草稿） */
 export interface UpdateRouteDraftRequest {

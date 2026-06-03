@@ -1,4 +1,4 @@
-import { eq, and, like, or, sql, inArray } from 'drizzle-orm';
+import { eq, and, like, or, sql, inArray, count } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { attractions } from '../db/schema/attractions.js';
 import {
@@ -8,8 +8,9 @@ import {
   AttractionCategory,
   ApiError,
   ApiMessageKey,
+  buildPaginatedResult,
 } from '@douxing/shared';
-import type { AttractionInfo, AttractionOpenHours, RouteDetailPayload } from '@douxing/shared';
+import type { AttractionInfo, AttractionOpenHours, PaginatedResult, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
 import { resolvePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 import { deleteStoredAttractionCover } from './attraction-cover-storage.service.js';
@@ -260,15 +261,52 @@ export async function seedAttractions() {
   console.log(`[seed] Created ${ATTRACTION_SEEDS.length} attractions`);
 }
 
-export async function listPendingAttractions(limit = 50) {
+export async function listPendingAttractionsPaginated(page: number, pageSize: number) {
   const db = getDb();
+  const where = eq(attractions.status, AttractionStatus.PENDING);
+  const [{ value: total }] = await db.select({ value: count() }).from(attractions).where(where);
+  const offset = (page - 1) * pageSize;
   const rows = await db
     .select()
     .from(attractions)
-    .where(eq(attractions.status, AttractionStatus.PENDING))
+    .where(where)
     .orderBy(attractions.updatedAt)
-    .limit(Math.min(limit, 100));
-  return rows.map(toAttractionInfo);
+    .limit(pageSize)
+    .offset(offset);
+  return buildPaginatedResult(rows.map(toAttractionInfo), Number(total ?? 0), page, pageSize);
+}
+
+export async function listAttractionsForAdminPaginated(options: {
+  city?: string;
+  keyword?: string;
+  page: number;
+  pageSize: number;
+}): Promise<PaginatedResult<AttractionInfo>> {
+  const db = getDb();
+  const pageSize = Math.min(Math.max(options.pageSize, 1), 100);
+  const page = Math.max(options.page, 1);
+  const offset = (page - 1) * pageSize;
+  const conditions = [eq(attractions.status, AttractionStatus.ACTIVE)];
+
+  if (options.city?.trim()) {
+    conditions.push(eq(attractions.city, options.city.trim()));
+  }
+  if (options.keyword?.trim()) {
+    const kw = `%${options.keyword.trim()}%`;
+    conditions.push(or(like(attractions.name, kw), like(attractions.description, kw))!);
+  }
+
+  const where = and(...conditions);
+  const [{ value: total }] = await db.select({ value: count() }).from(attractions).where(where);
+  const rows = await db
+    .select()
+    .from(attractions)
+    .where(where)
+    .orderBy(attractions.city, attractions.name)
+    .limit(pageSize)
+    .offset(offset);
+
+  return buildPaginatedResult(rows.map(toAttractionInfo), Number(total ?? 0), page, pageSize);
 }
 
 export async function approveAttraction(id: number) {
@@ -295,36 +333,6 @@ export async function approveAttraction(id: number) {
 
   const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
   return updated[0] ? toAttractionInfo(updated[0]) : null;
-}
-
-export async function listAttractionsForAdmin(options: {
-  city?: string;
-  keyword?: string;
-  limit?: number;
-  offset?: number;
-}) {
-  const db = getDb();
-  const limit = Math.min(Math.max(options.limit ?? 50, 1), 100);
-  const offset = Math.max(options.offset ?? 0, 0);
-  const conditions = [eq(attractions.status, AttractionStatus.ACTIVE)];
-
-  if (options.city?.trim()) {
-    conditions.push(eq(attractions.city, options.city.trim()));
-  }
-  if (options.keyword?.trim()) {
-    const kw = `%${options.keyword.trim()}%`;
-    conditions.push(or(like(attractions.name, kw), like(attractions.description, kw))!);
-  }
-
-  const rows = await db
-    .select()
-    .from(attractions)
-    .where(and(...conditions))
-    .orderBy(attractions.city, attractions.name)
-    .limit(limit)
-    .offset(offset);
-
-  return rows.map(toAttractionInfo);
 }
 
 export async function updateAttractionCoverImage(

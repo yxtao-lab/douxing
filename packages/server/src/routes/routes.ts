@@ -9,7 +9,7 @@ import {
   regenerateRouteFromPrompt,
   getRouteById,
   publishRoute,
-  listAllRoutesForAdmin,
+  listAllRoutesForAdminPaginated,
   updateDraftRoute,
   setRoutePublicShare,
 } from '../services/route.service.js';
@@ -31,6 +31,7 @@ import { isLlmEnabled } from '../config/llm.js';
 import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
 import { RoleCode } from '@douxing/shared';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
 import planSessionsRouter from './plan-sessions.js';
 
 const router = Router();
@@ -53,6 +54,8 @@ const listQuerySchema = z.object({
   status: optionalQueryInt(0, 2),
   sort: z.enum(['recent', 'hot', 'views']).optional(),
   limit: optionalQueryInt(1, 100),
+  page: optionalQueryInt(1, 10_000),
+  pageSize: optionalQueryInt(1, 100),
 });
 
 const updateDraftSchema = z.object({
@@ -142,15 +145,16 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const routes = await listAllRoutesForAdmin();
-      return success(res, routes);
+      const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+      const result = await listAllRoutesForAdminPaginated(page, pageSize);
+      return success(res, result);
     }
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const routes = await listRoutesForUser(req.auth!.userId, parsed.data);
-    success(res, routes);
+    const result = await listRoutesForUser(req.auth!.userId, parsed.data);
+    success(res, result);
   } catch (err) {
     console.error('[routes/list]', err);
     return fail(res, '获取路线列表失败', 500, 500);
@@ -160,14 +164,16 @@ router.get('/', authMiddleware, async (req, res) => {
 router.get('/plaza', authMiddleware, async (req, res) => {
   try {
     const parsed = listQuerySchema.safeParse({ ...req.query, scope: 'plaza' });
-    const limit = parsed.success ? parsed.data.limit : undefined;
     const sort = parsed.success ? parsed.data.sort : undefined;
-    const routes = await listRoutesForUser(req.auth!.userId, {
+    const page = parsed.success ? parsed.data.page : undefined;
+    const pageSize = parsed.success ? parsed.data.pageSize ?? parsed.data.limit : undefined;
+    const result = await listRoutesForUser(req.auth!.userId, {
       scope: 'plaza',
       sort: sort ?? 'hot',
-      limit,
+      page,
+      pageSize,
     });
-    success(res, routes);
+    success(res, result);
   } catch (err) {
     console.error('[routes/plaza]', err);
     return fail(res, '获取广场路线失败', 500, 500);
@@ -178,13 +184,15 @@ router.get('/plaza', authMiddleware, async (req, res) => {
 router.get('/hot', authMiddleware, async (req, res) => {
   try {
     const parsed = listQuerySchema.safeParse({ ...req.query, scope: 'plaza' });
-    const limit = parsed.success ? parsed.data.limit : undefined;
-    const routes = await listRoutesForUser(req.auth!.userId, {
+    const page = parsed.success ? parsed.data.page : undefined;
+    const pageSize = parsed.success ? parsed.data.pageSize ?? parsed.data.limit : undefined;
+    const result = await listRoutesForUser(req.auth!.userId, {
       scope: 'plaza',
       sort: 'hot',
-      limit,
+      page,
+      pageSize,
     });
-    success(res, routes);
+    success(res, result);
   } catch (err) {
     console.error('[routes/hot]', err);
     return fail(res, '获取热门路线失败', 500, 500);

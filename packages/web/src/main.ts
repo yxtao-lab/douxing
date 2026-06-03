@@ -3,10 +3,20 @@ import { createPinia } from 'pinia';
 import App from './App.vue';
 import router from './router';
 import { i18n } from './i18n';
+import { bootstrapSession, setupHttpAuthHandlers } from './utils/session';
+import 'ant-design-vue/dist/reset.css';
 import './styles/main.css';
 
-const app = createApp(App);
-app.use(createPinia());
-app.use(i18n);
-app.use(router);
-app.mount('#app');
+async function bootstrap() {
+  const app = createApp(App);
+  const pinia = createPinia();
+  app.use(pinia);
+  app.use(i18n);
+  app.use(router);
+
+  await bootstrapSession();
+  setupHttpAuthHandlers(router);
+  app.mount('#app');
+}
+
+bootstrap();
