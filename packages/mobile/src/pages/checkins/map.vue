@@ -27,8 +27,8 @@
           {{ opt.label }}
         </view>
       </scroll-view>
-      <view class="stats">
-        <text>{{ totalPoints }} {{ t('common.points') }}</text>
+      <view class="stats-block">
+        <text class="stats">{{ totalPoints }} {{ t('common.points') }}</text>
         <text v-if="hiddenCount > 0" class="hint">{{ hiddenHint }}</text>
       </view>
     </view>
@@ -127,7 +127,13 @@
     </scroll-view>
 
     <view class="footer-actions">
-      <button class="btn-secondary" @click="openPoster">{{ t('checkins.posterTitle') }}</button>
+      <button
+        class="btn-primary"
+        :disabled="filteredList.length === 0"
+        @click="openPoster"
+      >
+        {{ t('checkins.posterAction') }}
+      </button>
       <button class="btn-secondary" @click="goList">{{ t('common.listView') }}</button>
     </view>
     <CheckInPosterSheet
@@ -426,14 +432,19 @@ onShow(async () => {
   color: var(--dx-text-inverse);
   background: var(--dx-primary);
 }
-.stats {
+.stats-block {
   margin-top: 12rpx;
+}
+.stats {
+  display: block;
   font-size: 24rpx;
   color: var(--dx-text);
 }
 .hint {
-  margin-left: 8rpx;
+  display: block;
+  margin-top: 4rpx;
   color: var(--dx-text-muted);
+  font-size: 22rpx;
 }
 .map-wrap {
   position: relative;
@@ -533,16 +544,38 @@ onShow(async () => {
   color: var(--dx-text-secondary);
 }
 .footer-actions {
+  display: flex;
+  gap: 16rpx;
   padding: 16rpx var(--page-gutter) calc(16rpx + env(safe-area-inset-bottom));
   background: var(--dx-surface);
   border-top: 1rpx solid var(--dx-border);
+  flex-shrink: 0;
+}
+.btn-secondary,
+.btn-primary {
+  flex: 1;
+  margin: 0;
+  font-size: 28rpx;
+  border-radius: var(--dx-radius-lg);
+  border: none;
+}
+.btn-secondary::after,
+.btn-primary::after {
+  border: none;
 }
 .btn-secondary {
   background: var(--dx-bg);
   color: var(--dx-text);
-  font-size: 28rpx;
-  border: none;
-  border-radius: var(--dx-radius-sm);
+}
+.btn-primary {
+  background: var(--dx-primary);
+  color: var(--dx-text-inverse);
+  box-shadow: var(--dx-shadow-sm);
+}
+.btn-primary[disabled] {
+  opacity: 0.45;
+  color: var(--dx-text-inverse);
+  background: var(--dx-primary);
 }
 </style>
 

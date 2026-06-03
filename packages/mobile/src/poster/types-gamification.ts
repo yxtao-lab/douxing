@@ -1,4 +1,5 @@
 import type { LocaleCode } from '@douxing/shared';
+import type { PosterThemePresetId } from './types';
 
 export type GamificationPosterKind = 'achievements' | 'badges';
 
@@ -33,4 +34,5 @@ export interface GamificationPosterPayload {
   qrUrl: string | null;
   locale: LocaleCode;
   labels: GamificationPosterLabels;
+  themePresetId: PosterThemePresetId;
 }

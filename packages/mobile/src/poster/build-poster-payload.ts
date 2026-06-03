@@ -1,10 +1,14 @@
 import type { LocaleCode, RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
-import type { PosterDayBlock, PosterLabels, PosterPayload, PosterPoiItem } from './types';
+import type { PosterDayBlock, PosterLabels, PosterPayload, PosterPoiItem, PosterRenderOptions } from './types';
 import { buildRouteShareUrl } from './share-url';
 import { MAX_HIGHLIGHT_IMAGES_PER_DAY } from './draw-poster-images';
 import { buildRouteDayFlow, type RouteFlowNode } from '@/utils/route-day-flow';
-
-const DAY_THEME_COLORS = ['#2d6a4f', '#40916c', '#52b788', '#74c69d', '#1d3557', '#457b9d'];
+import {
+  applyShowTimeToItems,
+  limitDayItemsByPlayCount,
+  mergePosterRenderOptions,
+  themeColorForDay,
+} from './poster-options';
 
 function collectDayHighlightImages(nodes: RouteFlowNode[]): string[] {
   const urls: string[] = [];
@@ -39,7 +43,12 @@ function flowNodeToPosterItem(node: RouteFlowNode, labels: PosterLabels): Poster
   };
 }
 
-function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: PosterLabels): PosterDayBlock[] {
+function buildDayBlocks(
+  days: RouteDayPlan[],
+  locale: LocaleCode,
+  labels: PosterLabels,
+  options: PosterRenderOptions,
+): PosterDayBlock[] {
   return days.map((day, index) => {
     const dayNo = index + 1;
     const label =
@@ -48,14 +57,28 @@ function buildDayBlocks(days: RouteDayPlan[], locale: LocaleCode, labels: Poster
       (locale === 'en-US' ? `${labels.dayPrefix} ${dayNo}` : `第 ${dayNo} 天`);
 
     const flowNodes = buildRouteDayFlow(day);
-    const items = flowNodes.map((node) => flowNodeToPosterItem(node, labels));
+    const allItems = flowNodes.map((node) => flowNodeToPosterItem(node, labels));
+    const { items: limitedItems, hiddenItemCount } = limitDayItemsByPlayCount(
+      allItems,
+      options.poisPerDay,
+    );
+    const items = applyShowTimeToItems(limitedItems, options.showTime);
+
+    const visibleNodes = flowNodes.filter((node, i) => {
+      if (node.kind !== 'play') {
+        const playBefore = flowNodes.slice(0, i).filter((n) => n.kind === 'play').length;
+        return playBefore < options.poisPerDay;
+      }
+      const playIndex = flowNodes.slice(0, i + 1).filter((n) => n.kind === 'play').length - 1;
+      return playIndex < options.poisPerDay;
+    });
 
     return {
       label,
-      themeColor: DAY_THEME_COLORS[index % DAY_THEME_COLORS.length]!,
+      themeColor: themeColorForDay(options.themePresetId, index),
       items,
-      highlightImages: collectDayHighlightImages(flowNodes),
-      hiddenItemCount: 0,
+      highlightImages: collectDayHighlightImages(visibleNodes),
+      hiddenItemCount,
     };
   });
 }
@@ -91,7 +114,7 @@ export interface BuildPosterPayloadInput {
   brandName: string;
   brandTagline: string;
   scanHint: string;
-  subtitle?: string;
+  options?: Partial<PosterRenderOptions>;
 }
 
 /** 从路线详情抽取统一 PosterPayload（含交通 / 游玩 / 住宿，与行程路径一致） */
@@ -100,17 +123,24 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
   const days = detail?.days ?? [];
   if (days.length === 0) return null;
 
+  const options = mergePosterRenderOptions(input.options);
   const city = detail?.matchedCity?.trim() || input.route.budgetRange?.trim() || '—';
   const dayCount = input.route.days || days.length;
   const labels = buildLabels(input.locale, dayCount);
+
+  const subtitleFromRoute = (input.route.description ?? '').trim();
+  const subtitle =
+    options.subtitleOverride !== undefined
+      ? options.subtitleOverride.trim()
+      : subtitleFromRoute;
 
   return {
     routeId: input.route.id,
     city,
     title: input.route.name?.trim() || '—',
-    subtitle: input.subtitle?.trim() || (input.route.description ?? '').trim(),
+    subtitle,
     dayCount,
-    days: buildDayBlocks(days, input.locale, labels),
+    days: buildDayBlocks(days, input.locale, labels, options),
     hiddenDayCount: 0,
     brand: {
       name: input.brandName,
@@ -120,5 +150,6 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
     qrUrl: buildRouteShareUrl(input.route.id),
     locale: input.locale,
     labels,
+    options,
   };
 }

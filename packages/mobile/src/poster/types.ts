@@ -3,6 +3,20 @@ import type { LocaleCode } from '@douxing/shared';
 /** H2-a MVP 手帐海报模板 ID */
 export type PosterTemplateId = 'timeline-columns' | 'diary-page';
 
+export type PosterThemePresetId = 'forest' | 'ocean' | 'sunset' | 'classic';
+export type PosterPoisPerDay = 2 | 3 | 4;
+export type PosterStickerId = 'none' | 'travel' | 'food' | 'family';
+
+/** H2-a+ 轻量自定义选项（仅影响海报渲染，不改路线 JSON） */
+export interface PosterRenderOptions {
+  /** 自定义副标题；空字符串表示使用路线 description */
+  subtitleOverride?: string;
+  themePresetId: PosterThemePresetId;
+  poisPerDay: PosterPoisPerDay;
+  showTime: boolean;
+  stickerId: PosterStickerId;
+}
+
 export type PosterPoiKind = 'transit' | 'play' | 'lodging';
 
 export interface PosterPoiItem {
@@ -57,6 +71,8 @@ export interface PosterPayload {
   qrUrl: string | null;
   locale: LocaleCode;
   labels: PosterLabels;
+  /** H2-a+ 渲染选项 */
+  options: PosterRenderOptions;
 }
 
 export interface PosterTemplateMeta {

@@ -136,10 +136,11 @@ export function drawBrandFooter(
   scanHint: string,
   qrSize: number,
   drawQr: (x: number, y: number, size: number) => void,
+  footerColor?: string,
 ) {
   const footerH = 168;
   const footerY = height - footerH;
-  ctx.fillStyle = POSTER_COLORS.footer;
+  ctx.fillStyle = footerColor ?? POSTER_COLORS.footer;
   ctx.fillRect(0, footerY, width, footerH);
 
   const qrX = width - qrSize - 36;

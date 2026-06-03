@@ -17,12 +17,13 @@ import {
   POSTER_WIDTH,
   WRAP_LINES_UNLIMITED,
   drawBrandFooter,
-  fillPaperBackground,
   getWrapTextHeight,
   roundRect,
   wrapText,
 } from '../draw-utils';
 import { drawPosterQr } from '../draw-qr-code';
+import { drawPosterSticker } from '../draw-poster-sticker';
+import { fillThemedBackground, resolvePosterColors } from '../draw-poster-background';
 
 function formatMoreDays(payload: PosterPayload): string | null {
   if (payload.hiddenDayCount <= 0) return null;
@@ -79,11 +80,12 @@ export function renderTimelineColumnsPoster(
 ): PosterRenderResult {
   const width = POSTER_WIDTH;
   const height = canvasHeight;
-  fillPaperBackground(ctx, width, height);
+  const colors = resolvePosterColors(payload.options.themePresetId);
+  fillThemedBackground(ctx, width, height, payload.options.themePresetId);
 
   const headerH = measureTimelineHeaderHeight(ctx, payload, width);
   const innerW = width - 104;
-  ctx.fillStyle = POSTER_COLORS.accent;
+  ctx.fillStyle = colors.accent;
   roundRect(ctx, 28, 36, width - 56, headerH, 20);
   ctx.fill();
 
@@ -101,6 +103,8 @@ export function renderTimelineColumnsPoster(
     ctx.font = '22px sans-serif';
     headerY = wrapText(ctx, payload.subtitle, 52, headerY, innerW, 30, WRAP_LINES_UNLIMITED);
   }
+
+  drawPosterSticker(ctx, payload.options.stickerId, width - 28 - 64, 44, 52);
 
   const colTop = 36 + headerH + 24;
   const footerGap = 188;
@@ -204,6 +208,7 @@ export function renderTimelineColumnsPoster(
     (qrX, qrY, qrSize) => {
       drawPosterQr(ctx, payload.qrUrl, imageMap, qrX, qrY, qrSize);
     },
+    colors.footer,
   );
 
   return { width, height };

@@ -9,6 +9,8 @@ import type {
   GamificationPosterLabels,
   GamificationPosterPayload,
 } from './types-gamification';
+import type { PosterThemePresetId } from './types';
+import { loadStoredPosterRenderOptions } from './poster-options';
 
 const MAX_ITEMS = 12;
 
@@ -81,6 +83,7 @@ export interface BuildGamificationPosterPayloadInput {
   brandName: string;
   brandTagline: string;
   scanHint: string;
+  themePresetId?: PosterThemePresetId;
 }
 
 export function buildGamificationPosterPayload(
@@ -115,5 +118,6 @@ export function buildGamificationPosterPayload(
     qrUrl: buildShareUrl(kind),
     locale,
     labels: buildLabels(kind, locale, unlockedCount),
+    themePresetId: input.themePresetId ?? loadStoredPosterRenderOptions().themePresetId,
   };
 }

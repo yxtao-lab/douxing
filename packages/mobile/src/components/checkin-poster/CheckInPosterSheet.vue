@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <view v-if="visible" class="poster-mask" @click="handleClose">
     <view class="poster-sheet" @click.stop>
       <view class="poster-header">
@@ -7,6 +7,12 @@
       </view>
 
       <text class="poster-hint">{{ t('checkins.posterHint') }}</text>
+
+      <PosterThemeChipRow
+        v-model="themePresetId"
+        :disabled="generating"
+        @update:model-value="onThemeChange"
+      />
 
       <view class="preview-wrap">
         <image
@@ -61,6 +67,13 @@ import {
 import { loadPosterImage } from '@/poster/load-poster-image';
 import type { PosterImageMap } from '@/poster/load-poster-image';
 import { POSTER_WIDTH } from '@/poster/draw-utils';
+import {
+  loadStoredPosterRenderOptions,
+  mergePosterRenderOptions,
+  savePosterRenderOptions,
+} from '@/poster/poster-options';
+import type { PosterThemePresetId } from '@/poster/types';
+import PosterThemeChipRow from '@/components/poster/PosterThemeChipRow.vue';
 import { getStoredUser } from '@/utils/auth-storage';
 import { getAppErrorMessage } from '@/utils/request';
 
@@ -82,6 +95,7 @@ const previewPath = ref('');
 const generating = ref(false);
 const saving = ref(false);
 const posterCanvasHeight = ref(800);
+const themePresetId = ref<PosterThemePresetId>(loadStoredPosterRenderOptions().themePresetId);
 
 const canvasStyle = computed(
   () => `width:${POSTER_WIDTH}px;height:${posterCanvasHeight.value}px;`,
@@ -120,6 +134,7 @@ async function generatePreview() {
       brandName: t('routes.poster.brandName'),
       brandTagline: t('routes.poster.brandTagline'),
       scanHint: payloadScanHint(),
+      themePresetId: themePresetId.value,
     });
     if (!payload) {
       uni.showToast({ title: t('checkins.posterNoData'), icon: 'none' });
@@ -135,12 +150,17 @@ async function generatePreview() {
 
     // Load avatar image if available
     const imageMap: PosterImageMap = new Map();
-    if (payload.avatarUrl) {
+    const imageUrls = new Set<string>();
+    if (payload.avatarUrl) imageUrls.add(payload.avatarUrl);
+    for (const loc of payload.checkinLocations) {
+      if (loc.photoUrl?.trim()) imageUrls.add(loc.photoUrl.trim());
+    }
+    for (const url of imageUrls) {
       try {
-        const img = await loadPosterImage(surface.canvas, payload.avatarUrl);
-        imageMap.set(payload.avatarUrl, img);
+        const img = await loadPosterImage(surface.canvas, url);
+        imageMap.set(url, img);
       } catch {
-        // avatar load failure is non-fatal
+        // 单张图片失败可忽略
       }
     }
 
@@ -170,6 +190,14 @@ function handleClose() {
 
 async function handleRegenerate() {
   await generatePreview();
+}
+
+function onThemeChange(id: PosterThemePresetId) {
+  themePresetId.value = id;
+  savePosterRenderOptions(
+    mergePosterRenderOptions({ ...loadStoredPosterRenderOptions(), themePresetId: id }),
+  );
+  void generatePreview();
 }
 
 async function handleSave() {

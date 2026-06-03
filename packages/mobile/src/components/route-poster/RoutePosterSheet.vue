@@ -23,6 +23,82 @@
         </view>
       </scroll-view>
 
+      <view class="options-panel">
+        <text class="options-title">{{ t('routes.poster.options.sectionTitle') }}</text>
+
+        <view class="option-row">
+          <text class="option-label">{{ t('routes.poster.options.subtitleLabel') }}</text>
+          <input
+            v-model="subtitleDraft"
+            class="option-input"
+            type="text"
+            :placeholder="t('routes.poster.options.subtitlePlaceholder')"
+            :disabled="generating"
+            @blur="applySubtitleAndRefresh"
+          />
+        </view>
+
+        <view class="option-row">
+          <text class="option-label">{{ t('routes.poster.options.themeLabel') }}</text>
+          <scroll-view scroll-x class="chip-scroll" :show-scrollbar="false">
+            <view class="chip-row">
+              <view
+                v-for="preset in themePresets"
+                :key="preset.id"
+                class="option-chip"
+                :class="{ active: renderOptions.themePresetId === preset.id }"
+                @click="setThemePreset(preset.id)"
+              >
+                <view class="color-dot" :style="{ background: preset.sampleColor }" />
+                <text>{{ t(preset.labelKey) }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
+        <view class="option-row">
+          <text class="option-label">{{ t('routes.poster.options.poisPerDayLabel') }}</text>
+          <view class="chip-row">
+            <view
+              v-for="count in poisPerDayChoices"
+              :key="count"
+              class="option-chip compact"
+              :class="{ active: renderOptions.poisPerDay === count }"
+              @click="setPoisPerDay(count)"
+            >
+              <text>{{ count }}</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="option-row inline">
+          <text class="option-label">{{ t('routes.poster.options.showTimeLabel') }}</text>
+          <switch
+            :checked="renderOptions.showTime"
+            color="var(--dx-primary)"
+            :disabled="generating"
+            @change="onShowTimeChange"
+          />
+        </view>
+
+        <view class="option-row">
+          <text class="option-label">{{ t('routes.poster.options.stickerLabel') }}</text>
+          <scroll-view scroll-x class="chip-scroll" :show-scrollbar="false">
+            <view class="chip-row">
+              <view
+                v-for="sticker in stickerChoices"
+                :key="sticker.id"
+                class="option-chip compact"
+                :class="{ active: renderOptions.stickerId === sticker.id }"
+                @click="setSticker(sticker.id)"
+              >
+                <text>{{ t(sticker.labelKey) }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+      </view>
+
       <view class="preview-wrap">
         <image
           v-if="previewPath"
@@ -75,7 +151,12 @@ import {
 import { POSTER_WIDTH } from '@/poster/draw-utils';
 import { POSTER_HEIGHT } from '@/poster/draw-utils';
 import { measurePosterHeight } from '@/poster/poster-layout';
-import type { PosterTemplateId } from '@/poster/types';
+import type { PosterTemplateId, PosterPoisPerDay, PosterStickerId, PosterThemePresetId, PosterRenderOptions } from '@/poster/types';
+import {
+  loadStoredPosterRenderOptions,
+  savePosterRenderOptions,
+  POSTER_THEME_PRESETS,
+} from '@/poster/poster-options';
 import {
   getDefaultPosterTemplateId,
   POSTER_TEMPLATES,
@@ -101,10 +182,28 @@ const componentInstance = getCurrentInstance()?.proxy ?? null;
 
 const templates = POSTER_TEMPLATES;
 const selectedTemplate = ref<PosterTemplateId>(getDefaultPosterTemplateId());
+const renderOptions = ref<PosterRenderOptions>(loadStoredPosterRenderOptions());
+const subtitleDraft = ref('');
 const previewPath = ref('');
 const generating = ref(false);
 const saving = ref(false);
 const posterCanvasHeight = ref(1334);
+
+const poisPerDayChoices: PosterPoisPerDay[] = [2, 3, 4];
+
+const themePresets = [
+  { id: 'forest' as PosterThemePresetId, labelKey: 'routes.poster.options.themeForest', sampleColor: POSTER_THEME_PRESETS.forest.colors[0] },
+  { id: 'ocean' as PosterThemePresetId, labelKey: 'routes.poster.options.themeOcean', sampleColor: POSTER_THEME_PRESETS.ocean.colors[0] },
+  { id: 'sunset' as PosterThemePresetId, labelKey: 'routes.poster.options.themeSunset', sampleColor: POSTER_THEME_PRESETS.sunset.colors[0] },
+  { id: 'classic' as PosterThemePresetId, labelKey: 'routes.poster.options.themeClassic', sampleColor: POSTER_THEME_PRESETS.classic.colors[0] },
+];
+
+const stickerChoices = [
+  { id: 'none' as PosterStickerId, labelKey: 'routes.poster.options.stickerNone' },
+  { id: 'travel' as PosterStickerId, labelKey: 'routes.poster.options.stickerTravel' },
+  { id: 'food' as PosterStickerId, labelKey: 'routes.poster.options.stickerFood' },
+  { id: 'family' as PosterStickerId, labelKey: 'routes.poster.options.stickerFamily' },
+];
 
 const canvasStyle = computed(
   () => `width:${POSTER_WIDTH}px;height:${posterCanvasHeight.value}px;`,
@@ -115,12 +214,52 @@ watch(
   async ([visible]) => {
     if (visible && props.route) {
       selectedTemplate.value = getDefaultPosterTemplateId();
+      renderOptions.value = loadStoredPosterRenderOptions();
+      subtitleDraft.value = renderOptions.value.subtitleOverride ?? '';
       previewPath.value = '';
       await nextTick();
       await generatePreview();
     }
   },
 );
+
+function persistOptions(patch: Partial<PosterRenderOptions>) {
+  const next: PosterRenderOptions = { ...renderOptions.value, ...patch };
+  if ('subtitleOverride' in patch && patch.subtitleOverride === undefined) {
+    delete next.subtitleOverride;
+  }
+  renderOptions.value = next;
+  savePosterRenderOptions(next);
+}
+
+async function applySubtitleAndRefresh() {
+  const trimmed = subtitleDraft.value.trim();
+  persistOptions({ subtitleOverride: trimmed || undefined });
+  await generatePreview();
+}
+
+async function setThemePreset(id: PosterThemePresetId) {
+  if (renderOptions.value.themePresetId === id || generating.value) return;
+  persistOptions({ themePresetId: id });
+  await generatePreview();
+}
+
+async function setPoisPerDay(count: PosterPoisPerDay) {
+  if (renderOptions.value.poisPerDay === count || generating.value) return;
+  persistOptions({ poisPerDay: count });
+  await generatePreview();
+}
+
+async function onShowTimeChange(e: { detail: { value: boolean } }) {
+  persistOptions({ showTime: e.detail.value });
+  await generatePreview();
+}
+
+async function setSticker(id: PosterStickerId) {
+  if (renderOptions.value.stickerId === id || generating.value) return;
+  persistOptions({ stickerId: id });
+  await generatePreview();
+}
 
 async function selectTemplate(id: PosterTemplateId) {
   if (selectedTemplate.value === id || generating.value) return;
@@ -136,6 +275,7 @@ async function generatePreview() {
     brandName: t('routes.poster.brandName'),
     brandTagline: t('routes.poster.brandTagline'),
     scanHint: payloadScanHint(),
+    options: renderOptions.value,
   });
   if (!payload) {
     uni.showToast({ title: t('routes.poster.noItinerary'), icon: 'none' });
@@ -321,6 +461,78 @@ async function handleSave() {
   color: var(--dx-text-muted);
   line-height: 1.4;
   white-space: normal;
+}
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  padding: 16rpx;
+  background: var(--dx-bg);
+  border-radius: var(--dx-radius-md);
+  max-height: 36vh;
+  overflow-y: auto;
+}
+.options-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.option-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+.option-row.inline {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.option-label {
+  font-size: 22rpx;
+  color: var(--dx-text-secondary);
+}
+.option-input {
+  padding: 12rpx 16rpx;
+  font-size: 24rpx;
+  border-radius: var(--dx-radius-sm);
+  border: 1rpx solid var(--dx-border);
+  background: var(--dx-surface);
+  color: var(--dx-text);
+}
+.chip-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+.chip-row {
+  display: inline-flex;
+  gap: 12rpx;
+  flex-wrap: wrap;
+}
+.option-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 10rpx 20rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid var(--dx-border);
+  background: var(--dx-surface);
+  font-size: 22rpx;
+  color: var(--dx-text);
+}
+.option-chip.compact {
+  min-width: 64rpx;
+  justify-content: center;
+}
+.option-chip.active {
+  border-color: var(--dx-primary);
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
+}
+.color-dot {
+  width: 20rpx;
+  height: 20rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 .preview-wrap {
   min-height: 420rpx;

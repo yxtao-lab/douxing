@@ -2,10 +2,9 @@ import type { PosterCanvasContext, PosterRenderResult } from '../types';
 import type { PosterImageMap } from '../load-poster-image';
 import type { GamificationPosterPayload } from '../types-gamification';
 import { drawPosterQr } from '../draw-qr-code';
+import { fillThemedBackground, resolvePosterColors } from '../draw-poster-background';
 import {
-  POSTER_COLORS,
   POSTER_WIDTH,
-  fillPaperBackground,
   drawBrandFooter,
   roundRect,
   wrapText,
@@ -18,12 +17,15 @@ const AVATAR_SIZE = 108;
 const FOOTER_HEIGHT = 168;
 const GRID_GAP = 16;
 
+type PosterPalette = ReturnType<typeof resolvePosterColors>;
+
 function drawAvatar(
   ctx: PosterCanvasContext,
   avatarUrl: string | null,
   cx: number,
   cy: number,
   size: number,
+  accent: string,
   imageMap?: PosterImageMap,
 ) {
   ctx.save();
@@ -35,15 +37,13 @@ function drawAvatar(
   if (avatarUrl && imageMap?.get(avatarUrl)) {
     ctx.drawImage(imageMap.get(avatarUrl)!, cx - size / 2, cy - size / 2, size, size);
   } else {
-    ctx.fillStyle = POSTER_COLORS.accent;
+    ctx.fillStyle = accent;
     ctx.fillRect(cx - size / 2, cy - size / 2, size, size);
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 42px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('?', cx, cy);
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'alphabetic';
   }
   ctx.restore();
 
@@ -56,30 +56,36 @@ function drawAvatar(
   ctx.restore();
 }
 
-function drawHeader(ctx: PosterCanvasContext, payload: GamificationPosterPayload, imageMap?: PosterImageMap): number {
+function drawHeader(
+  ctx: PosterCanvasContext,
+  payload: GamificationPosterPayload,
+  colors: PosterPalette,
+  imageMap?: PosterImageMap,
+): number {
   const avatarCx = POSTER_WIDTH / 2;
   const avatarTop = 40;
   const avatarCy = avatarTop + AVATAR_SIZE / 2;
 
-  drawAvatar(ctx, payload.avatarUrl, avatarCx, avatarCy, AVATAR_SIZE, imageMap);
+  drawAvatar(ctx, payload.avatarUrl, avatarCx, avatarCy, AVATAR_SIZE, colors.accent, imageMap);
 
-  ctx.fillStyle = POSTER_COLORS.ink;
+  ctx.fillStyle = colors.ink;
   ctx.font = 'bold 34px sans-serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillText(payload.nickname, POSTER_WIDTH / 2, avatarCy + AVATAR_SIZE / 2 + 20 + 34);
 
-  ctx.fillStyle = POSTER_COLORS.accent;
+  ctx.fillStyle = colors.accent;
   ctx.font = 'bold 30px sans-serif';
   ctx.fillText(payload.labels.sectionTitle, POSTER_WIDTH / 2, avatarCy + AVATAR_SIZE / 2 + 72 + 30);
 
-  ctx.fillStyle = POSTER_COLORS.inkMuted;
+  ctx.fillStyle = colors.inkMuted;
   ctx.font = '24px sans-serif';
   ctx.fillText(payload.labels.unlockedCount, POSTER_WIDTH / 2, avatarCy + AVATAR_SIZE / 2 + 112 + 24);
   ctx.textAlign = 'left';
 
   const separatorY = avatarCy + AVATAR_SIZE / 2 + 148;
   ctx.save();
-  ctx.fillStyle = POSTER_COLORS.accent;
+  ctx.fillStyle = colors.accent;
   ctx.globalAlpha = 0.25;
   ctx.fillRect(POSTER_MARGIN + 48, separatorY, CONTENT_WIDTH - 96, 4);
   ctx.restore();
@@ -91,50 +97,55 @@ function drawBadgeGrid(
   ctx: PosterCanvasContext,
   payload: GamificationPosterPayload,
   startY: number,
+  colors: PosterPalette,
 ): number {
   const cols = 2;
-  const cardW = (CONTENT_WIDTH - GRID_GAP) / cols;
-  const cardH = 168;
-  let y = startY;
+  const cardW = Math.floor((CONTENT_WIDTH - GRID_GAP) / cols);
+  const cardH = 132;
+  const pad = 14;
+  const iconColW = 52;
+  const textX = pad + iconColW + 8;
+  const textW = cardW - textX - pad;
 
   for (let i = 0; i < payload.items.length; i += 1) {
     const item = payload.items[i]!;
     const col = i % cols;
     const row = Math.floor(i / cols);
     const x = POSTER_MARGIN + col * (cardW + GRID_GAP);
-    const cardY = y + row * (cardH + GRID_GAP);
+    const cardY = startY + row * (cardH + GRID_GAP);
 
     ctx.save();
-    ctx.fillStyle = POSTER_COLORS.card;
+    ctx.fillStyle = colors.card;
     roundRect(ctx, x, cardY, cardW, cardH, 12);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(45, 106, 79, 0.18)';
+    ctx.strokeStyle = `${colors.accent}2e`;
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.restore();
 
-    ctx.font = '48px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(item.icon, x + cardW / 2, cardY + 52);
-
-    ctx.fillStyle = POSTER_COLORS.ink;
-    ctx.font = 'bold 24px sans-serif';
-    wrapText(ctx, item.name, x + 12, cardY + 78, cardW - 24, 28, 2);
-
-    ctx.fillStyle = POSTER_COLORS.inkMuted;
-    ctx.font = '20px sans-serif';
-    wrapText(ctx, item.description ?? '', x + 12, cardY + 118, cardW - 24, 24, 2);
+    ctx.font = '40px sans-serif';
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillText(item.icon, x + pad, cardY + pad + 36);
+
+    ctx.fillStyle = colors.ink;
+    ctx.font = 'bold 22px sans-serif';
+    wrapText(ctx, item.name, x + textX, cardY + pad + 28, textW, 26, 2);
+
+    ctx.fillStyle = colors.inkMuted;
+    ctx.font = '18px sans-serif';
+    wrapText(ctx, item.description ?? '', x + textX, cardY + pad + 58, textW, 22, 2);
+    ctx.restore();
   }
 
   const rows = Math.ceil(payload.items.length / cols);
-  return y + rows * (cardH + GRID_GAP);
+  return startY + rows * (cardH + GRID_GAP);
 }
 
 function drawAchievementList(
   ctx: PosterCanvasContext,
   payload: GamificationPosterPayload,
   startY: number,
+  colors: PosterPalette,
 ): number {
   let y = startY;
 
@@ -143,24 +154,26 @@ function drawAchievementList(
     const x = POSTER_MARGIN;
 
     ctx.save();
-    ctx.fillStyle = POSTER_COLORS.card;
+    ctx.fillStyle = colors.card;
     roundRect(ctx, x, y, CONTENT_WIDTH, cardH, 12);
     ctx.fill();
-    ctx.strokeStyle = 'rgba(45, 106, 79, 0.15)';
+    ctx.strokeStyle = `${colors.accent}26`;
     ctx.lineWidth = 2;
     ctx.stroke();
-    ctx.restore();
 
     ctx.font = '44px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
     ctx.fillText(item.icon, x + 20, y + 56);
 
-    ctx.fillStyle = POSTER_COLORS.ink;
+    ctx.fillStyle = colors.ink;
     ctx.font = 'bold 26px sans-serif';
     ctx.fillText(item.name, x + 88, y + 44);
 
-    ctx.fillStyle = POSTER_COLORS.inkMuted;
+    ctx.fillStyle = colors.inkMuted;
     ctx.font = '22px sans-serif';
     wrapText(ctx, item.description ?? '', x + 88, y + 72, CONTENT_WIDTH - 108, 26, WRAP_LINES_UNLIMITED);
+    ctx.restore();
 
     y += cardH + GRID_GAP;
   }
@@ -172,7 +185,7 @@ export function estimateGamificationPosterHeight(payload: GamificationPosterPayl
   const headerH = 320;
   if (payload.kind === 'badges') {
     const rows = Math.ceil(payload.items.length / 2);
-    return Math.max(900, headerH + rows * 184 + FOOTER_HEIGHT + 48);
+    return Math.max(900, headerH + rows * 148 + FOOTER_HEIGHT + 48);
   }
   return Math.max(900, headerH + payload.items.length * 148 + FOOTER_HEIGHT + 48);
 }
@@ -193,14 +206,15 @@ export function renderGamificationPoster(
 ): PosterRenderResult {
   const width = POSTER_WIDTH;
   const height = canvasHeight ?? estimateGamificationPosterHeight(payload);
+  const colors = resolvePosterColors(payload.themePresetId);
 
-  fillPaperBackground(ctx, width, height);
+  fillThemedBackground(ctx, width, height, payload.themePresetId);
 
-  const headerBottom = drawHeader(ctx, payload, imageMap);
+  const headerBottom = drawHeader(ctx, payload, colors, imageMap);
   const contentBottom =
     payload.kind === 'badges'
-      ? drawBadgeGrid(ctx, payload, headerBottom)
-      : drawAchievementList(ctx, payload, headerBottom);
+      ? drawBadgeGrid(ctx, payload, headerBottom, colors)
+      : drawAchievementList(ctx, payload, headerBottom, colors);
 
   void contentBottom;
 
@@ -215,6 +229,7 @@ export function renderGamificationPoster(
     (qrX, qrY, qrSize) => {
       drawPosterQr(ctx, payload.qrUrl, imageMap, qrX, qrY, qrSize);
     },
+    colors.footer,
   );
 
   return { width, height };

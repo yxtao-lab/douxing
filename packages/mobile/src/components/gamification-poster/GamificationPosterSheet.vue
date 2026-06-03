@@ -8,6 +8,12 @@
 
       <text class="poster-hint">{{ sheetHint }}</text>
 
+      <PosterThemeChipRow
+        v-model="themePresetId"
+        :disabled="generating"
+        @update:model-value="onThemeChange"
+      />
+
       <view class="preview-wrap">
         <image
           v-if="previewPath"
@@ -64,6 +70,13 @@ import {
 import { loadPosterImage } from '@/poster/load-poster-image';
 import type { PosterImageMap } from '@/poster/load-poster-image';
 import { POSTER_WIDTH } from '@/poster/draw-utils';
+import {
+  loadStoredPosterRenderOptions,
+  mergePosterRenderOptions,
+  savePosterRenderOptions,
+} from '@/poster/poster-options';
+import type { PosterThemePresetId } from '@/poster/types';
+import PosterThemeChipRow from '@/components/poster/PosterThemeChipRow.vue';
 import { getStoredUser } from '@/utils/auth-storage';
 import { getAppErrorMessage } from '@/utils/request';
 
@@ -87,6 +100,7 @@ const previewPath = ref('');
 const generating = ref(false);
 const saving = ref(false);
 const posterCanvasHeight = ref(900);
+const themePresetId = ref<PosterThemePresetId>(loadStoredPosterRenderOptions().themePresetId);
 
 const sheetTitle = computed(() =>
   props.kind === 'achievements'
@@ -150,6 +164,7 @@ async function generatePreview() {
       brandName: t('routes.poster.brandName'),
       brandTagline: t('routes.poster.brandTagline'),
       scanHint: payloadScanHint(),
+      themePresetId: themePresetId.value,
     });
     if (!payload) {
       uni.showToast({ title: noDataMessage(), icon: 'none' });
@@ -203,6 +218,14 @@ function handleClose() {
 
 async function handleRegenerate() {
   await generatePreview();
+}
+
+function onThemeChange(id: PosterThemePresetId) {
+  themePresetId.value = id;
+  savePosterRenderOptions(
+    mergePosterRenderOptions({ ...loadStoredPosterRenderOptions(), themePresetId: id }),
+  );
+  void generatePreview();
 }
 
 async function handleSave() {

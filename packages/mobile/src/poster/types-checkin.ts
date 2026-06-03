@@ -1,4 +1,5 @@
-﻿import type { LocaleCode } from '@douxing/shared';
+import type { LocaleCode } from '@douxing/shared';
+import type { PosterThemePresetId } from './types';
 
 /** 打卡海报的单个打卡点（简化足迹地图用） */
 export interface CheckinMapPosterLocation {
@@ -17,6 +18,8 @@ export interface CheckinPosterLabels {
   points: string;
   mapTitle: string;
   noMapData: string;
+  footprintDirection: string;
+  footprintByTime: string;
 }
 
 /** 打卡足迹海报数据层 */
@@ -36,4 +39,5 @@ export interface CheckinMapPosterPayload {
   qrUrl: string | null;
   locale: LocaleCode;
   labels: CheckinPosterLabels;
+  themePresetId: PosterThemePresetId;
 }

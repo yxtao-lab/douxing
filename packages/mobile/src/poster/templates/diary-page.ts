@@ -12,11 +12,12 @@ import {
   POSTER_WIDTH,
   WRAP_LINES_UNLIMITED,
   drawBrandFooter,
-  fillPaperBackground,
   roundRect,
   wrapText,
 } from '../draw-utils';
 import { drawPosterQr } from '../draw-qr-code';
+import { drawPosterSticker } from '../draw-poster-sticker';
+import { fillThemedBackground, resolvePosterColors } from '../draw-poster-background';
 
 const DIARY_CARD_PAD_BOTTOM = 20;
 
@@ -60,6 +61,8 @@ function drawDiaryHeader(
     y = wrapText(ctx, payload.subtitle, 48, y, innerW, 28, WRAP_LINES_UNLIMITED);
   }
 
+  drawPosterSticker(ctx, payload.options.stickerId, width - 48 - 56, 40, 52);
+
   return headerH;
 }
 
@@ -71,7 +74,8 @@ export function renderDiaryPagePoster(
 ): PosterRenderResult {
   const width = POSTER_WIDTH;
   const height = canvasHeight;
-  fillPaperBackground(ctx, width, height);
+  const colors = resolvePosterColors(payload.options.themePresetId);
+  fillThemedBackground(ctx, width, height, payload.options.themePresetId);
 
   const headerH = drawDiaryHeader(ctx, payload, width);
   let cursorY = 32 + headerH + 20;
@@ -178,6 +182,7 @@ export function renderDiaryPagePoster(
     (qrX, qrY, qrSize) => {
       drawPosterQr(ctx, payload.qrUrl, imageMap, qrX, qrY, qrSize);
     },
+    colors.footer,
   );
 
   return { width, height };
