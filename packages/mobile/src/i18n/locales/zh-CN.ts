@@ -1,4 +1,4 @@
-/** 移动端中文文案 */
+﻿/** 移动端中文文案 */
 export const mobileZhCN = {
   home: {
     subtitle: 'AI 驱动 · 一句话生成专属旅行',
@@ -389,15 +389,27 @@ export const mobileZhCN = {
     timelineMeta: '{time} · +{points} 积分',
     mapMarkerFallback: '打卡点',
     mapCalloutPoints: '+{points} 积分',
+    posterTitle: '生成打卡足迹海报',
+    posterHint: '保存你的打卡足迹，和朋友分享',
+    posterNoData: '暂无打卡数据',
+    posterLoginRequired: '请先登录',
   },
   achievements: {
     unlockedSummary: '已解锁成就',
     emptyFilter: '该筛选条件下暂无成就',
     progressLabel: '进度 {current}/{target}',
+    posterTitle: '生成成就炫耀海报',
+    posterHint: '展示已解锁成就，保存并分享给朋友',
+    posterNoUnlocked: '暂无已解锁成就',
+    posterAction: '炫耀成就',
   },
   badges: {
     unlockedSummary: '已解锁徽章',
     emptyFilter: '该筛选条件下暂无徽章',
+    posterTitle: '生成徽章炫耀海报',
+    posterHint: '展示已解锁徽章，保存并分享给朋友',
+    posterNoUnlocked: '暂无已解锁徽章',
+    posterAction: '炫耀徽章',
   },
   leaderboard: {
     periodWeek: '周榜',

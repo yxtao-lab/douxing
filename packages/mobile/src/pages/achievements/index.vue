@@ -15,9 +15,23 @@
         <view class="summary-stats">
           <text class="summary-count">{{ unlockedCount }}/{{ achievementCatalog.length }}</text>
           <text class="summary-label">{{ t('achievements.unlockedSummary') }}</text>
+          <button
+            v-if="unlockedCount > 0"
+            class="poster-btn"
+            @click="posterVisible = true"
+          >
+            {{ t('achievements.posterAction') }}
+          </button>
         </view>
       </view>
     </view>
+
+    <GamificationPosterSheet
+      :visible="posterVisible"
+      kind="achievements"
+      :achievements="achievementCatalog"
+      @close="posterVisible = false"
+    />
 
     <view class="page-body">
       <view class="filter-panel">
@@ -93,6 +107,7 @@ import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import GamificationPosterSheet from '@/components/gamification-poster/GamificationPosterSheet.vue';
 
 usePageTitle('nav.achievements');
 const { t, tf } = useTf();
@@ -114,6 +129,7 @@ const achievementCatalog = ref<AchievementCatalogItem[]>([]);
 const activeCategory = ref('all');
 const activeUnlockStatus = ref('all');
 const loading = ref(false);
+const posterVisible = ref(false);
 
 const unlockedCount = computed(() =>
   achievementCatalog.value.filter((item) => isCompleted(item)).length,
@@ -257,6 +273,17 @@ onShow(async () => {
   color: rgba(255, 255, 255, 0.9);
   display: block;
   margin-top: 6rpx;
+}
+.poster-btn {
+  margin-top: 20rpx;
+  padding: 0 28rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+  border-radius: 999rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.45);
+  background: rgba(255, 255, 255, 0.16);
+  color: var(--dx-text-inverse);
 }
 .page-body {
   padding: 0 var(--page-gutter) 32rpx;

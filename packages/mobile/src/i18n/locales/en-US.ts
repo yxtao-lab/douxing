@@ -1,4 +1,4 @@
-/** 移动端英文文案 */
+﻿/** 移动端英文文案 */
 export const mobileEnUS = {
   home: {
     subtitle: 'AI-powered trips from one sentence',
@@ -391,15 +391,27 @@ export const mobileEnUS = {
     timelineMeta: '{time} · +{points} pts',
     mapMarkerFallback: 'Check-in',
     mapCalloutPoints: '+{points} pts',
+    posterTitle: 'Generate Check-in Poster',
+    posterHint: 'Save your check-in footprint and share with friends',
+    posterNoData: 'No check-in data',
+    posterLoginRequired: 'Login required',
   },
   achievements: {
     unlockedSummary: 'Achievements unlocked',
     emptyFilter: 'No achievements match this filter',
     progressLabel: 'Progress {current}/{target}',
+    posterTitle: 'Achievement Showcase Poster',
+    posterHint: 'Show off unlocked achievements and share with friends',
+    posterNoUnlocked: 'No unlocked achievements yet',
+    posterAction: 'Share achievements',
   },
   badges: {
     unlockedSummary: 'Badges unlocked',
     emptyFilter: 'No badges match this filter',
+    posterTitle: 'Badge Showcase Poster',
+    posterHint: 'Show off unlocked badges and share with friends',
+    posterNoUnlocked: 'No unlocked badges yet',
+    posterAction: 'Share badges',
   },
   leaderboard: {
     periodWeek: 'Weekly',

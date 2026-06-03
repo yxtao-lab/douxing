@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="page" :class="themeClass">
     <view class="page-hero">
       <view class="hero-bg" />
@@ -31,6 +31,7 @@
         <view class="toolbar-actions">
           <text class="stats">{{ statsLine }}</text>
           <text class="map-link" @click="goMap">{{ t('checkins.mapLink') }}</text>
+          <text class="poster-link" @click="openPoster">{{ t('checkins.posterTitle') }}</text>
         </view>
       </view>
 
@@ -62,6 +63,11 @@
         </view>
       </view>
     </view>
+    <CheckInPosterSheet
+      :visible="posterVisible"
+      :checkins="filteredList"
+      @close="posterVisible = false"
+    />
   </view>
 </template>
 
@@ -75,6 +81,7 @@ import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import CheckInPosterSheet from '@/components/checkin-poster/CheckInPosterSheet.vue';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
@@ -95,6 +102,7 @@ const timeRangeOptions = computed(() =>
 );
 const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
+const posterVisible = ref(false);
 
 const filteredList = computed(() => filterCheckInsByTimeRange(allList.value, timeRange.value));
 const totalPoints = computed(() => sumCheckInPoints(filteredList.value));
@@ -120,6 +128,10 @@ function previewPhoto(photos: string[], index: number) {
 
 function goMap() {
   uni.navigateTo({ url: `/pages/checkins/map?range=${timeRange.value}` });
+}
+
+function openPoster() {
+  posterVisible.value = true;
 }
 
 function goPlan() {
@@ -244,6 +256,12 @@ onShow(async () => {
   color: var(--dx-text);
 }
 .map-link {
+  font-size: 24rpx;
+  color: var(--dx-primary);
+  font-weight: 500;
+}
+.poster-link {
+  margin-left: 16rpx;
   font-size: 24rpx;
   color: var(--dx-primary);
   font-weight: 500;

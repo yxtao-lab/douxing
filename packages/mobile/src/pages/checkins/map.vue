@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <view class="page" :class="themeClass">
     <view class="page-hero page-hero--compact">
       <view class="hero-bg" />
@@ -127,8 +127,14 @@
     </scroll-view>
 
     <view class="footer-actions">
+      <button class="btn-secondary" @click="openPoster">{{ t('checkins.posterTitle') }}</button>
       <button class="btn-secondary" @click="goList">{{ t('common.listView') }}</button>
     </view>
+    <CheckInPosterSheet
+      :visible="posterVisible"
+      :checkins="filteredList"
+      @close="posterVisible = false"
+    />
   </view>
 </template>
 
@@ -142,6 +148,7 @@ import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import CheckInPosterSheet from '@/components/checkin-poster/CheckInPosterSheet.vue';
 import {
   CHECKIN_TIME_RANGE_OPTIONS,
   type CheckInTimeRange,
@@ -172,6 +179,7 @@ const timeRangeOptions = computed(() =>
 const allList = ref<CheckInInfo[]>([]);
 const timeRange = ref<CheckInTimeRange>('all');
 const selectedId = ref<number | null>(null);
+const posterVisible = ref(false);
 const mapScale = ref(10);
 const userMovedMap = ref(false);
 const overrideCenter = ref<{ latitude: number; longitude: number } | null>(null);
@@ -296,13 +304,19 @@ async function loadCheckIns() {
   }
 }
 
+
 function goList() {
   uni.navigateTo({ url: `/pages/checkins/list?range=${timeRange.value}` });
+}
+
+function openPoster() {
+  posterVisible.value = true;
 }
 
 function goPlan() {
   uni.switchTab({ url: '/pages/plan/plan' });
 }
+
 
 onLoad((query) => {
   const range = String(query?.range ?? '');
