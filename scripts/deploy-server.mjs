@@ -17,6 +17,15 @@ import { existsSync, copyFileSync, readFileSync, mkdirSync, writeFileSync } from
 import os from 'node:os';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  detectPm,
+  pmInstallCmd,
+  pmFilterExecCmd,
+  pmFilterCmd,
+  pmRunCmd,
+  pmExecCmd,
+  getRunHint,
+} from './pm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -132,9 +141,10 @@ function ensureDockerReady() {
   return composePrefix;
 }
 
-/** 优先使用项目内 pm2（pnpm install 后可用），其次全局 pm2 */
+/** 优先使用项目内 pm2（install 后可用），其次全局 pm2 */
 function resolvePm2Prefix() {
-  if (tryRun('pnpm exec pm2 -v')) return 'pnpm exec pm2';
+  const execPm2 = detectPm() === 'pnpm' ? 'pnpm exec pm2' : 'npm exec pm2';
+  if (tryRun(`${execPm2} -v`)) return execPm2;
   if (tryRun('pm2 -v')) return 'pm2';
   if (tryRun('npx pm2 -v')) return 'npx pm2';
   return null;
@@ -145,8 +155,8 @@ function ensurePm2Ready() {
   if (!pm2Prefix) {
     throw new Error(
       [
-        '未检测到 PM2。部署脚本会在 pnpm install 后自动使用项目内 pm2；',
-        '若仍失败，请执行: pnpm install && pnpm deploy:server --skip-docker --skip-build',
+        `未检测到 PM2。部署脚本会在 ${detectPm()} install 后自动使用项目内 pm2；`,
+        `若仍失败，请执行: ${getRunHint('install')} && ${getRunHint('deploy:server')} --skip-docker --skip-build`,
         '或全局安装: npm install -g pm2（已是 root 勿加 sudo；sudo 会找不到 npm）',
       ].join('\n'),
     );
@@ -322,9 +332,10 @@ function checkEnvironment() {
   console.log('  兜行 · 生产环境检查');
   console.log('========================================\n');
 
+  const pm = detectPm();
   const tools = [
     ['node', 'node -v'],
-    ['pnpm', 'pnpm -v'],
+    [pm, pm === 'pnpm' ? 'pnpm -v' : 'npm -v'],
     ['docker', 'docker -v'],
   ];
   for (const [name, cmd] of tools) {
@@ -336,7 +347,7 @@ function checkEnvironment() {
   console.log(
     pm2Prefix
       ? `  ✓ pm2: ${getCmdVersion(`${pm2Prefix} -v`)} (${pm2Prefix})`
-      : `  ✗ pm2: 未安装（pnpm install 后可用，或 npm i -g pm2）`,
+      : `  ✗ pm2: 未安装（${getRunHint('install')} 后可用，或 npm i -g pm2）`,
   );
 
   const composePrefix = resolveDockerComposePrefix();
@@ -416,24 +427,24 @@ async function main() {
     console.log('[deploy:server] 跳过 Docker（--skip-docker）');
   }
 
-  run('pnpm install --frozen-lockfile');
+  run(pmInstallCmd({ frozen: true }));
 
   if (process.env.DATABASE_URL) {
-    run('pnpm --filter @douxing/server exec tsx src/db/wait-only.ts');
+    run(pmFilterExecCmd('@douxing/server', 'tsx', ['src/db/wait-only.ts']));
   }
 
   if (!skipBuild) {
     if (useTsx) {
       console.log('\n[deploy:server] 低内存模式（--use-tsx）：只构建 shared，server 由 tsx 直跑');
-      run('pnpm --filter @douxing/shared build');
+      run(pmFilterCmd('@douxing/shared', 'build'));
       process.env.SERVER_RUNTIME = 'tsx';
     } else {
-      run('pnpm build:server', {
+      run(pmRunCmd('build:server'), {
         env: { ...process.env, NODE_OPTIONS: process.env.NODE_OPTIONS || '--max-old-space-size=1024' },
       });
     }
     console.log('\n[deploy:server] 数据库迁移...');
-    run('pnpm db:migrate');
+    run(pmRunCmd('db:migrate'));
   } else if (useTsx) {
     process.env.SERVER_RUNTIME = 'tsx';
   }

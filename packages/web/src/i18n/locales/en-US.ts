@@ -113,7 +113,7 @@ export const webEnUS = {
     },
     systemInfoValues: {
       version: 'Douxing v{version}',
-      packageManager: 'pnpm workspace (Monorepo)',
+      packageManager: 'pnpm / npm workspaces (Monorepo)',
       language: 'TypeScript 5.7',
       runtime: 'Node.js 18+',
       webFramework: 'Vue 3.5 + Vite 6',

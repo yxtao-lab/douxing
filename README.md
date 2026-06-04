@@ -6,7 +6,7 @@
 
 | 模块 | 技术 |
 |------|------|
-| 包管理 | pnpm workspace |
+| 包管理 | pnpm workspace（推荐）；亦支持 npm workspaces |
 | Web 管理端 | Vue 3 + Vite + Pinia + Vue Router |
 | 移动端 | UniApp (Vue 3) + Vite（H5 / 微信小程序 / Android / iOS App） |
 | 后端 | Node.js + Express + TypeScript |
@@ -17,6 +17,7 @@
 
 | 文档 | 链接 |
 |------|------|
+| 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
 | 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含时间轴进度） | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
@@ -43,25 +44,26 @@ project/
 ## 环境要求
 
 - Node.js >= 18
-- pnpm >= 8
+- 包管理：**pnpm >= 8（推荐）** 或 **npm >= 9**（内置 workspaces，无需单独安装 pnpm）
 - Docker（用于本地 MySQL，可选）
 - 原生 App 打包： [HBuilderX](https://www.dcloud.io/hbuilderx.html)（Android / iOS 云打包或真机调试）
 
 ## 命令速查
 
-> 以下命令均在**项目根目录**执行。组合启动可用 `pnpm dev:only <平台>`，平台标识见 [平台标识表](#平台标识表)。
+> 以下命令均在**项目根目录**执行。文档以 `pnpm` 为例；未安装 pnpm 时可将 `pnpm` 换为 `npm run`（如 `pnpm dev` → `npm run dev`）。组合启动：`pnpm dev:only <平台>` / `npm run dev:only -- <平台>`，平台标识见 [平台标识表](#平台标识表)。
 
 ### 环境与初始化
 
 ```bash
-# 安装 pnpm（若未安装）
-npm install -g pnpm
+# 方式 A（推荐）：pnpm
+npm install -g pnpm   # 若未安装
+pnpm install
+
+# 方式 B：仅使用 npm（无需安装 pnpm）
+npm install
 
 # 复制环境变量（首次）
 cp .env.example .env
-
-# 安装依赖
-pnpm install
 
 # 一键部署：MySQL → 迁移 → 种子数据 → 全量构建
 pnpm bootstrap
@@ -240,7 +242,9 @@ cp .env.example .env
 pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 ```
 
-日常开发只需记住：`pnpm dev`（全端）或 `pnpm dev:only <平台>`（单端）。
+日常开发只需记住：`pnpm dev`（全端）或 `pnpm dev:only <平台>`（单端）。仅用 npm 时对应为 `npm run dev`、`npm run dev:only -- server,web`。
+
+脚本通过 `scripts/pm.mjs` 自动识别当前包管理器；可用 `DOUXING_PM=npm` 或 `DOUXING_PM=pnpm` 强制指定。
 
 ## 默认账号
 
@@ -481,16 +485,20 @@ pnpm bootstrap --skip-docker
 # monorepo
 Monorepo 的意思是：**一个 Git 仓库里放多个可独立开发的子项目（包）**，用统一工具链管理依赖、构建和脚本。在「兜行」里主要体现在下面几处。
 
+包管理器说明（pnpm 推荐、npm 可选）见 [docs/包管理与命令.md](docs/包管理与命令.md)。
+
 ## 1. 工作区定义（Workspace）
 
-根目录的 `pnpm-workspace.yaml` 声明哪些目录是子包：
+**pnpm**：根目录 `pnpm-workspace.yaml`：
 
-```1:2:e:\Desktop\兜行项目\project\pnpm-workspace.yaml
-package
+```yaml
+packages:
   - 'packages/*'
 ```
 
-`packages/` 下每个子目录都是一个 **package**，共享同一份 `pnpm-lock.yaml` 和根目录 `node_modules` 链接策略（`.npmrc` 里的 `shamefully-hoist`）。
+**npm**：根目录 `package.json` 中 `"workspaces": ["packages/*"]`。
+
+`packages/` 下每个子目录都是一个 **package**。团队以 **`pnpm-lock.yaml`** 为主锁；`.npmrc` 中 `shamefully-hoist`（pnpm）与 `install-strategy=hoisted`（npm）用于提升依赖，便于 UniApp/Vite 解析。
 
 ---
 
@@ -531,14 +539,16 @@ project/                    ← 根包（douxing），只做编排，不写业�
 
 ## 4. 根目录统一编排（Filter / Recursive）
 
-根 `package.json` 不实现业务，只**调度子包**：
+根 `package.json` 不实现业务，只**调度子包**（内部经 `scripts/pm.mjs` 转发，兼容 pnpm / npm）：
 
-| 能力 | 命令 | Monorepo 机制 |
-|------|------|----------------|
-| 只跑后端 | `pnpm dev:server` | `pnpm --filter @douxing/server` |
-| 只构建 Web | `pnpm build:web` | `--filter @douxing/web` |
-| 构建全部 | `pnpm build` | `pnpm run -r build`（recursive） |
-| 同时开发三端 | `pnpm dev` | 根脚本 + 分别 filter 各包 |
+| 能力 | 命令（pnpm） | 底层机制 |
+|------|--------------|----------|
+| 只跑后端 | `pnpm dev:server` | filter `@douxing/shared` build + `@douxing/server` dev |
+| 只构建 Web | `pnpm build:web` | filter `@douxing/web` |
+| 构建全部 | `pnpm build` | 各 workspace recursive build |
+| 同时开发三端 | `pnpm dev` | concurrently + 多子包 dev |
+
+npm 等价写法见 [包管理与命令.md](docs/包管理与命令.md#3-命令写法对照)。
 
 `@douxing/*` 是 **scope 命名**，便于在仓库里精确指定「跑哪一个包」。
 
@@ -552,7 +562,7 @@ project/                    ← 根包（douxing），只做编排，不写业�
 pnpm install
 ```
 
-会为 **所有子包** 解析依赖并写入 **同一份** `pnpm-lock.yaml`，避免 web 用 Vue 3.5、mobile 用 3.4 却互不知情的问题（pnpm 会尽量提升/对齐兼容版本）。
+会为 **所有子包** 解析依赖并写入 **同一份锁文件**（pnpm：`pnpm-lock.yaml`），避免 web 用 Vue 3.5、mobile 用 3.4 却互不知情的问题。
 
 ---
 
@@ -574,7 +584,7 @@ pnpm install
 |--|------------------|---------------------|
 | 代码位置 | 一个 Git 仓库 | web / mobile / server 各一个仓库 |
 | 改 shared 类型 | 改一处，三端同步 | 要发 npm 包或复制粘贴 |
-| 安装依赖 | 根目录 `pnpm install` 一次 | 每个仓库各装一遍 |
+| 安装依赖 | 根目录 `pnpm install` / `npm install` 一次 | 每个仓库各装一遍 |
 | 版本/发布 | 可统一发版（未做也可分开发） | 各自独立 |
 
 ---
@@ -587,8 +597,8 @@ pnpm install
 - **Changesets** — 多包版本发布与 changelog
 - **统一 ESLint/Prettier 根配置包** — 可再加 `packages/eslint-config`
 
-这些可以后续按需加；**现有结构已经是标准的 pnpm workspace monorepo**。
+这些可以后续按需加；**现有结构已经是标准的 workspace monorepo**（pnpm + npm 双支持）。
 
 ---
 
-**一句话：** monorepo 体现在「一个仓库、`packages/*` 多子包、`workspace:*` 共享 `@douxing/shared`、根目录用 pnpm filter/recursive 统一 dev/build/db」。不是把三个项目硬塞在一个文件夹里，而是用 pnpm workspace 把它们连成可协作的整体。
+**一句话：** monorepo 体现在「一个仓库、`packages/*` 多子包、`workspace:*` 共享 `@douxing/shared`、根目录统一 dev/build/db」。不是把三个项目硬塞在一个文件夹里，而是用 workspace 把它们连成可协作的整体。

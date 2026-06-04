@@ -16,8 +16,9 @@ python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 开发模式（热重载，默认 8100 端口）
-pnpm dev
+# 开发模式（热重载，默认 8100 端口，在项目根目录执行）
+pnpm dev:ai-service
+# 或：npm run dev:ai-service
 # 或：python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8100
 ```
 

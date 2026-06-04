@@ -4,10 +4,18 @@
  * 用法: pnpm bootstrap [--skip-docker] [--skip-build] [--dev]
  * 注意: 勿使用 pnpm deploy / pnpm setup，会与 pnpm 内置命令冲突
  */
-import { execSync, spawn } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import { existsSync, copyFileSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  pmInstallCmd,
+  pmFilterExecCmd,
+  pmRunCmd,
+  pmSpawnDev,
+  getRunHint,
+  detectPm,
+} from './pm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -95,31 +103,27 @@ async function main() {
     console.log('[deploy] Skipped Docker (--skip-docker)');
   }
 
-  run('pnpm install');
+  run(pmInstallCmd());
 
   if (!skipDocker && process.env.DATABASE_URL) {
     console.log('\n[deploy] Waiting for host port from DATABASE_URL...');
-    run('pnpm --filter @douxing/server exec tsx src/db/wait-only.ts');
+    run(pmFilterExecCmd('@douxing/server', 'tsx', ['src/db/wait-only.ts']));
   }
 
   console.log('\n[deploy] Running database migrations and seed...');
-  run('pnpm db:setup');
+  run(pmRunCmd('db:setup'));
 
   if (!skipBuild && !devMode) {
-    run('pnpm build');
+    run(pmRunCmd('build'));
     console.log('\n[deploy] Build completed. Start production server with:');
-    console.log('  pnpm --filter @douxing/server start');
+    console.log(`  ${detectPm() === 'pnpm' ? 'pnpm --filter @douxing/server start' : 'npm run start -w @douxing/server'}`);
     console.log('\n[deploy] 微信小程序产物: packages/mobile/dist/build/mp-weixin');
     console.log('  用微信开发者工具导入该目录后上传发布');
   }
 
   if (devMode) {
     console.log('\n[deploy] Starting development servers...');
-    const child = spawn('pnpm', ['dev'], {
-      cwd: root,
-      stdio: 'inherit',
-      shell: true,
-    });
+    const child = pmSpawnDev('dev');
     child.on('exit', (code) => process.exit(code ?? 0));
     return;
   }
@@ -129,10 +133,10 @@ async function main() {
   console.log('========================================');
   console.log('  请在新终端执行以下命令启动访问：');
   console.log('');
-  console.log('    pnpm dev          # API + 管理端 + H5 + 微信小程序 + Android App 编译监听');
+  console.log(`    ${getRunHint('dev')}          # API + 管理端 + H5 + 微信小程序 + Android App 编译监听`);
   console.log('');
   console.log('  或一键部署并启动：');
-  console.log('    pnpm bootstrap:dev');
+  console.log(`    ${getRunHint('bootstrap:dev')}`);
   console.log('');
   console.log('  启动后访问：');
   console.log('    管理端  http://localhost:5173');

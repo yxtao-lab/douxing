@@ -11,6 +11,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { concurrently } from 'concurrently';
 import { PLATFORMS, resolvePlatformList, listPlatformHelp } from './platforms.mjs';
+import { getRunHint } from './pm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -31,7 +32,7 @@ function parseArgs(argv) {
 function main() {
   const { help, platforms: raw, withServer } = parseArgs(process.argv.slice(2));
   if (help || raw.length === 0) {
-    console.log('用法: pnpm dev:only <平台1>[,<平台2>...]');
+    console.log(`用法: ${getRunHint('dev:only')} <平台1>[,<平台2>...]`);
     console.log('      node scripts/run-dev.mjs server web mobile\n');
     console.log(listPlatformHelp());
     process.exit(help ? 0 : 1);

@@ -3,6 +3,7 @@
  * 微信小程序 dev：首次编译完成后自动打开微信开发者工具
  */
 import { spawn } from 'node:child_process';
+import { pmExecCmd } from './pm.mjs';
 import { existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -57,7 +58,7 @@ function attachBuildWatcher(stream, label) {
   });
 }
 
-const child = spawn('pnpm', ['exec', 'uni', '-p', 'mp-weixin'], {
+const child = spawn(pmExecCmd(['uni', '-p', 'mp-weixin']), {
   cwd: mobileRoot,
   stdio: ['inherit', 'pipe', 'pipe'],
   shell: true,

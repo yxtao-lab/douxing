@@ -113,7 +113,7 @@ export const webZhCN = {
     },
     systemInfoValues: {
       version: '兜行 v{version}',
-      packageManager: 'pnpm workspace (Monorepo)',
+      packageManager: 'pnpm / npm workspaces (Monorepo)',
       language: 'TypeScript 5.7',
       runtime: 'Node.js 18+',
       webFramework: 'Vue 3.5 + Vite 6',

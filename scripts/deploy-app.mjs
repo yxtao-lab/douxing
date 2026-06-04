@@ -14,6 +14,7 @@ import { existsSync, copyFileSync, readFileSync, writeFileSync, mkdirSync } from
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { PLATFORMS, NATIVE_DEPLOY_TARGETS, resolvePlatformId } from './platforms.mjs';
+import { pmInstallCmd, getRunHint } from './pm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -82,9 +83,9 @@ function printNativeGuide(platforms) {
   console.log(`   当前 VITE_API_BASE_URL=${api}`);
   console.log('   真机不能使用 localhost，请改为局域网 IP 或 HTTPS 域名');
   console.log('\n4. 单独开发某一端');
-  console.log('   pnpm dev:only app-android   # Android');
-  console.log('   pnpm dev:only app-ios       # iOS（需 macOS + Xcode）');
-  console.log('   pnpm dev:only server,app-android');
+  console.log(`   ${getRunHint('dev:only')} app-android   # Android`);
+  console.log(`   ${getRunHint('dev:only')} app-ios       # iOS（需 macOS + Xcode）`);
+  console.log(`   ${getRunHint('dev:only')} server,app-android`);
   console.log('========================================\n');
 }
 
@@ -111,7 +112,7 @@ async function main() {
     execSync(deployArgs.join(' '), { cwd: root, stdio: 'inherit' });
   }
 
-  run('pnpm install');
+  run(pmInstallCmd());
 
   const buildTargets = opts.platforms.join(',');
   run(`node scripts/run-build.mjs ${buildTargets}`);

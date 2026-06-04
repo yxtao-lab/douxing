@@ -1,5 +1,7 @@
 # iOS / Android 原生 App 部署指南
 
+> 命令默认写 `pnpm`；仅用 npm 时改为 `npm run`（带参数脚本加 `--`）。见 [docs/包管理与命令.md](../docs/包管理与命令.md)。
+
 兜行移动端基于 **UniApp**，原生 App 采用「CLI 编译资源 + HBuilderX 云打包/真机运行」流程。
 
 ## 一键部署

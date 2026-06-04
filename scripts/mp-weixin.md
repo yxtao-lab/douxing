@@ -1,5 +1,7 @@
 # 兜行 · 微信小程序部署
 
+> 命令默认写 `pnpm`；仅用 npm 时改为 `npm run`（例：`pnpm dev:mp-weixin` → `npm run dev:mp-weixin`）。见 [docs/包管理与命令.md](../docs/包管理与命令.md)。
+
 AppID：`wx2c8d1e2b2e502819`
 
 海报 QR 与环境变量见 [docs/env-environments.md §8](../docs/env-environments.md#8-海报二维码配置)。

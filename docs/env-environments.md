@@ -2,6 +2,8 @@
 
 > 域名：`yxtao.site` · 生产 API：`https://api.yxtao.site` · 测试 API：`https://api-test.yxtao.site`
 
+> **包管理器**：下文 `pnpm` 命令可用 `npm run` 替代（例：`pnpm build:mp-weixin` → `npm run build:mp-weixin`）。对照表见 [包管理与命令.md](./包管理与命令.md)。
+
 ---
 
 ## 1. 环境文件一览
@@ -110,6 +112,8 @@ pnpm build:mobile
 ---
 
 ## 6. 命令速查
+
+> npm 用户：将「命令」列中的 `pnpm` 改为 `npm run`（脚本名不变）。
 
 | 场景 | 命令 | 读取 env | 产物/效果 |
 |------|------|----------|-----------|

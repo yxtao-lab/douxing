@@ -5,6 +5,8 @@
 
 ## 快速命令
 
+> 根目录执行；npm 用户将 `pnpm` 改为 `npm run`。见 [docs/包管理与命令.md](../../docs/包管理与命令.md)。
+
 ```bash
 # 根目录 — 生成训练数据（需 DEEPSEEK_API_KEY + MySQL）
 pnpm ml:generate-dataset

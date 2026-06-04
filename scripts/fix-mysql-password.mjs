@@ -10,6 +10,7 @@ import { execSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { pmFilterExecCmd } from './pm.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -174,7 +175,7 @@ function verifyFromHost() {
     return false;
   }
   try {
-    run('pnpm --filter @douxing/server exec tsx src/db/wait-only.ts', { stdio: 'inherit' });
+    run(pmFilterExecCmd('@douxing/server', 'tsx', ['src/db/wait-only.ts']), { stdio: 'inherit' });
     return true;
   } catch {
     return false;

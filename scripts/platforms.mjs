@@ -1,14 +1,15 @@
 /**
  * 兜行多端平台定义（开发 / 构建 / 产物路径）
  */
+import { pmFilterCmd, pmRunCmd, getRunHint } from './pm.mjs';
 
 export const PLATFORMS = {
   server: {
     id: 'server',
     label: '后端 API',
     group: 'backend',
-    dev: { shell: 'pnpm dev:server' },
-    build: { shell: 'pnpm --filter @douxing/server build' },
+    dev: { shell: pmRunCmd('dev:server') },
+    build: { shell: pmFilterCmd('@douxing/server', 'build') },
     port: () => Number(process.env.SERVER_PORT) || 3000,
     output: null,
   },
@@ -16,8 +17,8 @@ export const PLATFORMS = {
     id: 'web',
     label: 'Web 管理端',
     group: 'frontend',
-    dev: { shell: 'pnpm dev:web' },
-    build: { shell: 'pnpm --filter @douxing/web build' },
+    dev: { shell: pmRunCmd('dev:web') },
+    build: { shell: pmFilterCmd('@douxing/web', 'build') },
     port: () => 5173,
     output: 'packages/web/dist',
   },
@@ -26,8 +27,8 @@ export const PLATFORMS = {
     label: '移动端 H5',
     group: 'frontend',
     aliases: ['h5'],
-    dev: { shell: 'pnpm dev:mobile' },
-    build: { shell: 'pnpm --filter @douxing/mobile build:h5' },
+    dev: { shell: pmRunCmd('dev:mobile') },
+    build: { shell: pmFilterCmd('@douxing/mobile', 'build:h5') },
     port: () => 5174,
     output: 'packages/mobile/dist/build/h5',
   },
@@ -36,8 +37,8 @@ export const PLATFORMS = {
     label: '微信小程序',
     group: 'frontend',
     aliases: ['mp', 'weixin'],
-    dev: { shell: 'pnpm dev:mp-weixin' },
-    build: { shell: 'pnpm --filter @douxing/mobile build:mp-weixin' },
+    dev: { shell: pmRunCmd('dev:mp-weixin') },
+    build: { shell: pmFilterCmd('@douxing/mobile', 'build:mp-weixin') },
     port: null,
     output: 'packages/mobile/dist/build/mp-weixin',
   },
@@ -46,8 +47,8 @@ export const PLATFORMS = {
     label: 'Android App',
     group: 'native',
     aliases: ['android'],
-    dev: { shell: 'pnpm dev:app-android' },
-    build: { shell: 'pnpm --filter @douxing/mobile build:app-android' },
+    dev: { shell: pmRunCmd('dev:app-android') },
+    build: { shell: pmFilterCmd('@douxing/mobile', 'build:app-android') },
     port: () => 5175,
     output: 'packages/mobile/dist/build/app',
     releaseDir: 'packages/mobile/dist/release/android',
@@ -57,8 +58,8 @@ export const PLATFORMS = {
     label: 'iOS App',
     group: 'native',
     aliases: ['ios'],
-    dev: { shell: 'pnpm dev:app-ios' },
-    build: { shell: 'pnpm --filter @douxing/mobile build:app-ios' },
+    dev: { shell: pmRunCmd('dev:app-ios') },
+    build: { shell: pmFilterCmd('@douxing/mobile', 'build:app-ios') },
     port: () => 5175,
     output: 'packages/mobile/dist/build/app',
     releaseDir: 'packages/mobile/dist/release/ios',
@@ -68,8 +69,8 @@ export const PLATFORMS = {
     label: '原生 App（Android + iOS 资源）',
     group: 'native',
     aliases: ['native'],
-    dev: { shell: 'pnpm dev:app' },
-    build: { shell: 'pnpm --filter @douxing/mobile build:app' },
+    dev: { shell: pmRunCmd('dev:app') },
+    build: { shell: pmFilterCmd('@douxing/mobile', 'build:app') },
     port: () => 5175,
     output: 'packages/mobile/dist/build/app',
   },
@@ -112,9 +113,9 @@ export function listPlatformHelp() {
   }
   lines.push('');
   lines.push('组合示例:');
-  lines.push('  pnpm dev:only server,mobile');
-  lines.push('  pnpm dev:only app-android');
-  lines.push('  pnpm deploy:app');
-  lines.push('  pnpm build:app-all');
+  lines.push(`  ${getRunHint('dev:only')} server,mobile`);
+  lines.push(`  ${getRunHint('dev:only')} app-android`);
+  lines.push(`  ${getRunHint('deploy:app')}`);
+  lines.push(`  ${getRunHint('build:app-all')}`);
   return lines.join('\n');
 }
