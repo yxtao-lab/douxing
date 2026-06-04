@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "uni",
     "dev:h5": "uni",
-    "dev:mp-weixin": "uni -p mp-weixin",
+    "dev:mp-weixin": "node ../../scripts/dev-mp-weixin.mjs",
     "dev:app": "uni -p app",
     "dev:app-android": "uni -p app-android",
     "dev:app-ios": "uni -p app-ios",

@@ -144,6 +144,7 @@
 import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo } from '@douxing/shared';
+import { normalizePaginatedItems } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
@@ -235,7 +236,7 @@ function syncPageLayout() {
         contentNeedsScroll.value = body.height > container.height + 2;
       }
 
-      if (hotRoutes.value.length === 0) {
+      if ((hotRoutes.value ?? []).length === 0) {
         hotSwiperHeightPx.value = 0;
         return;
       }
@@ -250,7 +251,8 @@ async function loadHotRoutes() {
   hotLoading.value = true;
   hotError.value = '';
   try {
-    hotRoutes.value = (await fetchPlazaRoutes(8, 'hot')).items;
+    const data = await fetchPlazaRoutes(8, 'hot');
+    hotRoutes.value = normalizePaginatedItems(data);
   } catch (e) {
     hotRoutes.value = [];
     hotError.value = getAppErrorMessage(e, t('home.hotRoutesLoadFailed'));
@@ -269,7 +271,7 @@ function goHotSlide(index: number) {
 }
 
 function cardCarouselClass(index: number) {
-  const total = hotRoutes.value.length;
+  const total = (hotRoutes.value ?? []).length;
   if (total <= 1) return ['hot-card--active'];
 
   const current = hotCurrent.value;

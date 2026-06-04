@@ -7,7 +7,7 @@
       </a-layout-header>
       <AppTabs />
       <a-layout-content class="basic-layout-content">
-        <div class="content-inner">
+        <div class="content-inner overlay-scrollbar">
           <router-view />
         </div>
       </a-layout-content>
@@ -56,7 +56,7 @@ import AppTabs from './components/AppTabs.vue';
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 24px;
+  padding: 24px 1px 24px 24px;
   overflow: hidden;
   background: #f5f7fa;
 }

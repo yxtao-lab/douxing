@@ -9,6 +9,7 @@
     "dev:web": "pnpm --filter @douxing/web dev",
     "dev:mobile": "pnpm --filter @douxing/mobile dev:h5",
     "dev:mp-weixin": "pnpm --filter @douxing/mobile dev:mp-weixin",
+    "setup:wechat-devtools": "node scripts/setup-wechat-devtools.mjs",
     "dev:app": "pnpm --filter @douxing/mobile dev:app",
     "dev:app-android": "pnpm --filter @douxing/mobile dev:app-android",
     "dev:app-ios": "pnpm --filter @douxing/mobile dev:app-ios",

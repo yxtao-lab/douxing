@@ -1,5 +1,10 @@
 import http from './http';
-import type { ApiResponse, PaginatedResult, RoutePlaybookInfo } from '@douxing/shared';
+import {
+  normalizePaginatedResult,
+  type ApiResponse,
+  type PaginatedResult,
+  type RoutePlaybookInfo,
+} from '@douxing/shared';
 
 export async function fetchAdminPlaybooksPage(params: {
   page: number;
@@ -18,7 +23,10 @@ export async function fetchAdminPlaybooksPage(params: {
   const { data } = await http.get<ApiResponse<PaginatedResult<RoutePlaybookInfo>>>(
     `/playbooks/admin?${query.toString()}`,
   );
-  return data.data;
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
 }
 
 export async function createPlaybook(body: RoutePlaybookInfo) {

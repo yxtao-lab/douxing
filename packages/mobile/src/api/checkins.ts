@@ -1,4 +1,5 @@
 import type { CheckInInfo, CheckInResult, CheckInTimeRange, PaginatedResult } from '@douxing/shared';
+import { normalizePaginatedResult } from '@douxing/shared';
 import { request } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
 import { resolveClientRequestErrorMessage } from '@douxing/shared';
@@ -56,7 +57,8 @@ export async function fetchAllCheckInsForMap(range?: CheckInTimeRange) {
   let page = 1;
   const pageSize = 50;
   while (true) {
-    const result = await fetchCheckInsPage({ page, pageSize, range });
+    const raw = await fetchCheckInsPage({ page, pageSize, range });
+    const result = normalizePaginatedResult(raw, { page, pageSize });
     items.push(...result.items);
     if (!result.hasMore) break;
     page += 1;

@@ -1,8 +1,11 @@
 import { computed, ref, type Ref } from 'vue';
-import { DEFAULT_PAGE_SIZE, type PaginatedResult } from '@douxing/shared';
+import { DEFAULT_PAGE_SIZE, normalizePaginatedResult, type PaginatedResult } from '@douxing/shared';
 
 export function useServerTablePagination<T>(
-  fetchPage: (page: number, pageSize: number) => Promise<PaginatedResult<T>>,
+  fetchPage: (
+    page: number,
+    pageSize: number,
+  ) => Promise<PaginatedResult<T> | T[] | null | undefined>,
   options?: { defaultPageSize?: number },
 ) {
   const items = ref([]) as Ref<T[]>;
@@ -21,7 +24,11 @@ export function useServerTablePagination<T>(
   async function load() {
     loading.value = true;
     try {
-      const result = await fetchPage(page.value, pageSize.value);
+      const raw = await fetchPage(page.value, pageSize.value);
+      const result = normalizePaginatedResult(raw, {
+        page: page.value,
+        pageSize: pageSize.value,
+      });
       items.value = result.items;
       total.value = result.total;
       page.value = result.page;

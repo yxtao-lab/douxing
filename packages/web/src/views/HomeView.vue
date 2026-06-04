@@ -97,7 +97,7 @@
           </WorkbenchPanel>
 
           <WorkbenchPanel :title="t('home.systemInfo')">
-            <div class="info-scroll">
+            <div class="info-scroll overlay-scrollbar">
               <section
                 v-for="group in systemInfoGroups"
                 :key="group.titleKey"
@@ -154,6 +154,7 @@ import { fetchOrdersPage } from '@/api/orders';
 import { fetchCheckInsPage } from '@/api/checkins';
 import { fetchPendingAttractionsPage } from '@/api/attractions';
 import type { ApiResponse } from '@douxing/shared';
+import { normalizePaginatedResult } from '@douxing/shared';
 import {
   WORKBENCH_CHANGELOG,
   WORKBENCH_QUICK_ACTIONS,
@@ -259,10 +260,14 @@ async function loadStats() {
     fetchCheckInsPage({ page: 1, pageSize: 1, all: true }),
     fetchPendingAttractionsPage(1, 1),
   ]);
-  stats.value.routes = routes.status === 'fulfilled' ? routes.value.total : 0;
-  stats.value.orders = orders.status === 'fulfilled' ? orders.value.total : 0;
-  stats.value.checkins = checkins.status === 'fulfilled' ? checkins.value.total : 0;
-  stats.value.pending = pending.status === 'fulfilled' ? pending.value.total : 0;
+  stats.value.routes =
+    routes.status === 'fulfilled' ? normalizePaginatedResult(routes.value).total : 0;
+  stats.value.orders =
+    orders.status === 'fulfilled' ? normalizePaginatedResult(orders.value).total : 0;
+  stats.value.checkins =
+    checkins.status === 'fulfilled' ? normalizePaginatedResult(checkins.value).total : 0;
+  stats.value.pending =
+    pending.status === 'fulfilled' ? normalizePaginatedResult(pending.value).total : 0;
 }
 
 async function loadHealth() {
@@ -443,36 +448,6 @@ a.site-card:hover,
   /* 滚动条贴卡片右缘，不挤压内容 */
   margin-right: -16px;
   padding-right: 8px;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-}
-
-.info-scroll:hover {
-  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
-}
-
-.info-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.info-scroll::-webkit-scrollbar-track {
-  background: transparent;
-  margin: 6px 0;
-}
-
-.info-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  border: 2px solid transparent;
-  background-color: transparent;
-  background-clip: padding-box;
-}
-
-.info-scroll:hover::-webkit-scrollbar-thumb {
-  background-color: rgba(148, 163, 184, 0.35);
-}
-
-.info-scroll::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(100, 116, 139, 0.5);
 }
 
 .info-group + .info-group {

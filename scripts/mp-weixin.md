@@ -18,11 +18,16 @@ pnpm dev   # API + 管理端 + H5 + 微信小程序 + Android App 编译监听
 # 终端 1：启动后端
 pnpm dev:server
 
-# 终端 2：编译并监听小程序
+# 终端 2：编译并监听小程序（首次编译完成后自动打开微信开发者工具）
 pnpm dev:mp-weixin
 ```
 
-用 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) 导入目录：
+> 自动打开需在微信开发者工具 **设置 → 安全设置** 中开启「服务端口」。
+> 首次配置可执行 `pnpm setup:wechat-devtools` 自动检测 CLI 并写入 `.env.local`。
+> 也可手动设置 `WECHAT_DEVTOOLS_CLI`（指向 `cli.bat`）或 `WECHAT_DEVTOOLS_PORT`（HTTP 唤起）。
+> 禁用自动打开：`DOUXING_NO_OPEN=1 pnpm dev:mp-weixin`。
+
+也可手动用 [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) 导入目录：
 
 ```
 packages/mobile/dist/dev/mp-weixin

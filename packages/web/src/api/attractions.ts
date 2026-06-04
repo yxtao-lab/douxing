@@ -1,11 +1,16 @@
 import http from './http';
-import type { ApiResponse, AttractionInfo, PaginatedResult } from '@douxing/shared';
+import {
+  normalizePaginatedResult,
+  type ApiResponse,
+  type AttractionInfo,
+  type PaginatedResult,
+} from '@douxing/shared';
 
 export async function fetchPendingAttractionsPage(page: number, pageSize: number) {
   const { data } = await http.get<ApiResponse<PaginatedResult<AttractionInfo>>>(
     `/attractions/admin/pending?page=${page}&pageSize=${pageSize}`,
   );
-  return data.data;
+  return normalizePaginatedResult(data.data, { page, pageSize });
 }
 
 export async function approveAttraction(id: number) {
@@ -30,7 +35,10 @@ export async function fetchAdminAttractionCatalogPage(params: {
   const { data } = await http.get<ApiResponse<PaginatedResult<AttractionInfo>>>(
     `/attractions/admin/catalog?${query.toString()}`,
   );
-  return data.data;
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
 }
 
 export async function uploadAttractionCover(id: number, file: File) {

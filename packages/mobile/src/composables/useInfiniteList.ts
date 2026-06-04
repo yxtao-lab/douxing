@@ -1,8 +1,15 @@
 import { ref, type Ref } from 'vue';
-import { MOBILE_DEFAULT_PAGE_SIZE, type PaginatedResult } from '@douxing/shared';
+import {
+  MOBILE_DEFAULT_PAGE_SIZE,
+  normalizePaginatedResult,
+  type PaginatedResult,
+} from '@douxing/shared';
 
 export function useInfiniteList<T>(
-  fetchPage: (page: number, pageSize: number) => Promise<PaginatedResult<T>>,
+  fetchPage: (
+    page: number,
+    pageSize: number,
+  ) => Promise<PaginatedResult<T> | T[] | null | undefined>,
   options?: { pageSize?: number },
 ) {
   const pageSize = options?.pageSize ?? MOBILE_DEFAULT_PAGE_SIZE;
@@ -19,7 +26,8 @@ export function useInfiniteList<T>(
     hasMore.value = true;
     items.value = [];
     try {
-      const result = await fetchPage(1, pageSize);
+      const raw = await fetchPage(1, pageSize);
+      const result = normalizePaginatedResult(raw, { page: 1, pageSize });
       items.value = result.items;
       total.value = result.total;
       hasMore.value = result.hasMore;
@@ -34,7 +42,8 @@ export function useInfiniteList<T>(
     loadingMore.value = true;
     try {
       const nextPage = page.value + 1;
-      const result = await fetchPage(nextPage, pageSize);
+      const raw = await fetchPage(nextPage, pageSize);
+      const result = normalizePaginatedResult(raw, { page: nextPage, pageSize });
       items.value = [...items.value, ...result.items];
       total.value = result.total;
       hasMore.value = result.hasMore;

@@ -1,5 +1,10 @@
 import http from './http';
-import type { ApiResponse, CheckInInfo, PaginatedResult } from '@douxing/shared';
+import {
+  normalizePaginatedResult,
+  type ApiResponse,
+  type CheckInInfo,
+  type PaginatedResult,
+} from '@douxing/shared';
 
 export async function fetchCheckInsPage(params: {
   page: number;
@@ -14,7 +19,10 @@ export async function fetchCheckInsPage(params: {
   const { data } = await http.get<ApiResponse<PaginatedResult<CheckInInfo>>>(
     `/checkins?${query.toString()}`,
   );
-  return data.data;
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
 }
 
 export async function fetchAllCheckInsForMap() {
