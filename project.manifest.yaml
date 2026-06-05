@@ -1,0 +1,213 @@
+# =============================================================================
+# 项目清单（Project Manifest）
+# =============================================================================
+# 用途：新建同类型 Monorepo 或改造现有项目时，由人或 AI 先修改本文件，
+#       再按 docs/项目框架架构-AI模板.md 中的占位符映射替换代码与配置。
+# 规则：禁止在本文件填写真实密钥、密码、私钥；仅写结构、域名、端口、开关。
+# =============================================================================
+
+meta:
+  id: douxing # 仓库短名，用于容器名、PM2 进程名、目录别名
+  name: 兜行 # 中文产品名 → APP_NAME、导航标题
+  nameEn: Douxing # 英文产品名
+  description: AI 驱动的个性化旅游决策与社交平台
+  version: 1.0.0
+  license: private
+
+monorepo:
+  scope: "@douxing" # 所有子包 npm scope，如 @douxing/server
+  rootPackageName: douxing # 根 package.json name 字段
+  packageManager: pnpm@9.15.0 # Corepack / 生产推荐；亦支持 npm workspaces
+  nodeMin: "18.0.0"
+  workspaces:
+    - packages/*
+
+packages:
+  shared:
+    enabled: true
+    dir: packages/shared
+    name: "@douxing/shared"
+  server:
+    enabled: true
+    dir: packages/server
+    name: "@douxing/server"
+    port: 3000
+    apiPrefix: /api # 与 shared.constants.API_PREFIX 一致
+  web:
+    enabled: true
+    dir: packages/web
+    name: "@douxing/web"
+    port: 5173
+    uiLibrary: ant-design-vue # 管理端 UI
+  mobile:
+    enabled: true
+    dir: packages/mobile
+    name: "@douxing/mobile"
+    framework: uniapp-vue3 # 无第三方 UI 库，自研组件 + uni 内置组件
+    ports:
+      h5: 5174
+      appDev: 5175
+    targets:
+      h5: true
+      mpWeixin: true
+      appAndroid: true
+      appIos: true
+  aiService:
+    enabled: false # true 时启用 packages/ai-service + 根 dev:ai-service
+    dir: packages/ai-service
+    name: "@douxing/ai"
+    port: 8100
+  mlTraining:
+    enabled: false
+    dir: packages/ml-training
+    name: "@douxing/ml"
+
+domains:
+  root: yxtao.site # 主域名（备案主体下）
+  production:
+    apiHost: api.yxtao.site
+    apiBaseUrl: https://api.yxtao.site/api
+    publicBaseUrl: https://api.yxtao.site
+  staging:
+    apiHost: api-test.yxtao.site
+    apiBaseUrl: https://api-test.yxtao.site/api
+    publicBaseUrl: https://api-test.yxtao.site
+  development:
+    apiBaseUrl: http://127.0.0.1:3000/api
+    publicBaseUrl: http://127.0.0.1:3000
+
+database:
+  engine: mysql
+  version: "8.0"
+  name: douxing
+  charset: utf8mb4
+  timezone: "+08:00"
+  docker:
+    enabled: true
+    composeFile: docker-compose.yml
+    containerName: douxing-mysql
+    hostPort: 3307 # 避免与本机 3306 冲突
+    volumeName: mysql_data
+  redis:
+    enabled: true
+    containerName: douxing-redis
+    hostPort: 6379
+
+deploy:
+  pm2AppName: douxing-api
+  ecosystemFile: deploy/ecosystem.config.cjs
+  prodComposeFile: deploy/docker-compose.prod.yml
+  nginxTemplate: deploy/nginx/douxing-api.conf.template
+  serverSetupScripts:
+    - scripts/setup-debian12.sh
+    - scripts/setup-ubuntu22.sh
+
+mobileWechat:
+  mpAppId: wx2c8d1e2b2e502819 # 小程序 AppID，勿填 AppSecret
+  devTools:
+    autoOpenOnCompile: true # dev:mp-weixin 编译完成后打开开发者工具
+    envKeys:
+      cli: WECHAT_DEVTOOLS_CLI
+      port: WECHAT_DEVTOOLS_PORT
+      noOpen: DOUXING_NO_OPEN
+
+auth:
+  type: jwt # jwt | session（当前实现为 JWT）
+  header: Authorization # Bearer <token>
+  roles:
+    - admin
+    - user
+  seedAdmin:
+    username: admin
+    passwordPlaceholder: admin123 # 仅开发种子说明，生产必须改
+
+features:
+  i18n:
+    enabled: true
+    defaultLocale: zh-CN
+    locales:
+      - zh-CN
+      - en-US
+    apiHeader: Accept-Language
+  llm:
+    enabled: true
+    defaultProvider: auto # auto | deepseek | lmstudio
+    providers:
+      - deepseek
+      - lmstudio
+    optionalPythonService: false # 对应 aiService.enabled
+  payment:
+    mode: mock # mock | wechat | auto
+    routeUnlockRequired: false
+  oss:
+    enabled: false # 开发默认本地 uploads
+    vendor: aliyun # aliyun | tencent | none
+  geofenceCheckin:
+    enabled: true
+  gamification:
+    achievements: true
+    badges: true
+    leaderboard: true
+
+brand:
+  logoChar: 兜 # 圆形字标
+  slogan: 你负责游玩，其他的交给我
+  theme:
+    primaryColor: "#1677ff"
+    designTokenFile: packages/mobile/src/styles/theme.css
+    specDoc: docs/品牌视觉规范.md
+
+integrations:
+  # 仅声明需要哪些集成槽位；密钥一律在 .env，不写在此文件
+  amap:
+    enabled: true
+    envKeys:
+      webKey: AMAP_WEB_KEY
+      securityKey: AMAP_SECURITY_KEY
+  deepseek:
+    enabled: true
+    envKey: DEEPSEEK_API_KEY
+  lmstudio:
+    enabled: true
+    envKeys:
+      baseUrl: LLM_BASE_URL
+      model: LLM_MODEL
+  tencentCloud:
+    enabled: false
+    services:
+      - sms
+      - asr
+  wechatPay:
+    enabled: false
+
+conventions:
+  codeStyle:
+    variables: camelCase
+    constants: UPPER_SNAKE_CASE
+    components: PascalCase
+  language:
+    userFacingDocs: zh-CN
+    codeComments: zh-CN
+    commitMessages: conventional-commits-zh
+  api:
+    successCode: 0
+    responseShape: ApiResponse # { code, message, messageKey?, data }
+  git:
+    lockfilePrimary: pnpm-lock.yaml
+
+# 占位符替换（供 AI 批量查找替换，值来自本文件对应字段）
+placeholders:
+  "{{PROJECT_ID}}": meta.id
+  "{{APP_NAME}}": meta.name
+  "{{APP_NAME_EN}}": meta.nameEn
+  "{{SCOPE}}": monorepo.scope
+  "{{API_PREFIX}}": packages.server.apiPrefix
+  "{{SERVER_PORT}}": packages.server.port
+  "{{DB_NAME}}": database.name
+  "{{MYSQL_CONTAINER}}": database.docker.containerName
+  "{{PM2_APP_NAME}}": deploy.pm2AppName
+  "{{API_PROD}}": domains.production.apiBaseUrl
+  "{{API_STAGING}}": domains.staging.apiBaseUrl
+  "{{API_DEV}}": domains.development.apiBaseUrl
+  "{{MP_APP_ID}}": mobileWechat.mpAppId
+  "{{PRIMARY_COLOR}}": brand.theme.primaryColor

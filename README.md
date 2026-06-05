@@ -17,6 +17,7 @@
 
 | 文档 | 链接 |
 |------|------|
+| 项目框架架构（AI 模板） | [docs/项目框架架构-AI模板.md](docs/项目框架架构-AI模板.md) · 配置 [`project.manifest.yaml`](project.manifest.yaml) |
 | 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
 | 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含时间轴进度） | [docs/ROADMAP.md](docs/ROADMAP.md) |
