@@ -7,7 +7,7 @@
     "packages/*"
   ],
   "scripts": {
-    "dev": "concurrently -k -n api,web,mobile,mp,app -c blue,green,magenta,yellow,cyan \"node scripts/pm.mjs run dev:server\" \"node scripts/pm.mjs run dev:web\" \"node scripts/pm.mjs run dev:mobile\" \"node scripts/pm.mjs run dev:mp-weixin\" \"node scripts/pm.mjs run dev:app-android\"",
+    "dev": "node scripts/run-dev-all.mjs",
     "dev:only": "node scripts/run-dev.mjs",
     "dev:web": "node scripts/pm.mjs filter @douxing/web dev",
     "dev:mobile": "node scripts/pm.mjs filter @douxing/mobile dev:h5",
@@ -18,7 +18,7 @@
     "dev:app-ios": "node scripts/pm.mjs filter @douxing/mobile dev:app-ios",
     "dev:server": "node scripts/pm.mjs filter @douxing/shared build && node scripts/pm.mjs filter @douxing/server dev",
     "dev:ai-service": "node scripts/run-ai-service.mjs",
-    "dev:with-ai": "concurrently -k -n api,ai,web,mobile,mp,app -c blue,cyan,green,magenta,yellow,gray \"node scripts/pm.mjs run dev:server\" \"node scripts/pm.mjs run dev:ai-service\" \"node scripts/pm.mjs run dev:web\" \"node scripts/pm.mjs run dev:mobile\" \"node scripts/pm.mjs run dev:mp-weixin\" \"node scripts/pm.mjs run dev:app-android\"",
+    "dev:with-ai": "node scripts/run-dev-all.mjs",
     "build": "node scripts/pm.mjs recursive build",
     "build:only": "node scripts/run-build.mjs",
     "build:web": "node scripts/pm.mjs filter @douxing/web build",
