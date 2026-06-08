@@ -24,6 +24,7 @@
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
+| scripts 目录说明 | [scripts/README.md](scripts/README.md) |
 
 未完成能力与分步实施计划见 **ROADMAP**（对照详细设计文档 V2.0）。
 
@@ -80,13 +81,6 @@ pnpm bootstrap:dev --skip-docker
 docker compose up -d mysql
 ```
 
-Windows 也可用：
-
-```powershell
-.\scripts\deploy.ps1
-.\scripts\deploy.ps1 --dev
-```
-
 ### 数据库
 
 ```bash
@@ -98,10 +92,11 @@ pnpm db:reset      # 重置库并重新迁移、种子
 
 ### 开发运行（dev）
 
-**一次启动全部（API + Web + H5 + 微信小程序 + Android App 热更新）：**
+**一次启动全部（API + AI + Web + H5 + 微信小程序 + Android App 热更新）：**
 
 ```bash
 pnpm dev
+pnpm env:status   # 可选：确认 API 指向本地
 ```
 
 HBuilderX 导入 App 开发目录：`packages/mobile/dist/dev/app`（首次需「运行到手机」制作自定义调试基座）。
@@ -128,6 +123,8 @@ pnpm dev:mp-weixin     # 微信小程序     → packages/mobile/dist/dev/mp-wei
 pnpm dev:app           # 原生 App 开发
 pnpm dev:app-android   # Android App 开发 → packages/mobile/dist/dev/app（Vite :5175）
 pnpm dev:app-ios       # iOS App 开发（需 macOS + Xcode）
+pnpm dev:ai-service    # Python AI 微服务（:8100，pnpm dev 已包含）
+pnpm env:status        # 查看当前环境 API 与配置文件
 ```
 
 ### 构建（build）
@@ -571,8 +568,10 @@ pnpm install
 
 这些不属于某个子应用，而是**整仓级别**：
 
-- `.env` / `docker-compose.yml` — 数据库、部署
+- `.env` / `docker-compose.yml` — 数据库、部署（后端密钥，**勿写 VITE_***）
+- `.env.local` — 本机 dev API 地址、微信 CLI（gitignore）
 - `scripts/deploy.mjs` — 一键 bootstrap
+- `scripts/README.md` — 各脚本用途说明
 - `README.md` — 全项目说明
 
 子包只关心自己的 `vite.config.ts`、`drizzle` 等；**跨包流程**放在根目录，这也是 monorepo 常见做法。

@@ -93,3 +93,13 @@ pnpm build:web
 不能。会导致 dev 误连线上；API 地址只放 `.env.local`（dev）或 `.env.staging` / `.env.production`（打包）。
 
 更多部署细节见 [启动与部署流程.md](./启动与部署流程.md)。
+
+---
+
+## 7. 相关文档
+
+| 文档 | 内容 |
+|------|------|
+| [启动与部署流程.md](./启动与部署流程.md) | 开发 / 测试 / 生产启动与发版 |
+| [../scripts/README.md](../scripts/README.md) | scripts 目录各脚本说明 |
+| [../scripts/mp-weixin.md](../scripts/mp-weixin.md) | 微信小程序专项 |

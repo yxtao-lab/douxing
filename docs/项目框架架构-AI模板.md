@@ -292,8 +292,9 @@ packages/mobile/src/
 
 | 文件 | 读取方 | 内容 |
 |------|--------|------|
-| `.env` | server、deploy 脚本 | 数据库、JWT、第三方密钥、SERVER_PORT |
-| `.env.development` | Vite / UniApp dev | `VITE_API_BASE_URL` |
+| `.env` | server、deploy 脚本 | 数据库、JWT、第三方密钥、SERVER_PORT（**禁止 VITE_***） |
+| `.env.local` | Vite / UniApp dev（gitignore） | 本机 dev API、微信 CLI |
+| `.env.development` | Vite / UniApp dev | dev 共享项（如 `VITE_H5_BASE_URL`） |
 | `.env.staging` | staging 构建 | 测试 API 域名 |
 | `.env.production` | 生产构建 | 生产 API 域名 |
 | `deploy/env.*.example` | 服务器首次部署 | 完整生产模板 |
@@ -418,7 +419,7 @@ git pull → pnpm install --frozen-lockfile
 | `{{DB_NAME}}` | `.env.example`, `docker-compose.yml` |
 | `{{MYSQL_CONTAINER}}` | `docker-compose.yml` `container_name` |
 | `{{PM2_APP_NAME}}` | `deploy/ecosystem.config.cjs` |
-| `{{API_DEV}}` | `.env.development` `VITE_API_BASE_URL` |
+| `{{API_DEV}}` | `.env.local` 或 `.env.development`（dev 默认 127.0.0.1） |
 | `{{API_PROD}}` | `.env.production` |
 | `{{API_STAGING}}` | `.env.staging` |
 | `{{MP_APP_ID}}` | 小程序 manifest、`WECHAT_PAY_APP_ID` 等 |
