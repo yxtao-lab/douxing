@@ -31,8 +31,7 @@ console.log(`[mp-weixin] 开发 API: ${apiBaseUrl}`);
 console.log(`[mp-weixin] 导入目录: ${mpDevDir}`);
 if (/yxtao\.site/i.test(apiBaseUrl)) {
   console.warn(
-    '[mp-weixin] 当前 API 指向线上域名。本地开发请检查 .env.development / .env.development.local，' +
-      '勿在 .env 中写 VITE_API_BASE_URL，修改后重启 pnpm dev:mp-weixin',
+    '[mp-weixin] 当前 API 指向线上域名。本地开发请编辑 .env.local 的 VITE_API_BASE_URL，勿在 .env 中写 VITE_*，修改后重启 pnpm dev',
   );
 }
 

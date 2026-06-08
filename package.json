@@ -18,6 +18,7 @@
     "dev:app-ios": "node scripts/pm.mjs filter @douxing/mobile dev:app-ios",
     "dev:server": "node scripts/pm.mjs filter @douxing/shared build && node scripts/pm.mjs filter @douxing/server dev",
     "dev:ai-service": "node scripts/run-ai-service.mjs",
+    "env:status": "node scripts/env-status.mjs",
     "dev:with-ai": "node scripts/run-dev-all.mjs",
     "build": "node scripts/pm.mjs recursive build",
     "build:only": "node scripts/run-build.mjs",

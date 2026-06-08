@@ -30,7 +30,7 @@ export function getApiBaseUrl(): string {
       );
     } else {
       console.warn(
-        '[兜行] 未配置 VITE_API_BASE_URL，开发默认 127.0.0.1（仅模拟器可用；真机请见 .env.development.local.example）',
+        '[兜行] 未配置 VITE_API_BASE_URL，开发默认 127.0.0.1（仅模拟器可用；真机请在 .env.local 配置局域网 IP）',
       );
     }
     return 'http://127.0.0.1:3000/api';
@@ -45,7 +45,7 @@ export function assertRemoteApiBase(action = '上传文件'): void {
   if (isLocalHostBase(base)) {
     throw new Error(
       `${action}失败：当前 API 为 ${base}，手机无法访问本机。` +
-        '请执行 pnpm build:mp-weixin 导入生产包，或在 .env.development.local 配置 HTTPS 域名后重新 pnpm dev:mp-weixin',
+        '请执行 pnpm build:mp-weixin 导入生产包，或在 .env.local 配置 HTTPS 域名后重新 pnpm dev:mp-weixin',
     );
   }
   if (!/^https:\/\//i.test(base)) {
