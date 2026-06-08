@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --dx-primary: #1677ff;
+    --dx-primary-dark: #0958d9;
+    --dx-accent: #13c2c2;
+    --dx-bg: #f5f7fa;
+  }
+
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-dx-bg text-dx-text antialiased;
+    font-family:
+      'PingFang SC',
+      'Microsoft YaHei',
+      system-ui,
+      -apple-system,
+      sans-serif;
+  }
+}
+
+@layer components {
+  .dx-btn-primary {
+    @apply inline-flex items-center justify-center rounded-xl bg-dx-primary px-5 py-2.5 text-sm font-medium text-white shadow-md transition hover:bg-dx-primary-dark;
+  }
+
+  .dx-btn-secondary {
+    @apply inline-flex items-center justify-center rounded-xl border border-dx-border bg-white px-5 py-2.5 text-sm font-medium text-dx-text transition hover:border-dx-primary hover:text-dx-primary;
+  }
+
+  .dx-card {
+    @apply rounded-2xl border border-dx-border bg-white p-5 shadow-card;
+  }
+}

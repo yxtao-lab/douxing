@@ -22,6 +22,16 @@ export const PLATFORMS = {
     port: () => 5173,
     output: 'packages/web/dist',
   },
+  pc: {
+    id: 'pc',
+    label: 'PC 用户端',
+    group: 'frontend',
+    aliases: ['desktop', 'web-user'],
+    dev: { shell: pmRunCmd('dev:pc') },
+    build: { shell: pmFilterCmd('@douxing/pc', 'build') },
+    port: () => 5176,
+    output: 'packages/pc/dist',
+  },
   mobile: {
     id: 'mobile',
     label: '移动端 H5',

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * 并行启动全部开发服务（API + AI + Web + H5 + 小程序 + Android App）
+ * 并行启动全部开发服务（API + AI + Web + PC + H5 + 小程序 + Android App）
  */
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,6 +13,7 @@ const SERVICES = [
   { name: 'api', shell: pmRunCmd('dev:server'), color: 'blue' },
   { name: 'ai', shell: pmRunCmd('dev:ai-service'), color: 'cyan' },
   { name: 'web', shell: pmRunCmd('dev:web'), color: 'green' },
+  { name: 'pc', shell: pmRunCmd('dev:pc'), color: 'brightMagenta' },
   { name: 'mobile', shell: pmRunCmd('dev:mobile'), color: 'magenta' },
   { name: 'mp', shell: pmRunCmd('dev:mp-weixin'), color: 'yellow' },
   { name: 'app', shell: pmRunCmd('dev:app-android'), color: 'gray' },

@@ -39,6 +39,12 @@ packages:
     name: "@douxing/web"
     port: 5173
     uiLibrary: ant-design-vue # 管理端 UI
+  pc:
+    enabled: true
+    dir: packages/pc
+    name: "@douxing/pc"
+    port: 5176
+    uiLibrary: tailwindcss # C 端 PC 网页
   mobile:
     enabled: true
     dir: packages/mobile

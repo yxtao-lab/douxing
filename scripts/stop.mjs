@@ -34,7 +34,7 @@ function getDevPorts() {
   const serverPort = Number(process.env.SERVER_PORT) || 3000;
   const dockerMysqlPort = Number(process.env.DOCKER_MYSQL_HOST_PORT) || 3307;
   return {
-    dev: [serverPort, 5173, 5174],
+    dev: [serverPort, 5173, 5174, 5176],
     docker: [dockerMysqlPort],
   };
 }
@@ -89,7 +89,7 @@ async function main() {
 
   console.log('\n========================================');
   console.log('  已停止');
-  console.log('  - API / 管理端 / 移动端 H5 占用端口（微信小程序为编译监听，随终端一并结束）');
+  console.log('  - API / 管理端 / PC 用户端 / 移动端 H5 占用端口（微信小程序为编译监听，随终端一并结束）');
   if (!skipDocker) console.log('  - Docker MySQL 容器');
   console.log('========================================\n');
 }

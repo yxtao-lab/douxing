@@ -1,0 +1,366 @@
+import { computed, ref, watch } from 'vue';
+import type {
+  RouteCommentInfo,
+  RouteDayPlan,
+  RouteDetailPayload,
+  TravelRouteInfo,
+} from '@douxing/shared';
+import { RouteStatus } from '@douxing/shared';
+import {
+  createRouteComment,
+  fetchRouteComments,
+  fetchRouteDetail,
+  publishRoute,
+  regenerateRoute,
+  setRoutePublicShare,
+  toggleRouteFavorite,
+  toggleRouteLike,
+  updateRouteDraft,
+} from '@/api/routes';
+import { completeRouteUnlockPayment, fetchOrderPaymentConfig } from '@/api/orders';
+import { isAiPlanCancelledError } from '@/api/ai-plan';
+import { useLocale } from '@/i18n/useLocale';
+import { useUserStore } from '@/stores/user';
+import { getAppErrorMessage } from '@/utils/error-message';
+
+export function useRouteDetail(routeId: () => number) {
+  const { t } = useLocale();
+  const userStore = useUserStore();
+
+  const route = ref<TravelRouteInfo | null>(null);
+  const loading = ref(false);
+  const loadError = ref('');
+  const toastMessage = ref('');
+  const activeDayIndex = ref(0);
+  const routeUnlockPaymentRequired = ref(false);
+  const paying = ref(false);
+  const sharing = ref(false);
+  const savingDraft = ref(false);
+  const postingComment = ref(false);
+  const editModalVisible = ref(false);
+  const editName = ref('');
+  const editDesc = ref('');
+  const regeneratePrompt = ref('');
+  const comments = ref<RouteCommentInfo[]>([]);
+  const commentText = ref('');
+
+  const publishedStatus = RouteStatus.PUBLISHED;
+
+  const currentUserId = computed(() => userStore.user?.id ?? 0);
+
+  const isOwner = computed(
+    () => route.value != null && route.value.creatorId === currentUserId.value,
+  );
+
+  const canEditRouteInfo = computed(
+    () => isOwner.value && route.value?.status === RouteStatus.DRAFT,
+  );
+
+  const showShareSetting = computed(
+    () => isOwner.value && route.value?.status === RouteStatus.PUBLISHED,
+  );
+
+  const showInteraction = computed(() => route.value?.isPublic === true);
+
+  const showComments = computed(() => route.value?.isPublic === true);
+
+  const canRegenerate = computed(
+    () => route.value?.isAiGenerated === true && route.value?.status === RouteStatus.DRAFT,
+  );
+
+  const isUnlocked = computed(() => {
+    if (route.value?.isPublic && !isOwner.value) return true;
+    if (!routeUnlockPaymentRequired.value && isOwner.value) return true;
+    const detail = route.value?.routeDetail as Record<string, unknown> | null;
+    return detail?.isUnlocked === true || (route.value?.unlockPrice ?? 0) === 0;
+  });
+
+  const days = computed((): RouteDayPlan[] => {
+    const detail = route.value?.routeDetail as RouteDetailPayload | null;
+    return detail?.days ?? [];
+  });
+
+  const unlockPrice = computed(() => {
+    const detail = route.value?.routeDetail as Record<string, unknown> | null;
+    return (detail?.unlockPrice as number) ?? route.value?.unlockPrice ?? 9.9;
+  });
+
+  const routeStatusLabel = computed(() => {
+    if (!route.value) return '';
+    if (route.value.status === RouteStatus.PUBLISHED) return t('routes.statusPublished');
+    if (route.value.status === RouteStatus.ARCHIVED) return t('routes.statusArchived');
+    return t('routes.statusDraft');
+  });
+
+  const regenerateHint = computed(() =>
+    routeUnlockPaymentRequired.value
+      ? t('routes.regenerateHintUnlockReset')
+      : t('routes.regenerateHint'),
+  );
+
+  watch(
+    () => days.value.length,
+    () => {
+      if (activeDayIndex.value >= days.value.length) {
+        activeDayIndex.value = 0;
+      }
+    },
+  );
+
+  async function loadPaymentConfig() {
+    try {
+      const config = await fetchOrderPaymentConfig();
+      routeUnlockPaymentRequired.value = config.routeUnlockPaymentRequired;
+    } catch {
+      routeUnlockPaymentRequired.value = false;
+    }
+  }
+
+  async function loadComments() {
+    const id = routeId();
+    if (!route.value?.isPublic || !id) {
+      comments.value = [];
+      return;
+    }
+    try {
+      comments.value = await fetchRouteComments(id);
+    } catch {
+      comments.value = [];
+    }
+  }
+
+  async function loadDetail() {
+    const id = routeId();
+    if (!id) return;
+
+    loading.value = true;
+    loadError.value = '';
+    try {
+      activeDayIndex.value = 0;
+      route.value = await fetchRouteDetail(id);
+      editName.value = route.value?.name ?? '';
+      editDesc.value = route.value?.description ?? '';
+      if (route.value?.sourcePrompt) {
+        regeneratePrompt.value = route.value.sourcePrompt;
+      } else if (canRegenerate.value && !regeneratePrompt.value) {
+        regeneratePrompt.value = route.value?.description ?? '';
+      }
+      await loadComments();
+    } catch (err) {
+      loadError.value = getAppErrorMessage(err, t('routes.loadFailed'));
+    } finally {
+      loading.value = false;
+    }
+  }
+
+  function showToast(message: string) {
+    toastMessage.value = message;
+  }
+
+  function dismissToast() {
+    toastMessage.value = '';
+  }
+
+  function openEditModal() {
+    if (!canEditRouteInfo.value) return;
+    editName.value = route.value?.name ?? '';
+    editDesc.value = route.value?.description ?? '';
+    editModalVisible.value = true;
+  }
+
+  function closeEditModal() {
+    editModalVisible.value = false;
+  }
+
+  async function handleShareToggle(isPublic: boolean) {
+    const id = routeId();
+    if (!id) return;
+    sharing.value = true;
+    try {
+      route.value = await setRoutePublicShare(id, { isPublic });
+      showToast(isPublic ? t('routes.shareOn') : t('routes.shareOff'));
+      await loadComments();
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.shareSetFailed')));
+      await loadDetail();
+    } finally {
+      sharing.value = false;
+    }
+  }
+
+  async function handlePostComment() {
+    const id = routeId();
+    const text = commentText.value.trim();
+    if (!id || !text) {
+      showToast(t('routes.commentRequired'));
+      return;
+    }
+    postingComment.value = true;
+    try {
+      const created = await createRouteComment(id, { content: text });
+      comments.value = [created, ...comments.value];
+      if (route.value) {
+        route.value.commentCount = (route.value.commentCount ?? 0) + 1;
+      }
+      commentText.value = '';
+      showToast(t('routes.commentSuccess'));
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.commentFailed')));
+    } finally {
+      postingComment.value = false;
+    }
+  }
+
+  async function handleLike() {
+    const id = routeId();
+    if (!id) return;
+    try {
+      const result = await toggleRouteLike(id);
+      if (route.value) {
+        route.value.isLiked = result.liked;
+        route.value.likeCount = result.likeCount;
+      }
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.operationFailed')));
+    }
+  }
+
+  async function handleFavorite() {
+    const id = routeId();
+    if (!id) return;
+    try {
+      const result = await toggleRouteFavorite(id);
+      if (route.value) {
+        route.value.isFavorited = result.favorited;
+        route.value.collectCount = result.collectCount;
+      }
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.operationFailed')));
+    }
+  }
+
+  async function handleSaveDraft() {
+    const id = routeId();
+    const name = editName.value.trim();
+    if (!id || !name) {
+      showToast(t('routes.nameRequired'));
+      return;
+    }
+    savingDraft.value = true;
+    try {
+      route.value = await updateRouteDraft(id, {
+        name,
+        description: editDesc.value.trim() || null,
+      });
+      showToast(t('routes.draftSaved'));
+      editModalVisible.value = false;
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.saveFailed')));
+    } finally {
+      savingDraft.value = false;
+    }
+  }
+
+  async function handleRegenerate() {
+    const id = routeId();
+    const text = regeneratePrompt.value.trim();
+    if (!id || !text) {
+      showToast(t('routes.regeneratePromptRequired'));
+      return;
+    }
+    try {
+      const result = await regenerateRoute(id, { prompt: text });
+      let tip = t('routes.regenerateTemplate');
+      if (result.generationSource === 'llm') {
+        tip =
+          result.llmProvider === 'ai-service'
+            ? t('routes.regenerateAiService')
+            : result.llmProvider === 'deepseek'
+              ? t('routes.regenerateDeepseek')
+              : result.llmProvider === 'lmstudio'
+                ? t('routes.regenerateLmstudio')
+                : t('routes.regenerateAi');
+      }
+      showToast(tip);
+      route.value = result;
+      regeneratePrompt.value = result.sourcePrompt ?? text;
+      activeDayIndex.value = 0;
+    } catch (err) {
+      if (!isAiPlanCancelledError(err)) {
+        showToast(getAppErrorMessage(err, t('routes.regenerateFailed')));
+      }
+    }
+  }
+
+  async function handleUnlock() {
+    const id = routeId();
+    if (!id) return;
+    paying.value = true;
+    try {
+      await completeRouteUnlockPayment(id);
+      showToast(t('routes.unlockSuccess'));
+      await loadDetail();
+    } catch (err) {
+      const msg = getAppErrorMessage(err, t('routes.payFailed'));
+      if (msg !== t('routes.payCancelled')) {
+        showToast(msg);
+      }
+    } finally {
+      paying.value = false;
+    }
+  }
+
+  async function handlePublish() {
+    const id = routeId();
+    if (!id) return;
+    try {
+      route.value = await publishRoute(id);
+      showToast(t('routes.publishSuccess'));
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.publishFailed')));
+    }
+  }
+
+  return {
+    route,
+    loading,
+    loadError,
+    toastMessage,
+    activeDayIndex,
+    paying,
+    sharing,
+    savingDraft,
+    postingComment,
+    editModalVisible,
+    editName,
+    editDesc,
+    regeneratePrompt,
+    comments,
+    commentText,
+    publishedStatus,
+    isOwner,
+    canEditRouteInfo,
+    showShareSetting,
+    showInteraction,
+    showComments,
+    canRegenerate,
+    isUnlocked,
+    days,
+    unlockPrice,
+    routeStatusLabel,
+    regenerateHint,
+    loadPaymentConfig,
+    loadDetail,
+    dismissToast,
+    openEditModal,
+    closeEditModal,
+    handleShareToggle,
+    handlePostComment,
+    handleLike,
+    handleFavorite,
+    handleSaveDraft,
+    handleRegenerate,
+    handleUnlock,
+    handlePublish,
+  };
+}
