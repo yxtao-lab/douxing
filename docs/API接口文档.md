@@ -13,7 +13,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | 全量 72 个 REST 接口，含参数、Schema、JWT 鉴权 |
+| **[openapi.yaml](./openapi.yaml)** | 全量 76 个 REST 接口，含参数、Schema、JWT 鉴权 |
 
 **导入步骤**
 
@@ -55,8 +55,9 @@
 16. [分享 share](#16-分享-share)
 17. [玩法动线 playbooks](#17-玩法动线-playbooks)
 18. [旅程相册 journey-albums](#18-旅程相册-journey-albums)
-19. [静态资源 uploads](#19-静态资源-uploads)
-20. [附录：常用枚举](#20-附录常用枚举)
+19. [数据分析 analytics](#19-数据分析-analytics)
+20. [静态资源 uploads](#20-静态资源-uploads)
+21. [附录：常用枚举](#21-附录常用枚举)
 
 ---
 
@@ -206,6 +207,10 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 70 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
 | 71 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
 | 72 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 73 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
+| 74 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
+| 75 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
+| 76 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
 
 ---
 
@@ -802,7 +807,75 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ---
 
-## 19. 静态资源 uploads
+## 19. 数据分析 analytics
+
+前缀：`/api/analytics`（均需 **管理员** JWT）。指标口径与分阶段路线见 [数据中台.md](./数据中台.md)。
+
+### GET `/overview`
+
+核心指标概览：用户、路线、订单、打卡、规划会话的总量与近 7 日 / 今日新增。
+
+**响应 `data`**：`AnalyticsOverview`
+
+| 块 | 字段 | 说明 |
+|----|------|------|
+| `users` | `total`, `newToday`, `newLast7Days` | 用户总数与新增 |
+| `routes` | `total`, `publicTotal`, `newLast7Days` | 路线；公开 = 已发布 |
+| `orders` | `total`, `paidTotal`, `newLast7Days` | 订单；已支付 = PAID/COMPLETED |
+| `checkins` | `total`, `approvedTotal`, `newLast7Days` | 打卡；已通过 = APPROVED |
+| `planSessions` | `total`, `newLast7Days` | AI 规划会话 |
+| — | `generatedAt` | ISO 生成时间 |
+
+### GET `/trends`
+
+按日趋势序列。
+
+**Query**
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `days` | number | 30 | 1～90，含当天 |
+
+**响应 `data`**：`AnalyticsDailyPoint[]`
+
+| 字段 | 说明 |
+|------|------|
+| `date` | `YYYY-MM-DD` |
+| `users` / `routes` / `orders` / `checkins` / `planSessions` | 当日新增计数 |
+
+### GET `/top-cities`
+
+打卡城市排行（已通过打卡，按 `city_code` 聚合）。
+
+**Query**
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `limit` | number | 10 | 1～50 |
+
+**响应 `data`**：`AnalyticsCityRankItem[]` — `{ cityCode, checkinCount }`
+
+### POST `/events`
+
+写入埋点事件（DT1 供服务端/管理端扩展；DT3 开放客户端上报）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `eventName` | string | 是 | 1～64 字符，如 `route.publish` |
+| `eventCategory` | string | 否 | `business` / `behavior` / `system` |
+| `userId` | number | 否 | 关联用户 |
+| `sessionId` | string | 否 | 客户端会话 ID |
+| `properties` | object | 否 | JSON 扩展属性 |
+| `source` | string | 否 | `server` / `mobile` / `pc` / `web` |
+| `occurredAt` | string | 否 | ISO 8601 业务发生时间 |
+
+**响应 `data`**：`{ ok: true }`
+
+---
+
+## 20. 静态资源 uploads
 
 非 JSON API，Express 静态目录：
 
@@ -817,7 +890,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ---
 
-## 20. 附录：常用枚举
+## 21. 附录：常用枚举
 
 定义于 `@douxing/shared` 的 `constants.ts`：
 
@@ -829,6 +902,8 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 | `CheckInStatus` | 0/1/2 | 待审 / 通过 / 拒绝 |
 | `JourneyAlbumStatus` | active/archived | 相册状态 |
 | `TravelPhotoSource` | upload/checkin/import | 照片来源 |
+| `AnalyticsEventCategory` | business/behavior/system | 埋点分类 |
+| `AnalyticsEventSource` | server/mobile/pc/web | 埋点来源端 |
 
 ---
 
@@ -836,7 +911,8 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 日期 | 说明 |
 |------|------|
-| 2026-06-09 | 初版：汇总全项目 72 个 REST 接口 + 静态资源说明；含 J1 旅程相册 |
+| 2026-06-09 | 新增 §19 数据分析 `/api/analytics/*`（4 个接口）；OpenAPI 同步 |
+| 2026-06-09 | 初版：汇总全项目 REST 接口 + 静态资源说明；含 J1 旅程相册 |
 
 ---
 

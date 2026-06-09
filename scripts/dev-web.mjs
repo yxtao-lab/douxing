@@ -1,14 +1,21 @@
 #!/usr/bin/env node
 /**
- * Web 管理端 dev：就绪后自动打开浏览器
+ * Web 管理端 dev：使用 Vite server.open 自启动浏览器
  * 禁用：DOUXING_NO_OPEN=1
- * 自定义地址：DOUXING_WEB_OPEN_URL=http://localhost:5173/
  */
-import { runViteDevWithBrowserOpen } from './lib/run-vite-dev-open.mjs';
+import { spawn } from 'node:child_process';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { pmFilterCmd } from './pm.mjs';
 
-runViteDevWithBrowserOpen({
-  tag: 'web',
-  workspace: '@douxing/web',
-  defaultUrl: process.env.DOUXING_WEB_OPEN_URL || 'http://localhost:5173/',
-  openLabel: '正在打开管理后台',
+const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+
+const child = spawn(pmFilterCmd('@douxing/web', 'dev'), {
+  cwd: root,
+  stdio: 'inherit',
+  shell: true,
+});
+
+child.on('exit', (code) => {
+  process.exit(code ?? 0);
 });

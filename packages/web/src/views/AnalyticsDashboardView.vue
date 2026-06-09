@@ -63,28 +63,12 @@
               <a-segmented v-model:value="trendDays" :options="trendDayOptions" @change="loadTrends" />
             </template>
 
-            <div v-if="trends.length" class="trend-bars">
-              <div v-for="point in trendBars" :key="point.date" class="trend-row">
-                <span class="trend-date">{{ point.date.slice(5) }}</span>
-                <div class="trend-track">
-                  <span
-                    class="trend-bar users"
-                    :style="{ width: `${point.usersPct}%` }"
-                    :title="`${t('analytics.metricUsers')}: ${point.users}`"
-                  />
-                  <span
-                    class="trend-bar checkins"
-                    :style="{ width: `${point.checkinsPct}%` }"
-                    :title="`${t('analytics.metricCheckins')}: ${point.checkins}`"
-                  />
-                </div>
-                <span class="trend-sum">{{ point.users + point.checkins }}</span>
-              </div>
-            </div>
-            <p class="legend">
-              <span class="legend-item users">{{ t('analytics.metricUsers') }}</span>
-              <span class="legend-item checkins">{{ t('analytics.metricCheckins') }}</span>
-            </p>
+            <AnalyticsTrendLineChart
+              v-if="trends.length"
+              :data="trends"
+              :labels="trendSeriesLabels"
+            />
+            <a-empty v-else :description="t('common.noData')" />
 
             <a-table
               :columns="trendColumns"
@@ -122,6 +106,7 @@ import {
   fetchAnalyticsTrends,
   fetchTopCheckinCities,
 } from '@/api/analytics';
+import AnalyticsTrendLineChart from '@/components/analytics/AnalyticsTrendLineChart.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 
 usePageTitle('web.analytics');
@@ -156,18 +141,13 @@ const cityColumns = computed<TableColumnType[]>(() => [
 
 const trendTableRows = computed(() => [...trends.value].reverse());
 
-const trendBars = computed(() => {
-  const slice = trends.value.slice(-14);
-  const maxValue = Math.max(
-    1,
-    ...slice.map((point) => Math.max(point.users, point.checkins)),
-  );
-  return slice.map((point) => ({
-    ...point,
-    usersPct: (point.users / maxValue) * 100,
-    checkinsPct: (point.checkins / maxValue) * 100,
-  }));
-});
+const trendSeriesLabels = computed(() => ({
+  users: t('analytics.metricUsers'),
+  routes: t('analytics.metricRoutes'),
+  orders: t('analytics.metricOrders'),
+  checkins: t('analytics.metricCheckins'),
+  planSessions: t('analytics.metricPlanSessions'),
+}));
 
 async function loadOverview() {
   overview.value = await fetchAnalyticsOverview();
@@ -216,76 +196,7 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.trend-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.trend-row {
-  display: grid;
-  grid-template-columns: 48px 1fr 36px;
-  gap: 8px;
-  align-items: center;
-  font-size: 12px;
-}
-
-.trend-date {
-  color: #6b7280;
-}
-
-.trend-track {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 0;
-}
-
-.trend-bar {
-  display: block;
-  height: 6px;
-  border-radius: 3px;
-  min-width: 2px;
-}
-
-.trend-bar.users {
-  background: #1677ff;
-}
-
-.trend-bar.checkins {
-  background: #52c41a;
-}
-
-.trend-sum {
-  text-align: right;
-  color: #374151;
-}
-
-.legend {
-  display: flex;
-  gap: 16px;
-  margin: 0 0 16px;
-  font-size: 12px;
-}
-
-.legend-item::before {
-  content: '';
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.legend-item.users::before {
-  background: #1677ff;
-}
-
-.legend-item.checkins::before {
-  background: #52c41a;
+.content-row :deep(.ant-table-wrapper) {
+  margin-top: 16px;
 }
 </style>

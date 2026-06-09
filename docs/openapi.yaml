@@ -51,6 +51,8 @@ tags:
     description: 管理员 Playbook CRUD
   - name: 旅程相册
     description: J1 照片存储
+  - name: 数据分析
+    description: 管理端指标与埋点（DT1）
 
 security:
   - bearerAuth: []
@@ -1531,6 +1533,118 @@ paths:
                           photoId:
                             type: integer
 
+  /api/analytics/overview:
+    get:
+      tags: [数据分析]
+      summary: 核心指标概览（管理员）
+      operationId: analyticsOverview
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnalyticsOverview'
+        '403':
+          description: 非管理员
+
+  /api/analytics/trends:
+    get:
+      tags: [数据分析]
+      summary: 按日趋势（管理员）
+      operationId: analyticsTrends
+      parameters:
+        - name: days
+          in: query
+          description: 天数，1～90，默认 30
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 30
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnalyticsDailyPoint'
+        '403':
+          description: 非管理员
+
+  /api/analytics/top-cities:
+    get:
+      tags: [数据分析]
+      summary: 打卡城市排行（管理员）
+      operationId: analyticsTopCities
+      parameters:
+        - name: limit
+          in: query
+          description: Top N，1～50，默认 10
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 10
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnalyticsCityRankItem'
+        '403':
+          description: 非管理员
+
+  /api/analytics/events:
+    post:
+      tags: [数据分析]
+      summary: 写入埋点事件（管理员）
+      operationId: analyticsTrackEvent
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackAnalyticsEventRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          ok:
+                            type: boolean
+                            example: true
+        '403':
+          description: 非管理员
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1930,3 +2044,80 @@ components:
         attractionId: { type: integer, nullable: true }
         caption: { type: string, nullable: true }
         sortOrder: { type: integer }
+
+    AnalyticsOverview:
+      type: object
+      properties:
+        users:
+          type: object
+          properties:
+            total: { type: integer }
+            newToday: { type: integer }
+            newLast7Days: { type: integer }
+        routes:
+          type: object
+          properties:
+            total: { type: integer }
+            publicTotal: { type: integer }
+            newLast7Days: { type: integer }
+        orders:
+          type: object
+          properties:
+            total: { type: integer }
+            paidTotal: { type: integer }
+            newLast7Days: { type: integer }
+        checkins:
+          type: object
+          properties:
+            total: { type: integer }
+            approvedTotal: { type: integer }
+            newLast7Days: { type: integer }
+        planSessions:
+          type: object
+          properties:
+            total: { type: integer }
+            newLast7Days: { type: integer }
+        generatedAt: { type: string, format: date-time }
+
+    AnalyticsDailyPoint:
+      type: object
+      properties:
+        date: { type: string, example: '2026-06-09' }
+        users: { type: integer }
+        routes: { type: integer }
+        orders: { type: integer }
+        checkins: { type: integer }
+        planSessions: { type: integer }
+
+    AnalyticsCityRankItem:
+      type: object
+      properties:
+        cityCode: { type: string }
+        checkinCount: { type: integer }
+
+    TrackAnalyticsEventRequest:
+      type: object
+      required: [eventName]
+      properties:
+        eventName:
+          type: string
+          minLength: 1
+          maxLength: 64
+        eventCategory:
+          type: string
+          enum: [business, behavior, system]
+        userId:
+          type: integer
+          minimum: 1
+        sessionId:
+          type: string
+          maxLength: 64
+        properties:
+          type: object
+          additionalProperties: true
+        source:
+          type: string
+          enum: [server, mobile, pc, web]
+        occurredAt:
+          type: string
+          format: date-time

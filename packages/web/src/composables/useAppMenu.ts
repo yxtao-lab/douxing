@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
   AuditOutlined,
+  BarChartOutlined,
   BookOutlined,
   EnvironmentOutlined,
   GlobalOutlined,
@@ -23,6 +24,7 @@ const iconMap: Record<string, Component> = {
   AuditOutlined,
   PictureOutlined,
   BookOutlined,
+  BarChartOutlined,
 };
 
 export interface AppRouteMeta {
@@ -65,6 +67,7 @@ export function useAppMenu() {
     const workbench = visible.filter((item) => !item.meta?.menuGroupKey);
     const biz = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.biz');
     const content = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.content');
+    const data = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.data');
 
     const toMenuItem = (item: MenuRouteItem) => ({
       key: toMenuPath(item.path),
@@ -95,6 +98,15 @@ export function useAppMenu() {
       });
     }
 
+    if (data.length) {
+      groups.push({
+        key: 'group-data',
+        label: t('web.menu.data'),
+        title: t('web.menu.data'),
+        children: data.map(toMenuItem),
+      });
+    }
+
     return groups;
   });
 
@@ -104,6 +116,7 @@ export function useAppMenu() {
     const group = route.meta.menuGroupKey as string | undefined;
     if (group === 'web.menu.biz') return ['group-biz'];
     if (group === 'web.menu.content') return ['group-content'];
+    if (group === 'web.menu.data') return ['group-data'];
     return [];
   });
 
