@@ -102,7 +102,7 @@ function renderPolyline() {
 
   polyline = L.polyline(
     points.map((point) => [point.lat, point.lng] as L.LatLngExpression),
-    { color: '#1677ff', weight: 4, opacity: 0.65 },
+    { color: '#008cba', weight: 4, opacity: 0.65 },
   ).addTo(map);
 }
 

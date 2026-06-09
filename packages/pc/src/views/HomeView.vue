@@ -4,11 +4,7 @@
       <div class="mx-auto grid max-w-7xl gap-10 lg:grid-cols-2 lg:items-center">
         <div>
           <div class="mb-6 flex items-center gap-4">
-            <span
-              class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 text-2xl font-bold"
-            >
-              兜
-            </span>
+            <AppLogo size="lg" class="rounded-2xl ring-2 ring-white/25" />
             <div>
               <h1 class="text-3xl font-bold">{{ t('app.name') }}</h1>
               <p class="text-white/85">{{ t('home.subtitle') }}</p>
@@ -99,6 +95,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { fetchPlazaRoutesPage } from '@/api/routes';
+import AppLogo from '@/components/AppLogo.vue';
 import RouteCard from '@/components/RouteCard.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';

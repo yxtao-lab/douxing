@@ -57,7 +57,7 @@ defineProps<{
   width: 3px;
   height: 16px;
   border-radius: 2px;
-  background: #1677ff;
+  background: var(--color-primary);
   flex-shrink: 0;
 }
 </style>

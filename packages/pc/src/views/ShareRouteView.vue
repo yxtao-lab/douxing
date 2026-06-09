@@ -3,7 +3,7 @@
     <header class="border-b border-dx-border bg-white px-4 py-4">
       <div class="mx-auto flex max-w-3xl items-center justify-between">
         <RouterLink to="/" class="flex items-center gap-2 font-semibold text-dx-text">
-          <span class="flex h-8 w-8 items-center justify-center rounded-lg bg-dx-primary text-sm text-white">兜</span>
+          <AppLogo size="sm" />
           {{ t('app.name') }}
         </RouterLink>
         <RouterLink to="/login" class="text-sm text-dx-primary hover:underline">{{ t('common.login') }}</RouterLink>
@@ -65,6 +65,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import type { RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
 import { fetchSharedRoute } from '@/api/share';
+import AppLogo from '@/components/AppLogo.vue';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';

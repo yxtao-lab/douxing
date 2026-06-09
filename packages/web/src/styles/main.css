@@ -1,11 +1,23 @@
 :root {
-  --color-primary: #1677ff;
+  /* 管理后台品牌色（与 logo 青蓝渐变 + 橙色弧线一致） */
+  --color-primary: #008cba;
+  --color-primary-dark: #0066a1;
+  --color-primary-light: #e0f7fb;
+  --color-accent: #f57c00;
+  --color-accent-dark: #e65100;
+  --color-accent-light: #fff3e0;
   --color-bg: #f5f7fa;
   --color-card: #ffffff;
   --color-text: #1f2937;
   --color-muted: #6b7280;
   --radius: 12px;
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+  --gradient-admin-hero: linear-gradient(
+    135deg,
+    #004b6e 0%,
+    #0066a1 45%,
+    #008cba 100%
+  );
 }
 
 * {

@@ -1,7 +1,7 @@
 import type { CheckInInfo } from '@douxing/shared';
 
 const PLACEHOLDER_GRADIENTS: readonly [string, string][] = [
-  ['#1677ff', '#69b1ff'],
+  ['#008cba', '#4fc3f7'],
   ['#13c2c2', '#5cdbd3'],
   ['#722ed1', '#b37feb'],
   ['#eb2f96', '#ff85c0'],

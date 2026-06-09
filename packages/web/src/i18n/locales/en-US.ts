@@ -1,5 +1,8 @@
 /** Web admin English copy */
 export const webEnUS = {
+  app: {
+    name: 'Douxing Admin',
+  },
   layout: {
     loginHeroTitle: 'Douxing Admin',
     loginHeroDesc: 'Manage routes, orders, check-ins, and content operations in one place.',

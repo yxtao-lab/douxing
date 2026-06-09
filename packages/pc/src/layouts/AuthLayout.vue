@@ -3,11 +3,7 @@
     <div class="hidden w-[420px] bg-dx-hero lg:flex lg:flex-col lg:justify-between lg:p-10">
       <div>
         <div class="flex items-center gap-3">
-          <span
-            class="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/20 text-xl font-bold text-white"
-          >
-            兜
-          </span>
+          <AppLogo size="md" class="rounded-2xl ring-2 ring-white/25" />
           <div>
             <p class="text-xl font-semibold text-white">{{ t('app.name') }}</p>
             <p class="text-sm text-white/80">{{ t('home.subtitle') }}</p>
@@ -29,6 +25,7 @@
 </template>
 
 <script setup lang="ts">
+import AppLogo from '@/components/AppLogo.vue';
 import { useLocale } from '@/i18n/useLocale';
 
 const { t } = useLocale();

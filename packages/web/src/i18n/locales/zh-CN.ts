@@ -1,5 +1,8 @@
 /** Web 管理端中文文案 */
 export const webZhCN = {
+  app: {
+    name: '兜行管理后台',
+  },
   layout: {
     loginHeroTitle: '兜行管理后台',
     loginHeroDesc: '路线、订单、打卡与内容运营的一站式管理平台，助力团队高效协作。',

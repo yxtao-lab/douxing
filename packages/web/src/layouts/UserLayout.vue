@@ -45,7 +45,7 @@ function onLocaleChange(value: unknown) {
 .user-layout {
   height: 100%;
   overflow: auto;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #1677ff 100%);
+  background: var(--gradient-admin-hero);
 }
 
 .user-layout-top {

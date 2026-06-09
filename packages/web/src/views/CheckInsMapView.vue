@@ -516,16 +516,16 @@ onMounted(loadList);
 
 .footprint-card:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.1);
-  border-color: rgba(22, 119, 255, 0.22);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--color-primary) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-primary) 22%, transparent);
 }
 
 .footprint-card.active {
-  border-color: #1677ff;
-  background: #f8fbff;
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
   box-shadow:
-    0 0 0 1px #1677ff,
-    0 6px 16px rgba(22, 119, 255, 0.14);
+    0 0 0 1px var(--color-primary),
+    0 6px 16px color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 .footprint-media {
@@ -607,22 +607,22 @@ onMounted(loadList);
 }
 
 .footprint-card.active .footprint-title {
-  color: #1677ff;
+  color: var(--color-primary);
 }
 
 .footprint-points {
   flex-shrink: 0;
   padding: 0 6px;
   border-radius: 999px;
-  background: #eff6ff;
-  color: #1677ff;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
   font-size: 11px;
   font-weight: 600;
   line-height: 18px;
 }
 
 .footprint-card.active .footprint-points {
-  background: #dbeafe;
+  background: color-mix(in srgb, var(--color-primary) 18%, white);
 }
 
 .footprint-city {

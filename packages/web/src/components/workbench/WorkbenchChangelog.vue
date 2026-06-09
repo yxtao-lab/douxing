@@ -140,7 +140,7 @@ function typeColor(type: ChangelogType) {
 
 .changelog-item.open .changelog-arrow {
   transform: rotate(180deg);
-  color: #1677ff;
+  color: var(--color-primary);
 }
 
 .changelog-body {

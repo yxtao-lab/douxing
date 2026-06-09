@@ -2,11 +2,7 @@
   <header class="sticky top-0 z-50 border-b border-dx-border bg-white/90 backdrop-blur">
     <div class="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 lg:px-8">
       <RouterLink to="/" class="flex items-center gap-3">
-        <span
-          class="flex h-9 w-9 items-center justify-center rounded-xl bg-dx-primary text-sm font-bold text-white"
-        >
-          兜
-        </span>
+        <AppLogo size="sm" />
         <div class="hidden sm:block">
           <p class="text-base font-semibold text-dx-text">{{ t('app.name') }}</p>
           <p class="text-xs text-dx-muted">{{ t('pc.layout.slogan') }}</p>
@@ -59,6 +55,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { RouterLink, useRoute, useRouter } from 'vue-router';
+import AppLogo from '@/components/AppLogo.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';
 import type { LocaleCode } from '@douxing/shared';

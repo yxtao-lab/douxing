@@ -2,7 +2,7 @@ import type { ThemeConfig } from 'ant-design-vue/es/config-provider/context';
 
 export const antdTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#1677ff',
+    colorPrimary: '#008cba',
     colorBgLayout: '#f5f7fa',
     colorBgContainer: '#ffffff',
     colorText: '#1f2937',

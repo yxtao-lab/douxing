@@ -1,4 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="8" fill="#1677ff"/>
-  <text x="16" y="22" text-anchor="middle" fill="white" font-size="16" font-family="sans-serif" font-weight="bold">\</text>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="dxLogoGrad" x1="4" y1="2" x2="28" y2="30" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0958d9"/>
+      <stop offset="0.45" stop-color="#1677ff"/>
+      <stop offset="1" stop-color="#13c2c2"/>
+    </linearGradient>
+  </defs>
+  <rect width="32" height="32" rx="8" fill="url(#dxLogoGrad)"/>
+  <text
+    x="16"
+    y="22"
+    text-anchor="middle"
+    fill="#ffffff"
+    font-size="15"
+    font-family="PingFang SC, Microsoft YaHei, sans-serif"
+    font-weight="700"
+  >兜</text>
 </svg>

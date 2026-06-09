@@ -22,7 +22,7 @@
           v-if="animatedPolylinePoints.length >= 2"
           :points="polylineAttr"
           fill="none"
-          stroke="#1677ff"
+          stroke="#00c2cb"
           stroke-width="3"
           stroke-linecap="round"
           stroke-linejoin="round"
@@ -35,7 +35,7 @@
           :cy="poi.y"
           r="6"
           fill="#fff"
-          stroke="#1677ff"
+          stroke="#00c2cb"
           stroke-width="2"
         />
         <text

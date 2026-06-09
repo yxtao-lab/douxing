@@ -113,7 +113,7 @@ function handleContextAction(
 
 .app-tab.active {
   background: #f5f7fa;
-  color: #1677ff;
+  color: var(--color-primary);
   border-color: #d9d9d9;
   font-weight: 500;
 }

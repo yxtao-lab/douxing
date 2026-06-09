@@ -129,7 +129,7 @@ function handleLogout() {
 }
 
 .user-avatar {
-  background: #1677ff;
+  background: var(--color-primary);
 }
 
 .user-name {

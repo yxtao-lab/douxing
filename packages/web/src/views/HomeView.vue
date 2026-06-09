@@ -511,9 +511,9 @@ a.site-card:hover,
 }
 
 .action-item:hover {
-  border-color: rgba(22, 119, 255, 0.35);
-  background: #f0f7ff;
-  color: #1677ff;
+  border-color: color-mix(in srgb, var(--color-primary) 35%, transparent);
+  background: var(--color-primary-light);
+  color: var(--color-primary);
 }
 
 .action-icon {
@@ -524,8 +524,8 @@ a.site-card:hover,
   height: 40px;
   border-radius: 10px;
   font-size: 18px;
-  color: #1677ff;
-  background: #e8f3ff;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
 }
 
 .action-label {
