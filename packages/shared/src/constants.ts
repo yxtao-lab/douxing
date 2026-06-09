@@ -260,3 +260,18 @@ export const LEADERBOARD_DEFAULT_LIMIT = 50;
 
 /** 排行榜最大返回条数 */
 export const LEADERBOARD_MAX_LIMIT = 100;
+
+/** 埋点事件分类 */
+export const AnalyticsEventCategory = {
+  BUSINESS: 'business',
+  BEHAVIOR: 'behavior',
+  SYSTEM: 'system',
+} as const;
+
+/** 埋点来源端 */
+export const AnalyticsEventSource = {
+  SERVER: 'server',
+  MOBILE: 'mobile',
+  PC: 'pc',
+  WEB: 'web',
+} as const;

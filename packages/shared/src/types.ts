@@ -690,3 +690,59 @@ export interface UpdateTravelPhotoRequest {
   caption?: string | null;
   sortOrder?: number;
 }
+
+/** 数据分析概览 */
+export interface AnalyticsOverview {
+  users: {
+    total: number;
+    newToday: number;
+    newLast7Days: number;
+  };
+  routes: {
+    total: number;
+    publicTotal: number;
+    newLast7Days: number;
+  };
+  orders: {
+    total: number;
+    paidTotal: number;
+    newLast7Days: number;
+  };
+  checkins: {
+    total: number;
+    approvedTotal: number;
+    newLast7Days: number;
+  };
+  planSessions: {
+    total: number;
+    newLast7Days: number;
+  };
+  generatedAt: string;
+}
+
+/** 按日趋势数据点 */
+export interface AnalyticsDailyPoint {
+  date: string;
+  users: number;
+  routes: number;
+  orders: number;
+  checkins: number;
+  planSessions: number;
+}
+
+/** 打卡城市排行项 */
+export interface AnalyticsCityRankItem {
+  cityCode: string;
+  checkinCount: number;
+}
+
+/** 写入埋点事件 */
+export interface TrackAnalyticsEventInput {
+  eventName: string;
+  eventCategory?: string;
+  userId?: number;
+  sessionId?: string;
+  properties?: Record<string, unknown>;
+  source?: string;
+  occurredAt?: Date;
+}

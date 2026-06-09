@@ -113,6 +113,17 @@ const router = createRouter({
             icon: 'BookOutlined',
           },
         },
+        {
+          path: 'analytics',
+          name: 'analytics',
+          component: () => import('@/views/AnalyticsDashboardView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.analytics',
+            menuGroupKey: 'web.menu.data',
+            icon: 'BarChartOutlined',
+          },
+        },
       ],
     },
   ],

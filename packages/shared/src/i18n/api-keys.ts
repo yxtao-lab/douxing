@@ -180,6 +180,11 @@ export const ApiMessageKey = {
   TRAVEL_PHOTO_FILE_TOO_LARGE: 'api.travelPhotoFileTooLarge',
 
   SERVER_RUNNING: 'api.serverRunning',
+
+  ANALYTICS_OVERVIEW_FAILED: 'api.analyticsOverviewFailed',
+  ANALYTICS_TRENDS_FAILED: 'api.analyticsTrendsFailed',
+  ANALYTICS_TOP_CITIES_FAILED: 'api.analyticsTopCitiesFailed',
+  ANALYTICS_EVENT_TRACK_FAILED: 'api.analyticsEventTrackFailed',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

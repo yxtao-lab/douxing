@@ -9,6 +9,7 @@
 | [env-environments.md](./env-environments.md) | 环境文件说明与切换方式（`pnpm env:status`） |
 | [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划 |
+| [数据中台.md](./数据中台.md) | **数据中台**：指标 API、埋点表、管理端看板与分阶段路线图（DT1～DT4） |
 | [品牌视觉规范.md](./品牌视觉规范.md) | 移动端 Token；**Web 管理后台 §14** · **PC 用户端 §15** Logo 与主题色 |
 | [下一步工作.md](./下一步工作.md) | **当前建议先做什么**（精简排期，不重复 ROADMAP 全文） |
 | [后期待办.md](./后期待办.md) | **合规与资质类待办**（备案、支付、短信认证、公司注册等） |

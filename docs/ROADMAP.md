@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.23  
-**更新日期**：2026-06-08  
+**文档版本**：3.24  
+**更新日期**：2026-06-09  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/pc` · `packages/mobile` · `packages/server` · `packages/shared`）
 
 ---
@@ -137,6 +137,7 @@ gantt
 | v0.9.4 | 2026-06-08 | **P3 PC 个人中心** | 资料编辑 · 成就/徽章/打卡/排行榜 · 订单 · 会员权益子页 | 见 [§ 阶段 P · P3](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) |
 | v0.9.5 | 2026-06-08 | **P4 PC 分享与手帐** | `/share/routes/:id` 只读页 · `RoutePosterSheet` Canvas 预览 · 浏览器下载 PNG | 见 [§ 阶段 P · P4](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) |
 | v0.9.6 | 2026-06-08 | **双端 Logo 与主题色** | 管理后台青蓝+橙（`packages/web`）· PC 紫青渐变（`packages/pc`）· [品牌视觉规范 §14～15](./品牌视觉规范.md) | Web 标题「兜行管理后台」· favicon 与侧栏 Logo 一致 |
+| v0.9.7 | 2026-06-09 | **Web/PC dev 浏览器自启动** | `scripts/dev-web.mjs` · `scripts/dev-pc.mjs` · `pnpm dev:admin` · `DOUXING_NO_OPEN` / `DOUXING_*_OPEN_URL` | `pnpm dev` 就绪后自动打开 :5173 与 :5176；见 [启动与部署流程 §3.4](./启动与部署流程.md#34-浏览器自启动可选) |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -472,12 +473,27 @@ POST /api/speech/transcribe
 | G1 | [~] | — | Redis 缓存 | §7.3 | 热门路线、会话、限流 | docker-compose 含 Redis；生产 compose 已启用 |
 | G2 | [~] | — | 对象存储 | §7 | 景点封面 OSS（A2+++ P2）；**J 线**用户旅行照片 `photos/` 前缀待 J1 | 图片 URL 可访问；见 [旅行照片存储系统](./旅行照片存储系统.md) |
 | G3 | [ ] | — | 通知服务 | §2.2.3 | 站内消息 + 微信订阅消息 | 关键事件有通知 |
-| G4 | [ ] | — | 管理端数据分析 | 数据分析服务 | Dashboard 图表 | 用户/订单/打卡趋势 |
+| G4 | [~] | — | 管理端数据分析 | 数据分析服务 · [数据中台](./数据中台.md) | **DT1** Dashboard + `/api/analytics/*` | 用户/订单/打卡趋势；见阶段 **DT** |
 | G5 | [~] | — | 限流与网关 | §2.2.2 | Nginx 反代 + rate limit | 超限 429 |
 | G6 | [~] | — | 安全合规 | §8 | 脱敏、审计日志、HTTPS 说明 | 敏感字段已脱敏 |
 | G7 | [ ] | — | 自动化测试 | §11 | API 集成测试 + 核心 E2E | CI `pnpm test` 通过 |
 | G8 | [x] | 2026-05-23 | 生产部署 | §9 | Debian 12 + deploy-server + Nginx/Certbot 自动 + tsx 低内存 + 发版文档 | `curl https://api.yxtao.site/api/health` |
 | G9 | [x] | 2026-05-27 | 国际化（i18n） | §12、产品出海 | shared/mobile/web i18n；`mobileT`；Web 管理端 View；`ApiError` + 旧中文兼容映射 | zh-CN / en-US 切换后全主流程 UI 无硬编码；API `message` 随 `Accept-Language` 变化（已手测） |
+
+---
+
+### 阶段 DT：数据中台（2026-06-09 录入）
+
+> 完整方案见 **[数据中台.md](./数据中台.md)**。与 **G4** 管理端数据分析合并验收。
+
+| 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
+|----|------|----------|------|------|----------|----------|
+| **DT1** | [~] | 2026-06-09 | 指标 API + 埋点表 + 看板 | G8、W1 | `analytics_events` 迁移；`analytics.service`；`GET /analytics/overview` · `/trends` · `/top-cities`；Web「数据分析」页 | 管理员可看概览、30 日趋势、城市 Top10 |
+| **DT2** | [ ] | — | 日汇总跑批 | DT1 | `analytics_daily_metrics`；`pnpm analytics:rollup` | 趋势查询走汇总表 |
+| **DT3** | [ ] | — | 客户端埋点 | DT1 | mobile/pc `POST /analytics/events`；漏斗指标 | 规划完成等行为可统计 |
+| **DT4** | [ ] | — | ClickHouse 升级（可选） | DT2、§7 详细设计 | MySQL → ClickHouse 同步 | 大数据量 OLAP |
+
+**推荐顺序**：`DT1`（验收 G4）→ `DT3`（行为埋点）→ `DT2`（性能）→ 视规模启用 `DT4`。
 
 ---
 

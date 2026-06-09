@@ -9,8 +9,9 @@
   "scripts": {
     "dev": "node scripts/run-dev-all.mjs",
     "dev:only": "node scripts/run-dev.mjs",
-    "dev:web": "node scripts/pm.mjs filter @douxing/web dev",
-    "dev:pc": "node scripts/pm.mjs filter @douxing/pc dev",
+    "dev:web": "node scripts/dev-web.mjs",
+    "dev:admin": "node scripts/run-dev.mjs server,web",
+    "dev:pc": "node scripts/dev-pc.mjs",
     "dev:mobile": "node scripts/pm.mjs filter @douxing/mobile dev:h5",
     "dev:mp-weixin": "node scripts/pm.mjs filter @douxing/mobile dev:mp-weixin",
     "setup:wechat-devtools": "node scripts/setup-wechat-devtools.mjs",

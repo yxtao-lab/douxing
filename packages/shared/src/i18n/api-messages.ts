@@ -182,6 +182,11 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: '照片文件过大',
 
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
+
+  [ApiMessageKey.ANALYTICS_OVERVIEW_FAILED]: '获取数据分析概览失败',
+  [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: '获取趋势数据失败',
+  [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: '获取城市排行失败',
+  [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: '写入埋点事件失败',
 };
 
 const enUS: Record<string, string> = {
@@ -370,6 +375,11 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: 'Photo file is too large',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
+
+  [ApiMessageKey.ANALYTICS_OVERVIEW_FAILED]: 'Failed to load analytics overview',
+  [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: 'Failed to load trend data',
+  [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: 'Failed to load city rankings',
+  [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: 'Failed to track analytics event',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

@@ -133,13 +133,14 @@ async function main() {
   console.log('========================================');
   console.log('  请在新终端执行以下命令启动访问：');
   console.log('');
-  console.log(`    ${getRunHint('dev')}          # API + 管理端 + H5 + 微信小程序 + Android App 编译监听`);
+  console.log(`    ${getRunHint('dev')}          # API + 管理端 + PC + H5 + 小程序 + Android（Web/PC 自动打开浏览器）`);
   console.log('');
   console.log('  或一键部署并启动：');
   console.log(`    ${getRunHint('bootstrap:dev')}`);
   console.log('');
-  console.log('  启动后访问：');
+  console.log('  启动后访问（pnpm dev 就绪后会自动打开浏览器）：');
   console.log('    管理端  http://localhost:5173');
+  console.log('    PC 用户端  http://localhost:5176');
   console.log('    移动端 H5  http://localhost:5174');
   console.log('    后端    http://localhost:3000');
   console.log('    微信小程序  微信开发者工具导入:');

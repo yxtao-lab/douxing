@@ -101,10 +101,12 @@ export const sharedZhCN = {
     attractionsPending: '景点审核',
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
+    analytics: '数据分析',
     logout: '退出',
     menu: {
       biz: '业务管理',
       content: '内容运营',
+      data: '数据中台',
     },
     layout: {
       breadcrumbHome: '首页',

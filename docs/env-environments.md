@@ -62,9 +62,11 @@ VITE_API_BASE_URL=http://192.168.x.x:3000/api
 
 ```bash
 cp .env.example .env     # 首次
-pnpm dev                 # 全端 + AI + 本地 API
+pnpm dev                 # 全端 + AI + 本地 API（Web/PC 自动打开浏览器）
 pnpm env:status          # 检查当前 API 是否指向本地
 ```
+
+**禁用自动打开浏览器 / 微信开发者工具：** `DOUXING_NO_OPEN=1 pnpm dev`。详见 [启动与部署流程 §3.4](./启动与部署流程.md#34-浏览器自启动可选)。
 
 ---
 

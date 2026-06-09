@@ -14,7 +14,7 @@ export default defineConfig({
   server: {
     host: true,
     port: 5176,
-    open: process.env.DOUXING_NO_OPEN !== '1',
+    open: process.env.DOUXING_NO_OPEN !== '1' && process.env.DOUXING_VITE_NO_OPEN !== '1',
     proxy: {
       '/api': {
         target: 'http://localhost:3000',

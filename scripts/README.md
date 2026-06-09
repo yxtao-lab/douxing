@@ -9,9 +9,11 @@
 
 | 脚本 | 对应命令 | 作用 |
 |------|----------|------|
-| `run-dev-all.mjs` | `pnpm dev` | 并行启动 API、AI、Web、H5、小程序、Android dev |
+| `run-dev-all.mjs` | `pnpm dev` | 并行启动 API、AI、Web、PC、H5、小程序、Android dev |
 | `run-dev.mjs` | `pnpm dev:only <平台>` | 按需启动部分平台（如 `server,web`） |
 | `run-ai-service.mjs` | `pnpm dev:ai-service` | 启动 Python AI 微服务（FastAPI，默认 `:8100`） |
+| `dev-web.mjs` | `pnpm dev:web` / `pnpm dev:admin` | Web 管理端 dev + 就绪后自动打开浏览器（`:5173`） |
+| `dev-pc.mjs` | `pnpm dev:pc` | PC 用户端 dev + 就绪后自动打开浏览器（`:5176`） |
 | `dev-mp-weixin.mjs` | `pnpm dev:mp-weixin` | 小程序 dev 编译 + 自动打开微信开发者工具 |
 | `env-status.mjs` | `pnpm env:status` | 查看当前各环境 API 地址与配置文件 |
 | `stop.mjs` | `pnpm stop` / `stop:dev` / `stop:docker` | 停止 dev 端口占用 / Docker 容器 |
@@ -113,7 +115,10 @@
 ## 9. 命令 → 脚本 速查
 
 ```
-pnpm dev                    → run-dev-all.mjs
+pnpm dev                    → run-dev-all.mjs（Web :5173 + PC :5176 自动打开浏览器）
+pnpm dev:web                → dev-web.mjs
+pnpm dev:pc                 → dev-pc.mjs
+pnpm dev:admin              → run-dev.mjs server,web
 pnpm dev:only server,web    → run-dev.mjs
 pnpm dev:mp-weixin          → dev-mp-weixin.mjs
 pnpm dev:ai-service         → run-ai-service.mjs
@@ -127,4 +132,4 @@ pnpm fix:mysql-password     → fix-mysql-password.mjs
 pnpm setup:wechat-devtools  → setup-wechat-devtools.mjs
 ```
 
-环境变量说明见 [docs/env-environments.md](../docs/env-environments.md)。
+环境变量说明见 [docs/env-environments.md](../docs/env-environments.md)；浏览器/开发者工具自启动见 [启动与部署流程 §3.4](../docs/启动与部署流程.md#34-浏览器自启动可选)。

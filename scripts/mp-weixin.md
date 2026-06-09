@@ -12,7 +12,8 @@ AppID：`wx2c8d1e2b2e502819`
 **一键（推荐）：**
 
 ```bash
-pnpm dev   # API + AI + Web + H5 + 小程序 + Android App
+pnpm dev   # API + AI + Web + PC + H5 + 小程序 + Android App
+           # Web :5173、PC :5176 就绪后自动打开浏览器；小程序自动打开开发者工具
 ```
 
 **或分终端：**

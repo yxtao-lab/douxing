@@ -101,10 +101,12 @@ export const sharedEnUS = {
     attractionsPending: 'Attraction Review',
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
+    analytics: 'Analytics',
     logout: 'Sign out',
     menu: {
       biz: 'Operations',
       content: 'Content',
+      data: 'Data platform',
     },
     layout: {
       breadcrumbHome: 'Home',

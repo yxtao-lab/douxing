@@ -92,12 +92,14 @@ pnpm db:reset      # 重置库并重新迁移、种子
 
 ### 开发运行（dev）
 
-**一次启动全部（API + AI + Web + H5 + 微信小程序 + Android App 热更新）：**
+**一次启动全部（API + AI + Web 管理端 + PC 用户端 + H5 + 微信小程序 + Android App 热更新）：**
 
 ```bash
 pnpm dev
 pnpm env:status   # 可选：确认 API 指向本地
 ```
+
+就绪后会**自动打开浏览器**：管理后台 `:5173`、PC 用户端 `:5176`；微信小程序编译完成后自动打开开发者工具。禁用：`DOUXING_NO_OPEN=1 pnpm dev`。
 
 HBuilderX 导入 App 开发目录：`packages/mobile/dist/dev/app`（首次需「运行到手机」制作自定义调试基座）。
 
@@ -111,13 +113,18 @@ pnpm dev:only mp-weixin           # 仅微信小程序编译
 pnpm dev:only app-android         # 仅 Android App（自动带上 server）
 pnpm dev:only app-ios             # 仅 iOS App（自动带上 server）
 pnpm dev:only server,web,mobile   # 任意组合，逗号分隔
+pnpm dev:only server,pc           # 后端 + PC 用户端（浏览器自启 :5176）
 ```
+
+**浏览器自启动（Vite 就绪后）：** 管理端 `dev:web`、PC 端 `dev:pc`；`pnpm dev` 全端时两者都会打开。环境变量见 [启动与部署流程 · §3.4](docs/启动与部署流程.md#34-浏览器自启动可选)。
 
 **等价单平台命令（不自动组合其他端）：**
 
 ```bash
 pnpm dev:server        # 后端 API       → http://localhost:3000
-pnpm dev:web           # Web 管理端     → http://localhost:5173
+pnpm dev:web           # Web 管理端     → http://localhost:5173（就绪后自动打开浏览器）
+pnpm dev:pc            # PC 用户端      → http://localhost:5176（就绪后自动打开浏览器）
+pnpm dev:admin         # 后端 + 管理端   → API :3000 + 管理端 :5173
 pnpm dev:mobile        # 移动端 H5      → http://localhost:5174
 pnpm dev:mp-weixin     # 微信小程序     → packages/mobile/dist/dev/mp-weixin
 pnpm dev:app           # 原生 App 开发
@@ -215,9 +222,10 @@ AI 路线生成（DeepSeek / LM Studio）环境变量与接口说明见下文 [A
 | 标识 | 说明 | 开发 | 默认端口 / 产物 |
 |------|------|------|-----------------|
 | `server` | 后端 API | `pnpm dev:server` | http://localhost:3000 |
-| `web` | Web 管理端 | `pnpm dev:web` | http://localhost:5173 |
+| `web` | Web 管理端 | `pnpm dev:web` | http://localhost:5173（就绪后自动打开浏览器） |
+| `pc` / `desktop` | PC 用户端 | `pnpm dev:pc` | http://localhost:5176（就绪后自动打开浏览器） |
 | `mobile` / `h5` | 移动端 H5 | `pnpm dev:mobile` | http://localhost:5174 |
-| `mp-weixin` / `mp` | 微信小程序 | `pnpm dev:mp-weixin` | `packages/mobile/dist/dev/mp-weixin` |
+| `mp-weixin` / `mp` | 微信小程序 | `pnpm dev:mp-weixin` | `packages/mobile/dist/dev/mp-weixin`（编译后自动打开开发者工具） |
 | `app-android` / `android` | Android App | `pnpm dev:app-android` | `packages/mobile/dist/build/app` |
 | `app-ios` / `ios` | iOS App | `pnpm dev:app-ios` | `packages/mobile/dist/build/app` |
 | `app` / `native` | 原生 App（通用） | `pnpm dev:app` | `packages/mobile/dist/build/app` |
@@ -226,7 +234,8 @@ AI 路线生成（DeepSeek / LM Studio）环境变量与接口说明见下文 [A
 
 | 端 | 地址 / 操作 |
 |----|-------------|
-| 管理端 | http://localhost:5173 |
+| 管理端 | http://localhost:5173（`pnpm dev` / `dev:web` 就绪后自动打开） |
+| PC 用户端 | http://localhost:5176（`pnpm dev` / `dev:pc` 就绪后自动打开） |
 | 移动端 H5 | http://localhost:5174 |
 | API 健康检查 | http://localhost:3000/api/health |
 | 微信小程序 | [微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html) 导入 `packages/mobile/dist/dev/mp-weixin`；开发阶段关闭「校验合法域名」 |

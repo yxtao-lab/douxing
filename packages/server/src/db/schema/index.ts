@@ -16,3 +16,4 @@ export * from './user-badges.js';
 export * from './plan-sessions.js';
 export * from './route-playbooks.js';
 export * from './journey-albums.js';
+export * from './analytics-events.js';

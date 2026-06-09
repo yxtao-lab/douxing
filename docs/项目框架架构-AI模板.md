@@ -268,7 +268,7 @@ packages/mobile/src/
 
 | 脚本类别 | 示例 | 实现方式 |
 |----------|------|----------|
-| 开发 | `dev`, `dev:server`, `dev:web`, `dev:mobile`, `dev:mp-weixin` | `node scripts/pm.mjs` + concurrently |
+| 开发 | `dev`, `dev:server`, `dev:web`, `dev:pc`, `dev:admin`, `dev:mobile`, `dev:mp-weixin` | `scripts/dev-web.mjs` / `dev-pc.mjs` / `dev-mp-weixin.mjs` + concurrently |
 | 组合开发 | `dev:only` | `scripts/run-dev.mjs` + `platforms.mjs` |
 | 构建 | `build`, `build:web`, `build:server` | pm filter / recursive |
 | 数据库 | `db:migrate`, `db:seed`, `db:setup` | filter server |
@@ -280,7 +280,8 @@ packages/mobile/src/
 | id | 说明 |
 |----|------|
 | server | 后端 API |
-| web | 管理端 |
+| web | 管理端（dev 就绪后自动打开浏览器） |
+| pc / desktop | PC 用户端（dev 就绪后自动打开浏览器） |
 | mobile / h5 | H5 |
 | mp-weixin / mp | 微信小程序 |
 | app-android / android | Android |
