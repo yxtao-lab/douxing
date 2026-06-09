@@ -215,6 +215,22 @@ export const CHECKIN_FIRST_ATTRACTION_BONUS = 10;
 /** 单条打卡最多上传照片数 */
 export const CHECKIN_MAX_PHOTOS = 3;
 
+/** 旅行照片单张大小上限（J1 默认 10MB） */
+export const TRAVEL_PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024;
+
+/** 旅程相册状态 */
+export const JourneyAlbumStatus = {
+  ACTIVE: 'active',
+  ARCHIVED: 'archived',
+} as const;
+
+/** 旅行照片来源 */
+export const TravelPhotoSource = {
+  UPLOAD: 'upload',
+  CHECKIN: 'checkin',
+  IMPORT: 'import',
+} as const;
+
 /** 地理围栏有效打卡半径（米） */
 export const CHECKIN_GEOFENCE_RADIUS_M = 500;
 

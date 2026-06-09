@@ -164,6 +164,23 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.PLAYBOOK_DELETE_SUCCESS]: '玩法动线已删除',
   [ApiMessageKey.PLAYBOOK_DELETE_FAILED]: '删除玩法动线失败',
 
+  [ApiMessageKey.JOURNEY_ALBUM_LIST_FAILED]: '获取旅程相册列表失败',
+  [ApiMessageKey.JOURNEY_ALBUM_DETAIL_FAILED]: '获取旅程相册详情失败',
+  [ApiMessageKey.JOURNEY_ALBUM_CREATE_FAILED]: '创建旅程相册失败',
+  [ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND]: '旅程相册不存在',
+  [ApiMessageKey.JOURNEY_ALBUM_FORBIDDEN]: '无权访问该旅程相册',
+  [ApiMessageKey.JOURNEY_ALBUM_INVALID_ID]: '无效的相册 ID',
+  [ApiMessageKey.JOURNEY_ALBUM_ROUTE_NOT_OWNED]: '只能为自己的路线创建相册',
+  [ApiMessageKey.JOURNEY_ALBUM_CREATED]: '旅程相册已创建',
+  [ApiMessageKey.TRAVEL_PHOTO_UPLOAD_FAILED]: '照片上传失败',
+  [ApiMessageKey.TRAVEL_PHOTO_UPLOAD_SUCCESS]: '照片上传成功',
+  [ApiMessageKey.TRAVEL_PHOTO_NOT_FOUND]: '照片不存在',
+  [ApiMessageKey.TRAVEL_PHOTO_UPDATE_FAILED]: '更新照片失败',
+  [ApiMessageKey.TRAVEL_PHOTO_DELETE_FAILED]: '删除照片失败',
+  [ApiMessageKey.TRAVEL_PHOTO_DELETE_SUCCESS]: '照片已删除',
+  [ApiMessageKey.TRAVEL_PHOTO_UPDATED]: '照片已更新',
+  [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: '照片文件过大',
+
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
 };
 
@@ -334,6 +351,23 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.PLAYBOOK_UPDATE_FAILED]: 'Failed to update playbook',
   [ApiMessageKey.PLAYBOOK_DELETE_SUCCESS]: 'Playbook deleted',
   [ApiMessageKey.PLAYBOOK_DELETE_FAILED]: 'Failed to delete playbook',
+
+  [ApiMessageKey.JOURNEY_ALBUM_LIST_FAILED]: 'Failed to load journey albums',
+  [ApiMessageKey.JOURNEY_ALBUM_DETAIL_FAILED]: 'Failed to load journey album',
+  [ApiMessageKey.JOURNEY_ALBUM_CREATE_FAILED]: 'Failed to create journey album',
+  [ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND]: 'Journey album not found',
+  [ApiMessageKey.JOURNEY_ALBUM_FORBIDDEN]: 'You cannot access this journey album',
+  [ApiMessageKey.JOURNEY_ALBUM_INVALID_ID]: 'Invalid journey album ID',
+  [ApiMessageKey.JOURNEY_ALBUM_ROUTE_NOT_OWNED]: 'You can only create albums for your own routes',
+  [ApiMessageKey.JOURNEY_ALBUM_CREATED]: 'Journey album created',
+  [ApiMessageKey.TRAVEL_PHOTO_UPLOAD_FAILED]: 'Failed to upload photo',
+  [ApiMessageKey.TRAVEL_PHOTO_UPLOAD_SUCCESS]: 'Photo uploaded',
+  [ApiMessageKey.TRAVEL_PHOTO_NOT_FOUND]: 'Photo not found',
+  [ApiMessageKey.TRAVEL_PHOTO_UPDATE_FAILED]: 'Failed to update photo',
+  [ApiMessageKey.TRAVEL_PHOTO_DELETE_FAILED]: 'Failed to delete photo',
+  [ApiMessageKey.TRAVEL_PHOTO_DELETE_SUCCESS]: 'Photo deleted',
+  [ApiMessageKey.TRAVEL_PHOTO_UPDATED]: 'Photo updated',
+  [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: 'Photo file is too large',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
 };

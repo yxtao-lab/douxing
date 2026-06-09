@@ -915,6 +915,8 @@ POST /api/speech/transcribe
 | 品牌标语（Slogan） | [docs/品牌标语.md](./品牌标语.md) |
 | 专属模型训练与部署 | [docs/阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) |
 | 旅行照片存储（J 线） | [docs/旅行照片存储系统.md](./旅行照片存储系统.md) |
+| **REST API 接口文档** | [docs/API接口文档.md](./API接口文档.md) |
+| **OpenAPI（Apifox 导入）** | [docs/openapi.yaml](./openapi.yaml) |
 | 后期待办（合规资质） | [docs/后期待办.md](./后期待办.md) |
 | 产品待办（H 阶段） | [ROADMAP.md §9](./ROADMAP.md#9-产品待办池新增关键点) |
 | 微信小程序 | [scripts/mp-weixin.md](../scripts/mp-weixin.md) |

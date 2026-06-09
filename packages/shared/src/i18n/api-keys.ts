@@ -162,6 +162,23 @@ export const ApiMessageKey = {
   PLAYBOOK_DELETE_SUCCESS: 'api.playbookDeleteSuccess',
   PLAYBOOK_DELETE_FAILED: 'api.playbookDeleteFailed',
 
+  JOURNEY_ALBUM_LIST_FAILED: 'api.journeyAlbumListFailed',
+  JOURNEY_ALBUM_DETAIL_FAILED: 'api.journeyAlbumDetailFailed',
+  JOURNEY_ALBUM_CREATE_FAILED: 'api.journeyAlbumCreateFailed',
+  JOURNEY_ALBUM_NOT_FOUND: 'api.journeyAlbumNotFound',
+  JOURNEY_ALBUM_FORBIDDEN: 'api.journeyAlbumForbidden',
+  JOURNEY_ALBUM_INVALID_ID: 'api.journeyAlbumInvalidId',
+  JOURNEY_ALBUM_ROUTE_NOT_OWNED: 'api.journeyAlbumRouteNotOwned',
+  JOURNEY_ALBUM_CREATED: 'api.journeyAlbumCreated',
+  TRAVEL_PHOTO_UPLOAD_FAILED: 'api.travelPhotoUploadFailed',
+  TRAVEL_PHOTO_UPLOAD_SUCCESS: 'api.travelPhotoUploadSuccess',
+  TRAVEL_PHOTO_NOT_FOUND: 'api.travelPhotoNotFound',
+  TRAVEL_PHOTO_UPDATE_FAILED: 'api.travelPhotoUpdateFailed',
+  TRAVEL_PHOTO_DELETE_FAILED: 'api.travelPhotoDeleteFailed',
+  TRAVEL_PHOTO_DELETE_SUCCESS: 'api.travelPhotoDeleteSuccess',
+  TRAVEL_PHOTO_UPDATED: 'api.travelPhotoUpdated',
+  TRAVEL_PHOTO_FILE_TOO_LARGE: 'api.travelPhotoFileTooLarge',
+
   SERVER_RUNNING: 'api.serverRunning',
 } as const;
 

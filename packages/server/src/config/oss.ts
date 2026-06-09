@@ -37,6 +37,12 @@ export function getOssAttractionsPrefix(): string {
   return raw.endsWith('/') ? raw : `${raw}/`;
 }
 
+/** 用户旅行照片对象键前缀，默认 photos/ */
+export function getOssPhotosPrefix(): string {
+  const raw = trimEnv('OSS_PHOTOS_PREFIX') || 'photos/';
+  return raw.endsWith('/') ? raw : `${raw}/`;
+}
+
 /** Wikimedia 封面兜底，默认开启（OSS 无关） */
 export function isWikimediaImageEnrichEnabled(): boolean {
   return trimEnv('WIKIMEDIA_IMAGE_ENRICH_ENABLED') !== 'false';

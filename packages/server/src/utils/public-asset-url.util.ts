@@ -4,8 +4,8 @@
  * - 接口返回时按 API_PUBLIC_BASE_URL（或分环境变量）或当前请求动态拼完整 URL
  */
 
-const OUR_UPLOAD_PATH = /^(\/uploads\/(?:avatars|checkins|attractions)\/.+)$/i;
-const OUR_UPLOAD_FULL = /^https?:\/\/[^/]+(\/uploads\/(?:avatars|checkins|attractions)\/.+)$/i;
+const OUR_UPLOAD_PATH = /^(\/uploads\/(?:avatars|checkins|attractions|photos)\/.+)$/i;
+const OUR_UPLOAD_FULL = /^https?:\/\/[^/]+(\/uploads\/(?:avatars|checkins|attractions|photos)\/.+)$/i;
 
 function trimPublicBase(value: string | undefined): string | null {
   const trimmed = value?.trim();

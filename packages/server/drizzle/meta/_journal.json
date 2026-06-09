@@ -141,6 +141,13 @@
       "when": 1749196800000,
       "tag": "0019_route_playbooks",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "5",
+      "when": 1749283200000,
+      "tag": "0020_journey_albums",
+      "breakpoints": true
     }
   ]
 }

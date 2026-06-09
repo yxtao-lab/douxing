@@ -1,0 +1,846 @@
+# 兜行 API 接口文档
+
+> **版本**：与代码同步（含 J1 旅程相册）  
+> **更新日期**：2026-06-09  
+> **服务包**：`packages/server`（Express + MySQL）  
+> **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
+
+---
+
+## Apifox 导入（推荐）
+
+接口定义以 **OpenAPI 3.0** 机器可读文件为准，可直接导入 Apifox：
+
+| 文件 | 说明 |
+|------|------|
+| **[openapi.yaml](./openapi.yaml)** | 全量 72 个 REST 接口，含参数、Schema、JWT 鉴权 |
+
+**导入步骤**
+
+1. 打开 Apifox → 选择目标项目  
+2. **项目设置** → **导入数据**（或左上角 **导入**）  
+3. 格式选 **OpenAPI** / **Swagger**  
+4. 选择本仓库 `docs/openapi.yaml`（或拖入文件）  
+5. 导入后检查 **环境变量**：将 `servers` 中的 `http://localhost:3000` 设为当前环境  
+6. 在 **Auth / 鉴权** 中配置：`Bearer Token`，值来自 `POST /api/auth/login` 返回的 `data.token`
+
+**Apifox 环境建议**
+
+| 变量名 | 示例值 | 用途 |
+|--------|--------|------|
+| `baseUrl` | `http://localhost:3000` | 与 OpenAPI `servers.url` 一致 |
+| `token` | `eyJhbG...` | 登录后 JWT，用于 `Authorization: Bearer {{token}}` |
+
+> 修改 `packages/server/src/routes/**` 后，请同步更新 `docs/openapi.yaml`，再于 Apifox 中 **重新导入** 或 **合并更新**。
+
+---
+
+## 目录
+
+1. [通用约定](#1-通用约定)
+2. [接口总览](#2-接口总览)
+3. [系统与健康检查](#3-系统与健康检查)
+4. [认证 auth](#4-认证-auth)
+5. [用户 users](#5-用户-users)
+6. [景点 attractions](#6-景点-attractions)
+7. [路线 routes](#7-路线-routes)
+8. [规划会话 plan-sessions](#8-规划会话-plan-sessions)
+9. [打卡 checkins](#9-打卡-checkins)
+10. [订单 orders](#10-订单-orders)
+11. [支付 payments](#11-支付-payments)
+12. [成就 achievements](#12-成就-achievements)
+13. [徽章 badges](#13-徽章-badges)
+14. [排行榜 leaderboard](#14-排行榜-leaderboard)
+15. [语音 speech](#15-语音-speech)
+16. [分享 share](#16-分享-share)
+17. [玩法动线 playbooks](#17-玩法动线-playbooks)
+18. [旅程相册 journey-albums](#18-旅程相册-journey-albums)
+19. [静态资源 uploads](#19-静态资源-uploads)
+20. [附录：常用枚举](#20-附录常用枚举)
+
+---
+
+## 1. 通用约定
+
+### 1.1 基址
+
+| 环境 | 基址示例 |
+|------|----------|
+| 本地开发 | `http://localhost:3000` |
+| 生产 | 见 `API_PUBLIC_BASE_URL` / `https://api.yxtao.site` |
+
+所有 JSON API 前缀为 **`/api`**（`@douxing/shared` 中 `API_PREFIX = '/api'`）。
+
+### 1.2 请求头
+
+| Header | 说明 |
+|--------|------|
+| `Authorization` | 需登录接口：`Bearer <JWT>` |
+| `Content-Type` | JSON 体：`application/json`；上传：`multipart/form-data` |
+| `Accept-Language` | 可选，`zh-CN`（默认）或 `en-US`；影响 `message` 文案 |
+
+### 1.3 统一响应体
+
+```json
+{
+  "code": 0,
+  "message": "成功",
+  "messageKey": "api.ok",
+  "data": { }
+}
+```
+
+| 字段 | 说明 |
+|------|------|
+| `code` | `0` 成功；非 0 业务错误 |
+| `message` | 人类可读文案（随 `Accept-Language`） |
+| `messageKey` | 稳定 i18n 键，见 `ApiMessageKey` |
+| `data` | 业务数据；失败时多为 `null` |
+
+HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失败 **401**、无权 **403**、资源不存在 **404** 等也会配合使用。
+
+### 1.4 分页
+
+查询参数：`page`（默认 1）、`pageSize`（默认 20，最大 100）。
+
+分页响应（`PaginatedResult<T>`）：
+
+```json
+{
+  "items": [],
+  "total": 100,
+  "page": 1,
+  "pageSize": 20,
+  "hasMore": true
+}
+```
+
+### 1.5 鉴权说明
+
+| 标记 | 含义 |
+|------|------|
+| 公开 | 无需 Token |
+| 登录 | 需有效 JWT |
+| 管理员 | 需 JWT 且角色含 `admin` |
+
+### 1.6 静态资源 URL
+
+数据库存 **相对路径**（如 `/uploads/photos/2/xxx.jpg`）或 **OSS/CDN 完整 URL**。  
+接口返回时会按 `API_PUBLIC_BASE_URL` 或当前请求 Host 拼完整 URL。
+
+---
+
+## 2. 接口总览
+
+| # | 方法 | 路径 | 鉴权 | 模块 |
+|---|------|------|------|------|
+| 1 | GET | `/` | 公开 | 系统 |
+| 2 | GET | `/api/health` | 公开 | 系统 |
+| 3 | POST | `/api/auth/register` | 公开 | 认证 |
+| 4 | POST | `/api/auth/login` | 公开 | 认证 |
+| 5 | POST | `/api/auth/sms/send` | 公开 | 认证 |
+| 6 | POST | `/api/auth/sms/login` | 公开 | 认证 |
+| 7 | GET | `/api/auth/me` | 登录 | 认证 |
+| 8 | GET | `/api/users/me` | 登录 | 用户 |
+| 9 | PUT | `/api/users/me` | 登录 | 用户 |
+| 10 | GET | `/api/users/me/membership` | 登录 | 用户 |
+| 11 | POST | `/api/users/me/avatar` | 登录 | 用户 |
+| 12 | GET | `/api/attractions` | 公开 | 景点 |
+| 13 | GET | `/api/attractions/cities` | 公开 | 景点 |
+| 14 | GET | `/api/attractions/:id` | 公开 | 景点 |
+| 15 | GET | `/api/attractions/admin/pending` | 管理员 | 景点 |
+| 16 | GET | `/api/attractions/admin/catalog` | 管理员 | 景点 |
+| 17 | POST | `/api/attractions/admin/:id/cover` | 管理员 | 景点 |
+| 18 | POST | `/api/attractions/admin/:id/cover/refresh-amap` | 管理员 | 景点 |
+| 19 | POST | `/api/attractions/admin/:id/approve` | 管理员 | 景点 |
+| 20 | GET | `/api/routes/llm-providers` | 公开 | 路线 |
+| 21 | GET | `/api/routes/llm-status` | 公开 | 路线 |
+| 22 | POST | `/api/routes/generate` | 登录 | 路线 |
+| 23 | GET | `/api/routes` | 登录 | 路线 |
+| 24 | GET | `/api/routes/plaza` | 登录 | 路线 |
+| 25 | GET | `/api/routes/hot` | 登录 | 路线（兼容） |
+| 26 | GET | `/api/routes/:id` | 登录 | 路线 |
+| 27 | PUT | `/api/routes/:id` | 登录 | 路线 |
+| 28 | POST | `/api/routes/:id/publish` | 登录 | 路线 |
+| 29 | POST | `/api/routes/:id/regenerate` | 登录 | 路线 |
+| 30 | POST | `/api/routes/:id/like` | 登录 | 路线 |
+| 31 | POST | `/api/routes/:id/favorite` | 登录 | 路线 |
+| 32 | POST | `/api/routes/:id/share` | 登录 | 路线 |
+| 33 | GET | `/api/routes/:id/comments` | 登录 | 路线 |
+| 34 | POST | `/api/routes/:id/comments` | 登录 | 路线 |
+| 35 | GET | `/api/routes/:id/map-path` | 登录 | 路线 |
+| 36 | GET | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 37 | POST | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 38 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
+| 39 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
+| 40 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
+| 41 | POST | `/api/checkins/photos` | 登录 | 打卡 |
+| 42 | POST | `/api/checkins` | 登录 | 打卡 |
+| 43 | GET | `/api/checkins` | 登录 | 打卡 |
+| 44 | GET | `/api/orders/payment-config` | 登录 | 订单 |
+| 45 | POST | `/api/orders` | 登录 | 订单 |
+| 46 | GET | `/api/orders` | 登录 | 订单 |
+| 47 | GET | `/api/orders/:id` | 登录 | 订单 |
+| 48 | POST | `/api/orders/:id/prepay` | 登录 | 订单 |
+| 49 | POST | `/api/orders/:id/pay` | 登录 | 订单 |
+| 50 | POST | `/api/orders/:id/cancel` | 登录 | 订单 |
+| 51 | POST | `/api/payments/wechat/notify` | 微信回调 | 支付 |
+| 52 | GET | `/api/achievements/catalog` | 登录 | 成就 |
+| 53 | GET | `/api/achievements/mine` | 登录 | 成就 |
+| 54 | GET | `/api/achievements` | 登录 | 成就（兼容） |
+| 55 | GET | `/api/badges` | 登录 | 徽章 |
+| 56 | GET | `/api/badges/mine` | 登录 | 徽章 |
+| 57 | GET | `/api/leaderboard` | 登录 | 排行榜 |
+| 58 | POST | `/api/speech/transcribe` | 登录 | 语音 |
+| 59 | GET | `/api/share/routes/:id` | 公开 | 分享 |
+| 60 | GET | `/api/share/routes/:id/wxacode` | 公开 | 分享 |
+| 61 | GET | `/api/share/routes/:id/link` | 公开 | 分享 |
+| 62 | GET | `/api/playbooks/admin` | 管理员 | 动线 |
+| 63 | GET | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 64 | POST | `/api/playbooks/admin` | 管理员 | 动线 |
+| 65 | PUT | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 66 | DELETE | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 67 | GET | `/api/journey-albums` | 登录 | 相册 |
+| 68 | POST | `/api/journey-albums` | 登录 | 相册 |
+| 69 | GET | `/api/journey-albums/:id` | 登录 | 相册 |
+| 70 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
+| 71 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 72 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+
+---
+
+## 3. 系统与健康检查
+
+### GET `/`
+
+根路径健康探测。
+
+**响应 `data`**：`{ name, status: 'ok' }`
+
+### GET `/api/health`
+
+**响应 `data`**：
+
+| 字段 | 说明 |
+|------|------|
+| `name` | 应用名「兜行」 |
+| `status` | `ok` |
+| `timestamp` | ISO 时间 |
+| `checkin` | 打卡配置摘要（围栏开关等） |
+
+---
+
+## 4. 认证 auth
+
+前缀：`/api/auth`
+
+### POST `/register`
+
+用户名密码注册。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `username` | string | 是 | 3～32 字符 |
+| `password` | string | 是 | 6～64 字符 |
+| `nickname` | string | 否 | 昵称 |
+
+**响应 `data`**：`LoginResult` — `{ token, user: UserInfo }`
+
+### POST `/login`
+
+**Body**：`{ username, password }`
+
+**响应 `data`**：`LoginResult`
+
+### POST `/sms/send`
+
+发送手机验证码。
+
+**Body**：`{ phone }` — 大陆 11 位手机号
+
+**响应 `data`**：发送结果（含 mock 模式提示）
+
+### POST `/sms/login`
+
+验证码登录；未注册手机号自动注册。
+
+**Body**：`{ phone, code }` — 验证码 6 位
+
+**响应 `data`**：`LoginResult`
+
+### GET `/me`
+
+当前登录用户（含角色）。
+
+**响应 `data`**：`UserInfo`
+
+---
+
+## 5. 用户 users
+
+前缀：`/api/users`
+
+### GET `/me`
+
+同 `GET /api/auth/me`，返回 `UserInfo`。
+
+### PUT `/me`
+
+更新资料。
+
+**Body**（均可选，至少一项）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `nickname` | string | 1～64 字符 |
+| `avatar` | string \| null | 头像 URL 或相对路径 |
+| `email` | string \| null | 邮箱 |
+| `interestTags` | string[] | 兴趣标签，上限见 `USER_INTEREST_MAX` |
+
+**响应 `data`**：`UserInfo`
+
+### GET `/me/membership`
+
+**响应 `data`**：会员权益信息（等级、规划候选数等）
+
+### POST `/me/avatar`
+
+上传头像（multipart）。
+
+| 表单字段 | 说明 |
+|----------|------|
+| `file` | 图片，≤ 2MB，支持 jpg/png/webp/gif |
+
+**响应 `data`**：`UserInfo`（含新头像 URL）
+
+---
+
+## 6. 景点 attractions
+
+前缀：`/api/attractions`
+
+### GET `/`
+
+景点列表（仅已发布）。
+
+**Query**
+
+| 参数 | 说明 |
+|------|------|
+| `city` | 城市名 |
+| `cityCode` | 城市编码 |
+| `category` | `attraction` \| `restaurant` \| `hotel` |
+| `keyword` | 关键词 |
+| `tags` | 标签，逗号分隔或数组 |
+| `limit` | 1～100 |
+| `offset` | 偏移 |
+
+**响应 `data`**：`AttractionInfo[]`
+
+### GET `/cities`
+
+有景点的城市汇总。
+
+### GET `/:id`
+
+景点详情（仅已发布）。
+
+---
+
+### 管理员接口
+
+需 **admin** 角色。
+
+#### GET `/admin/pending`
+
+待审核景点（分页）。
+
+#### GET `/admin/catalog`
+
+景点管理列表。
+
+**Query**：`city`、`keyword`、`page`、`pageSize`
+
+#### POST `/admin/:id/cover`
+
+上传景点封面（multipart 字段 `file`，≤ 3MB）。
+
+#### POST `/admin/:id/cover/refresh-amap`
+
+从高德拉取封面（非 manual 来源）。
+
+#### POST `/admin/:id/approve`
+
+审核通过 pending 景点。
+
+---
+
+## 7. 路线 routes
+
+前缀：`/api/routes`
+
+### GET `/llm-providers`
+
+可选 LLM 提供商列表。
+
+**响应 `data`**：`{ options: [...] }`
+
+### GET `/llm-status`
+
+检测 DeepSeek / LM Studio / ai-service 可用性。
+
+### POST `/generate`
+
+一句话生成路线（单轮，无会话）。
+
+**Body**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `prompt` | string | 旅行需求，≥ 2 字 |
+| `days` | number | 可选，1～7 |
+| `budget` | string | 可选 |
+| `provider` | string | `auto` \| `deepseek` \| `lmstudio` |
+
+**响应 `data`**：`TravelRouteInfo` + `generationSource`、`llmProvider`
+
+### GET `/`
+
+路线列表。
+
+**Query**
+
+| 参数 | 说明 |
+|------|------|
+| `scope` | `mine` \| `plaza` \| `favorites` \| `hot` |
+| `status` | 0 草稿 / 1 已发布 / 2 归档 |
+| `sort` | `recent` \| `hot` \| `views` |
+| `page` / `pageSize` / `limit` | 分页 |
+| `all=1` | **管理员**：全站路线 |
+
+**响应 `data`**：`PaginatedResult<TravelRouteInfo>`
+
+### GET `/plaza`
+
+广场公开路线（`isPublic=1`），默认真按热度。
+
+### GET `/hot`
+
+**已废弃**，行为同 `/plaza`。
+
+### GET `/:id`
+
+路线详情（非所有者仅可看已发布且公开路线；浏览量 +1）。
+
+### PUT `/:id`
+
+编辑 **草稿** 路线。
+
+**Body**（均可选）：`name`、`description`、`budgetRange`、`days`、`interestTags`、`routeDetail`
+
+### POST `/:id/publish`
+
+发布路线。
+
+### POST `/:id/regenerate`
+
+AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
+
+**Body**：同 `/generate`
+
+### POST `/:id/like`
+
+点赞/取消。**响应**：`{ liked, likeCount }`
+
+### POST `/:id/favorite`
+
+收藏/取消。**响应**：`{ favorited, collectCount }`
+
+### POST `/:id/share`
+
+公开/取消公开到广场。
+
+**Body**：`{ isPublic: boolean }`（公开前须已发布）
+
+### GET `/:id/comments`
+
+评论列表。**Query**：`limit`（默认 50）
+
+### POST `/:id/comments`
+
+发表评论（仅广场公开路线）。
+
+**Body**：`{ content: string }` — 1～500 字
+
+### GET `/:id/map-path`
+
+路线地图 polyline（需有查看权限）。
+
+**Query**：`day` — 可选，指定某天 0-based 索引
+
+**响应 `data`**：地图路径对象（含 polyline、节点等）
+
+---
+
+## 8. 规划会话 plan-sessions
+
+前缀：`/api/routes/plan-sessions`  
+多轮对话规划 + 多方案候选（C1/C4）。
+
+### GET `/`
+
+我的规划会话列表。
+
+**Query**：`limit`（1～50，默认 20）
+
+**响应 `data`**：`PlanSessionSummary[]`
+
+### POST `/`
+
+创建会话并生成首条方案。
+
+**Body**：同 `POST /api/routes/generate`
+
+**响应 `data`**：`PlanSessionActionResult`（含 `sessionId`、`candidates` 等）
+
+### GET `/:sessionId`
+
+会话详情（消息、路线、候选）。
+
+**响应 `data`**：`PlanSessionInfo`
+
+### POST `/:sessionId/messages`
+
+追问/修改方案。
+
+**Body**：`{ content: string }` — 1～500 字
+
+**响应 `data`**：`PlanSessionActionResult`
+
+### POST `/:sessionId/select-candidate`
+
+切换候选方案。
+
+**Body**：`{ routeId: number }`
+
+**响应 `data`**：`PlanSessionActionResult`
+
+---
+
+## 9. 打卡 checkins
+
+前缀：`/api/checkins`
+
+### POST `/photos`
+
+上传打卡照片（multipart）。
+
+| 表单字段 | 说明 |
+|----------|------|
+| `file` | 图片，≤ 2MB |
+
+**响应 `data`**：`{ url, path }` — 公网 URL 与 DB 相对路径
+
+### POST `/`
+
+创建打卡（含地理围栏校验）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `routeId` | number | 是 | 路线 ID |
+| `location` | object | 是 | `latitude`、`longitude`、`placeName`；可选 `address` |
+| `attractionId` | number | 否 | 关联景点 |
+| `cityCode` / `cityName` | string | 否 | 城市 |
+| `targetLatitude` / `targetLongitude` | number | 否 | 围栏目标坐标 |
+| `gpsAccuracy` | number | 否 | GPS 精度（米） |
+| `photos` | string[] | 否 | 已上传图片 URL，最多 3 张 |
+| `remark` | string | 否 | 备注 |
+
+**响应 `data`**：`CheckInResult` — `{ checkIn, newAchievements, newBadges }`
+
+### GET `/`
+
+打卡列表（分页）。
+
+**Query**
+
+| 参数 | 说明 |
+|------|------|
+| `page` / `pageSize` | 分页 |
+| `range` | `7d` \| `30d` \| `90d` \| `all` |
+| `routeId` | 指定路线的打卡 |
+| `all=1` | **管理员**：全站打卡 |
+
+---
+
+## 10. 订单 orders
+
+前缀：`/api/orders`
+
+### GET `/payment-config`
+
+**响应 `data`**：
+
+| 字段 | 说明 |
+|------|------|
+| `mode` | 支付模式 |
+| `wechatConfigured` | 微信支付是否配置 |
+| `routeUnlockPaymentRequired` | 路线解锁是否强制支付 |
+
+### POST `/`
+
+创建路线解锁订单。
+
+**Body**：`{ routeId: number }`
+
+**响应 `data`**：`OrderInfo`
+
+### GET `/`
+
+我的订单（分页）。
+
+**Query**：`tab` — `all` \| `pending` \| `done`；`all=1` 管理员全站
+
+### GET `/:id`
+
+订单详情。
+
+### POST `/:id/prepay`
+
+微信 JSAPI 预下单。
+
+**Body**：`{ wxCode?: string }` — 小程序 login code
+
+**响应 `data`**：`OrderPrepayResult`
+
+### POST `/:id/pay`
+
+模拟支付（开发/MVP）。
+
+### POST `/:id/cancel`
+
+取消 pending 订单。
+
+---
+
+## 11. 支付 payments
+
+### POST `/api/payments/wechat/notify`
+
+微信支付异步通知（**非 JSON 中间件**，raw body）。  
+由微信服务器调用，无需 JWT。响应格式遵循微信支付协议。
+
+---
+
+## 12. 成就 achievements
+
+前缀：`/api/achievements`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/catalog` | 成就图鉴（含解锁状态与进度） |
+| GET | `/mine` | 已解锁成就 |
+| GET | `/` | 兼容旧版，同 `/mine` |
+
+**响应 `data`**：`AchievementCatalogItem[]` 或 `AchievementInfo[]`
+
+---
+
+## 13. 徽章 badges
+
+前缀：`/api/badges`
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/` | 徽章图鉴（含进度） |
+| GET | `/mine` | 已解锁徽章 |
+
+---
+
+## 14. 排行榜 leaderboard
+
+### GET `/api/leaderboard`
+
+**Query**
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `period` | `week` | `week` \| `month` |
+| `metric` | `checkins` | `checkins` \| `points` |
+| `limit` | — | 1～`LEADERBOARD_MAX_LIMIT` |
+
+**响应 `data`**：`LeaderboardResult` — 含 `entries`、`myRank`、`myValue`
+
+---
+
+## 15. 语音 speech
+
+### POST `/api/speech/transcribe`
+
+语音转文字（腾讯云 ASR）。
+
+**multipart 字段**：`audio` — ≤ 10MB
+
+**响应 `data`**：`{ text: string }`
+
+---
+
+## 16. 分享 share
+
+前缀：`/api/share` — **均无需登录**
+
+### GET `/routes/:id`
+
+公开路线只读摘要（D5-a H5 分享页）。
+
+### GET `/routes/:id/wxacode`
+
+返回 **PNG** 小程序码（需配置微信 AppId/Secret）。
+
+### GET `/routes/:id/link`
+
+**响应 `data`**：`{ url: string }` — 微信 URL Link
+
+---
+
+## 17. 玩法动线 playbooks
+
+前缀：`/api/playbooks` — **管理员 CRUD**（H9+-2）
+
+### GET `/admin`
+
+动线列表（分页）。
+
+**Query**：`city`、`keyword`、`enabled`、`page`、`pageSize`
+
+### GET `/admin/:id`
+
+动线详情（`:id` 为 slug，如 `hangzhou-west-lake`）。
+
+### POST `/admin`
+
+创建动线。
+
+**Body**：`RoutePlaybookInfo` 结构 — `id`、`city`、`scope`、`keywords`、`themes`、`classicOrder`、`segments`、`summaryZh`、`summaryEn` 等
+
+### PUT `/admin/:id`
+
+部分更新动线。
+
+### DELETE `/admin/:id`
+
+删除动线。
+
+---
+
+## 18. 旅程相册 journey-albums
+
+前缀：`/api/journey-albums` — **J1 数据模型 + 上传 API**
+
+一路线一相册；照片按天/POI 分组；详见 [旅行照片存储系统.md](./旅行照片存储系统.md)。
+
+### GET `/`
+
+我的相册列表。
+
+**响应 `data`**：`{ items: JourneyAlbumSummary[] }`
+
+### POST `/`
+
+为路线创建相册（须为路线所有者；已存在则幂等返回）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `routeId` | number | 是 | 路线 ID |
+| `title` | string | 否 | 默认路线名 |
+
+**响应 `data`**：`JourneyAlbumSummary`
+
+### GET `/:id`
+
+相册详情 + 分组树。
+
+**响应 `data`**：`JourneyAlbumDetail`
+
+| 字段 | 说明 |
+|------|------|
+| `photos` | 全部照片 flat 列表 |
+| `groups` | 按 `dayIndex` + `poiName` 分组 |
+
+### POST `/:id/photos`
+
+上传照片（multipart）。
+
+| 表单字段 | 说明 |
+|----------|------|
+| `file` | 图片，≤ 10MB（`TRAVEL_PHOTO_MAX_FILE_BYTES`） |
+| `dayIndex` | 可选，0-based 天索引 |
+| `poiName` | 可选，POI 名称 |
+| `attractionId` | 可选 |
+| `caption` | 可选，备注 |
+| `sortOrder` | 可选，排序 |
+
+**响应 `data`**：`TravelPhotoInfo`
+
+### PATCH `/:id/photos/:photoId`
+
+更新照片元数据。
+
+**Body**（均可选，至少一项）：`dayIndex`、`poiName`、`attractionId`、`caption`、`sortOrder`
+
+### DELETE `/:id/photos/:photoId`
+
+删除照片并更新相册计数。
+
+**响应 `data`**：`{ photoId: number }`
+
+---
+
+## 19. 静态资源 uploads
+
+非 JSON API，Express 静态目录：
+
+| 路径前缀 | 用途 |
+|----------|------|
+| `/uploads/avatars/` | 用户头像 |
+| `/uploads/checkins/` | 打卡照片 |
+| `/uploads/attractions/` | 景点封面 |
+| `/uploads/photos/{userId}/` | 旅程相册照片（J1） |
+
+生产环境用户照片也可存 OSS/CDN 完整 URL，不经过上述静态目录。
+
+---
+
+## 20. 附录：常用枚举
+
+定义于 `@douxing/shared` 的 `constants.ts`：
+
+| 枚举 | 值 | 说明 |
+|------|-----|------|
+| `RouteStatus` | 0/1/2 | 草稿 / 已发布 / 归档 |
+| `MemberLevel` | 0～3 | 免费 / 白银 / 黄金 / VIP |
+| `OrderStatus` | — | pending / paid / completed / cancelled |
+| `CheckInStatus` | 0/1/2 | 待审 / 通过 / 拒绝 |
+| `JourneyAlbumStatus` | active/archived | 相册状态 |
+| `TravelPhotoSource` | upload/checkin/import | 照片来源 |
+
+---
+
+## 变更记录
+
+| 日期 | 说明 |
+|------|------|
+| 2026-06-09 | 初版：汇总全项目 72 个 REST 接口 + 静态资源说明；含 J1 旅程相册 |
+
+---
+
+**维护约定**：新增或变更 `packages/server/src/routes/**` 时，请同步更新：
+
+1. 本文档 §2 总览表与对应章节  
+2. **[openapi.yaml](./openapi.yaml)**（Apifox 导入源）

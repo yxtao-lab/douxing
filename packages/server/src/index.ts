@@ -5,6 +5,7 @@ import routes from './routes/index.js';
 import { uploadsDir } from './routes/users.js';
 import { checkInPhotosDir } from './routes/checkins.js';
 import { attractionCoversDir } from './routes/attractions.js';
+import { getPhotosUploadRoot } from './utils/local-photo-upload.util.js';
 import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 import { wechatPayNotifyHandler } from './routes/payments.js';
@@ -32,6 +33,7 @@ app.use(localeMiddleware);
 app.use('/uploads/avatars', express.static(uploadsDir));
 app.use('/uploads/checkins', express.static(checkInPhotosDir));
 app.use('/uploads/attractions', express.static(attractionCoversDir));
+app.use('/uploads/photos', express.static(getPhotosUploadRoot()));
 app.use(routes);
 
 app.get('/', (_req, res) => {

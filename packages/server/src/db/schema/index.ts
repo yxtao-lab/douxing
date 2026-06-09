@@ -15,3 +15,4 @@ export * from './badges.js';
 export * from './user-badges.js';
 export * from './plan-sessions.js';
 export * from './route-playbooks.js';
+export * from './journey-albums.js';

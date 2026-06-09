@@ -295,8 +295,10 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
+> **完整接口文档**（72 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）
+
 - `POST /api/auth/register` — 注册
-- `GET /api/routes/llm-providers` — 可选模型列表
 - `GET /api/routes/llm-status` — 检测各模型是否可用
 - `POST /api/routes/generate` — 生成路线（`provider` 可选）
 - `GET /api/routes` — 路线列表（`scope=mine|plaza|favorites`、`status`、`sort`）；`?all=1` 管理员查看全部

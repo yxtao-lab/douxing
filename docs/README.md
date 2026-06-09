@@ -2,6 +2,8 @@
 
 | 文档 | 说明 |
 |------|------|
+| [API接口文档.md](./API接口文档.md) | **REST API 全量接口说明**（人类可读；Apifox 请导入 [openapi.yaml](./openapi.yaml)） |
+| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（Apifox / Postman / Swagger 直接导入） |
 | [公共组件.md](./公共组件.md) | **移动端可复用 Vue 组件**：功能、封装方式与用法 |
 | [启动与部署流程.md](./启动与部署流程.md) | **开发/测试/生产启动命令、打包与部署流程总览** |
 | [env-environments.md](./env-environments.md) | 环境文件说明与切换方式（`pnpm env:status`） |

@@ -618,3 +618,75 @@ export interface LeaderboardResult {
   myRank: number | null;
   myValue: number | null;
 }
+
+/** 旅程相册状态 */
+export type JourneyAlbumStatusValue = 'active' | 'archived';
+
+/** 旅行照片来源 */
+export type TravelPhotoSourceValue = 'upload' | 'checkin' | 'import';
+
+/** 旅程相册摘要（列表项） */
+export interface JourneyAlbumSummary {
+  id: number;
+  userId: number;
+  routeId: number;
+  routeName: string | null;
+  title: string;
+  coverPhotoId: number | null;
+  coverPhotoUrl: string | null;
+  photoCount: number;
+  bytesUsed: number;
+  status: JourneyAlbumStatusValue;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 旅行照片信息 */
+export interface TravelPhotoInfo {
+  id: number;
+  albumId: number;
+  storedUrl: string;
+  byteSize: number;
+  width: number | null;
+  height: number | null;
+  dayIndex: number | null;
+  poiName: string | null;
+  attractionId: number | null;
+  checkInId: number | null;
+  takenAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  caption: string | null;
+  sortOrder: number;
+  source: TravelPhotoSourceValue;
+  createdAt: string;
+}
+
+/** 相册内按天/POI 分组 */
+export interface JourneyAlbumPhotoGroup {
+  dayIndex: number | null;
+  poiName: string | null;
+  attractionId: number | null;
+  photos: TravelPhotoInfo[];
+}
+
+/** 旅程相册详情 */
+export interface JourneyAlbumDetail extends JourneyAlbumSummary {
+  groups: JourneyAlbumPhotoGroup[];
+  photos: TravelPhotoInfo[];
+}
+
+/** 创建旅程相册 */
+export interface CreateJourneyAlbumRequest {
+  routeId: number;
+  title?: string;
+}
+
+/** 更新旅行照片元数据 */
+export interface UpdateTravelPhotoRequest {
+  dayIndex?: number | null;
+  poiName?: string | null;
+  attractionId?: number | null;
+  caption?: string | null;
+  sortOrder?: number;
+}

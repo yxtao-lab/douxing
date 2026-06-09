@@ -1,0 +1,1932 @@
+openapi: 3.0.3
+info:
+  title: 兜行 Douxing API
+  description: |
+    兜行平台 REST API（`packages/server`）。
+
+    - 统一响应：`{ code, message, messageKey?, data }`，`code === 0` 为成功
+    - 鉴权：Header `Authorization: Bearer <JWT>`
+    - 国际化：Header `Accept-Language: zh-CN | en-US`
+    - 人类可读说明见 [API接口文档.md](./API接口文档.md)
+  version: 1.0.0
+  contact:
+    name: 兜行项目
+
+servers:
+  - url: http://localhost:3000
+    description: 本地开发
+  - url: https://api.yxtao.site
+    description: 生产环境
+
+tags:
+  - name: 系统
+    description: 健康检查
+  - name: 认证
+    description: 注册、登录、验证码
+  - name: 用户
+    description: 资料、头像、会员
+  - name: 景点
+    description: 景点库与管理员维护
+  - name: 路线
+    description: AI 生成、列表、互动
+  - name: 规划会话
+    description: 多轮对话规划
+  - name: 打卡
+    description: 地理围栏打卡
+  - name: 订单
+    description: 路线解锁订单
+  - name: 支付
+    description: 微信支付回调
+  - name: 成就
+    description: 成就图鉴
+  - name: 徽章
+    description: 徽章图鉴
+  - name: 排行榜
+    description: 周榜/月榜
+  - name: 语音
+    description: ASR 语音识别
+  - name: 分享
+    description: 公开路线、小程序码
+  - name: 玩法动线
+    description: 管理员 Playbook CRUD
+  - name: 旅程相册
+    description: J1 照片存储
+
+security:
+  - bearerAuth: []
+
+paths:
+  /:
+    get:
+      tags: [系统]
+      summary: 根路径探测
+      security: []
+      operationId: getRoot
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          name: { type: string, example: 兜行 }
+                          status: { type: string, example: ok }
+
+  /api/health:
+    get:
+      tags: [系统]
+      summary: 健康检查
+      security: []
+      operationId: getHealth
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          name: { type: string }
+                          status: { type: string, example: ok }
+                          timestamp: { type: string, format: date-time }
+                          checkin: { type: object }
+
+  /api/auth/register:
+    post:
+      tags: [认证]
+      summary: 用户名密码注册
+      security: []
+      operationId: authRegister
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResult'
+
+  /api/auth/login:
+    post:
+      tags: [认证]
+      summary: 用户名密码登录
+      security: []
+      operationId: authLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResult'
+
+  /api/auth/sms/send:
+    post:
+      tags: [认证]
+      summary: 发送短信验证码
+      security: []
+      operationId: authSmsSend
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PhoneRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/auth/sms/login:
+    post:
+      tags: [认证]
+      summary: 验证码登录（未注册自动注册）
+      security: []
+      operationId: authSmsLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmsLoginRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoginResult'
+
+  /api/auth/me:
+    get:
+      tags: [认证]
+      summary: 当前用户（含角色）
+      operationId: authMe
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+
+  /api/users/me:
+    get:
+      tags: [用户]
+      summary: 获取当前用户资料
+      operationId: usersMeGet
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+    put:
+      tags: [用户]
+      summary: 更新用户资料
+      operationId: usersMePut
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+
+  /api/users/me/membership:
+    get:
+      tags: [用户]
+      summary: 获取会员权益信息
+      operationId: usersMeMembership
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/users/me/avatar:
+    post:
+      tags: [用户]
+      summary: 上传头像
+      operationId: usersMeAvatar
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片，≤ 2MB
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserInfo'
+
+  /api/attractions:
+    get:
+      tags: [景点]
+      summary: 景点列表（已发布）
+      security: []
+      operationId: attractionsList
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: cityCode
+          in: query
+          schema: { type: string }
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [attraction, restaurant, hotel]
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: tags
+          in: query
+          schema: { type: string }
+          description: 逗号分隔标签
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/attractions/cities:
+    get:
+      tags: [景点]
+      summary: 有景点的城市汇总
+      security: []
+      operationId: attractionsCities
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/attractions/{id}:
+    get:
+      tags: [景点]
+      summary: 景点详情
+      security: []
+      operationId: attractionsDetail
+      parameters:
+        - $ref: '#/components/parameters/AttractionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/attractions/admin/pending:
+    get:
+      tags: [景点]
+      summary: 待审核景点（管理员）
+      operationId: attractionsAdminPending
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/attractions/admin/catalog:
+    get:
+      tags: [景点]
+      summary: 景点管理列表（管理员）
+      operationId: attractionsAdminCatalog
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/attractions/admin/{id}/cover:
+    post:
+      tags: [景点]
+      summary: 上传景点封面（管理员）
+      operationId: attractionsAdminCover
+      parameters:
+        - $ref: '#/components/parameters/AttractionId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片，≤ 3MB
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/attractions/admin/{id}/cover/refresh-amap:
+    post:
+      tags: [景点]
+      summary: 高德刷新封面（管理员）
+      operationId: attractionsAdminCoverRefreshAmap
+      parameters:
+        - $ref: '#/components/parameters/AttractionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/attractions/admin/{id}/approve:
+    post:
+      tags: [景点]
+      summary: 审核通过景点（管理员）
+      operationId: attractionsAdminApprove
+      parameters:
+        - $ref: '#/components/parameters/AttractionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/llm-providers:
+    get:
+      tags: [路线]
+      summary: LLM 提供商列表
+      security: []
+      operationId: routesLlmProviders
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/llm-status:
+    get:
+      tags: [路线]
+      summary: LLM 可用性检测
+      security: []
+      operationId: routesLlmStatus
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/generate:
+    post:
+      tags: [路线]
+      summary: 单轮生成路线
+      operationId: routesGenerate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRouteRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes:
+    get:
+      tags: [路线]
+      summary: 路线列表
+      operationId: routesList
+      parameters:
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum: [mine, hot, favorites, plaza]
+        - name: status
+          in: query
+          schema: { type: integer, enum: [0, 1, 2] }
+          description: 0 草稿 / 1 已发布 / 2 归档
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, hot, views]
+        - name: all
+          in: query
+          schema: { type: string, enum: ['1'] }
+          description: 管理员查看全站
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: limit
+          in: query
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/routes/plaza:
+    get:
+      tags: [路线]
+      summary: 广场公开路线
+      operationId: routesPlaza
+      parameters:
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, hot, views]
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/routes/hot:
+    get:
+      tags: [路线]
+      summary: 热门路线（兼容，同 plaza）
+      deprecated: true
+      operationId: routesHot
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/routes/plan-sessions:
+    get:
+      tags: [规划会话]
+      summary: 规划会话列表
+      operationId: planSessionsList
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [规划会话]
+      summary: 创建规划会话
+      operationId: planSessionsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRouteRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/plan-sessions/{sessionId}:
+    get:
+      tags: [规划会话]
+      summary: 规划会话详情
+      operationId: planSessionsDetail
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/plan-sessions/{sessionId}/messages:
+    post:
+      tags: [规划会话]
+      summary: 追问/修改方案
+      operationId: planSessionsAppendMessage
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/plan-sessions/{sessionId}/select-candidate:
+    post:
+      tags: [规划会话]
+      summary: 切换候选方案
+      operationId: planSessionsSelectCandidate
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [routeId]
+              properties:
+                routeId:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}:
+    get:
+      tags: [路线]
+      summary: 路线详情
+      operationId: routesDetail
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      tags: [路线]
+      summary: 编辑草稿路线
+      operationId: routesUpdateDraft
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateRouteDraftRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/publish:
+    post:
+      tags: [路线]
+      summary: 发布路线
+      operationId: routesPublish
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/regenerate:
+    post:
+      tags: [路线]
+      summary: AI 重新生成路线
+      operationId: routesRegenerate
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRouteRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/like:
+    post:
+      tags: [路线]
+      summary: 点赞/取消点赞
+      operationId: routesLike
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/favorite:
+    post:
+      tags: [路线]
+      summary: 收藏/取消收藏
+      operationId: routesFavorite
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/share:
+    post:
+      tags: [路线]
+      summary: 公开/取消公开到广场
+      operationId: routesShare
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isPublic]
+              properties:
+                isPublic:
+                  type: boolean
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/comments:
+    get:
+      tags: [路线]
+      summary: 路线评论列表
+      operationId: routesCommentsList
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+        - name: limit
+          in: query
+          schema: { type: integer, default: 50 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [路线]
+      summary: 发表评论
+      operationId: routesCommentsCreate
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  minLength: 1
+                  maxLength: 500
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{id}/map-path:
+    get:
+      tags: [路线]
+      summary: 路线地图 polyline
+      operationId: routesMapPath
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+        - name: day
+          in: query
+          schema: { type: integer, minimum: 0 }
+          description: 可选，指定某天 0-based
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/checkins/photos:
+    post:
+      tags: [打卡]
+      summary: 上传打卡照片
+      operationId: checkinsUploadPhoto
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片，≤ 2MB
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string }
+                          path: { type: string }
+
+  /api/checkins:
+    post:
+      tags: [打卡]
+      summary: 创建打卡
+      operationId: checkinsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCheckInRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    get:
+      tags: [打卡]
+      summary: 打卡列表
+      operationId: checkinsList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [7d, 30d, 90d, all]
+        - name: routeId
+          in: query
+          schema: { type: integer }
+        - name: all
+          in: query
+          schema: { type: string, enum: ['1'] }
+          description: 管理员全站
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/orders/payment-config:
+    get:
+      tags: [订单]
+      summary: 支付配置
+      operationId: ordersPaymentConfig
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/orders:
+    post:
+      tags: [订单]
+      summary: 创建路线解锁订单
+      operationId: ordersCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [routeId]
+              properties:
+                routeId:
+                  type: integer
+                  minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    get:
+      tags: [订单]
+      summary: 订单列表
+      operationId: ordersList
+      parameters:
+        - name: tab
+          in: query
+          schema:
+            type: string
+            enum: [all, pending, done]
+            default: all
+        - name: all
+          in: query
+          schema: { type: string, enum: ['1'] }
+          description: 管理员全站
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/orders/{id}:
+    get:
+      tags: [订单]
+      summary: 订单详情
+      operationId: ordersDetail
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/orders/{id}/prepay:
+    post:
+      tags: [订单]
+      summary: 微信预下单
+      operationId: ordersPrepay
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wxCode:
+                  type: string
+                  description: 小程序 login code
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/orders/{id}/pay:
+    post:
+      tags: [订单]
+      summary: 模拟支付
+      operationId: ordersPay
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/orders/{id}/cancel:
+    post:
+      tags: [订单]
+      summary: 取消订单
+      operationId: ordersCancel
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/payments/wechat/notify:
+    post:
+      tags: [支付]
+      summary: 微信支付异步通知
+      description: 微信服务器回调，raw JSON body，无需 JWT
+      security: []
+      operationId: paymentsWechatNotify
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 微信协议响应
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /api/achievements/catalog:
+    get:
+      tags: [成就]
+      summary: 成就图鉴
+      operationId: achievementsCatalog
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/achievements/mine:
+    get:
+      tags: [成就]
+      summary: 已解锁成就
+      operationId: achievementsMine
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/achievements:
+    get:
+      tags: [成就]
+      summary: 已解锁成就（兼容）
+      deprecated: true
+      operationId: achievementsListLegacy
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/badges:
+    get:
+      tags: [徽章]
+      summary: 徽章图鉴
+      operationId: badgesCatalog
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/badges/mine:
+    get:
+      tags: [徽章]
+      summary: 已解锁徽章
+      operationId: badgesMine
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/leaderboard:
+    get:
+      tags: [排行榜]
+      summary: 排行榜
+      operationId: leaderboardGet
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month]
+            default: week
+        - name: metric
+          in: query
+          schema:
+            type: string
+            enum: [checkins, points]
+            default: checkins
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/speech/transcribe:
+    post:
+      tags: [语音]
+      summary: 语音转文字
+      operationId: speechTranscribe
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [audio]
+              properties:
+                audio:
+                  type: string
+                  format: binary
+                  description: 音频，≤ 10MB
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          text: { type: string }
+
+  /api/share/routes/{id}:
+    get:
+      tags: [分享]
+      summary: 公开路线只读摘要
+      security: []
+      operationId: shareRouteDetail
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/share/routes/{id}/wxacode:
+    get:
+      tags: [分享]
+      summary: 路线分享小程序码 PNG
+      security: []
+      operationId: shareRouteWxacode
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: PNG 图片
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+
+  /api/share/routes/{id}/link:
+    get:
+      tags: [分享]
+      summary: 微信 URL Link
+      security: []
+      operationId: shareRouteLink
+      parameters:
+        - $ref: '#/components/parameters/RouteId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          url: { type: string }
+
+  /api/playbooks/admin:
+    get:
+      tags: [玩法动线]
+      summary: 动线列表（管理员）
+      operationId: playbooksAdminList
+      parameters:
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: enabled
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+    post:
+      tags: [玩法动线]
+      summary: 创建动线（管理员）
+      operationId: playbooksAdminCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoutePlaybookBody'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/playbooks/admin/{id}:
+    get:
+      tags: [玩法动线]
+      summary: 动线详情（管理员）
+      operationId: playbooksAdminDetail
+      parameters:
+        - $ref: '#/components/parameters/PlaybookId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      tags: [玩法动线]
+      summary: 更新动线（管理员）
+      operationId: playbooksAdminUpdate
+      parameters:
+        - $ref: '#/components/parameters/PlaybookId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoutePlaybookUpdateBody'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [玩法动线]
+      summary: 删除动线（管理员）
+      operationId: playbooksAdminDelete
+      parameters:
+        - $ref: '#/components/parameters/PlaybookId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/journey-albums:
+    get:
+      tags: [旅程相册]
+      summary: 我的相册列表
+      operationId: journeyAlbumsList
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/JourneyAlbumSummary'
+    post:
+      tags: [旅程相册]
+      summary: 创建旅程相册
+      operationId: journeyAlbumsCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateJourneyAlbumRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JourneyAlbumSummary'
+
+  /api/journey-albums/{id}:
+    get:
+      tags: [旅程相册]
+      summary: 相册详情（含分组）
+      operationId: journeyAlbumsDetail
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JourneyAlbumDetail'
+
+  /api/journey-albums/{id}/photos:
+    post:
+      tags: [旅程相册]
+      summary: 上传旅行照片
+      operationId: journeyAlbumsUploadPhoto
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 图片，≤ 10MB
+                dayIndex:
+                  type: integer
+                  minimum: 0
+                poiName:
+                  type: string
+                attractionId:
+                  type: integer
+                caption:
+                  type: string
+                sortOrder:
+                  type: integer
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TravelPhotoInfo'
+
+  /api/journey-albums/{id}/photos/{photoId}:
+    patch:
+      tags: [旅程相册]
+      summary: 更新照片元数据
+      operationId: journeyAlbumsUpdatePhoto
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+        - $ref: '#/components/parameters/PhotoId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTravelPhotoRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TravelPhotoInfo'
+    delete:
+      tags: [旅程相册]
+      summary: 删除照片
+      operationId: journeyAlbumsDeletePhoto
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+        - $ref: '#/components/parameters/PhotoId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          photoId:
+                            type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: "登录后获得的 JWT，填入 Authorization: Bearer <token>"
+
+  parameters:
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      schema:
+        type: string
+        enum: [zh-CN, en-US]
+        default: zh-CN
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PageSize:
+      name: pageSize
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+    RouteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    AttractionId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    SessionId:
+      name: sessionId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    OrderId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PlaybookId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        example: hangzhou-west-lake
+    AlbumId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    PhotoId:
+      name: photoId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          example: 0
+        message:
+          type: string
+          example: 成功
+        messageKey:
+          type: string
+          example: api.ok
+        data:
+          nullable: true
+
+    PaginatedApiResponse:
+      allOf:
+        - $ref: '#/components/schemas/ApiResponse'
+        - type: object
+          properties:
+            data:
+              $ref: '#/components/schemas/PaginatedResult'
+
+    PaginatedResult:
+      type: object
+      properties:
+        items:
+          type: array
+          items: {}
+        total:
+          type: integer
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        hasMore:
+          type: boolean
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+
+    RegisterRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 32
+        password:
+          type: string
+          minLength: 6
+          maxLength: 64
+        nickname:
+          type: string
+          maxLength: 50
+
+    PhoneRequest:
+      type: object
+      required: [phone]
+      properties:
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+          example: '13800138000'
+
+    SmsLoginRequest:
+      type: object
+      required: [phone, code]
+      properties:
+        phone:
+          type: string
+          pattern: '^1[3-9]\d{9}$'
+        code:
+          type: string
+          minLength: 6
+          maxLength: 6
+
+    UserInfo:
+      type: object
+      properties:
+        id: { type: integer }
+        username: { type: string }
+        nickname: { type: string }
+        avatar: { type: string, nullable: true }
+        phone: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        interestTags:
+          type: array
+          items: { type: string }
+          nullable: true
+        memberLevel: { type: integer }
+        status: { type: integer }
+        roles:
+          type: array
+          items: { type: string }
+
+    LoginResult:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: '#/components/schemas/UserInfo'
+
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        nickname: { type: string, minLength: 1, maxLength: 64 }
+        avatar: { type: string, nullable: true }
+        email: { type: string, nullable: true }
+        interestTags:
+          type: array
+          items: { type: string }
+
+    GenerateRouteRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 2
+          example: 杭州三日游，喜欢自然和美食
+        days:
+          type: integer
+          minimum: 1
+          maximum: 7
+        budget:
+          type: string
+        provider:
+          type: string
+          enum: [auto, deepseek, lmstudio]
+
+    UpdateRouteDraftRequest:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string, nullable: true }
+        budgetRange: { type: string, nullable: true }
+        days: { type: integer }
+        interestTags:
+          type: array
+          items: { type: string }
+        routeDetail:
+          type: object
+
+    CreateCheckInRequest:
+      type: object
+      required: [routeId, location]
+      properties:
+        routeId:
+          type: integer
+        attractionId:
+          type: integer
+        cityCode:
+          type: string
+        cityName:
+          type: string
+        location:
+          type: object
+          required: [latitude, longitude, placeName]
+          properties:
+            latitude: { type: number }
+            longitude: { type: number }
+            address: { type: string }
+            placeName: { type: string }
+        targetLatitude: { type: number }
+        targetLongitude: { type: number }
+        gpsAccuracy: { type: number }
+        photos:
+          type: array
+          items: { type: string, format: uri }
+          maxItems: 3
+        remark:
+          type: string
+
+    RoutePlaybookBody:
+      type: object
+      required: [id, city, scope, classicOrder, summaryZh, summaryEn]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9-]+$'
+        city: { type: string }
+        scope: { type: string }
+        keywords:
+          type: array
+          items: { type: string }
+        themes:
+          type: array
+          items: { type: string }
+        classicOrder:
+          type: array
+          items: { type: string }
+        segments:
+          type: array
+          items:
+            type: object
+        summaryZh: { type: string }
+        summaryEn: { type: string }
+        enabled: { type: boolean }
+        sortOrder: { type: integer }
+
+    RoutePlaybookUpdateBody:
+      type: object
+      properties:
+        city: { type: string }
+        scope: { type: string }
+        keywords:
+          type: array
+          items: { type: string }
+        themes:
+          type: array
+          items: { type: string }
+        classicOrder:
+          type: array
+          items: { type: string }
+        segments:
+          type: array
+          items:
+            type: object
+        summaryZh: { type: string }
+        summaryEn: { type: string }
+        enabled: { type: boolean }
+        sortOrder: { type: integer }
+
+    CreateJourneyAlbumRequest:
+      type: object
+      required: [routeId]
+      properties:
+        routeId:
+          type: integer
+          minimum: 1
+        title:
+          type: string
+          maxLength: 128
+
+    JourneyAlbumSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        routeId: { type: integer }
+        routeName: { type: string, nullable: true }
+        title: { type: string }
+        coverPhotoId: { type: integer, nullable: true }
+        coverPhotoUrl: { type: string, nullable: true }
+        photoCount: { type: integer }
+        bytesUsed: { type: integer }
+        status:
+          type: string
+          enum: [active, archived]
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    TravelPhotoInfo:
+      type: object
+      properties:
+        id: { type: integer }
+        albumId: { type: integer }
+        storedUrl: { type: string }
+        byteSize: { type: integer }
+        width: { type: integer, nullable: true }
+        height: { type: integer, nullable: true }
+        dayIndex: { type: integer, nullable: true }
+        poiName: { type: string, nullable: true }
+        attractionId: { type: integer, nullable: true }
+        checkInId: { type: integer, nullable: true }
+        takenAt: { type: string, format: date-time, nullable: true }
+        latitude: { type: number, nullable: true }
+        longitude: { type: number, nullable: true }
+        caption: { type: string, nullable: true }
+        sortOrder: { type: integer }
+        source:
+          type: string
+          enum: [upload, checkin, import]
+        createdAt: { type: string, format: date-time }
+
+    JourneyAlbumPhotoGroup:
+      type: object
+      properties:
+        dayIndex: { type: integer, nullable: true }
+        poiName: { type: string, nullable: true }
+        attractionId: { type: integer, nullable: true }
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TravelPhotoInfo'
+
+    JourneyAlbumDetail:
+      allOf:
+        - $ref: '#/components/schemas/JourneyAlbumSummary'
+        - type: object
+          properties:
+            photos:
+              type: array
+              items:
+                $ref: '#/components/schemas/TravelPhotoInfo'
+            groups:
+              type: array
+              items:
+                $ref: '#/components/schemas/JourneyAlbumPhotoGroup'
+
+    UpdateTravelPhotoRequest:
+      type: object
+      properties:
+        dayIndex: { type: integer, nullable: true }
+        poiName: { type: string, nullable: true }
+        attractionId: { type: integer, nullable: true }
+        caption: { type: string, nullable: true }
+        sortOrder: { type: integer }

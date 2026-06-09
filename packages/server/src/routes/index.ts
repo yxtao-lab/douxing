@@ -14,6 +14,7 @@ import speechRouter from './speech.js';
 import shareRouter from './share.js';
 
 import playbooksRouter from './playbooks.js';
+import journeyAlbumsRouter from './journey-albums.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use(`${API_PREFIX}/leaderboard`, leaderboardRouter);
 router.use(`${API_PREFIX}/speech`, speechRouter);
 router.use(`${API_PREFIX}/share`, shareRouter);
 router.use(`${API_PREFIX}/playbooks`, playbooksRouter);
+router.use(`${API_PREFIX}/journey-albums`, journeyAlbumsRouter);
 
 export default router;
