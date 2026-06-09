@@ -6,6 +6,7 @@ import { i18n } from './i18n';
 import { bootstrapSession, setupHttpAuthHandlers } from './utils/session';
 import 'ant-design-vue/dist/reset.css';
 import './styles/main.css';
+import './styles/admin-page.css';
 
 async function bootstrap() {
   const app = createApp(App);

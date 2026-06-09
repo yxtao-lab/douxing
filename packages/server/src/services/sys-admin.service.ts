@@ -1,0 +1,946 @@
+import os from 'node:os';
+import { count, desc, eq, like, or, and } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
+import {
+  APP_NAME,
+  buildPaginatedResult,
+  RoleCode,
+  UserStatus,
+  type PaginatedResult,
+  type UserInfo,
+} from '@douxing/shared';
+import { getDb } from '../db/client.js';
+import { users, roles, userRoles, systemConfig } from '../db/schema/index.js';
+import {
+  sysDept,
+  sysPost,
+  sysDictType,
+  sysDictData,
+  sysNotice,
+  sysOperLog,
+  sysLoginLog,
+  sysMenu,
+} from '../db/schema/sys-admin.js';
+import { getUserWithRoles } from './user.service.js';
+import { getAnalyticsOverview } from './analytics.service.js';
+import { getRedisClient } from './redis-client.service.js';
+import { isRedisEnabled } from '../config/redis.js';
+import { listOnlineSessions } from './online-session.service.js';
+
+export interface AdminUserRow extends UserInfo {
+  createdAt: string;
+}
+
+export interface RoleRow {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
+  userCount: number;
+}
+
+export interface DeptRow {
+  id: number;
+  parentId: number;
+  name: string;
+  sortOrder: number;
+  status: number;
+  createdAt: string;
+}
+
+export interface PostRow {
+  id: number;
+  code: string;
+  name: string;
+  sortOrder: number;
+  status: number;
+  remark: string | null;
+  createdAt: string;
+}
+
+export interface DictTypeRow {
+  id: number;
+  dictType: string;
+  dictName: string;
+  status: number;
+  remark: string | null;
+  createdAt: string;
+}
+
+export interface DictDataRow {
+  id: number;
+  dictType: string;
+  dictLabel: string;
+  dictValue: string;
+  sortOrder: number;
+  status: number;
+  remark: string | null;
+  createdAt: string;
+}
+
+export interface NoticeRow {
+  id: number;
+  title: string;
+  noticeType: number;
+  status: number;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConfigRow {
+  id: number;
+  configKey: string;
+  configValue: string;
+  remark: string | null;
+  updatedAt: string;
+}
+
+export interface OperLogRow {
+  id: number;
+  title: string;
+  operName: string;
+  operUrl: string;
+  method: string;
+  operIp: string | null;
+  status: number;
+  errorMsg: string | null;
+  operTime: string;
+}
+
+export interface LoginLogRow {
+  id: number;
+  username: string;
+  ip: string | null;
+  browser: string | null;
+  os: string | null;
+  status: number;
+  msg: string | null;
+  loginTime: string;
+}
+
+export interface MenuRow {
+  id: number;
+  parentId: number;
+  menuKey: string;
+  menuName: string;
+  menuType: number;
+  path: string | null;
+  component: string | null;
+  perms: string | null;
+  icon: string | null;
+  sortOrder: number;
+  isFrame: number;
+  visible: number;
+  status: number;
+  routeParams: string | null;
+  remark: string | null;
+  children?: MenuRow[];
+}
+
+export interface MenuTreeNode {
+  key: string;
+  title: string;
+  path?: string;
+  icon?: string;
+  children?: MenuTreeNode[];
+}
+
+export const MenuType = {
+  DIRECTORY: 1,
+  MENU: 2,
+  BUTTON: 3,
+} as const;
+
+const SCHEDULED_JOBS = [
+  { id: 'analytics-rollup', name: '指标日汇总', cron: '0 2 * * *', status: 'pending', remark: 'DT2 跑批任务' },
+  { id: 'cache-cleanup', name: '缓存清理', cron: '0 3 * * 0', status: 'pending', remark: 'Redis 过期键扫描' },
+  { id: 'log-archive', name: '日志归档', cron: '0 4 1 * *', status: 'pending', remark: '操作/登录日志归档' },
+];
+
+function mapMenuRow(row: typeof sysMenu.$inferSelect): MenuRow {
+  return {
+    id: row.id,
+    parentId: row.parentId,
+    menuKey: row.menuKey,
+    menuName: row.menuName,
+    menuType: row.menuType,
+    path: row.path,
+    component: row.component,
+    perms: row.perms,
+    icon: row.icon,
+    sortOrder: row.sortOrder,
+    isFrame: row.isFrame,
+    visible: row.visible,
+    status: row.status,
+    routeParams: row.routeParams,
+    remark: row.remark,
+  };
+}
+
+function buildMenuTree(rows: MenuRow[], parentId = 0): MenuRow[] {
+  return rows
+    .filter((row) => row.parentId === parentId)
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+    .map((row) => {
+      const children = buildMenuTree(rows, row.id);
+      const node: MenuRow = { ...row };
+      if (children.length > 0) node.children = children;
+      return node;
+    });
+}
+
+function filterMenuTree(nodes: MenuRow[], keyword?: string): MenuRow[] {
+  const kw = keyword?.trim().toLowerCase();
+  if (!kw) return nodes;
+  return nodes.reduce<MenuRow[]>((acc, node) => {
+    const children = node.children ? filterMenuTree(node.children, kw) : [];
+    const selfMatch =
+      node.menuName.toLowerCase().includes(kw) ||
+      node.menuKey.toLowerCase().includes(kw) ||
+      (node.path?.toLowerCase().includes(kw) ?? false) ||
+      (node.perms?.toLowerCase().includes(kw) ?? false);
+    if (selfMatch || children.length > 0) {
+      acc.push({ ...node, children: children.length > 0 ? children : undefined });
+    }
+    return acc;
+  }, []);
+}
+
+async function collectDescendantIds(rootId: number): Promise<Set<number>> {
+  const db = getDb();
+  const rows = await db.select({ id: sysMenu.id, parentId: sysMenu.parentId }).from(sysMenu);
+  const descendants = new Set<number>();
+  function walk(parentId: number) {
+    for (const row of rows) {
+      if (row.parentId === parentId && !descendants.has(row.id)) {
+        descendants.add(row.id);
+        walk(row.id);
+      }
+    }
+  }
+  walk(rootId);
+  return descendants;
+}
+
+export async function listMenusTree(keyword?: string): Promise<MenuRow[]> {
+  const db = getDb();
+  const rows = await db.select().from(sysMenu).orderBy(sysMenu.sortOrder, sysMenu.id);
+  const tree = buildMenuTree(rows.map(mapMenuRow));
+  return filterMenuTree(tree, keyword);
+}
+
+export async function getMenuById(id: number): Promise<MenuRow | null> {
+  const db = getDb();
+  const [row] = await db.select().from(sysMenu).where(eq(sysMenu.id, id)).limit(1);
+  return row ? mapMenuRow(row) : null;
+}
+
+export async function createMenu(input: {
+  parentId: number;
+  menuKey: string;
+  menuName: string;
+  menuType?: number;
+  path?: string | null;
+  component?: string | null;
+  perms?: string | null;
+  icon?: string | null;
+  sortOrder?: number;
+  isFrame?: number;
+  visible?: number;
+  status?: number;
+  routeParams?: string | null;
+  remark?: string | null;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysMenu).values({
+    parentId: input.parentId,
+    menuKey: input.menuKey,
+    menuName: input.menuName,
+    menuType: input.menuType ?? MenuType.MENU,
+    path: input.path ?? null,
+    component: input.component ?? null,
+    perms: input.perms ?? null,
+    icon: input.icon ?? null,
+    sortOrder: input.sortOrder ?? 0,
+    isFrame: input.isFrame ?? 0,
+    visible: input.visible ?? 1,
+    status: input.status ?? 1,
+    routeParams: input.routeParams ?? null,
+    remark: input.remark ?? null,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateMenu(
+  id: number,
+  input: {
+    parentId?: number;
+    menuName?: string;
+    menuType?: number;
+    path?: string | null;
+    component?: string | null;
+    perms?: string | null;
+    icon?: string | null;
+    sortOrder?: number;
+    isFrame?: number;
+    visible?: number;
+    status?: number;
+    routeParams?: string | null;
+    remark?: string | null;
+  },
+) {
+  if (input.parentId !== undefined) {
+    if (input.parentId === id) return { error: '上级菜单不能为自身' };
+    const descendants = await collectDescendantIds(id);
+    if (descendants.has(input.parentId)) return { error: '上级菜单不能为当前菜单的子菜单' };
+  }
+  const db = getDb();
+  const patch: Partial<typeof sysMenu.$inferInsert> = {};
+  if (input.parentId !== undefined) patch.parentId = input.parentId;
+  if (input.menuName !== undefined) patch.menuName = input.menuName;
+  if (input.menuType !== undefined) patch.menuType = input.menuType;
+  if (input.path !== undefined) patch.path = input.path;
+  if (input.component !== undefined) patch.component = input.component;
+  if (input.perms !== undefined) patch.perms = input.perms;
+  if (input.icon !== undefined) patch.icon = input.icon;
+  if (input.sortOrder !== undefined) patch.sortOrder = input.sortOrder;
+  if (input.isFrame !== undefined) patch.isFrame = input.isFrame;
+  if (input.visible !== undefined) patch.visible = input.visible;
+  if (input.status !== undefined) patch.status = input.status;
+  if (input.routeParams !== undefined) patch.routeParams = input.routeParams;
+  if (input.remark !== undefined) patch.remark = input.remark;
+  if (Object.keys(patch).length === 0) return { ok: true };
+  await db.update(sysMenu).set(patch).where(eq(sysMenu.id, id));
+  return { ok: true };
+}
+
+export async function deleteMenu(id: number) {
+  const db = getDb();
+  const children = await db.select().from(sysMenu).where(eq(sysMenu.parentId, id)).limit(1);
+  if (children.length > 0) return { error: '存在子菜单，无法删除' };
+  await db.delete(sysMenu).where(eq(sysMenu.id, id));
+  return { ok: true };
+}
+
+export async function getMenuTree(): Promise<MenuTreeNode[]> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(sysMenu)
+    .where(and(eq(sysMenu.visible, 1), eq(sysMenu.status, 1)))
+    .orderBy(sysMenu.sortOrder, sysMenu.id);
+  const navRows = rows.filter((row) => row.menuType !== MenuType.BUTTON);
+
+  function toNavTree(parentId = 0): MenuTreeNode[] {
+    return navRows
+      .filter((row) => row.parentId === parentId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      .map((row) => {
+        const children = toNavTree(row.id);
+        const node: MenuTreeNode = {
+          key: row.menuKey,
+          title: row.menuName,
+        };
+        if (row.path) node.path = row.path;
+        if (row.icon) node.icon = row.icon;
+        if (children.length > 0) node.children = children;
+        return node;
+      });
+  }
+
+  return toNavTree();
+}
+
+export interface MenuSeedItem {
+  menuKey: string;
+  menuName: string;
+  parentKey?: string;
+  menuType: number;
+  path?: string;
+  component?: string;
+  perms?: string;
+  icon?: string;
+  sortOrder: number;
+}
+
+export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
+  { menuKey: 'home', menuName: '工作台', menuType: MenuType.MENU, path: '/', icon: 'HomeOutlined', sortOrder: 1 },
+  { menuKey: 'biz', menuName: '业务管理', menuType: MenuType.DIRECTORY, icon: 'UnorderedListOutlined', sortOrder: 10 },
+  { menuKey: 'routes', menuName: '路线', parentKey: 'biz', menuType: MenuType.MENU, path: '/routes', perms: 'biz:routes:list', icon: 'UnorderedListOutlined', sortOrder: 11 },
+  { menuKey: 'orders', menuName: '订单', parentKey: 'biz', menuType: MenuType.MENU, path: '/orders', perms: 'biz:orders:list', icon: 'ShoppingOutlined', sortOrder: 12 },
+  { menuKey: 'checkins', menuName: '打卡', parentKey: 'biz', menuType: MenuType.MENU, path: '/checkins', perms: 'biz:checkins:list', icon: 'EnvironmentOutlined', sortOrder: 13 },
+  { menuKey: 'checkins-map', menuName: '打卡地图', parentKey: 'biz', menuType: MenuType.MENU, path: '/checkins/map', perms: 'biz:checkins:map', icon: 'GlobalOutlined', sortOrder: 14 },
+  { menuKey: 'content', menuName: '内容运营', menuType: MenuType.DIRECTORY, icon: 'AuditOutlined', sortOrder: 20 },
+  { menuKey: 'attractions-pending', menuName: '景点审核', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/pending', perms: 'content:attractions:pending', icon: 'AuditOutlined', sortOrder: 21 },
+  { menuKey: 'attractions-manage', menuName: '景点封面', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/manage', perms: 'content:attractions:manage', icon: 'PictureOutlined', sortOrder: 22 },
+  { menuKey: 'playbooks', menuName: '玩法动线', parentKey: 'content', menuType: MenuType.MENU, path: '/playbooks/manage', perms: 'content:playbooks:list', icon: 'BookOutlined', sortOrder: 23 },
+  { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 30 },
+  { menuKey: 'analytics', menuName: '数据分析', parentKey: 'data', menuType: MenuType.MENU, path: '/analytics', perms: 'data:analytics:view', icon: 'BarChartOutlined', sortOrder: 31 },
+  { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
+  { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
+  { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
+  { menuKey: 'sys-menus', menuName: '菜单管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/menus', perms: 'system:menu:list', icon: 'MenuOutlined', sortOrder: 43 },
+  { menuKey: 'sys-depts', menuName: '部门管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/depts', perms: 'system:dept:list', icon: 'ApartmentOutlined', sortOrder: 44 },
+  { menuKey: 'sys-posts', menuName: '岗位管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/posts', perms: 'system:post:list', icon: 'IdcardOutlined', sortOrder: 45 },
+  { menuKey: 'sys-dict', menuName: '字典管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/dict', perms: 'system:dict:list', icon: 'ReadOutlined', sortOrder: 46 },
+  { menuKey: 'sys-config', menuName: '参数设置', parentKey: 'system', menuType: MenuType.MENU, path: '/system/config', perms: 'system:config:list', icon: 'FormOutlined', sortOrder: 47 },
+  { menuKey: 'sys-notices', menuName: '通知公告', parentKey: 'system', menuType: MenuType.MENU, path: '/system/notices', perms: 'system:notice:list', icon: 'NotificationOutlined', sortOrder: 48 },
+  { menuKey: 'monitor', menuName: '系统监控', menuType: MenuType.DIRECTORY, path: 'monitor', icon: 'RadarChartOutlined', sortOrder: 50 },
+  { menuKey: 'online', menuName: '在线用户', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/online', perms: 'monitor:online:list', icon: 'WifiOutlined', sortOrder: 51 },
+  { menuKey: 'jobs', menuName: '定时任务', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/jobs', perms: 'monitor:job:list', icon: 'ClockCircleOutlined', sortOrder: 52 },
+  { menuKey: 'data-monitor', menuName: '数据监控', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/data', perms: 'monitor:data:view', icon: 'RadarChartOutlined', sortOrder: 53 },
+  { menuKey: 'server', menuName: '服务监控', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/server', perms: 'monitor:server:view', icon: 'DesktopOutlined', sortOrder: 54 },
+  { menuKey: 'cache', menuName: '缓存监控', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/cache', perms: 'monitor:cache:view', icon: 'CloudServerOutlined', sortOrder: 55 },
+  { menuKey: 'cache-list', menuName: '缓存列表', parentKey: 'monitor', menuType: MenuType.MENU, path: '/monitor/cache-list', perms: 'monitor:cache:list', icon: 'DatabaseOutlined', sortOrder: 56 },
+  { menuKey: 'log', menuName: '日志管理', menuType: MenuType.DIRECTORY, path: 'log', icon: 'FileTextOutlined', sortOrder: 60 },
+  { menuKey: 'oper-log', menuName: '操作日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/oper', perms: 'log:oper:list', icon: 'FileTextOutlined', sortOrder: 61 },
+  { menuKey: 'login-log', menuName: '登录日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/login', perms: 'log:login:list', icon: 'BlockOutlined', sortOrder: 62 },
+];
+
+export async function listAdminUsersPaginated(
+  page: number,
+  pageSize: number,
+  keyword?: string,
+): Promise<PaginatedResult<AdminUserRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const where = keyword
+    ? or(
+        like(users.username, `%${keyword}%`),
+        like(users.nickname, `%${keyword}%`),
+        like(users.phone, `%${keyword}%`),
+      )
+    : undefined;
+
+  const [totalRow] = await db.select({ total: count() }).from(users).where(where);
+  const rows = await db
+    .select()
+    .from(users)
+    .where(where)
+    .orderBy(desc(users.id))
+    .limit(pageSize)
+    .offset(offset);
+
+  const items: AdminUserRow[] = [];
+  for (const row of rows) {
+    const info = await getUserWithRoles(row.id);
+    if (!info) continue;
+    items.push({ ...info, createdAt: String(row.createdAt) });
+  }
+
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export async function updateAdminUserStatus(userId: number, status: number) {
+  const db = getDb();
+  await db.update(users).set({ status }).where(eq(users.id, userId));
+  return getUserWithRoles(userId);
+}
+
+export async function updateAdminUserRoles(userId: number, roleCodes: string[]) {
+  const db = getDb();
+  const roleRows = await db.select().from(roles);
+  const roleIdByCode = new Map(roleRows.map((r) => [r.code, r.id]));
+  const targetIds = roleCodes
+    .map((code) => roleIdByCode.get(code))
+    .filter((id): id is number => id != null);
+
+  await db.delete(userRoles).where(eq(userRoles.userId, userId));
+  if (targetIds.length > 0) {
+    await db.insert(userRoles).values(targetIds.map((roleId) => ({ userId, roleId })));
+  }
+  return getUserWithRoles(userId);
+}
+
+export async function resetAdminUserPassword(userId: number, password: string) {
+  const db = getDb();
+  const hashed = await bcrypt.hash(password, 10);
+  await db.update(users).set({ passwordHash: hashed }).where(eq(users.id, userId));
+}
+
+export async function listRolesWithStats(): Promise<RoleRow[]> {
+  const db = getDb();
+  const roleRows = await db.select().from(roles).orderBy(roles.id);
+  const result: RoleRow[] = [];
+  for (const role of roleRows) {
+    const [cnt] = await db
+      .select({ total: count() })
+      .from(userRoles)
+      .where(eq(userRoles.roleId, role.id));
+    result.push({
+      id: role.id,
+      code: role.code,
+      name: role.name,
+      description: role.description,
+      userCount: Number(cnt?.total ?? 0),
+    });
+  }
+  return result;
+}
+
+export async function createRole(input: { code: string; name: string; description?: string }) {
+  const db = getDb();
+  const [result] = await db.insert(roles).values({
+    code: input.code,
+    name: input.name,
+    description: input.description ?? null,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateRole(
+  id: number,
+  input: { name?: string; description?: string },
+) {
+  const db = getDb();
+  const patch: Partial<typeof roles.$inferInsert> = {};
+  if (input.name !== undefined) patch.name = input.name;
+  if (input.description !== undefined) patch.description = input.description;
+  if (Object.keys(patch).length === 0) return;
+  await db.update(roles).set(patch).where(eq(roles.id, id));
+}
+
+export async function deleteRole(id: number) {
+  const db = getDb();
+  const roleRow = await db.select().from(roles).where(eq(roles.id, id)).limit(1);
+  const role = roleRow[0];
+  if (!role) return { error: '角色不存在' };
+  if (role.code === RoleCode.ADMIN || role.code === RoleCode.USER) {
+    return { error: '系统内置角色不可删除' };
+  }
+  const [cnt] = await db
+    .select({ total: count() })
+    .from(userRoles)
+    .where(eq(userRoles.roleId, id));
+  if (Number(cnt?.total ?? 0) > 0) {
+    return { error: '该角色下仍有用户，无法删除' };
+  }
+  await db.delete(roles).where(eq(roles.id, id));
+  return { ok: true };
+}
+
+export async function listDepts(): Promise<DeptRow[]> {
+  const db = getDb();
+  const rows = await db.select().from(sysDept).orderBy(sysDept.sortOrder, sysDept.id);
+  return rows.map((r) => ({
+    id: r.id,
+    parentId: r.parentId,
+    name: r.name,
+    sortOrder: r.sortOrder,
+    status: r.status,
+    createdAt: String(r.createdAt),
+  }));
+}
+
+export async function createDept(input: {
+  parentId: number;
+  name: string;
+  sortOrder?: number;
+  status?: number;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysDept).values({
+    parentId: input.parentId,
+    name: input.name,
+    sortOrder: input.sortOrder ?? 0,
+    status: input.status ?? 1,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateDept(
+  id: number,
+  input: { parentId?: number; name?: string; sortOrder?: number; status?: number },
+) {
+  const db = getDb();
+  await db.update(sysDept).set(input).where(eq(sysDept.id, id));
+}
+
+export async function deleteDept(id: number) {
+  const db = getDb();
+  const children = await db.select().from(sysDept).where(eq(sysDept.parentId, id)).limit(1);
+  if (children.length > 0) return { error: '存在子部门，无法删除' };
+  await db.delete(sysDept).where(eq(sysDept.id, id));
+  return { ok: true };
+}
+
+export async function listPostsPaginated(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<PostRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const [totalRow] = await db.select({ total: count() }).from(sysPost);
+  const rows = await db
+    .select()
+    .from(sysPost)
+    .orderBy(sysPost.sortOrder, desc(sysPost.id))
+    .limit(pageSize)
+    .offset(offset);
+  const items = rows.map((r) => ({
+    id: r.id,
+    code: r.code,
+    name: r.name,
+    sortOrder: r.sortOrder,
+    status: r.status,
+    remark: r.remark,
+    createdAt: String(r.createdAt),
+  }));
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export async function createPost(input: {
+  code: string;
+  name: string;
+  sortOrder?: number;
+  status?: number;
+  remark?: string;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysPost).values({
+    code: input.code,
+    name: input.name,
+    sortOrder: input.sortOrder ?? 0,
+    status: input.status ?? 1,
+    remark: input.remark ?? null,
+  });
+  return Number(result.insertId);
+}
+
+export async function updatePost(
+  id: number,
+  input: { name?: string; sortOrder?: number; status?: number; remark?: string },
+) {
+  const db = getDb();
+  await db.update(sysPost).set(input).where(eq(sysPost.id, id));
+}
+
+export async function deletePost(id: number) {
+  const db = getDb();
+  await db.delete(sysPost).where(eq(sysPost.id, id));
+}
+
+export async function listDictTypes(): Promise<DictTypeRow[]> {
+  const db = getDb();
+  const rows = await db.select().from(sysDictType).orderBy(desc(sysDictType.id));
+  return rows.map((r) => ({
+    id: r.id,
+    dictType: r.dictType,
+    dictName: r.dictName,
+    status: r.status,
+    remark: r.remark,
+    createdAt: String(r.createdAt),
+  }));
+}
+
+export async function createDictType(input: {
+  dictType: string;
+  dictName: string;
+  status?: number;
+  remark?: string;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysDictType).values({
+    dictType: input.dictType,
+    dictName: input.dictName,
+    status: input.status ?? 1,
+    remark: input.remark ?? null,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateDictType(
+  id: number,
+  input: { dictName?: string; status?: number; remark?: string },
+) {
+  const db = getDb();
+  await db.update(sysDictType).set(input).where(eq(sysDictType.id, id));
+}
+
+export async function deleteDictType(id: number) {
+  const db = getDb();
+  const row = await db.select().from(sysDictType).where(eq(sysDictType.id, id)).limit(1);
+  if (!row[0]) return { error: '字典类型不存在' };
+  await db.delete(sysDictData).where(eq(sysDictData.dictType, row[0].dictType));
+  await db.delete(sysDictType).where(eq(sysDictType.id, id));
+  return { ok: true };
+}
+
+export async function listDictData(dictType?: string): Promise<DictDataRow[]> {
+  const db = getDb();
+  const rows = dictType
+    ? await db
+        .select()
+        .from(sysDictData)
+        .where(eq(sysDictData.dictType, dictType))
+        .orderBy(sysDictData.sortOrder, sysDictData.id)
+    : await db.select().from(sysDictData).orderBy(sysDictData.sortOrder, sysDictData.id);
+  return rows.map((r) => ({
+    id: r.id,
+    dictType: r.dictType,
+    dictLabel: r.dictLabel,
+    dictValue: r.dictValue,
+    sortOrder: r.sortOrder,
+    status: r.status,
+    remark: r.remark,
+    createdAt: String(r.createdAt),
+  }));
+}
+
+export async function createDictData(input: {
+  dictType: string;
+  dictLabel: string;
+  dictValue: string;
+  sortOrder?: number;
+  status?: number;
+  remark?: string;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysDictData).values({
+    dictType: input.dictType,
+    dictLabel: input.dictLabel,
+    dictValue: input.dictValue,
+    sortOrder: input.sortOrder ?? 0,
+    status: input.status ?? 1,
+    remark: input.remark ?? null,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateDictData(
+  id: number,
+  input: {
+    dictLabel?: string;
+    dictValue?: string;
+    sortOrder?: number;
+    status?: number;
+    remark?: string;
+  },
+) {
+  const db = getDb();
+  await db.update(sysDictData).set(input).where(eq(sysDictData.id, id));
+}
+
+export async function deleteDictData(id: number) {
+  const db = getDb();
+  await db.delete(sysDictData).where(eq(sysDictData.id, id));
+}
+
+export async function listNoticesPaginated(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<NoticeRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const [totalRow] = await db.select({ total: count() }).from(sysNotice);
+  const rows = await db
+    .select()
+    .from(sysNotice)
+    .orderBy(desc(sysNotice.id))
+    .limit(pageSize)
+    .offset(offset);
+  const items = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    noticeType: r.noticeType,
+    status: r.status,
+    content: r.content,
+    createdAt: String(r.createdAt),
+    updatedAt: String(r.updatedAt),
+  }));
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export async function createNotice(input: {
+  title: string;
+  noticeType?: number;
+  status?: number;
+  content: string;
+}) {
+  const db = getDb();
+  const [result] = await db.insert(sysNotice).values({
+    title: input.title,
+    noticeType: input.noticeType ?? 1,
+    status: input.status ?? 1,
+    content: input.content,
+  });
+  return Number(result.insertId);
+}
+
+export async function updateNotice(
+  id: number,
+  input: { title?: string; noticeType?: number; status?: number; content?: string },
+) {
+  const db = getDb();
+  await db.update(sysNotice).set(input).where(eq(sysNotice.id, id));
+}
+
+export async function deleteNotice(id: number) {
+  const db = getDb();
+  await db.delete(sysNotice).where(eq(sysNotice.id, id));
+}
+
+export async function listConfigs(): Promise<ConfigRow[]> {
+  const db = getDb();
+  const rows = await db.select().from(systemConfig).orderBy(systemConfig.configKey);
+  return rows.map((r) => ({
+    id: r.id,
+    configKey: r.configKey,
+    configValue: r.configValue,
+    remark: r.remark,
+    updatedAt: String(r.updatedAt),
+  }));
+}
+
+export async function updateConfig(id: number, configValue: string, remark?: string) {
+  const db = getDb();
+  const patch: Partial<typeof systemConfig.$inferInsert> = { configValue };
+  if (remark !== undefined) patch.remark = remark;
+  await db.update(systemConfig).set(patch).where(eq(systemConfig.id, id));
+}
+
+export async function listOperLogsPaginated(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<OperLogRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const [totalRow] = await db.select({ total: count() }).from(sysOperLog);
+  const rows = await db
+    .select()
+    .from(sysOperLog)
+    .orderBy(desc(sysOperLog.id))
+    .limit(pageSize)
+    .offset(offset);
+  const items = rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    operName: r.operName,
+    operUrl: r.operUrl,
+    method: r.method,
+    operIp: r.operIp,
+    status: r.status,
+    errorMsg: r.errorMsg,
+    operTime: String(r.operTime),
+  }));
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export async function listLoginLogsPaginated(
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<LoginLogRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const [totalRow] = await db.select({ total: count() }).from(sysLoginLog);
+  const rows = await db
+    .select()
+    .from(sysLoginLog)
+    .orderBy(desc(sysLoginLog.id))
+    .limit(pageSize)
+    .offset(offset);
+  const items = rows.map((r) => ({
+    id: r.id,
+    username: r.username,
+    ip: r.ip,
+    browser: r.browser,
+    os: r.os,
+    status: r.status,
+    msg: r.msg,
+    loginTime: String(r.loginTime),
+  }));
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export function getOnlineUsers() {
+  return listOnlineSessions();
+}
+
+export function getScheduledJobs() {
+  return SCHEDULED_JOBS;
+}
+
+export async function getDataMonitorStats() {
+  return getAnalyticsOverview();
+}
+
+export async function getServerMonitorInfo() {
+  const mem = process.memoryUsage();
+  return {
+    appName: APP_NAME,
+    status: 'ok',
+    nodeVersion: process.version,
+    platform: process.platform,
+    uptime: process.uptime(),
+    hostname: os.hostname(),
+    cpuCount: os.cpus().length,
+    loadAvg: os.loadavg(),
+    memory: {
+      rss: mem.rss,
+      heapUsed: mem.heapUsed,
+      heapTotal: mem.heapTotal,
+      external: mem.external,
+    },
+    totalMemory: os.totalmem(),
+    freeMemory: os.freemem(),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+export async function getCacheMonitorStats() {
+  const enabled = isRedisEnabled();
+  const redis = await getRedisClient();
+  if (!enabled || !redis) {
+    return { enabled: false, connected: false, dbSize: 0, info: null };
+  }
+  try {
+    const dbSize = await redis.dbsize();
+    const info = await redis.info('memory');
+    return { enabled: true, connected: true, dbSize, info };
+  } catch (err) {
+    return {
+      enabled: true,
+      connected: false,
+      dbSize: 0,
+      info: null,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+export async function listCacheKeys(pattern = '*', limit = 100) {
+  const redis = await getRedisClient();
+  if (!redis) return [];
+  const keys: string[] = [];
+  let cursor = '0';
+  do {
+    const [next, batch] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 50);
+    cursor = next;
+    keys.push(...batch);
+  } while (cursor !== '0' && keys.length < limit);
+  return keys.slice(0, limit);
+}
+
+export async function deleteCacheKey(key: string) {
+  const redis = await getRedisClient();
+  if (!redis) return { error: 'Redis 未启用' };
+  await redis.del(key);
+  return { ok: true };
+}
+
+export async function getLatestNotices(limit = 5) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(sysNotice)
+    .where(eq(sysNotice.status, 1))
+    .orderBy(desc(sysNotice.id))
+    .limit(limit);
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    noticeType: r.noticeType,
+    createdAt: String(r.createdAt),
+  }));
+}

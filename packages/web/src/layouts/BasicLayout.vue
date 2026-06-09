@@ -56,7 +56,7 @@ import AppTabs from './components/AppTabs.vue';
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 24px 1px 24px 24px;
+  padding: 16px 8px 16px 16px;
   overflow: hidden;
   background: #f5f7fa;
 }
@@ -67,10 +67,16 @@ import AppTabs from './components/AppTabs.vue';
   min-width: 0;
   height: 100%;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+}
+
+.content-inner > :deep(> :not(.page-container)) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .content-inner > :deep(.page-container) {

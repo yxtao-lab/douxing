@@ -16,6 +16,8 @@ import { ApiMessageKey, RoleCode, UserStatus, UserType } from '@douxing/shared';
 import type { LoginResult } from '@douxing/shared';
 import { success, fail, failFromError } from '../utils/response.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { getClientIp, parseUserAgent, recordLoginLog } from '../services/sys-log.service.js';
+import { touchOnlineSession } from '../services/online-session.service.js';
 
 const router = Router();
 
@@ -47,9 +49,18 @@ function signToken(userId: number, username: string): string {
   return jwt.sign({ userId, username }, secret, signOptions);
 }
 
-async function buildLoginResult(userId: number): Promise<LoginResult | null> {
+async function buildLoginResult(userId: number, req?: import('express').Request): Promise<LoginResult | null> {
   const userInfo = await getUserWithRoles(userId);
   if (!userInfo) return null;
+  if (req) {
+    touchOnlineSession({
+      userId,
+      username: userInfo.username,
+      nickname: userInfo.nickname,
+      ip: getClientIp(req),
+      isLogin: true,
+    });
+  }
   return { token: signToken(userId, userInfo.username), user: userInfo };
 }
 
@@ -114,10 +125,20 @@ router.post('/sms/login', async (req, res) => {
       return fail(res, ApiMessageKey.ACCOUNT_DISABLED);
     }
 
-    const loginResult = await buildLoginResult(user.id);
+    const loginResult = await buildLoginResult(user.id, req);
     if (!loginResult) {
       return fail(res, ApiMessageKey.LOGIN_FAILED, 500, 500);
     }
+
+    const ua = parseUserAgent(req.headers['user-agent']);
+    await recordLoginLog({
+      username: user.username,
+      ip: getClientIp(req),
+      browser: ua.browser,
+      os: ua.os,
+      status: 1,
+      msg: isNewUser ? '注册并登录' : '登录成功',
+    });
 
     success(res, loginResult, isNewUser ? ApiMessageKey.REGISTER_SUCCESS : ApiMessageKey.LOGIN_SUCCESS);
   } catch (err) {
@@ -149,8 +170,18 @@ router.post('/register', async (req, res) => {
     const userId = Number(result.insertId);
     await assignDefaultRole(userId);
 
-    const loginResult = await buildLoginResult(userId);
+    const loginResult = await buildLoginResult(userId, req);
     if (!loginResult) return fail(res, ApiMessageKey.REGISTER_FAILED, 500, 500);
+
+    const ua = parseUserAgent(req.headers['user-agent']);
+    await recordLoginLog({
+      username: parsed.data.username,
+      ip: getClientIp(req),
+      browser: ua.browser,
+      os: ua.os,
+      status: 1,
+      msg: '注册成功',
+    });
 
     success(res, loginResult, ApiMessageKey.REGISTER_SUCCESS);
   } catch (err) {
@@ -177,13 +208,32 @@ router.post('/login', async (req, res) => {
 
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
+    const ua = parseUserAgent(req.headers['user-agent']);
+    await recordLoginLog({
+      username,
+      ip: getClientIp(req),
+      browser: ua.browser,
+      os: ua.os,
+      status: 0,
+      msg: '密码错误',
+    });
     return fail(res, ApiMessageKey.INVALID_CREDENTIALS);
   }
 
-  const loginResult = await buildLoginResult(user.id);
+  const loginResult = await buildLoginResult(user.id, req);
   if (!loginResult) {
     return fail(res, ApiMessageKey.USER_DATA_ERROR, 500, 500);
   }
+
+  const ua = parseUserAgent(req.headers['user-agent']);
+  await recordLoginLog({
+    username,
+    ip: getClientIp(req),
+    browser: ua.browser,
+    os: ua.os,
+    status: 1,
+    msg: '登录成功',
+  });
 
   success(res, loginResult, ApiMessageKey.LOGIN_SUCCESS);
 });

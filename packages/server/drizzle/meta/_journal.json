@@ -155,6 +155,13 @@
       "when": 1749369600000,
       "tag": "0021_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "5",
+      "when": 1749542400000,
+      "tag": "0023_sys_menu",
+      "breakpoints": true
     }
   ]
 }

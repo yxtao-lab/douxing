@@ -1,0 +1,21 @@
+CREATE TABLE `sys_menu` (
+	`id` int AUTO_INCREMENT NOT NULL,
+	`parent_id` int NOT NULL DEFAULT 0,
+	`menu_key` varchar(64) NOT NULL,
+	`menu_name` varchar(64) NOT NULL,
+	`menu_type` tinyint NOT NULL DEFAULT 2,
+	`path` varchar(128),
+	`component` varchar(128),
+	`perms` varchar(128),
+	`icon` varchar(64),
+	`sort_order` int NOT NULL DEFAULT 0,
+	`is_frame` tinyint NOT NULL DEFAULT 0,
+	`visible` tinyint NOT NULL DEFAULT 1,
+	`status` tinyint NOT NULL DEFAULT 1,
+	`route_params` varchar(255),
+	`remark` varchar(255),
+	`created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	`updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+	CONSTRAINT `sys_menu_id` PRIMARY KEY(`id`),
+	CONSTRAINT `sys_menu_menu_key_unique` UNIQUE(`menu_key`)
+);

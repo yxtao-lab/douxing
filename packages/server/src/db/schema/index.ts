@@ -17,3 +17,4 @@ export * from './plan-sessions.js';
 export * from './route-playbooks.js';
 export * from './journey-albums.js';
 export * from './analytics-events.js';
+export * from './sys-admin.js';

@@ -1,5 +1,7 @@
 import { computed, ref, type Ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { DEFAULT_PAGE_SIZE, normalizePaginatedResult, type PaginatedResult } from '@douxing/shared';
+import { createAdminPaginationConfig } from '@/utils/adminPagination';
 
 export function useServerTablePagination<T>(
   fetchPage: (
@@ -8,18 +10,31 @@ export function useServerTablePagination<T>(
   ) => Promise<PaginatedResult<T> | T[] | null | undefined>,
   options?: { defaultPageSize?: number },
 ) {
+  const { t } = useI18n();
   const items = ref([]) as Ref<T[]>;
   const loading = ref(false);
   const total = ref(0);
   const page = ref(1);
   const pageSize = ref(options?.defaultPageSize ?? DEFAULT_PAGE_SIZE);
 
-  const pagination = computed(() => ({
-    current: page.value,
-    pageSize: pageSize.value,
-    total: total.value,
-    showSizeChanger: true,
-  }));
+  function formatPaginationTotal(totalCount: number, range: [number, number]) {
+    return t('common.paginationTotal', {
+      start: range[0],
+      end: range[1],
+      total: totalCount,
+    });
+  }
+
+  const pagination = computed(() =>
+    createAdminPaginationConfig(
+      {
+        current: page.value,
+        pageSize: pageSize.value,
+        total: total.value,
+      },
+      formatPaginationTotal,
+    ),
+  );
 
   async function load() {
     loading.value = true;

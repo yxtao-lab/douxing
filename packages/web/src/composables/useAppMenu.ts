@@ -3,19 +3,37 @@ import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
+  ApartmentOutlined,
   AuditOutlined,
   BarChartOutlined,
+  BlockOutlined,
   BookOutlined,
+  CloudServerOutlined,
+  DatabaseOutlined,
+  DesktopOutlined,
   EnvironmentOutlined,
+  FileTextOutlined,
+  FormOutlined,
   GlobalOutlined,
+  HddOutlined,
   HomeOutlined,
+  IdcardOutlined,
+  MenuOutlined,
+  NotificationOutlined,
   PictureOutlined,
+  RadarChartOutlined,
+  ReadOutlined,
+  SettingOutlined,
   ShoppingOutlined,
+  TeamOutlined,
   UnorderedListOutlined,
+  UserOutlined,
+  WifiOutlined,
+  ClockCircleOutlined,
 } from '@ant-design/icons-vue';
 import type { Component } from 'vue';
 
-const iconMap: Record<string, Component> = {
+export const menuIconMap: Record<string, Component> = {
   HomeOutlined,
   UnorderedListOutlined,
   ShoppingOutlined,
@@ -25,13 +43,40 @@ const iconMap: Record<string, Component> = {
   PictureOutlined,
   BookOutlined,
   BarChartOutlined,
+  UserOutlined,
+  TeamOutlined,
+  MenuOutlined,
+  ApartmentOutlined,
+  IdcardOutlined,
+  ReadOutlined,
+  FormOutlined,
+  NotificationOutlined,
+  SettingOutlined,
+  WifiOutlined,
+  ClockCircleOutlined,
+  RadarChartOutlined,
+  DesktopOutlined,
+  CloudServerOutlined,
+  DatabaseOutlined,
+  HddOutlined,
+  BlockOutlined,
+  FileTextOutlined,
 };
+
+const MENU_GROUPS = [
+  { key: 'web.menu.biz', groupId: 'group-biz' },
+  { key: 'web.menu.content', groupId: 'group-content' },
+  { key: 'web.menu.data', groupId: 'group-data' },
+  { key: 'web.menu.system', groupId: 'group-system' },
+  { key: 'web.menu.monitor', groupId: 'group-monitor' },
+  { key: 'web.menu.log', groupId: 'group-log' },
+] as const;
 
 export interface AppRouteMeta {
   requiresAuth?: boolean;
   titleKey?: string;
   menuGroupKey?: string;
-  icon?: keyof typeof iconMap;
+  icon?: keyof typeof menuIconMap;
   hideInMenu?: boolean;
   hideInTabs?: boolean;
 }
@@ -48,8 +93,8 @@ function toMenuPath(path: string) {
 }
 
 function renderIcon(name?: string) {
-  if (!name || !iconMap[name]) return undefined;
-  return () => h(iconMap[name]);
+  if (!name || !menuIconMap[name]) return undefined;
+  return () => h(menuIconMap[name]);
 }
 
 export function useAppMenu() {
@@ -65,9 +110,6 @@ export function useAppMenu() {
   const menuItems = computed<MenuProps['items']>(() => {
     const visible = menuRoutes.value.filter((item) => !item.meta?.hideInMenu && item.meta?.titleKey);
     const workbench = visible.filter((item) => !item.meta?.menuGroupKey);
-    const biz = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.biz');
-    const content = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.content');
-    const data = visible.filter((item) => item.meta?.menuGroupKey === 'web.menu.data');
 
     const toMenuItem = (item: MenuRouteItem) => ({
       key: toMenuPath(item.path),
@@ -77,34 +119,18 @@ export function useAppMenu() {
     });
 
     const groups: NonNullable<MenuProps['items']> = [];
-
     workbench.forEach((item) => groups.push(toMenuItem(item)));
 
-    if (biz.length) {
-      groups.push({
-        key: 'group-biz',
-        label: t('web.menu.biz'),
-        title: t('web.menu.biz'),
-        children: biz.map(toMenuItem),
-      });
-    }
-
-    if (content.length) {
-      groups.push({
-        key: 'group-content',
-        label: t('web.menu.content'),
-        title: t('web.menu.content'),
-        children: content.map(toMenuItem),
-      });
-    }
-
-    if (data.length) {
-      groups.push({
-        key: 'group-data',
-        label: t('web.menu.data'),
-        title: t('web.menu.data'),
-        children: data.map(toMenuItem),
-      });
+    for (const group of MENU_GROUPS) {
+      const children = visible.filter((item) => item.meta?.menuGroupKey === group.key);
+      if (children.length) {
+        groups.push({
+          key: group.groupId,
+          label: t(group.key),
+          title: t(group.key),
+          children: children.map(toMenuItem),
+        });
+      }
     }
 
     return groups;
@@ -113,11 +139,9 @@ export function useAppMenu() {
   const selectedKeys = computed(() => [route.path]);
 
   const openKeys = computed(() => {
-    const group = route.meta.menuGroupKey as string | undefined;
-    if (group === 'web.menu.biz') return ['group-biz'];
-    if (group === 'web.menu.content') return ['group-content'];
-    if (group === 'web.menu.data') return ['group-data'];
-    return [];
+    const groupKey = route.meta.menuGroupKey as string | undefined;
+    const matched = MENU_GROUPS.find((g) => g.key === groupKey);
+    return matched ? [matched.groupId] : [];
   });
 
   const breadcrumbItems = computed(() => {

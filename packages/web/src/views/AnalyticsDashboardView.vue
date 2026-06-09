@@ -73,7 +73,7 @@
             <a-table
               :columns="trendColumns"
               :data-source="trendTableRows"
-              :pagination="{ pageSize: 10, showSizeChanger: false }"
+              :pagination="trendTablePagination"
               size="small"
               row-key="date"
             />
@@ -108,6 +108,7 @@ import {
 } from '@/api/analytics';
 import AnalyticsTrendLineChart from '@/components/analytics/AnalyticsTrendLineChart.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { createClientAdminPaginationConfig } from '@/utils/adminPagination';
 
 usePageTitle('web.analytics');
 
@@ -140,6 +141,12 @@ const cityColumns = computed<TableColumnType[]>(() => [
 ]);
 
 const trendTableRows = computed(() => [...trends.value].reverse());
+
+const trendTablePagination = computed(() =>
+  createClientAdminPaginationConfig({ pageSize: 10 }, (total, range) =>
+    t('common.paginationTotal', { start: range[0], end: range[1], total }),
+  ),
+);
 
 const trendSeriesLabels = computed(() => ({
   users: t('analytics.metricUsers'),

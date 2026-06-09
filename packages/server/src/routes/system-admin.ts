@@ -1,0 +1,753 @@
+import { Router } from 'express';
+import { z } from 'zod';
+import { authMiddleware } from '../middleware/auth.js';
+import { requireAdmin } from '../middleware/admin.middleware.js';
+import { success, fail } from '../utils/response.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
+import { recordOperLogFromRequest } from '../services/sys-log.service.js';
+import {
+  listAdminUsersPaginated,
+  updateAdminUserStatus,
+  updateAdminUserRoles,
+  resetAdminUserPassword,
+  listRolesWithStats,
+  createRole,
+  updateRole,
+  deleteRole,
+  listDepts,
+  createDept,
+  updateDept,
+  deleteDept,
+  listPostsPaginated,
+  createPost,
+  updatePost,
+  deletePost,
+  listDictTypes,
+  createDictType,
+  updateDictType,
+  deleteDictType,
+  listDictData,
+  createDictData,
+  updateDictData,
+  deleteDictData,
+  listNoticesPaginated,
+  createNotice,
+  updateNotice,
+  deleteNotice,
+  listConfigs,
+  updateConfig,
+  listOperLogsPaginated,
+  listLoginLogsPaginated,
+  getMenuTree,
+  listMenusTree,
+  getMenuById,
+  createMenu,
+  updateMenu,
+  deleteMenu,
+  getOnlineUsers,
+  getScheduledJobs,
+  getDataMonitorStats,
+  getServerMonitorInfo,
+  getCacheMonitorStats,
+  listCacheKeys,
+  deleteCacheKey,
+} from '../services/sys-admin.service.js';
+
+const router = Router();
+
+router.use(authMiddleware);
+
+async function withAdminWrite(
+  req: import('express').Request,
+  res: import('express').Response,
+  title: string,
+  handler: () => Promise<unknown>,
+) {
+  if (!(await requireAdmin(req, res))) return;
+  try {
+    const result = await handler();
+    await recordOperLogFromRequest(req, title);
+    return result;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : '操作失败';
+    await recordOperLogFromRequest(req, title, 0, msg);
+    throw err;
+  }
+}
+
+router.get('/users', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined;
+    const result = await listAdminUsersPaginated(page, pageSize, keyword || undefined);
+    success(res, result);
+  } catch (err) {
+    console.error('[system/users]', err);
+    fail(res, '获取用户列表失败', 500, 500);
+  }
+});
+
+router.patch('/users/:id/status', async (req, res) => {
+  try {
+    const userId = parseInt(String(req.params.id), 10);
+    const parsed = z.object({ status: z.number().int().min(0).max(1) }).safeParse(req.body);
+    if (Number.isNaN(userId) || !parsed.success) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '修改用户状态', () =>
+      updateAdminUserStatus(userId, parsed.data.status),
+    );
+    if (result === undefined) return;
+    success(res, result, '状态已更新');
+  } catch (err) {
+    console.error('[system/users/status]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.put('/users/:id/roles', async (req, res) => {
+  try {
+    const userId = parseInt(String(req.params.id), 10);
+    const parsed = z.object({ roleCodes: z.array(z.string().min(1)) }).safeParse(req.body);
+    if (Number.isNaN(userId) || !parsed.success) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '分配用户角色', () =>
+      updateAdminUserRoles(userId, parsed.data.roleCodes),
+    );
+    if (result === undefined) return;
+    success(res, result, '角色已更新');
+  } catch (err) {
+    console.error('[system/users/roles]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.post('/users/:id/reset-password', async (req, res) => {
+  try {
+    const userId = parseInt(String(req.params.id), 10);
+    const parsed = z.object({ password: z.string().min(6).max(64) }).safeParse(req.body);
+    if (Number.isNaN(userId) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '重置用户密码', () =>
+      resetAdminUserPassword(userId, parsed.data.password),
+    );
+    success(res, null, '密码已重置');
+  } catch (err) {
+    console.error('[system/users/reset-password]', err);
+    fail(res, '重置失败', 500, 500);
+  }
+});
+
+router.get('/roles', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await listRolesWithStats());
+  } catch (err) {
+    console.error('[system/roles]', err);
+    fail(res, '获取角色失败', 500, 500);
+  }
+});
+
+router.post('/roles', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        code: z.string().min(1).max(32),
+        name: z.string().min(1).max(64),
+        description: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增角色', () => createRole(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '角色已创建');
+  } catch (err) {
+    console.error('[system/roles/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/roles/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({ name: z.string().min(1).max(64).optional(), description: z.string().max(255).optional() })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑角色', () => updateRole(id, parsed.data));
+    success(res, null, '角色已更新');
+  } catch (err) {
+    console.error('[system/roles/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/roles/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '删除角色', () => deleteRole(id));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '角色已删除');
+  } catch (err) {
+    console.error('[system/roles/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/menus', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const keyword = typeof req.query.name === 'string' ? req.query.name : undefined;
+    success(res, await listMenusTree(keyword));
+  } catch (err) {
+    console.error('[system/menus]', err);
+    fail(res, '获取菜单失败', 500, 500);
+  }
+});
+
+router.get('/menus/:id', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    const menu = await getMenuById(id);
+    if (!menu) return fail(res, '菜单不存在', 404, 404);
+    success(res, menu);
+  } catch (err) {
+    console.error('[system/menus/detail]', err);
+    fail(res, '获取菜单失败', 500, 500);
+  }
+});
+
+router.post('/menus', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        parentId: z.number().int().min(0),
+        menuKey: z.string().min(1).max(64),
+        menuName: z.string().min(1).max(64),
+        menuType: z.number().int().min(1).max(3).optional(),
+        path: z.string().max(128).nullable().optional(),
+        component: z.string().max(128).nullable().optional(),
+        perms: z.string().max(128).nullable().optional(),
+        icon: z.string().max(64).nullable().optional(),
+        sortOrder: z.number().int().optional(),
+        isFrame: z.number().int().min(0).max(1).optional(),
+        visible: z.number().int().min(0).max(1).optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        routeParams: z.string().max(255).nullable().optional(),
+        remark: z.string().max(255).nullable().optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增菜单', () => createMenu(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '菜单已创建');
+  } catch (err) {
+    console.error('[system/menus/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/menus/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        parentId: z.number().int().min(0).optional(),
+        menuName: z.string().min(1).max(64).optional(),
+        menuType: z.number().int().min(1).max(3).optional(),
+        path: z.string().max(128).nullable().optional(),
+        component: z.string().max(128).nullable().optional(),
+        perms: z.string().max(128).nullable().optional(),
+        icon: z.string().max(64).nullable().optional(),
+        sortOrder: z.number().int().optional(),
+        isFrame: z.number().int().min(0).max(1).optional(),
+        visible: z.number().int().min(0).max(1).optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        routeParams: z.string().max(255).nullable().optional(),
+        remark: z.string().max(255).nullable().optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '编辑菜单', () => updateMenu(id, parsed.data));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '菜单已更新');
+  } catch (err) {
+    console.error('[system/menus/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/menus/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '删除菜单', () => deleteMenu(id));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '菜单已删除');
+  } catch (err) {
+    console.error('[system/menus/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/depts', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await listDepts());
+  } catch (err) {
+    console.error('[system/depts]', err);
+    fail(res, '获取部门失败', 500, 500);
+  }
+});
+
+router.post('/depts', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        parentId: z.number().int().min(0),
+        name: z.string().min(1).max(64),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增部门', () => createDept(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '部门已创建');
+  } catch (err) {
+    console.error('[system/depts/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/depts/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        parentId: z.number().int().min(0).optional(),
+        name: z.string().min(1).max(64).optional(),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑部门', () => updateDept(id, parsed.data));
+    success(res, null, '部门已更新');
+  } catch (err) {
+    console.error('[system/depts/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/depts/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '删除部门', () => deleteDept(id));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '部门已删除');
+  } catch (err) {
+    console.error('[system/depts/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/posts', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    success(res, await listPostsPaginated(page, pageSize));
+  } catch (err) {
+    console.error('[system/posts]', err);
+    fail(res, '获取岗位失败', 500, 500);
+  }
+});
+
+router.post('/posts', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        code: z.string().min(1).max(32),
+        name: z.string().min(1).max(64),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增岗位', () => createPost(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '岗位已创建');
+  } catch (err) {
+    console.error('[system/posts/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/posts/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        name: z.string().min(1).max(64).optional(),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑岗位', () => updatePost(id, parsed.data));
+    success(res, null, '岗位已更新');
+  } catch (err) {
+    console.error('[system/posts/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/posts/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '删除岗位', () => deletePost(id));
+    success(res, null, '岗位已删除');
+  } catch (err) {
+    console.error('[system/posts/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/dict/types', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await listDictTypes());
+  } catch (err) {
+    console.error('[system/dict/types]', err);
+    fail(res, '获取字典类型失败', 500, 500);
+  }
+});
+
+router.post('/dict/types', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        dictType: z.string().min(1).max(64),
+        dictName: z.string().min(1).max(64),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增字典类型', () => createDictType(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '字典类型已创建');
+  } catch (err) {
+    console.error('[system/dict/types/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/dict/types/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        dictName: z.string().min(1).max(64).optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑字典类型', () => updateDictType(id, parsed.data));
+    success(res, null, '字典类型已更新');
+  } catch (err) {
+    console.error('[system/dict/types/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/dict/types/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '删除字典类型', () => deleteDictType(id));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '字典类型已删除');
+  } catch (err) {
+    console.error('[system/dict/types/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/dict/data', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const dictType = typeof req.query.dictType === 'string' ? req.query.dictType : undefined;
+    success(res, await listDictData(dictType));
+  } catch (err) {
+    console.error('[system/dict/data]', err);
+    fail(res, '获取字典数据失败', 500, 500);
+  }
+});
+
+router.post('/dict/data', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        dictType: z.string().min(1).max(64),
+        dictLabel: z.string().min(1).max(64),
+        dictValue: z.string().min(1).max(64),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增字典数据', () => createDictData(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '字典数据已创建');
+  } catch (err) {
+    console.error('[system/dict/data/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/dict/data/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        dictLabel: z.string().min(1).max(64).optional(),
+        dictValue: z.string().min(1).max(64).optional(),
+        sortOrder: z.number().int().optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        remark: z.string().max(255).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑字典数据', () => updateDictData(id, parsed.data));
+    success(res, null, '字典数据已更新');
+  } catch (err) {
+    console.error('[system/dict/data/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/dict/data/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '删除字典数据', () => deleteDictData(id));
+    success(res, null, '字典数据已删除');
+  } catch (err) {
+    console.error('[system/dict/data/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/notices', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    success(res, await listNoticesPaginated(page, pageSize));
+  } catch (err) {
+    console.error('[system/notices]', err);
+    fail(res, '获取公告失败', 500, 500);
+  }
+});
+
+router.post('/notices', async (req, res) => {
+  try {
+    const parsed = z
+      .object({
+        title: z.string().min(1).max(128),
+        noticeType: z.number().int().min(1).max(2).optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        content: z.string().min(1),
+      })
+      .safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const id = await withAdminWrite(req, res, '新增公告', () => createNotice(parsed.data));
+    if (id === undefined) return;
+    success(res, { id }, '公告已创建');
+  } catch (err) {
+    console.error('[system/notices/create]', err);
+    fail(res, '创建失败', 500, 500);
+  }
+});
+
+router.put('/notices/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        title: z.string().min(1).max(128).optional(),
+        noticeType: z.number().int().min(1).max(2).optional(),
+        status: z.number().int().min(0).max(1).optional(),
+        content: z.string().min(1).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '编辑公告', () => updateNotice(id, parsed.data));
+    success(res, null, '公告已更新');
+  } catch (err) {
+    console.error('[system/notices/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.delete('/notices/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id)) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '删除公告', () => deleteNotice(id));
+    success(res, null, '公告已删除');
+  } catch (err) {
+    console.error('[system/notices/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/config', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await listConfigs());
+  } catch (err) {
+    console.error('[system/config]', err);
+    fail(res, '获取参数失败', 500, 500);
+  }
+});
+
+router.put('/config/:id', async (req, res) => {
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({ configValue: z.string().min(0), remark: z.string().max(255).optional() })
+      .safeParse(req.body);
+    if (Number.isNaN(id) || !parsed.success) return fail(res, '参数错误');
+    await withAdminWrite(req, res, '修改系统参数', () =>
+      updateConfig(id, parsed.data.configValue, parsed.data.remark),
+    );
+    success(res, null, '参数已更新');
+  } catch (err) {
+    console.error('[system/config/update]', err);
+    fail(res, '更新失败', 500, 500);
+  }
+});
+
+router.get('/logs/oper', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    success(res, await listOperLogsPaginated(page, pageSize));
+  } catch (err) {
+    console.error('[system/logs/oper]', err);
+    fail(res, '获取操作日志失败', 500, 500);
+  }
+});
+
+router.get('/logs/login', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    success(res, await listLoginLogsPaginated(page, pageSize));
+  } catch (err) {
+    console.error('[system/logs/login]', err);
+    fail(res, '获取登录日志失败', 500, 500);
+  }
+});
+
+router.get('/monitor/online', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, getOnlineUsers());
+  } catch (err) {
+    console.error('[system/monitor/online]', err);
+    fail(res, '获取在线用户失败', 500, 500);
+  }
+});
+
+router.get('/monitor/jobs', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, getScheduledJobs());
+  } catch (err) {
+    console.error('[system/monitor/jobs]', err);
+    fail(res, '获取定时任务失败', 500, 500);
+  }
+});
+
+router.get('/monitor/data', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await getDataMonitorStats());
+  } catch (err) {
+    console.error('[system/monitor/data]', err);
+    fail(res, '获取数据监控失败', 500, 500);
+  }
+});
+
+router.get('/monitor/server', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await getServerMonitorInfo());
+  } catch (err) {
+    console.error('[system/monitor/server]', err);
+    fail(res, '获取服务监控失败', 500, 500);
+  }
+});
+
+router.get('/monitor/cache', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await getCacheMonitorStats());
+  } catch (err) {
+    console.error('[system/monitor/cache]', err);
+    fail(res, '获取缓存监控失败', 500, 500);
+  }
+});
+
+router.get('/monitor/cache/keys', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const pattern = typeof req.query.pattern === 'string' ? req.query.pattern : '*';
+    const limit = req.query.limit != null ? Number(req.query.limit) : 100;
+    success(res, await listCacheKeys(pattern, limit));
+  } catch (err) {
+    console.error('[system/monitor/cache/keys]', err);
+    fail(res, '获取缓存键失败', 500, 500);
+  }
+});
+
+router.delete('/monitor/cache/keys', async (req, res) => {
+  try {
+    const parsed = z.object({ key: z.string().min(1) }).safeParse(req.body);
+    if (!parsed.success) return fail(res, '参数错误');
+    const result = await withAdminWrite(req, res, '删除缓存键', () => deleteCacheKey(parsed.data.key));
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, null, '缓存键已删除');
+  } catch (err) {
+    console.error('[system/monitor/cache/delete]', err);
+    fail(res, '删除失败', 500, 500);
+  }
+});
+
+export default router;

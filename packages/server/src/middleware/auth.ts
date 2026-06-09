@@ -2,6 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { fail } from '../utils/response.js';
 import { ApiMessageKey } from '@douxing/shared';
+import { getUserWithRoles } from '../services/user.service.js';
+import { touchOnlineSession } from '../services/online-session.service.js';
+import { getClientIp } from '../services/sys-log.service.js';
 
 export interface AuthPayload {
   userId: number;
@@ -31,6 +34,16 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   try {
     const payload = jwt.verify(token, secret) as AuthPayload;
     req.auth = payload;
+    void getUserWithRoles(payload.userId).then((user) => {
+      if (user) {
+        touchOnlineSession({
+          userId: user.id,
+          username: user.username,
+          nickname: user.nickname,
+          ip: getClientIp(req),
+        });
+      }
+    });
     next();
   } catch {
     return fail(res, ApiMessageKey.TOKEN_EXPIRED, 401, 401);
