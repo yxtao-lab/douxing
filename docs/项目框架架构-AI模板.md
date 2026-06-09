@@ -202,11 +202,11 @@ router.use(`${API_PREFIX}/users`, usersRouter);
 
 - 登录接口无 `authMiddleware`
 - 其余写操作：`authMiddleware` + `req.auth.userId`
-- 管理端接口：额外校验 `RoleCode.ADMIN`
+- 管理端接口：额外校验 `RoleCode.ADMIN`（**S1 目标**：`requirePerm` 细粒度 RBAC，见 [系统管理.md](./系统管理.md)）
 
 ### 3.3 `@scope/web`
 
-**职责**：运营管理端（Ant Design Vue），非用户 C 端。
+**职责**：运营管理端（Ant Design Vue），非用户 C 端。系统管理（S 线）与发单接单商户端（M 线 · 远期 `/partner`）分域；C 端 AI 规划与模块 B marketplace 产品入口独立。
 
 ```text
 packages/web/src/

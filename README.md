@@ -19,14 +19,16 @@
 |------|------|
 | 项目框架架构（AI 模板） | [docs/项目框架架构-AI模板.md](docs/项目框架架构-AI模板.md) · 配置 [`project.manifest.yaml`](project.manifest.yaml) |
 | 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
-| 详细设计（Markdown） | [docs/详细设计文档.md](docs/详细设计文档.md) |
-| 功能路线图（含时间轴进度） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 详细设计（Markdown + §17 补充） | [docs/详细设计文档.md](docs/详细设计文档.md) |
+| 功能路线图（含 S/M 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
+| 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 | scripts 目录说明 | [scripts/README.md](scripts/README.md) |
 
-未完成能力与分步实施计划见 **ROADMAP**（对照详细设计文档 V2.0）。
+未完成能力与分步实施计划见 **ROADMAP**（含模块 A 主链与 **S 系统管理** / **M 发单接单** 线）。
 
 ## 目录结构
 
