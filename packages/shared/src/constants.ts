@@ -218,6 +218,11 @@ export const CHECKIN_MAX_PHOTOS = 3;
 /** 旅行照片单张大小上限（J1 默认 10MB） */
 export const TRAVEL_PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024;
 
+/** J5：EXIF GPS 高置信匹配半径（米） */
+export const PHOTO_EXIF_GPS_HIGH_M = 500;
+/** J5：EXIF GPS 中置信匹配半径（米） */
+export const PHOTO_EXIF_GPS_MEDIUM_M = 2000;
+
 /** 旅程相册状态 */
 export const JourneyAlbumStatus = {
   ACTIVE: 'active',

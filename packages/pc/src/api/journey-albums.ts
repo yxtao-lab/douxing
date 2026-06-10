@@ -1,10 +1,13 @@
 import http from './http';
 import type {
   ApiResponse,
+  ApplyExifSuggestionsResult,
   JourneyAlbumDetail,
   JourneyAlbumPhotoGroup,
+  JourneyAlbumShareState,
   JourneyAlbumSummary,
   PaginatedResult,
+  SharedJourneyAlbumPayload,
   TravelPhotoInfo,
   UpdateTravelPhotoRequest,
   UserPhotoStorageInfo,
@@ -54,6 +57,29 @@ export async function deleteTravelPhoto(albumId: number, photoId: number) {
 
 export async function fetchPhotoStorage() {
   const { data } = await http.get<ApiResponse<UserPhotoStorageInfo>>('/users/me/storage');
+  return data.data;
+}
+
+export async function updateJourneyAlbumShare(albumId: number, enabled: boolean) {
+  const { data } = await http.post<ApiResponse<JourneyAlbumShareState>>(
+    `/journey-albums/${albumId}/share`,
+    { enabled },
+  );
+  return data.data;
+}
+
+export async function applyExifSuggestions(albumId: number, photoIds?: number[]) {
+  const { data } = await http.post<ApiResponse<ApplyExifSuggestionsResult>>(
+    `/journey-albums/${albumId}/photos/apply-exif-suggestions`,
+    photoIds ? { photoIds } : {},
+  );
+  return data.data;
+}
+
+export async function fetchSharedJourneyAlbum(token: string) {
+  const { data } = await http.get<ApiResponse<SharedJourneyAlbumPayload>>(
+    `/share/journey-albums/${encodeURIComponent(token)}`,
+  );
   return data.data;
 }
 

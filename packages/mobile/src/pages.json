@@ -33,6 +33,12 @@
       }
     },
     {
+      "path": "pages/share/journey-album",
+      "style": {
+        "navigationBarTitleText": "旅程相册"
+      }
+    },
+    {
       "path": "pages/profile/profile",
       "style": {
         "navigationBarTitleText": "我的"

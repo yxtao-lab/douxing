@@ -1,4 +1,5 @@
-import { and, desc, eq, inArray, sql, count } from 'drizzle-orm';
+import { and, desc, eq, inArray, isNull, or, sql, count } from 'drizzle-orm';
+import { randomBytes } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -16,6 +17,11 @@ import {
   type TravelPhotoInfo,
   type UpdateTravelPhotoRequest,
   type UserTravelPhotoListItem,
+  type JourneyAlbumShareState,
+  type SharedJourneyAlbumPayload,
+  type ApplyExifSuggestionsResult,
+  type TravelPhotoPlacementSuggestion,
+  type TravelPhotoSourceValue,
   buildPaginatedResult,
   type PaginatedResult,
 } from '@douxing/shared';
@@ -29,6 +35,14 @@ import {
   persistTravelPhotoBuffer,
 } from './travel-photo-storage.service.js';
 import { assertCanUploadTravelPhoto } from './photo-quota.service.js';
+import { parseImageExif } from '../utils/exif.util.js';
+import {
+  collectRoutePoiCandidates,
+  shouldAutoApplySuggestion,
+  suggestPhotoPlacement,
+} from './travel-photo-suggest.service.js';
+
+const JOURNEY_ALBUM_SHARE_PATH_PREFIX = '/share/journey-albums/';
 
 const serverRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const checkInPhotosRoot = path.resolve(serverRoot, 'uploads/checkins');
@@ -105,6 +119,7 @@ function toTravelPhotoInfo(row: TravelPhoto): TravelPhotoInfo {
     caption: row.caption ?? null,
     sortOrder: row.sortOrder,
     source: row.source as TravelPhotoInfo['source'],
+    shootingParams: row.shootingParams ?? null,
     createdAt: toIso(row.createdAt) ?? new Date().toISOString(),
   };
 }
@@ -218,9 +233,15 @@ function toAlbumSummary(
     photoCount: row.photoCount,
     bytesUsed: row.bytesUsed,
     status: row.status as JourneyAlbumSummary['status'],
+    shareEnabled: row.shareEnabled === 1,
     createdAt: toIso(row.createdAt) ?? new Date().toISOString(),
     updatedAt: toIso(row.updatedAt) ?? new Date().toISOString(),
   };
+}
+
+function buildSharePath(token: string | null | undefined): string | null {
+  if (!token) return null;
+  return `${JOURNEY_ALBUM_SHARE_PATH_PREFIX}${token}`;
 }
 
 export async function listJourneyAlbumsForUser(userId: number): Promise<JourneyAlbumSummary[]> {
@@ -419,10 +440,42 @@ export async function uploadTravelPhoto(
 
   await assertCanUploadTravelPhoto(userId, input.byteSize);
 
+  const exif = parseImageExif(input.buffer);
+  const db = getDb();
+  const routeRows = await db
+    .select({ routeDetail: travelRoutes.routeDetail })
+    .from(travelRoutes)
+    .where(eq(travelRoutes.id, album.routeId))
+    .limit(1);
+  const routeDetail = routeRows[0]?.routeDetail as Record<string, unknown> | null;
+  const poiCandidates = await collectRoutePoiCandidates(routeDetail);
+
+  const hasExplicitPlacement =
+    input.dayIndex != null || Boolean(input.poiName?.trim()) || input.attractionId != null;
+
+  let dayIndex = input.dayIndex ?? null;
+  let poiName = input.poiName?.trim() || null;
+  let attractionId = input.attractionId ?? null;
+  let photoSource: TravelPhotoSourceValue = TravelPhotoSource.UPLOAD;
+  let placementSuggestion: TravelPhotoPlacementSuggestion | null = null;
+
+  if (!hasExplicitPlacement) {
+    placementSuggestion = suggestPhotoPlacement(routeDetail, poiCandidates, {
+      latitude: exif.latitude,
+      longitude: exif.longitude,
+      takenAt: exif.takenAt,
+    });
+    if (shouldAutoApplySuggestion(placementSuggestion)) {
+      dayIndex = placementSuggestion.dayIndex;
+      poiName = placementSuggestion.poiName;
+      attractionId = placementSuggestion.attractionId;
+      photoSource = TravelPhotoSource.IMPORT;
+    }
+  }
+
   const { storedUrl } = await persistTravelPhotoBuffer(userId, input.buffer, input.contentType);
   const dimensions = readImageDimensions(input.buffer);
 
-  const db = getDb();
   const [insertResult] = await db.insert(travelPhotos).values({
     userId,
     albumId,
@@ -430,12 +483,16 @@ export async function uploadTravelPhoto(
     byteSize: input.byteSize,
     width: dimensions?.width ?? null,
     height: dimensions?.height ?? null,
-    dayIndex: input.dayIndex ?? null,
-    poiName: input.poiName?.trim() || null,
-    attractionId: input.attractionId ?? null,
+    dayIndex,
+    poiName,
+    attractionId,
+    takenAt: exif.takenAt ?? null,
+    latitude: exif.latitude != null ? String(exif.latitude) : null,
+    longitude: exif.longitude != null ? String(exif.longitude) : null,
     caption: input.caption?.trim() || null,
     sortOrder: input.sortOrder ?? 0,
-    source: TravelPhotoSource.UPLOAD,
+    source: photoSource,
+    shootingParams: exif.shootingParams,
   });
 
   const photoId = Number(insertResult.insertId);
@@ -456,7 +513,163 @@ export async function uploadTravelPhoto(
     throw new ApiError(ApiMessageKey.TRAVEL_PHOTO_UPLOAD_FAILED);
   }
 
-  return toTravelPhotoInfo(photo);
+  const info = toTravelPhotoInfo(photo);
+  if (placementSuggestion && placementSuggestion.confidence !== 'none') {
+    info.placementSuggestion = placementSuggestion;
+  }
+  return info;
+}
+
+/** J5：为未分配照片批量应用 EXIF 建议（高/中置信） */
+export async function applyExifSuggestionsForAlbum(
+  albumId: number,
+  userId: number,
+  photoIds?: number[],
+): Promise<ApplyExifSuggestionsResult> {
+  const album = await getAlbumRowForUser(albumId, userId);
+  if (!album) {
+    throw new ApiError(ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND);
+  }
+
+  const db = getDb();
+  const routeRows = await db
+    .select({ routeDetail: travelRoutes.routeDetail })
+    .from(travelRoutes)
+    .where(eq(travelRoutes.id, album.routeId))
+    .limit(1);
+  const routeDetail = routeRows[0]?.routeDetail as Record<string, unknown> | null;
+  const poiCandidates = await collectRoutePoiCandidates(routeDetail);
+
+  const unassignedCondition = and(
+    eq(travelPhotos.albumId, albumId),
+    eq(travelPhotos.userId, userId),
+    isNull(travelPhotos.dayIndex),
+    or(isNull(travelPhotos.poiName), eq(travelPhotos.poiName, '')),
+  );
+
+  const targetRows =
+    photoIds && photoIds.length > 0
+      ? await db
+          .select()
+          .from(travelPhotos)
+          .where(
+            and(
+              eq(travelPhotos.albumId, albumId),
+              eq(travelPhotos.userId, userId),
+              inArray(travelPhotos.id, photoIds),
+            ),
+          )
+      : await db.select().from(travelPhotos).where(unassignedCondition);
+
+  let applied = 0;
+  let skipped = 0;
+  const updatedPhotos: TravelPhotoInfo[] = [];
+
+  for (const row of targetRows) {
+    const suggestion = suggestPhotoPlacement(routeDetail, poiCandidates, {
+      latitude: decimalToNumber(row.latitude),
+      longitude: decimalToNumber(row.longitude),
+      takenAt: row.takenAt ? new Date(row.takenAt) : null,
+    });
+
+    const canApply =
+      suggestion.dayIndex != null &&
+      (suggestion.confidence === 'high' || suggestion.confidence === 'medium');
+    if (!canApply) {
+      skipped += 1;
+      continue;
+    }
+
+    await db
+      .update(travelPhotos)
+      .set({
+        dayIndex: suggestion.dayIndex,
+        poiName: suggestion.poiName,
+        attractionId: suggestion.attractionId,
+        source: TravelPhotoSource.IMPORT,
+      })
+      .where(eq(travelPhotos.id, row.id));
+
+    const updated = await db.select().from(travelPhotos).where(eq(travelPhotos.id, row.id)).limit(1);
+    if (updated[0]) {
+      applied += 1;
+      updatedPhotos.push(toTravelPhotoInfo(updated[0]));
+    } else {
+      skipped += 1;
+    }
+  }
+
+  return { applied, skipped, photos: updatedPhotos };
+}
+
+/** J5：开启/关闭相册公开分享 */
+export async function updateJourneyAlbumShare(
+  albumId: number,
+  userId: number,
+  enabled: boolean,
+): Promise<JourneyAlbumShareState> {
+  const album = await getAlbumRowForUser(albumId, userId);
+  if (!album) {
+    throw new ApiError(ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND);
+  }
+
+  const db = getDb();
+  let shareToken = album.shareToken ?? null;
+
+  if (enabled) {
+    if (!shareToken) {
+      shareToken = randomBytes(16).toString('hex');
+    }
+    await db
+      .update(journeyAlbums)
+      .set({ shareEnabled: 1, shareToken })
+      .where(eq(journeyAlbums.id, albumId));
+  } else {
+    await db
+      .update(journeyAlbums)
+      .set({ shareEnabled: 0 })
+      .where(eq(journeyAlbums.id, albumId));
+  }
+
+  return {
+    shareEnabled: enabled,
+    shareToken: enabled ? shareToken : shareToken,
+    sharePath: enabled ? buildSharePath(shareToken) : null,
+  };
+}
+
+/** J5：公开分享相册（token 只读） */
+export async function getPublicSharedJourneyAlbum(
+  token: string,
+): Promise<SharedJourneyAlbumPayload | null> {
+  const normalized = token.trim();
+  if (!normalized) return null;
+
+  const db = getDb();
+  const albumRows = await db
+    .select({
+      album: journeyAlbums,
+      routeName: travelRoutes.name,
+    })
+    .from(journeyAlbums)
+    .innerJoin(travelRoutes, eq(journeyAlbums.routeId, travelRoutes.id))
+    .where(and(eq(journeyAlbums.shareToken, normalized), eq(journeyAlbums.shareEnabled, 1)))
+    .limit(1);
+
+  const row = albumRows[0];
+  if (!row) return null;
+
+  const detail = await getJourneyAlbumDetail(row.album.id, row.album.userId);
+  if (!detail) return null;
+
+  return {
+    title: detail.title,
+    routeName: row.routeName,
+    photoCount: detail.photoCount,
+    coverPhotoUrl: detail.coverPhotoUrl,
+    photos: detail.photos,
+    groups: detail.groups,
+  };
 }
 
 export async function updateTravelPhoto(

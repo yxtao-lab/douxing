@@ -3,11 +3,14 @@ import {
   int,
   varchar,
   bigint,
+  tinyint,
   timestamp,
   decimal,
+  json,
   uniqueIndex,
   index,
 } from 'drizzle-orm/mysql-core';
+import type { TravelPhotoShootingParams } from '@douxing/shared';
 import { users } from './users.js';
 import { travelRoutes } from './travel-routes.js';
 
@@ -27,6 +30,8 @@ export const journeyAlbums = mysqlTable(
     photoCount: int('photo_count').notNull().default(0),
     bytesUsed: bigint('bytes_used', { mode: 'number', unsigned: true }).notNull().default(0),
     status: varchar('status', { length: 16 }).notNull().default('active'),
+    shareEnabled: tinyint('share_enabled').notNull().default(0),
+    shareToken: varchar('share_token', { length: 32 }),
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
   },
@@ -34,6 +39,7 @@ export const journeyAlbums = mysqlTable(
     userRouteUnique: uniqueIndex('uk_journey_albums_user_route').on(table.userId, table.routeId),
     userIdx: index('idx_journey_albums_user').on(table.userId),
     routeIdx: index('idx_journey_albums_route').on(table.routeId),
+    shareTokenUnique: uniqueIndex('uk_journey_albums_share_token').on(table.shareToken),
   }),
 );
 
@@ -62,6 +68,7 @@ export const travelPhotos = mysqlTable(
     caption: varchar('caption', { length: 512 }),
     sortOrder: int('sort_order').notNull().default(0),
     source: varchar('source', { length: 16 }).notNull().default('upload'),
+    shootingParams: json('shooting_params').$type<TravelPhotoShootingParams | null>(),
     createdAt: timestamp('created_at').notNull().defaultNow(),
   },
   (table) => ({

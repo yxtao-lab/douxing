@@ -1,7 +1,7 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 J1 旅程相册）  
-> **更新日期**：2026-06-09  
+> **版本**：与代码同步（含 J1～J4 旅程相册）  
+> **更新日期**：2026-06-10  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -13,7 +13,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | 全量 76 个 REST 接口，含参数、Schema、JWT 鉴权 |
+| **[openapi.yaml](./openapi.yaml)** | 全量 82 个 REST 接口，含参数、Schema、JWT 鉴权 |
 
 **导入步骤**
 
@@ -145,72 +145,80 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 8 | GET | `/api/users/me` | 登录 | 用户 |
 | 9 | PUT | `/api/users/me` | 登录 | 用户 |
 | 10 | GET | `/api/users/me/membership` | 登录 | 用户 |
-| 11 | POST | `/api/users/me/avatar` | 登录 | 用户 |
-| 12 | GET | `/api/attractions` | 公开 | 景点 |
-| 13 | GET | `/api/attractions/cities` | 公开 | 景点 |
-| 14 | GET | `/api/attractions/:id` | 公开 | 景点 |
-| 15 | GET | `/api/attractions/admin/pending` | 管理员 | 景点 |
-| 16 | GET | `/api/attractions/admin/catalog` | 管理员 | 景点 |
-| 17 | POST | `/api/attractions/admin/:id/cover` | 管理员 | 景点 |
-| 18 | POST | `/api/attractions/admin/:id/cover/refresh-amap` | 管理员 | 景点 |
-| 19 | POST | `/api/attractions/admin/:id/approve` | 管理员 | 景点 |
-| 20 | GET | `/api/routes/llm-providers` | 公开 | 路线 |
-| 21 | GET | `/api/routes/llm-status` | 公开 | 路线 |
-| 22 | POST | `/api/routes/generate` | 登录 | 路线 |
-| 23 | GET | `/api/routes` | 登录 | 路线 |
-| 24 | GET | `/api/routes/plaza` | 登录 | 路线 |
-| 25 | GET | `/api/routes/hot` | 登录 | 路线（兼容） |
-| 26 | GET | `/api/routes/:id` | 登录 | 路线 |
-| 27 | PUT | `/api/routes/:id` | 登录 | 路线 |
-| 28 | POST | `/api/routes/:id/publish` | 登录 | 路线 |
-| 29 | POST | `/api/routes/:id/regenerate` | 登录 | 路线 |
-| 30 | POST | `/api/routes/:id/like` | 登录 | 路线 |
-| 31 | POST | `/api/routes/:id/favorite` | 登录 | 路线 |
-| 32 | POST | `/api/routes/:id/share` | 登录 | 路线 |
-| 33 | GET | `/api/routes/:id/comments` | 登录 | 路线 |
-| 34 | POST | `/api/routes/:id/comments` | 登录 | 路线 |
-| 35 | GET | `/api/routes/:id/map-path` | 登录 | 路线 |
-| 36 | GET | `/api/routes/plan-sessions` | 登录 | 规划 |
-| 37 | POST | `/api/routes/plan-sessions` | 登录 | 规划 |
-| 38 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
-| 39 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
-| 40 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
-| 41 | POST | `/api/checkins/photos` | 登录 | 打卡 |
-| 42 | POST | `/api/checkins` | 登录 | 打卡 |
-| 43 | GET | `/api/checkins` | 登录 | 打卡 |
-| 44 | GET | `/api/orders/payment-config` | 登录 | 订单 |
-| 45 | POST | `/api/orders` | 登录 | 订单 |
-| 46 | GET | `/api/orders` | 登录 | 订单 |
-| 47 | GET | `/api/orders/:id` | 登录 | 订单 |
-| 48 | POST | `/api/orders/:id/prepay` | 登录 | 订单 |
-| 49 | POST | `/api/orders/:id/pay` | 登录 | 订单 |
-| 50 | POST | `/api/orders/:id/cancel` | 登录 | 订单 |
-| 51 | POST | `/api/payments/wechat/notify` | 微信回调 | 支付 |
-| 52 | GET | `/api/achievements/catalog` | 登录 | 成就 |
-| 53 | GET | `/api/achievements/mine` | 登录 | 成就 |
-| 54 | GET | `/api/achievements` | 登录 | 成就（兼容） |
-| 55 | GET | `/api/badges` | 登录 | 徽章 |
-| 56 | GET | `/api/badges/mine` | 登录 | 徽章 |
-| 57 | GET | `/api/leaderboard` | 登录 | 排行榜 |
-| 58 | POST | `/api/speech/transcribe` | 登录 | 语音 |
-| 59 | GET | `/api/share/routes/:id` | 公开 | 分享 |
-| 60 | GET | `/api/share/routes/:id/wxacode` | 公开 | 分享 |
-| 61 | GET | `/api/share/routes/:id/link` | 公开 | 分享 |
-| 62 | GET | `/api/playbooks/admin` | 管理员 | 动线 |
-| 63 | GET | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 64 | POST | `/api/playbooks/admin` | 管理员 | 动线 |
-| 65 | PUT | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 66 | DELETE | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 67 | GET | `/api/journey-albums` | 登录 | 相册 |
-| 68 | POST | `/api/journey-albums` | 登录 | 相册 |
-| 69 | GET | `/api/journey-albums/:id` | 登录 | 相册 |
-| 70 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
-| 71 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
-| 72 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
-| 73 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
-| 74 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
-| 75 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
-| 76 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
+| 11 | GET | `/api/users/me/storage` | 登录 | 用户 |
+| 12 | POST | `/api/users/me/avatar` | 登录 | 用户 |
+| 13 | GET | `/api/attractions` | 公开 | 景点 |
+| 14 | GET | `/api/attractions/cities` | 公开 | 景点 |
+| 15 | GET | `/api/attractions/:id` | 公开 | 景点 |
+| 16 | GET | `/api/attractions/admin/pending` | 管理员 | 景点 |
+| 17 | GET | `/api/attractions/admin/catalog` | 管理员 | 景点 |
+| 18 | POST | `/api/attractions/admin/:id/cover` | 管理员 | 景点 |
+| 19 | POST | `/api/attractions/admin/:id/cover/refresh-amap` | 管理员 | 景点 |
+| 20 | POST | `/api/attractions/admin/:id/approve` | 管理员 | 景点 |
+| 21 | GET | `/api/routes/llm-providers` | 公开 | 路线 |
+| 22 | GET | `/api/routes/llm-status` | 公开 | 路线 |
+| 23 | POST | `/api/routes/generate` | 登录 | 路线 |
+| 24 | GET | `/api/routes` | 登录 | 路线 |
+| 25 | GET | `/api/routes/plaza` | 登录 | 路线 |
+| 26 | GET | `/api/routes/hot` | 登录 | 路线（兼容） |
+| 27 | GET | `/api/routes/:id` | 登录 | 路线 |
+| 28 | PUT | `/api/routes/:id` | 登录 | 路线 |
+| 29 | POST | `/api/routes/:id/publish` | 登录 | 路线 |
+| 30 | POST | `/api/routes/:id/regenerate` | 登录 | 路线 |
+| 31 | POST | `/api/routes/:id/like` | 登录 | 路线 |
+| 32 | POST | `/api/routes/:id/favorite` | 登录 | 路线 |
+| 33 | POST | `/api/routes/:id/share` | 登录 | 路线 |
+| 34 | GET | `/api/routes/:id/comments` | 登录 | 路线 |
+| 35 | POST | `/api/routes/:id/comments` | 登录 | 路线 |
+| 36 | GET | `/api/routes/:id/map-path` | 登录 | 路线 |
+| 37 | GET | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 38 | POST | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 39 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
+| 40 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
+| 41 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
+| 42 | POST | `/api/checkins/photos` | 登录 | 打卡 |
+| 43 | POST | `/api/checkins` | 登录 | 打卡 |
+| 44 | GET | `/api/checkins` | 登录 | 打卡 |
+| 45 | GET | `/api/orders/payment-config` | 登录 | 订单 |
+| 46 | POST | `/api/orders` | 登录 | 订单 |
+| 47 | GET | `/api/orders` | 登录 | 订单 |
+| 48 | GET | `/api/orders/:id` | 登录 | 订单 |
+| 49 | POST | `/api/orders/:id/prepay` | 登录 | 订单 |
+| 50 | POST | `/api/orders/:id/pay` | 登录 | 订单 |
+| 51 | POST | `/api/orders/:id/cancel` | 登录 | 订单 |
+| 52 | POST | `/api/payments/wechat/notify` | 微信回调 | 支付 |
+| 53 | GET | `/api/achievements/catalog` | 登录 | 成就 |
+| 54 | GET | `/api/achievements/mine` | 登录 | 成就 |
+| 55 | GET | `/api/achievements` | 登录 | 成就（兼容） |
+| 56 | GET | `/api/badges` | 登录 | 徽章 |
+| 57 | GET | `/api/badges/mine` | 登录 | 徽章 |
+| 58 | GET | `/api/leaderboard` | 登录 | 排行榜 |
+| 59 | POST | `/api/speech/transcribe` | 登录 | 语音 |
+| 60 | GET | `/api/share/journey-albums/:token` | 公开 | 分享 |
+| 61 | GET | `/api/share/routes/:id` | 公开 | 分享 |
+| 62 | GET | `/api/share/routes/:id/wxacode` | 公开 | 分享 |
+| 63 | GET | `/api/share/routes/:id/link` | 公开 | 分享 |
+| 64 | GET | `/api/playbooks/admin` | 管理员 | 动线 |
+| 65 | GET | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 66 | POST | `/api/playbooks/admin` | 管理员 | 动线 |
+| 67 | PUT | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 68 | DELETE | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 69 | GET | `/api/journey-albums` | 登录 | 相册 |
+| 70 | GET | `/api/journey-albums/photos` | 登录 | 相册 |
+| 71 | GET | `/api/journey-albums/by-route/:routeId` | 登录 | 相册 |
+| 72 | POST | `/api/journey-albums` | 登录 | 相册 |
+| 73 | GET | `/api/journey-albums/:id` | 登录 | 相册 |
+| 74 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
+| 75 | POST | `/api/journey-albums/:id/share` | 登录 | 相册 |
+| 76 | POST | `/api/journey-albums/:id/photos/apply-exif-suggestions` | 登录 | 相册 |
+| 77 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 78 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 79 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
+| 80 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
+| 81 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
+| 82 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
+
+> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 82 项（C 端 + 数据分析主链）。
 
 ---
 
@@ -309,6 +317,19 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 ### GET `/me/membership`
 
 **响应 `data`**：会员权益信息（等级、规划候选数等）
+
+### GET `/me/storage`
+
+用户旅行照片存储用量（J2 会员配额）。
+
+**响应 `data`**：`UserPhotoStorageInfo`
+
+| 字段 | 说明 |
+|------|------|
+| `level` | 会员等级 `MemberLevel` |
+| `usedBytes` / `maxBytes` | 已用 / 容量上限（字节） |
+| `usedCount` / `maxCount` | 已用 / 张数上限 |
+| `maxFileBytes` | 单张大小上限 |
 
 ### POST `/me/avatar`
 
@@ -698,6 +719,12 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 前缀：`/api/share` — **均无需登录**
 
+### GET `/journey-albums/:token`
+
+公开旅程相册只读（J5 H5 分享页）。相册须已开启分享且 token 有效。
+
+**响应 `data`**：`SharedJourneyAlbumPayload`（标题、路线名、封面、分组照片）
+
 ### GET `/routes/:id`
 
 公开路线只读摘要（D5-a H5 分享页）。
@@ -744,7 +771,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ## 18. 旅程相册 journey-albums
 
-前缀：`/api/journey-albums` — **J1 数据模型 + 上传 API**
+前缀：`/api/journey-albums` — **J1～J5 旅程相册**
 
 一路线一相册；照片按天/POI 分组；详见 [旅行照片存储系统.md](./旅行照片存储系统.md)。
 
@@ -753,6 +780,20 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 我的相册列表。
 
 **响应 `data`**：`{ items: JourneyAlbumSummary[] }`
+
+### GET `/photos`
+
+用户全站旅行照片分页列表。
+
+**Query**：`page`、`pageSize`
+
+**响应 `data`**：分页结构，`items` 为 `UserTravelPhotoListItem[]`（含 `albumTitle`、`routeId`、`routeName`）
+
+### GET `/by-route/:routeId`
+
+按路线获取相册详情；若不存在则自动创建后返回。
+
+**响应 `data`**：`JourneyAlbumDetail`
 
 ### POST `/`
 
@@ -791,7 +832,23 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 | `caption` | 可选，备注 |
 | `sortOrder` | 可选，排序 |
 
-**响应 `data`**：`TravelPhotoInfo`
+**响应 `data`**：`TravelPhotoInfo`（含可选 `placementSuggestion`：EXIF GPS 建议归类）
+
+### POST `/:id/share`
+
+开启或关闭相册公开分享。
+
+**Body**：`{ enabled: boolean }`
+
+**响应 `data`**：`JourneyAlbumShareState`（`shareEnabled`、`shareToken`、`sharePath`）
+
+### POST `/:id/photos/apply-exif-suggestions`
+
+批量应用 EXIF 位置建议，将未分配照片归入天/POI。
+
+**Body**（可选）：`{ photoIds?: number[] }` — 默认处理全部未分配照片
+
+**响应 `data`**：`ApplyExifSuggestionsResult`（`applied`、`skipped`、`photos`）
 
 ### PATCH `/:id/photos/:photoId`
 
@@ -911,6 +968,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 日期 | 说明 |
 |------|------|
+| 2026-06-10 | 旅程相册补全 `by-route`、`/photos`；用户 `GET /me/storage`；总览 79 接口 |
 | 2026-06-09 | 新增 §19 数据分析 `/api/analytics/*`（4 个接口）；OpenAPI 同步 |
 | 2026-06-09 | 初版：汇总全项目 REST 接口 + 静态资源说明；含 J1 旅程相册 |
 

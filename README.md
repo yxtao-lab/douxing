@@ -7,7 +7,8 @@
 | 模块 | 技术 |
 |------|------|
 | 包管理 | pnpm workspace（推荐）；亦支持 npm workspaces |
-| Web 管理端 | Vue 3 + Vite + Pinia + Vue Router |
+| Web 管理端 | Vue 3 + Ant Design Vue + Vite（`:5173`） |
+| PC 用户端 | Vue 3 + Tailwind + Vite（`:5176`） |
 | 移动端 | UniApp (Vue 3) + Vite（H5 / 微信小程序 / Android / iOS App） |
 | 后端 | Node.js + Express + TypeScript |
 | 数据库 | MySQL 8 + Drizzle ORM |
@@ -21,6 +22,7 @@
 | 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
 | 详细设计（Markdown + §17 补充） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含 S/M 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| PC 双平台分工（用户端/管理端） | [docs/PC双平台分工.md](docs/PC双平台分工.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
@@ -36,7 +38,8 @@
 ```
 project/
 ├── packages/
-│   ├── web/      # Vue3 Web 管理端
+│   ├── web/      # Vue3 Web 管理端（:5173）
+│   ├── pc/       # Vue3 PC 用户端（:5176）
 │   ├── mobile/   # UniApp 移动端
 │   ├── server/   # Node 后端 API
 │   └── shared/   # 跨端共享类型
@@ -261,7 +264,7 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | 用户名 | 密码 | 说明 |
 |--------|------|------|
 | admin | admin123 | 管理员（Web 管理端） |
-| demo | demo123 | 体验用户（移动端 MVP） |
+| demo | demo123 | 体验用户（移动端 / PC 用户端） |
 
 ## MVP 功能（基于详细设计文档 Sprint 1-2）
 
@@ -271,12 +274,13 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
 | 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
 | 景点库 | 城市景点基础数据 | `GET /api/attractions`；AI 生成路线自动同步（pending + 合并）；管理员审核 |
-| 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就；**打卡地图**（移动端 / Web `/checkins/map` / PC `/checkins/map`） |
+| 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就；**打卡地图**（移动端 / Web / PC） |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
-| 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航 |
-| 管理端 | 路线 / 订单 / 打卡列表 / **打卡地图** | 需 admin 账号登录；地图为 Leaflet + 高德瓦片 |
-| PC 用户端 | 规划 / 路线 / 个人中心 / **打卡地图** | `http://localhost:5176`；打卡地图见 `/checkins/map` |
+| 旅程相册 | 按路线存旅行照 | `GET/POST /api/journey-albums`；会员配额 `GET /api/users/me/storage`；打卡归并 · 手帐选图 |
+| 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航；路线详情相册 Tab |
+| 管理端 | 路线 / 订单 / 打卡 / **数据分析** / 系统管理 | 需 admin；Leaflet 打卡地图；见 [PC双平台分工.md](docs/PC双平台分工.md) |
+| PC 用户端 | 规划 / 路线 / 个人中心 / 相册 / 打卡地图 | `http://localhost:5176`；与移动端能力对齐 |
 
 ### AI 模型接入（DeepSeek / LM Studio）
 

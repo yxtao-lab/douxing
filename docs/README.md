@@ -3,12 +3,13 @@
 | 文档 | 说明 |
 |------|------|
 | [API接口文档.md](./API接口文档.md) | **REST API 全量接口说明**（人类可读；Apifox 请导入 [openapi.yaml](./openapi.yaml)） |
-| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（Apifox / Postman / Swagger 直接导入） |
+| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（79 个 REST 接口；Apifox / Postman 直接导入） |
 | [公共组件.md](./公共组件.md) | **移动端可复用 Vue 组件**：功能、封装方式与用法 |
 | [启动与部署流程.md](./启动与部署流程.md) | **开发/测试/生产启动命令、打包与部署流程总览** |
 | [env-environments.md](./env-environments.md) | 环境文件说明与切换方式（`pnpm env:status`） |
 | [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划（含 **S 系统管理** · **M 发单接单**） |
+| [PC双平台分工.md](./PC双平台分工.md) | **PC 用户端 vs Web 管理端**：功能边界、共用能力与展示差异 |
 | [系统管理.md](./系统管理.md) | **Web 管理端**：用户/角色/菜单 RBAC、`sys_dept` 与 `biz_org` 区分、S 线 |
 | [发单接单平台.md](./发单接单平台.md) | **模块 B marketplace**：发单/接单、商户组织、与 AI 规划独立、M 线 |
 | [数据中台.md](./数据中台.md) | **数据中台**：指标 API、埋点表、管理端看板与分阶段路线图（DT1～DT4） |
@@ -27,6 +28,7 @@
 ## 阅读建议
 
 - **产品 / 业务**：详细设计 §1、§4、§5、§17；[发单接单平台.md](./发单接单平台.md)；数据中台价值见 [数据中台-价值与行业对照.md](./数据中台-价值与行业对照.md)  
+- **研发 · PC 双端分工**：[PC双平台分工.md](./PC双平台分工.md)（新功能放 `pc` 还是 `web`）  
 - **研发 · 模块 A（AI 规划）**：详细设计 §2、§3、§7、§12 + ROADMAP；踩坑查「开发记录-重难点与亮点」  
 - **研发 · 系统管理（S 线）**：[系统管理.md](./系统管理.md) + `packages/server/src/routes/system-admin.ts`  
 - **研发 · 发单接单（M 线）**：[发单接单平台.md](./发单接单平台.md)（M0 代码未启动）  

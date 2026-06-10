@@ -270,6 +270,25 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
 
+  /api/users/me/storage:
+    get:
+      tags: [用户]
+      summary: 获取旅行照片存储用量
+      operationId: usersMeStorage
+      description: J2 会员配额；已用容量/张数与上限
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserPhotoStorageInfo'
+
   /api/users/me/avatar:
     post:
       tags: [用户]
@@ -1231,6 +1250,33 @@ paths:
                         properties:
                           text: { type: string }
 
+  /api/share/journey-albums/{token}:
+    get:
+      tags: [分享]
+      summary: 公开旅程相册只读（token）
+      security: []
+      operationId: shareJourneyAlbumDetail
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SharedJourneyAlbumPayload'
+        '404':
+          description: 相册不存在或已关闭分享
+
   /api/share/routes/{id}:
     get:
       tags: [分享]
@@ -1421,6 +1467,60 @@ paths:
                       data:
                         $ref: '#/components/schemas/JourneyAlbumSummary'
 
+  /api/journey-albums/photos:
+    get:
+      tags: [旅程相册]
+      summary: 用户全站旅行照片分页列表
+      operationId: journeyAlbumsPhotosList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/UserTravelPhotoListItem'
+                          total: { type: integer }
+                          page: { type: integer }
+                          pageSize: { type: integer }
+
+  /api/journey-albums/by-route/{routeId}:
+    get:
+      tags: [旅程相册]
+      summary: 按路线获取相册（不存在则自动创建）
+      operationId: journeyAlbumsByRoute
+      parameters:
+        - name: routeId
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JourneyAlbumDetail'
+
   /api/journey-albums/{id}:
     get:
       tags: [旅程相册]
@@ -1483,6 +1583,67 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TravelPhotoInfo'
+
+  /api/journey-albums/{id}/share:
+    post:
+      tags: [旅程相册]
+      summary: 开启或关闭相册分享
+      operationId: journeyAlbumsShare
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              properties:
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/JourneyAlbumShareState'
+
+  /api/journey-albums/{id}/photos/apply-exif-suggestions:
+    post:
+      tags: [旅程相册]
+      summary: 批量应用 EXIF 位置建议归类
+      operationId: journeyAlbumsApplyExifSuggestions
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                photoIds:
+                  type: array
+                  items:
+                    type: integer
+                  description: 可选，限定照片 ID；默认处理未分配区
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ApplyExifSuggestionsResult'
 
   /api/journey-albums/{id}/photos/{photoId}:
     patch:
@@ -1970,6 +2131,25 @@ components:
           type: string
           maxLength: 128
 
+    UserPhotoStorageInfo:
+      type: object
+      properties:
+        level: { type: integer }
+        usedBytes: { type: integer }
+        maxBytes: { type: integer }
+        usedCount: { type: integer }
+        maxCount: { type: integer }
+        maxFileBytes: { type: integer }
+
+    UserTravelPhotoListItem:
+      allOf:
+        - $ref: '#/components/schemas/TravelPhotoInfo'
+        - type: object
+          properties:
+            albumTitle: { type: string }
+            routeId: { type: integer }
+            routeName: { type: string, nullable: true }
+
     JourneyAlbumSummary:
       type: object
       properties:
@@ -2009,7 +2189,53 @@ components:
         source:
           type: string
           enum: [upload, checkin, import]
+        placementSuggestion:
+          $ref: '#/components/schemas/TravelPhotoPlacementSuggestion'
         createdAt: { type: string, format: date-time }
+
+    TravelPhotoPlacementSuggestion:
+      type: object
+      properties:
+        dayIndex: { type: integer, nullable: true }
+        poiName: { type: string, nullable: true }
+        attractionId: { type: integer, nullable: true }
+        confidence:
+          type: string
+          enum: [none, low, medium, high]
+        distanceM: { type: number, nullable: true }
+
+    JourneyAlbumShareState:
+      type: object
+      properties:
+        shareEnabled: { type: boolean }
+        shareToken: { type: string, nullable: true }
+        sharePath: { type: string, nullable: true }
+
+    SharedJourneyAlbumPayload:
+      type: object
+      properties:
+        title: { type: string }
+        routeName: { type: string, nullable: true }
+        photoCount: { type: integer }
+        coverPhotoUrl: { type: string, nullable: true }
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TravelPhotoInfo'
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/JourneyAlbumPhotoGroup'
+
+    ApplyExifSuggestionsResult:
+      type: object
+      properties:
+        applied: { type: integer }
+        skipped: { type: integer }
+        photos:
+          type: array
+          items:
+            $ref: '#/components/schemas/TravelPhotoInfo'
 
     JourneyAlbumPhotoGroup:
       type: object

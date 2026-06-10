@@ -9,3 +9,4 @@ export * from './checkin-map.js';
 export * from './city-regions.js';
 export * from './route-path.js';
 export * from './open-hours.js';
+export * from './shooting-params.js';

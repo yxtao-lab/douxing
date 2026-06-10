@@ -17,6 +17,17 @@
         <button class="btn-upload" :loading="uploading" @click="handleUpload">
           {{ t('journeyAlbum.upload') }}
         </button>
+        <button
+          v-if="unassignedPhotos.length > 0"
+          class="btn-secondary"
+          :loading="applyingExif"
+          @click="handleApplyExif"
+        >
+          {{ t('journeyAlbum.applyExif') }}
+        </button>
+        <button class="btn-secondary" :loading="sharing" @click="handleShare">
+          {{ t('journeyAlbum.shareAlbum') }}
+        </button>
         <text class="album-count">{{ tf('journeyAlbum.photoCount', { count: album.photoCount }) }}</text>
       </view>
 
@@ -70,6 +81,21 @@
           mode="aspectFill"
         />
 
+        <view v-if="organizeShootingSummary" class="shooting-block">
+          <text class="organize-label">{{ t('journeyAlbum.shootingParams') }}</text>
+          <text class="shooting-summary">{{ organizeShootingSummary }}</text>
+          <button
+            v-if="canSameParamsExport"
+            class="btn-same-params"
+            @click="openSameParamsSheet"
+          >
+            {{ t('journeyAlbum.sameParamsExport') }}
+            <text v-if="sameParamsMatchCount > 1" class="same-params-badge">
+              {{ sameParamsMatchCount }}
+            </text>
+          </button>
+        </view>
+
         <text class="organize-label">{{ t('journeyAlbum.dayLabel') }}</text>
         <scroll-view scroll-x class="chip-scroll" :show-scrollbar="false">
           <view class="chip-row">
@@ -120,6 +146,14 @@
         </view>
       </view>
     </view>
+
+    <SameParamsPosterSheet
+      :visible="sameParamsVisible"
+      :reference-photo="organizePhoto"
+      :album-photos="album?.photos ?? []"
+      :album-title="album?.title ?? ''"
+      @close="sameParamsVisible = false"
+    />
   </view>
 </template>
 
@@ -127,10 +161,18 @@
 import { computed, ref, watch } from 'vue';
 import type { JourneyAlbumDetail, RouteDayAttraction, RouteDayPlan, TravelPhotoInfo } from '@douxing/shared';
 import {
+  findPhotosWithSameShootingParams,
+  formatShootingParamsSummary,
+  hasMatchableShootingParams,
+} from '@douxing/shared';
+import SameParamsPosterSheet from '@/components/route-journey-album/SameParamsPosterSheet.vue';
+import {
+  applyExifSuggestions,
   fetchJourneyAlbumByRoute,
   fetchPhotoStorage,
   formatStorageBytes,
   getUnassignedPhotos,
+  updateJourneyAlbumShare,
   updateTravelPhotoMeta,
   uploadJourneyAlbumPhoto,
 } from '@/api/journey-albums';
@@ -148,6 +190,8 @@ const { t, tf } = useTf();
 const loading = ref(false);
 const loadError = ref(false);
 const uploading = ref(false);
+const applyingExif = ref(false);
+const sharing = ref(false);
 const album = ref<JourneyAlbumDetail | null>(null);
 const storageUsedBytes = ref(0);
 const storageMaxBytes = ref(1);
@@ -161,6 +205,7 @@ const organizeDayIndex = ref<number | null>(null);
 const organizePoiName = ref<string | null>(null);
 const organizeAttractionId = ref<number | null>(null);
 const savingOrganize = ref(false);
+const sameParamsVisible = ref(false);
 
 const unassignedPhotos = computed(() => getUnassignedPhotos(album.value));
 
@@ -189,6 +234,31 @@ const poiOptions = computed((): RouteDayAttraction[] => {
   if (organizeDayIndex.value == null) return [];
   return props.days[organizeDayIndex.value]?.attractions ?? [];
 });
+
+const organizeShootingSummary = computed(() =>
+  formatShootingParamsSummary(organizePhoto.value?.shootingParams),
+);
+
+const canSameParamsExport = computed(
+  () => organizePhoto.value && hasMatchableShootingParams(organizePhoto.value.shootingParams),
+);
+
+const sameParamsMatchCount = computed(() => {
+  if (!organizePhoto.value || !album.value) return 0;
+  return findPhotosWithSameShootingParams(album.value.photos, organizePhoto.value).length;
+});
+
+function openSameParamsSheet() {
+  if (!canSameParamsExport.value) {
+    uni.showToast({ title: t('journeyAlbum.sameParamsNoParams'), icon: 'none' });
+    return;
+  }
+  if (sameParamsMatchCount.value <= 1) {
+    uni.showToast({ title: t('journeyAlbum.sameParamsNoMatch'), icon: 'none' });
+    return;
+  }
+  sameParamsVisible.value = true;
+}
 
 function dayTabLabel(day: RouteDayPlan, index: number): string {
   if (day.date?.trim()) return day.date;
@@ -254,8 +324,17 @@ async function handleUpload() {
     if (!filePath) return;
 
     uploading.value = true;
-    await uploadJourneyAlbumPhoto(album.value.id, filePath);
-    uni.showToast({ title: t('journeyAlbum.uploadSuccess'), icon: 'success' });
+    const photo = await uploadJourneyAlbumPhoto(album.value.id, filePath);
+    if (photo.placementSuggestion?.confidence === 'high') {
+      uni.showToast({ title: t('journeyAlbum.exifAutoAssigned'), icon: 'success' });
+    } else if (
+      photo.placementSuggestion &&
+      photo.placementSuggestion.confidence !== 'none'
+    ) {
+      uni.showToast({ title: t('journeyAlbum.exifSuggestionHint'), icon: 'none' });
+    } else {
+      uni.showToast({ title: t('journeyAlbum.uploadSuccess'), icon: 'success' });
+    }
     await loadAlbum();
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('journeyAlbum.uploadFailed')), icon: 'none' });
@@ -280,6 +359,45 @@ function closeOrganize() {
 function selectPoi(spot: RouteDayAttraction) {
   organizePoiName.value = spot.name;
   organizeAttractionId.value = spot.attractionId ?? null;
+}
+
+async function handleApplyExif() {
+  if (!album.value || unassignedPhotos.value.length === 0) return;
+  applyingExif.value = true;
+  try {
+    const result = await applyExifSuggestions(album.value.id);
+    uni.showToast({
+      title: tf('journeyAlbum.applyExifSuccess', {
+        applied: result.applied,
+        skipped: result.skipped,
+      }),
+      icon: 'none',
+    });
+    await loadAlbum();
+  } catch (e) {
+    uni.showToast({ title: getAppErrorMessage(e, t('journeyAlbum.applyExifFailed')), icon: 'none' });
+  } finally {
+    applyingExif.value = false;
+  }
+}
+
+async function handleShare() {
+  if (!album.value) return;
+  sharing.value = true;
+  try {
+    const state = await updateJourneyAlbumShare(album.value.id, true);
+    const path = state.sharePath ?? `/share/journey-albums/${state.shareToken}`;
+    let url = path;
+    if (typeof window !== 'undefined' && window.location?.origin && path.startsWith('/')) {
+      url = `${window.location.origin}${path}`;
+    }
+    await uni.setClipboardData({ data: url });
+    uni.showToast({ title: t('journeyAlbum.shareCopied'), icon: 'success' });
+  } catch (e) {
+    uni.showToast({ title: getAppErrorMessage(e, t('journeyAlbum.shareFailed')), icon: 'none' });
+  } finally {
+    sharing.value = false;
+  }
 }
 
 async function saveOrganize() {
@@ -369,6 +487,15 @@ defineExpose({
   font-size: 28rpx;
   border-radius: var(--dx-radius-sm);
 }
+.btn-secondary {
+  margin: 0;
+  padding: 0 24rpx;
+  background: var(--dx-bg);
+  color: var(--dx-primary);
+  font-size: 26rpx;
+  border: 1rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+}
 .album-count {
   font-size: 24rpx;
   color: var(--dx-text-secondary);
@@ -452,6 +579,32 @@ defineExpose({
   height: 160rpx;
   border-radius: 12rpx;
   margin-bottom: 24rpx;
+}
+.shooting-block {
+  margin-bottom: 16rpx;
+}
+.shooting-summary {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dx-text);
+  line-height: 1.5;
+  margin-bottom: 12rpx;
+}
+.btn-same-params {
+  margin: 0;
+  padding: 0 24rpx;
+  height: 64rpx;
+  line-height: 64rpx;
+  font-size: 26rpx;
+  background: var(--dx-bg);
+  color: var(--dx-primary);
+  border: 1rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+}
+.same-params-badge {
+  margin-left: 8rpx;
+  font-size: 22rpx;
+  color: var(--dx-text-secondary);
 }
 .organize-label {
   display: block;

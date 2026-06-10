@@ -184,6 +184,10 @@ const zhCN: Record<string, string> = {
     '照片存储已达上限（已用 {usedCount}/{maxCount} 张，{usedBytes}/{maxBytes}）',
   [ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED]: '获取存储用量失败',
   [ApiMessageKey.TRAVEL_PHOTO_LIST_FAILED]: '获取照片列表失败',
+  [ApiMessageKey.JOURNEY_ALBUM_SHARE_UPDATED]: '相册分享设置已更新',
+  [ApiMessageKey.SHARE_ALBUM_NOT_AVAILABLE]: '相册分享不可用或已关闭',
+  [ApiMessageKey.SHARE_ALBUM_LOAD_FAILED]: '加载分享相册失败',
+  [ApiMessageKey.TRAVEL_PHOTO_EXIF_APPLIED]: '已应用 EXIF 归类建议',
 
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
 
@@ -381,6 +385,10 @@ const enUS: Record<string, string> = {
     'Photo storage limit reached ({usedCount}/{maxCount} photos, {usedBytes}/{maxBytes})',
   [ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED]: 'Failed to load storage usage',
   [ApiMessageKey.TRAVEL_PHOTO_LIST_FAILED]: 'Failed to load photos',
+  [ApiMessageKey.JOURNEY_ALBUM_SHARE_UPDATED]: 'Album sharing settings updated',
+  [ApiMessageKey.SHARE_ALBUM_NOT_AVAILABLE]: 'Album sharing is unavailable or disabled',
+  [ApiMessageKey.SHARE_ALBUM_LOAD_FAILED]: 'Failed to load shared album',
+  [ApiMessageKey.TRAVEL_PHOTO_EXIF_APPLIED]: 'EXIF placement suggestions applied',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
 

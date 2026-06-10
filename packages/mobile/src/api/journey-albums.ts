@@ -1,8 +1,11 @@
 import type {
+  ApplyExifSuggestionsResult,
   JourneyAlbumDetail,
   JourneyAlbumPhotoGroup,
+  JourneyAlbumShareState,
   JourneyAlbumSummary,
   PaginatedResult,
+  SharedJourneyAlbumPayload,
   TravelPhotoInfo,
   UpdateTravelPhotoRequest,
   UserPhotoStorageInfo,
@@ -52,6 +55,27 @@ export function deleteTravelPhoto(albumId: number, photoId: number) {
 
 export function fetchPhotoStorage() {
   return request<UserPhotoStorageInfo>('/users/me/storage');
+}
+
+export function updateJourneyAlbumShare(albumId: number, enabled: boolean) {
+  return request<JourneyAlbumShareState>(`/journey-albums/${albumId}/share`, {
+    method: 'POST',
+    data: { enabled },
+  });
+}
+
+export function applyExifSuggestions(albumId: number, photoIds?: number[]) {
+  return request<ApplyExifSuggestionsResult>(
+    `/journey-albums/${albumId}/photos/apply-exif-suggestions`,
+    {
+      method: 'POST',
+      data: photoIds ? { photoIds } : {},
+    },
+  );
+}
+
+export function fetchSharedJourneyAlbum(token: string) {
+  return request<SharedJourneyAlbumPayload>(`/share/journey-albums/${encodeURIComponent(token)}`);
 }
 
 export function uploadJourneyAlbumPhoto(

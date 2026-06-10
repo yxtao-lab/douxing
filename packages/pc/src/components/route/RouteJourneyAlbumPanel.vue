@@ -2,7 +2,8 @@
   <div>
     <div v-if="loading" class="py-8 text-center text-sm text-dx-muted">{{ t('common.loading') }}</div>
     <div v-else-if="loadError" class="py-8 text-center text-sm text-red-600">
-      {{ t('journeyAlbum.loadFailed') }}
+      <p>{{ t('journeyAlbum.loadFailed') }}</p>
+      <p v-if="loadErrorDetail" class="mt-2 text-xs text-dx-muted">{{ loadErrorDetail }}</p>
     </div>
     <template v-else-if="album">
       <div class="mb-4 rounded-xl border border-dx-border bg-dx-bg p-4">
@@ -21,6 +22,18 @@
       <div class="mb-4 flex flex-wrap items-center gap-3">
         <button type="button" class="dx-btn-primary" :disabled="uploading" @click="triggerUpload">
           {{ uploading ? t('common.loading') : t('journeyAlbum.upload') }}
+        </button>
+        <button
+          v-if="unassignedPhotos.length > 0"
+          type="button"
+          class="dx-btn-secondary"
+          :disabled="applyingExif"
+          @click="handleApplyExif"
+        >
+          {{ applyingExif ? t('common.loading') : t('journeyAlbum.applyExif') }}
+        </button>
+        <button type="button" class="dx-btn-secondary" :disabled="sharing" @click="handleShare">
+          {{ sharing ? t('common.loading') : t('journeyAlbum.shareAlbum') }}
         </button>
         <span class="text-sm text-dx-muted">
           {{ t('journeyAlbum.photoCount', { count: album.photoCount }) }}
@@ -106,6 +119,22 @@
             class="mb-4 h-32 w-32 rounded-xl object-cover"
           />
 
+          <div v-if="organizeShootingSummary" class="mb-4 rounded-xl border border-dx-border bg-dx-bg p-3">
+            <p class="mb-1 text-sm font-medium text-dx-text">{{ t('journeyAlbum.shootingParams') }}</p>
+            <p class="text-sm text-dx-muted">{{ organizeShootingSummary }}</p>
+            <button
+              v-if="canSameParamsExport"
+              type="button"
+              class="dx-btn-secondary mt-3"
+              @click="openSameParamsSheet"
+            >
+              {{ t('journeyAlbum.sameParamsExport') }}
+              <span v-if="sameParamsMatchCount > 1" class="ml-1 text-dx-muted">
+                ({{ sameParamsMatchCount }})
+              </span>
+            </button>
+          </div>
+
           <p class="mb-2 text-sm font-medium text-dx-text">{{ t('journeyAlbum.dayLabel') }}</p>
           <div class="mb-4 flex flex-wrap gap-2">
             <button
@@ -155,6 +184,14 @@
         </div>
       </div>
     </Teleport>
+
+    <SameParamsCollageSheet
+      :visible="sameParamsVisible"
+      :reference-photo="organizePhoto"
+      :album-photos="album?.photos ?? []"
+      :album-title="album?.title ?? ''"
+      @close="sameParamsVisible = false"
+    />
   </div>
 </template>
 
@@ -167,10 +204,18 @@ import type {
   TravelPhotoInfo,
 } from '@douxing/shared';
 import {
+  findPhotosWithSameShootingParams,
+  formatShootingParamsSummary,
+  hasMatchableShootingParams,
+} from '@douxing/shared';
+import SameParamsCollageSheet from '@/components/route/SameParamsCollageSheet.vue';
+import {
+  applyExifSuggestions,
   fetchJourneyAlbumByRoute,
   fetchPhotoStorage,
   formatStorageBytes,
   getUnassignedPhotos,
+  updateJourneyAlbumShare,
   updateTravelPhotoMeta,
   uploadJourneyAlbumPhoto,
 } from '@/api/journey-albums';
@@ -187,7 +232,10 @@ const { t } = useLocale();
 
 const loading = ref(false);
 const loadError = ref(false);
+const loadErrorDetail = ref('');
 const uploading = ref(false);
+const applyingExif = ref(false);
+const sharing = ref(false);
 const album = ref<JourneyAlbumDetail | null>(null);
 const storageUsedBytes = ref(0);
 const storageMaxBytes = ref(1);
@@ -201,6 +249,7 @@ const organizeDayIndex = ref<number | null>(null);
 const organizePoiName = ref<string | null>(null);
 const organizeAttractionId = ref<number | null>(null);
 const savingOrganize = ref(false);
+const sameParamsVisible = ref(false);
 const fileInputRef = ref<HTMLInputElement | null>(null);
 
 const unassignedPhotos = computed(() => getUnassignedPhotos(album.value));
@@ -230,6 +279,31 @@ const poiOptions = computed((): RouteDayAttraction[] => {
   if (organizeDayIndex.value == null) return [];
   return props.days[organizeDayIndex.value]?.attractions ?? [];
 });
+
+const organizeShootingSummary = computed(() =>
+  formatShootingParamsSummary(organizePhoto.value?.shootingParams),
+);
+
+const canSameParamsExport = computed(
+  () => organizePhoto.value && hasMatchableShootingParams(organizePhoto.value.shootingParams),
+);
+
+const sameParamsMatchCount = computed(() => {
+  if (!organizePhoto.value || !album.value) return 0;
+  return findPhotosWithSameShootingParams(album.value.photos, organizePhoto.value).length;
+});
+
+function openSameParamsSheet() {
+  if (!canSameParamsExport.value) {
+    window.alert(t('journeyAlbum.sameParamsNoParams'));
+    return;
+  }
+  if (sameParamsMatchCount.value <= 1) {
+    window.alert(t('journeyAlbum.sameParamsNoMatch'));
+    return;
+  }
+  sameParamsVisible.value = true;
+}
 
 function dayTabLabel(day: RouteDayPlan, index: number): string {
   if (day.date?.trim()) return day.date;
@@ -264,6 +338,7 @@ function toggleGroup(key: string) {
 async function loadAlbum() {
   loading.value = true;
   loadError.value = false;
+  loadErrorDetail.value = '';
   try {
     const [detail, storage] = await Promise.all([
       fetchJourneyAlbumByRoute(props.routeId),
@@ -275,8 +350,9 @@ async function loadAlbum() {
     storageUsedCount.value = storage.usedCount;
     storageMaxCount.value = storage.maxCount;
     expandedGroups.value = new Set(detail.groups.map((group) => groupKey(group)));
-  } catch {
+  } catch (err) {
     loadError.value = true;
+    loadErrorDetail.value = getAppErrorMessage(err, '');
     album.value = null;
   } finally {
     loading.value = false;
@@ -295,12 +371,55 @@ async function handleFileChange(event: Event) {
 
   uploading.value = true;
   try {
-    await uploadJourneyAlbumPhoto(album.value.id, file);
+    const photo = await uploadJourneyAlbumPhoto(album.value.id, file);
+    if (photo.placementSuggestion?.confidence === 'high') {
+      window.alert(t('journeyAlbum.exifAutoAssigned'));
+    } else if (
+      photo.placementSuggestion &&
+      photo.placementSuggestion.confidence !== 'none'
+    ) {
+      window.alert(t('journeyAlbum.exifSuggestionHint'));
+    }
     await loadAlbum();
   } catch (err) {
     window.alert(getAppErrorMessage(err, t('journeyAlbum.uploadFailed')));
   } finally {
     uploading.value = false;
+  }
+}
+
+async function handleApplyExif() {
+  if (!album.value || unassignedPhotos.value.length === 0) return;
+  applyingExif.value = true;
+  try {
+    const result = await applyExifSuggestions(album.value.id);
+    window.alert(
+      t('journeyAlbum.applyExifSuccess', {
+        applied: result.applied,
+        skipped: result.skipped,
+      }),
+    );
+    await loadAlbum();
+  } catch (err) {
+    window.alert(getAppErrorMessage(err, t('journeyAlbum.applyExifFailed')));
+  } finally {
+    applyingExif.value = false;
+  }
+}
+
+async function handleShare() {
+  if (!album.value) return;
+  sharing.value = true;
+  try {
+    const state = await updateJourneyAlbumShare(album.value.id, true);
+    const path = state.sharePath ?? `/share/journey-albums/${state.shareToken}`;
+    const url = path.startsWith('http') ? path : `${window.location.origin}${path}`;
+    await navigator.clipboard.writeText(url);
+    window.alert(t('journeyAlbum.shareCopied'));
+  } catch (err) {
+    window.alert(getAppErrorMessage(err, t('journeyAlbum.shareFailed')));
+  } finally {
+    sharing.value = false;
   }
 }
 
@@ -331,6 +450,7 @@ async function saveOrganize() {
       poiName: organizeDayIndex.value == null ? null : organizePoiName.value,
       attractionId: organizeDayIndex.value == null ? null : organizeAttractionId.value,
     });
+    window.alert(t('journeyAlbum.organizeSuccess'));
     closeOrganize();
     await loadAlbum();
   } catch (err) {

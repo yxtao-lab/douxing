@@ -7,6 +7,7 @@ import {
 } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import {
+  applyExifSuggestionsForAlbum,
   createJourneyAlbum,
   deleteTravelPhoto,
   getJourneyAlbumDetail,
@@ -16,6 +17,7 @@ import {
   resolveAlbumDetailUrls,
   resolveAlbumPhotoUrls,
   resolveAlbumSummaryUrls,
+  updateJourneyAlbumShare,
   updateTravelPhoto,
   uploadTravelPhoto,
 } from '../services/journey-album.service.js';
@@ -40,6 +42,14 @@ const photoUpload = multer({
 const createAlbumSchema = z.object({
   routeId: z.coerce.number().int().positive(),
   title: z.string().max(128).optional(),
+});
+
+const shareAlbumSchema = z.object({
+  enabled: z.boolean(),
+});
+
+const applyExifSchema = z.object({
+  photoIds: z.array(z.coerce.number().int().positive()).optional(),
 });
 
 const updatePhotoSchema = z
@@ -118,6 +128,47 @@ router.get('/by-route/:routeId', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[journey-albums/by-route]', err);
     return failFromError(res, err, ApiMessageKey.JOURNEY_ALBUM_DETAIL_FAILED);
+  }
+});
+
+router.post('/:id/share', authMiddleware, async (req, res) => {
+  try {
+    const albumId = parseAlbumId(String(req.params.id));
+    if (!albumId) {
+      return fail(res, ApiMessageKey.JOURNEY_ALBUM_INVALID_ID);
+    }
+    const parsed = shareAlbumSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+    const state = await updateJourneyAlbumShare(albumId, req.auth!.userId, parsed.data.enabled);
+    success(res, state, ApiMessageKey.JOURNEY_ALBUM_SHARE_UPDATED);
+  } catch (err) {
+    console.error('[journey-albums/share]', err);
+    return failFromError(res, err, ApiMessageKey.JOURNEY_ALBUM_DETAIL_FAILED);
+  }
+});
+
+router.post('/:id/photos/apply-exif-suggestions', authMiddleware, async (req, res) => {
+  try {
+    const albumId = parseAlbumId(String(req.params.id));
+    if (!albumId) {
+      return fail(res, ApiMessageKey.JOURNEY_ALBUM_INVALID_ID);
+    }
+    const parsed = applyExifSchema.safeParse(req.body ?? {});
+    const photoIds = parsed.success ? parsed.data.photoIds : undefined;
+    const result = await applyExifSuggestionsForAlbum(albumId, req.auth!.userId, photoIds);
+    success(
+      res,
+      {
+        ...result,
+        photos: resolveAlbumPhotoUrls(result.photos, (stored) => resolveStoredUrl(req, stored)),
+      },
+      ApiMessageKey.TRAVEL_PHOTO_EXIF_APPLIED,
+    );
+  } catch (err) {
+    console.error('[journey-albums/apply-exif]', err);
+    return failFromError(res, err, ApiMessageKey.TRAVEL_PHOTO_UPDATE_FAILED);
   }
 });
 

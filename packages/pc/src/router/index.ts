@@ -115,6 +115,12 @@ const router = createRouter({
       component: () => import('@/views/ShareRouteView.vue'),
       meta: { hideNav: true, titleKey: 'shareRoute.pageTitle' },
     },
+    {
+      path: '/share/journey-albums/:token',
+      name: 'share-journey-album',
+      component: () => import('@/views/ShareJourneyAlbumView.vue'),
+      meta: { hideNav: true, titleKey: 'shareJourneyAlbum.pageTitle' },
+    },
   ],
 });
 

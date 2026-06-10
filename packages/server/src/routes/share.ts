@@ -3,12 +3,48 @@ import { ApiError, ApiMessageKey } from '@douxing/shared';
 import { success, fail } from '../utils/response.js';
 import { assertPublishedRouteForPoster, getPublicSharedRoute } from '../services/share.service.js';
 import {
+  getPublicSharedJourneyAlbum,
+  resolveAlbumPhotoUrls,
+} from '../services/journey-album.service.js';
+import { resolvePublicAssetUrl, resolvePublicBaseFromRequest } from '../utils/public-asset-url.util.js';
+import {
   createRouteShareUrlLink,
   createRouteShareWxacode,
   getWechatMiniCredentials,
 } from '../services/wechat-mini.service.js';
 
 const router = Router();
+
+/** J5：公开旅程相册（token 只读，无需登录） */
+router.get('/journey-albums/:token', async (req, res) => {
+  try {
+    const token = String(req.params.token ?? '').trim();
+    if (!token) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+    const album = await getPublicSharedJourneyAlbum(token);
+    if (!album) {
+      return fail(res, ApiMessageKey.SHARE_ALBUM_NOT_AVAILABLE, 404, 404);
+    }
+    const publicBase = resolvePublicBaseFromRequest(req);
+    const resolveUrl = (stored: string) =>
+      resolvePublicAssetUrl(stored, { publicBase }) ?? stored;
+    success(res, {
+      title: album.title,
+      routeName: album.routeName,
+      photoCount: album.photoCount,
+      coverPhotoUrl: album.coverPhotoUrl ? resolveUrl(album.coverPhotoUrl) : null,
+      photos: resolveAlbumPhotoUrls(album.photos, resolveUrl),
+      groups: album.groups.map((group) => ({
+        ...group,
+        photos: resolveAlbumPhotoUrls(group.photos, resolveUrl),
+      })),
+    });
+  } catch (err) {
+    console.error('[share/journey-albums/:token]', err);
+    return fail(res, ApiMessageKey.SHARE_ALBUM_LOAD_FAILED, 500, 500);
+  }
+});
 
 /** D5-a：公开路线只读摘要（无需登录） */
 router.get('/routes/:id', async (req, res) => {

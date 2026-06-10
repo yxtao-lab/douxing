@@ -625,6 +625,22 @@ export type JourneyAlbumStatusValue = 'active' | 'archived';
 /** 旅行照片来源 */
 export type TravelPhotoSourceValue = 'upload' | 'checkin' | 'import';
 
+/** J5：EXIF 智能归类置信度 */
+export type TravelPhotoPlacementConfidence = 'high' | 'medium' | 'low' | 'none';
+
+/** J5：EXIF 归类依据 */
+export type TravelPhotoPlacementReason = 'gps' | 'date' | 'gps_date' | 'none';
+
+/** J5：上传时 EXIF 建议的 day/POI */
+export interface TravelPhotoPlacementSuggestion {
+  dayIndex: number | null;
+  poiName: string | null;
+  attractionId: number | null;
+  confidence: TravelPhotoPlacementConfidence;
+  reason: TravelPhotoPlacementReason;
+  distanceMeters?: number | null;
+}
+
 /** 旅程相册摘要（列表项） */
 export interface JourneyAlbumSummary {
   id: number;
@@ -637,8 +653,24 @@ export interface JourneyAlbumSummary {
   photoCount: number;
   bytesUsed: number;
   status: JourneyAlbumStatusValue;
+  /** J5：是否已开启公开分享 */
+  shareEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** 旅行照片 EXIF 拍摄参数（上传时解析） */
+export interface TravelPhotoShootingParams {
+  deviceMake?: string | null;
+  deviceModel?: string | null;
+  lensModel?: string | null;
+  iso?: number | null;
+  fNumber?: number | null;
+  exposureTimeSec?: number | null;
+  focalLengthMm?: number | null;
+  focalLength35mm?: number | null;
+  flash?: boolean | null;
+  whiteBalance?: string | null;
 }
 
 /** 旅行照片信息 */
@@ -660,6 +692,10 @@ export interface TravelPhotoInfo {
   sortOrder: number;
   source: TravelPhotoSourceValue;
   createdAt: string;
+  /** J5：上传响应可附带 EXIF 归类建议 */
+  placementSuggestion?: TravelPhotoPlacementSuggestion | null;
+  /** 拍摄参数（EXIF，上传时写入） */
+  shootingParams?: TravelPhotoShootingParams | null;
 }
 
 /** 相册内按天/POI 分组 */
@@ -706,6 +742,35 @@ export interface UserTravelPhotoListItem extends TravelPhotoInfo {
   albumTitle: string;
   routeId: number;
   routeName: string | null;
+}
+
+/** J5：更新相册分享开关 */
+export interface UpdateJourneyAlbumShareRequest {
+  enabled: boolean;
+}
+
+export interface JourneyAlbumShareState {
+  shareEnabled: boolean;
+  shareToken: string | null;
+  /** 客户端拼接 H5/PC 分享路径，如 `/share/journey-albums/{token}` */
+  sharePath: string | null;
+}
+
+/** J5：公开分享的旅程相册（只读） */
+export interface SharedJourneyAlbumPayload {
+  title: string;
+  routeName: string | null;
+  photoCount: number;
+  coverPhotoUrl: string | null;
+  photos: TravelPhotoInfo[];
+  groups: JourneyAlbumPhotoGroup[];
+}
+
+/** J5：批量应用 EXIF 建议结果 */
+export interface ApplyExifSuggestionsResult {
+  applied: number;
+  skipped: number;
+  photos: TravelPhotoInfo[];
 }
 
 /** 数据分析概览 */

@@ -157,10 +157,31 @@
       "breakpoints": true
     },
     {
+      "idx": 22,
+      "version": "5",
+      "when": 1749456000000,
+      "tag": "0022_system_admin",
+      "breakpoints": true
+    },
+    {
       "idx": 23,
       "version": "5",
       "when": 1749542400000,
       "tag": "0023_sys_menu",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "5",
+      "when": 1749628800000,
+      "tag": "0024_journey_album_share",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "5",
+      "when": 1749715200000,
+      "tag": "0025_travel_photo_shooting_params",
       "breakpoints": true
     }
   ]

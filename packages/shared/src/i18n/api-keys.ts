@@ -181,6 +181,10 @@ export const ApiMessageKey = {
   PHOTO_QUOTA_EXCEEDED: 'api.photoQuotaExceeded',
   PHOTO_STORAGE_FETCH_FAILED: 'api.photoStorageFetchFailed',
   TRAVEL_PHOTO_LIST_FAILED: 'api.travelPhotoListFailed',
+  JOURNEY_ALBUM_SHARE_UPDATED: 'api.journeyAlbumShareUpdated',
+  SHARE_ALBUM_NOT_AVAILABLE: 'api.shareAlbumNotAvailable',
+  SHARE_ALBUM_LOAD_FAILED: 'api.shareAlbumLoadFailed',
+  TRAVEL_PHOTO_EXIF_APPLIED: 'api.travelPhotoExifApplied',
 
   SERVER_RUNNING: 'api.serverRunning',
 
