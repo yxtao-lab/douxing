@@ -178,6 +178,9 @@ export const ApiMessageKey = {
   TRAVEL_PHOTO_DELETE_SUCCESS: 'api.travelPhotoDeleteSuccess',
   TRAVEL_PHOTO_UPDATED: 'api.travelPhotoUpdated',
   TRAVEL_PHOTO_FILE_TOO_LARGE: 'api.travelPhotoFileTooLarge',
+  PHOTO_QUOTA_EXCEEDED: 'api.photoQuotaExceeded',
+  PHOTO_STORAGE_FETCH_FAILED: 'api.photoStorageFetchFailed',
+  TRAVEL_PHOTO_LIST_FAILED: 'api.travelPhotoListFailed',
 
   SERVER_RUNNING: 'api.serverRunning',
 

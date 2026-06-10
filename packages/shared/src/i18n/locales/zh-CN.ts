@@ -93,6 +93,7 @@ export const sharedZhCN = {
     orders: '我的订单',
     login: '登录',
     membership: '会员权益',
+    myAlbum: '我的相册',
   },
   memberLevel: {
     free: '免费会员',

@@ -24,6 +24,7 @@ export function createCheckIn(data: {
   };
   photos?: string[];
   remark?: string;
+  addToAlbum?: boolean;
 }) {
   return request<CheckInResult>('/checkins', { method: 'POST', data });
 }

@@ -153,6 +153,7 @@ const memberBadgeClass = computed(() => getMemberLevelBadgeClass(user.value?.mem
 
 const travelGridItems = computed<GridItem[]>(() => [
   { key: 'checkins', icon: '📍', label: t('profile.gridCheckins'), bg: 'var(--dx-primary-light)', action: goCheckins },
+  { key: 'albums', icon: '📷', label: t('profile.gridMyAlbum'), bg: '#fff0f6', needLogin: true, action: goMyAlbum },
   { key: 'map', icon: '🗺️', label: t('profile.gridMap'), bg: 'var(--dx-accent-soft)', needLogin: true, action: goCheckinMap },
   {
     key: 'achievements',
@@ -227,6 +228,10 @@ function goRoutes() {
 
 function goCheckins() {
   uni.navigateTo({ url: '/pages/checkins/list' });
+}
+
+function goMyAlbum() {
+  uni.navigateTo({ url: '/pages/journey-albums/list' });
 }
 
 function goBadges() {

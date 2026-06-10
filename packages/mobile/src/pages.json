@@ -87,6 +87,12 @@
       }
     },
     {
+      "path": "pages/journey-albums/list",
+      "style": {
+        "navigationBarTitleText": "我的相册"
+      }
+    },
+    {
       "path": "pages/login/login",
       "style": {
         "navigationStyle": "custom",

@@ -66,6 +66,12 @@ const router = createRouter({
           meta: { titleKey: 'nav.membership', navKey: 'profile', requiresAuth: true },
         },
         {
+          path: 'journey-albums',
+          name: 'journey-albums',
+          component: () => import('@/views/JourneyAlbumsView.vue'),
+          meta: { titleKey: 'nav.myAlbum', navKey: 'profile', requiresAuth: true },
+        },
+        {
           path: 'achievements',
           name: 'achievements',
           component: () => import('@/views/AchievementsView.vue'),

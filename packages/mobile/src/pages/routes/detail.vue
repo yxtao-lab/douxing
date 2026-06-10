@@ -47,7 +47,24 @@
       </view>
     </view>
 
-    <view v-if="isUnlocked && days.length > 0" class="card itinerary-card">
+    <view v-if="isUnlocked && days.length > 0 && showDetailTabs" class="detail-tabs">
+      <view
+        class="detail-tab"
+        :class="{ active: detailTab === 'itinerary' }"
+        @click="detailTab = 'itinerary'"
+      >
+        <text>{{ t('routes.tabItinerary') }}</text>
+      </view>
+      <view
+        class="detail-tab"
+        :class="{ active: detailTab === 'album' }"
+        @click="detailTab = 'album'"
+      >
+        <text>{{ t('routes.tabAlbum') }}</text>
+      </view>
+    </view>
+
+    <view v-if="isUnlocked && days.length > 0 && detailTab === 'itinerary'" class="card itinerary-card">
       <RouteDayTabs v-model:active-day-index="activeDayIndex" :days="days" />
       <text v-if="activeDayHeading" class="itinerary-day-heading">{{ activeDayHeading }}</text>
 
@@ -69,6 +86,15 @@
         :show-day-tabs="false"
         show-check-in
         @check-in="handleCheckIn"
+      />
+    </view>
+
+    <view v-if="showAlbumTab && detailTab === 'album'" class="card album-card">
+      <RouteJourneyAlbumPanel
+        ref="albumPanelRef"
+        :route-id="routeId"
+        :days="days"
+        :visible="detailTab === 'album'"
       />
     </view>
 
@@ -207,6 +233,7 @@ import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
 import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
 import RoutePosterSheet from '@/components/route-poster/RoutePosterSheet.vue';
+import RouteJourneyAlbumPanel from '@/components/route-journey-album/RouteJourneyAlbumPanel.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -238,6 +265,8 @@ const commentText = ref('');
 const postingComment = ref(false);
 const aiPlanning = computed(() => aiPlanLoadingState.active);
 const activeDayIndex = ref(0);
+const detailTab = ref<'itinerary' | 'album'>('itinerary');
+const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
 const posterSheetVisible = ref(false);
 const posterShareImagePath = ref('');
 let routeId = 0;
@@ -285,6 +314,10 @@ const canGeneratePoster = computed(
     days.value.length > 0 &&
     route.value?.status === RouteStatus.PUBLISHED,
 );
+
+const showDetailTabs = computed(() => isOwner.value && isUnlocked.value && days.value.length > 0);
+
+const showAlbumTab = computed(() => showDetailTabs.value);
 
 const isUnlocked = computed(() => {
   if (route.value?.isPublic && !isOwner.value) return true;
@@ -627,7 +660,12 @@ async function handleCheckIn(spot: RouteDayAttraction) {
               longitude: gps.longitude,
             },
             photos,
+            addToAlbum: photos != null && photos.length > 0,
           });
+
+          if (photos != null && photos.length > 0 && detailTab.value === 'album') {
+            albumPanelRef.value?.reload();
+          }
 
           let msg = tf('routes.checkInSuccess', { points: result.checkIn.pointsEarned });
           if (result.newAchievements.length > 0) {
@@ -671,6 +709,27 @@ onLoad((query) => {
   background: var(--dx-bg);
   min-height: 100vh;
   box-sizing: border-box;
+}
+.detail-tabs {
+  display: flex;
+  gap: 16rpx;
+  margin: 0 0 20rpx;
+}
+.detail-tab {
+  flex: 1;
+  text-align: center;
+  padding: 20rpx 0;
+  border-radius: var(--dx-radius-sm);
+  background: var(--dx-surface);
+  color: var(--dx-text-secondary);
+  font-size: 28rpx;
+  box-shadow: var(--dx-shadow-sm);
+}
+.detail-tab.active {
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 2rpx var(--dx-primary-border);
 }
 .hero {
   position: relative;

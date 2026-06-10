@@ -10,7 +10,9 @@ import {
   createJourneyAlbum,
   deleteTravelPhoto,
   getJourneyAlbumDetail,
+  getJourneyAlbumByRoute,
   listJourneyAlbumsForUser,
+  listUserTravelPhotosPaginated,
   resolveAlbumDetailUrls,
   resolveAlbumPhotoUrls,
   resolveAlbumSummaryUrls,
@@ -18,6 +20,7 @@ import {
   uploadTravelPhoto,
 } from '../services/journey-album.service.js';
 import { fail, failFromError, success } from '../utils/response.js';
+import { parsePaginationQuery } from '../utils/pagination.js';
 import { resolvePublicAssetUrl, resolvePublicBaseFromRequest } from '../utils/public-asset-url.util.js';
 
 const router = Router();
@@ -76,6 +79,45 @@ router.get('/', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[journey-albums/list]', err);
     return fail(res, ApiMessageKey.JOURNEY_ALBUM_LIST_FAILED, 500, 500);
+  }
+});
+
+router.get('/photos', authMiddleware, async (req, res) => {
+  try {
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const result = await listUserTravelPhotosPaginated(req.auth!.userId, page, pageSize);
+    const publicBase = resolvePublicBaseFromRequest(req);
+    success(res, {
+      ...result,
+      items: resolveAlbumPhotoUrls(result.items, (stored) => resolveStoredUrl(req, stored)),
+    });
+  } catch (err) {
+    console.error('[journey-albums/photos]', err);
+    return fail(res, ApiMessageKey.TRAVEL_PHOTO_LIST_FAILED, 500, 500);
+  }
+});
+
+router.get('/by-route/:routeId', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseAlbumId(String(req.params.routeId));
+    if (!routeId) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+
+    let summary = await getJourneyAlbumByRoute(req.auth!.userId, routeId);
+    if (!summary) {
+      summary = await createJourneyAlbum(req.auth!.userId, { routeId });
+    }
+
+    const detail = await getJourneyAlbumDetail(summary.id, req.auth!.userId);
+    if (!detail) {
+      return fail(res, ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND, 404, 404);
+    }
+
+    success(res, resolveAlbumDetailUrls(detail, (stored) => resolveStoredUrl(req, stored)));
+  } catch (err) {
+    console.error('[journey-albums/by-route]', err);
+    return failFromError(res, err, ApiMessageKey.JOURNEY_ALBUM_DETAIL_FAILED);
   }
 });
 

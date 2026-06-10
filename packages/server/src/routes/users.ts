@@ -8,6 +8,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import { success, fail, failFromError } from '../utils/response.js';
 import { getUserWithRoles, updateUserProfile, setUserAvatar } from '../services/user.service.js';
 import { getMembershipInfoForUser } from '../services/membership.service.js';
+import { getUserPhotoStorageInfo } from '../services/photo-quota.service.js';
 import { ApiMessageKey, USER_INTEREST_MAX } from '@douxing/shared';
 
 const router = Router();
@@ -75,6 +76,16 @@ router.get('/me/membership', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[users/me/membership]', err);
     return fail(res, ApiMessageKey.MEMBERSHIP_FETCH_FAILED, 500, 500);
+  }
+});
+
+router.get('/me/storage', authMiddleware, async (req, res) => {
+  try {
+    const storage = await getUserPhotoStorageInfo(req.auth!.userId);
+    success(res, storage);
+  } catch (err) {
+    console.error('[users/me/storage]', err);
+    return fail(res, ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED, 500, 500);
   }
 });
 

@@ -93,6 +93,7 @@ export const sharedEnUS = {
     orders: 'My Orders',
     login: 'Sign in',
     membership: 'Membership',
+    myAlbum: 'My photos',
   },
   memberLevel: {
     free: 'Free',

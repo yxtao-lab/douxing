@@ -27,6 +27,18 @@
           </view>
         </view>
 
+        <view v-if="photoStorage" class="storage-section">
+          <text class="section-title">{{ t('membership.storageTitle') }}</text>
+          <view class="storage-bar">
+            <view class="storage-row">
+              <text class="storage-value">{{ storageSummary }}</text>
+            </view>
+            <view class="storage-track">
+              <view class="storage-fill" :style="{ width: storagePercent + '%' }" />
+            </view>
+          </view>
+        </view>
+
         <view class="section">
           <text class="section-title">{{ t('membership.compareTitle') }}</text>
           <view class="compare-table">
@@ -68,6 +80,23 @@
                   {{ tier.canAppendPlan ? t('membership.followUpYes') : t('membership.followUpNo') }}
                 </text>
               </view>
+            </view>
+
+            <view class="compare-row">
+              <text class="feature-col">{{ t('membership.featurePhotoStorage') }}</text>
+              <text
+                v-for="tier in tiers"
+                :key="`photo-${tier.level}`"
+                class="tier-col"
+                :class="{ active: tier.level === membership.level }"
+              >
+                {{
+                  tf('membership.photoStorageUnit', {
+                    count: tier.photoQuota.maxCount,
+                    bytes: formatStorageBytes(tier.photoQuota.maxBytes),
+                  })
+                }}
+              </text>
             </view>
           </view>
 
@@ -115,7 +144,9 @@ import {
   getMemberLevelI18nKey,
   type MembershipInfo,
 } from '@douxing/shared';
-import { fetchMembershipInfo } from '@/api/user';
+import { fetchMembershipInfo, fetchPhotoStorage } from '@/api/user';
+import type { UserPhotoStorageInfo } from '@douxing/shared';
+import { formatStorageBytes } from '@/api/journey-albums';
 import { getStoredUser } from '@/utils/request';
 import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
 import { useTheme } from '@/i18n/useTheme';
@@ -128,6 +159,7 @@ usePageTitle('nav.membership');
 
 const loading = ref(true);
 const membership = ref<MembershipInfo | null>(null);
+const photoStorage = ref<UserPhotoStorageInfo | null>(null);
 const tiers = getAllMembershipTiers();
 
 function levelLabel(level: number): string {
@@ -146,6 +178,29 @@ const currentSummary = computed(() => {
   return tf('membership.planCountUnit', { count: membership.value.planCandidateCount }) + ` · ${followUp}`;
 });
 
+const storageSummary = computed(() => {
+  if (!photoStorage.value) return '';
+  return tf('membership.storageSummary', {
+    usedBytes: formatStorageBytes(photoStorage.value.usedBytes),
+    maxBytes: formatStorageBytes(photoStorage.value.maxBytes),
+    usedCount: photoStorage.value.usedCount,
+    maxCount: photoStorage.value.maxCount,
+  });
+});
+
+const storagePercent = computed(() => {
+  if (!photoStorage.value) return 0;
+  const byteRatio =
+    photoStorage.value.maxBytes > 0
+      ? photoStorage.value.usedBytes / photoStorage.value.maxBytes
+      : 0;
+  const countRatio =
+    photoStorage.value.maxCount > 0
+      ? photoStorage.value.usedCount / photoStorage.value.maxCount
+      : 0;
+  return Math.min(100, Math.round(Math.max(byteRatio, countRatio) * 100));
+});
+
 onShow(async () => {
   if (!getStoredUser()) {
     uni.showToast({ title: t('membership.loginRequired'), icon: 'none' });
@@ -154,9 +209,15 @@ onShow(async () => {
   }
   loading.value = true;
   try {
-    membership.value = await fetchMembershipInfo();
+    const [membershipInfo, storageInfo] = await Promise.all([
+      fetchMembershipInfo(),
+      fetchPhotoStorage(),
+    ]);
+    membership.value = membershipInfo;
+    photoStorage.value = storageInfo;
   } catch {
     membership.value = null;
+    photoStorage.value = null;
   } finally {
     loading.value = false;
   }
@@ -435,5 +496,33 @@ onShow(async () => {
   font-size: 24rpx;
   color: var(--dx-text-secondary);
   line-height: 1.5;
+}
+.storage-section {
+  margin-bottom: 24rpx;
+  padding: 24rpx;
+  border: 1rpx solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+  background: var(--dx-bg);
+}
+.storage-bar {
+  margin-top: 12rpx;
+}
+.storage-row {
+  margin-bottom: 12rpx;
+}
+.storage-value {
+  font-size: 24rpx;
+  color: var(--dx-text);
+}
+.storage-track {
+  height: 12rpx;
+  border-radius: 999rpx;
+  background: var(--dx-border);
+  overflow: hidden;
+}
+.storage-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  background: var(--dx-primary);
 }
 </style>

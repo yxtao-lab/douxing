@@ -14,6 +14,7 @@ import { buildPaginatedResult } from '@douxing/shared';
 import { evaluateAchievements } from './achievement.service.js';
 import { evaluateBadges } from './badge.service.js';
 import { getAttractionForCheckIn } from './attraction.service.js';
+import { ingestCheckInPhotosToAlbum, getAlbumPhotoUrlsByCheckInIds } from './journey-album.service.js';
 import {
   assertNotCheckedInToday,
   validateCheckInGeofence,
@@ -65,7 +66,19 @@ async function buildCityMap(cityCodes: string[]) {
 async function mapRowsToCheckInInfo(rows: typeof checkIns.$inferSelect[]) {
   const cityCodes = [...new Set(rows.map((row) => row.cityCode))];
   const cityMap = await buildCityMap(cityCodes);
-  return rows.map((row) => toCheckInInfo(row, cityMap));
+  const albumPhotosByCheckInId = await getAlbumPhotoUrlsByCheckInIds(rows.map((row) => row.id));
+
+  return rows.map((row) => {
+    const albumPhotos = albumPhotosByCheckInId.get(row.id);
+    const photos =
+      albumPhotos && albumPhotos.length > 0
+        ? rewritePublicAssetUrls(albumPhotos)
+        : rewritePublicAssetUrls(row.photos ?? []);
+    return {
+      ...toCheckInInfo(row, cityMap),
+      photos,
+    };
+  });
 }
 
 async function resolveCityCodeFromCityName(cityName: string) {
@@ -126,6 +139,7 @@ export async function createCheckIn(
     gpsAccuracy?: number;
     photos?: string[];
     remark?: string;
+    addToAlbum?: boolean;
   },
 ) {
   if (data.location.latitude == null || data.location.longitude == null) {
@@ -168,9 +182,36 @@ export async function createCheckIn(
   const cityMap = await buildCityMap([cityCode]);
   const checkIn = toCheckInInfo(rows[0]!, cityMap, distanceMeters);
 
+  if (photos.length > 0 && data.addToAlbum !== false) {
+    try {
+      await ingestCheckInPhotosToAlbum({
+        userId,
+        routeId: data.routeId,
+        checkInId: id,
+        photos,
+        attractionId: data.attractionId,
+        placeName: data.location.placeName,
+        latitude: data.location.latitude,
+        longitude: data.location.longitude,
+      });
+    } catch (err) {
+      console.error('[checkins/ingest-album]', err);
+    }
+  }
+
+  const albumPhotosByCheckInId = await getAlbumPhotoUrlsByCheckInIds([id]);
+  const albumPhotos = albumPhotosByCheckInId.get(id);
+  const enrichedCheckIn: CheckInInfo = {
+    ...checkIn,
+    photos:
+      albumPhotos && albumPhotos.length > 0
+        ? rewritePublicAssetUrls(albumPhotos)
+        : checkIn.photos,
+  };
+
   const newAchievements = await evaluateAchievements(userId);
   const newBadges = await evaluateBadges(userId);
-  return { checkIn, newAchievements, newBadges };
+  return { checkIn: enrichedCheckIn, newAchievements, newBadges };
 }
 
 function resolveCheckInSince(range?: CheckInTimeRange) {

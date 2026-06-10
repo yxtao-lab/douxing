@@ -127,6 +127,9 @@
 import { ref, watch } from 'vue';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { fetchRouteShareLink } from '@/api/share';
+import { buildJourneyPosterMaps, fetchJourneyAlbumByRoute } from '@/api/journey-albums';
+import { getAppErrorMessage } from '@/utils/error-message';
+import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
 import { buildPosterPayload } from '@/poster/build-poster-payload';
 import {
@@ -158,7 +161,6 @@ import type {
   PosterTemplateId,
   PosterThemePresetId,
 } from '@/poster/types';
-import { getAppErrorMessage } from '@/utils/error-message';
 
 const props = defineProps<{
   visible: boolean;
@@ -171,6 +173,7 @@ const emit = defineEmits<{
 }>();
 
 const { t, currentLocale } = useLocale();
+const userStore = useUserStore();
 
 const templates = POSTER_TEMPLATES;
 const selectedTemplate = ref<PosterTemplateId>(getDefaultPosterTemplateId());
@@ -244,6 +247,20 @@ async function selectTemplate(id: PosterTemplateId) {
 
 async function generatePreview() {
   if (!props.route || generating.value) return;
+
+  let journeyHighlightByDay: string[][] | undefined;
+  let journeyPhotoByPoiKey: Record<string, string> | undefined;
+  if (userStore.user) {
+    try {
+      const albumDetail = await fetchJourneyAlbumByRoute(props.route.id);
+      const maps = buildJourneyPosterMaps(albumDetail);
+      journeyHighlightByDay = maps.journeyHighlightByDay;
+      journeyPhotoByPoiKey = maps.journeyPhotoByPoiKey;
+    } catch {
+      /* 无相册时回退路线封面 */
+    }
+  }
+
   const payload = buildPosterPayload({
     route: props.route,
     locale: currentLocale.value,
@@ -251,6 +268,8 @@ async function generatePreview() {
     brandTagline: t('routes.poster.brandTagline'),
     scanHint: t('routes.poster.scanHint'),
     options: renderOptions.value,
+    journeyHighlightByDay,
+    journeyPhotoByPoiKey,
   });
   if (!payload) {
     toastMessage.value = t('routes.poster.noItinerary');

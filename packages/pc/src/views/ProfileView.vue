@@ -149,6 +149,7 @@ function labelOf(tag: string) {
 const gridItems = computed(() => [
   { key: 'checkinMap', icon: '🗺️', label: t('nav.checkinMap'), bg: '#e8f3ff', needLogin: true, to: { name: 'checkins-map' } },
   { key: 'checkins', icon: '📍', label: t('profile.gridCheckins'), bg: '#f0f9ff', needLogin: true, to: { name: 'checkins' } },
+  { key: 'albums', icon: '📷', label: t('profile.gridMyAlbum'), bg: '#fff0f6', needLogin: true, to: { name: 'journey-albums' } },
   { key: 'achievements', icon: '🏅', label: t('profile.gridAchievements'), bg: '#fff7e6', needLogin: true, to: { name: 'achievements' } },
   { key: 'badges', icon: '🎖️', label: t('profile.gridBadges'), bg: '#f9f0ff', needLogin: true, to: { name: 'badges' } },
   { key: 'leaderboard', icon: '🏆', label: t('profile.gridLeaderboard'), bg: '#fff1f0', needLogin: true, to: { name: 'leaderboard' } },

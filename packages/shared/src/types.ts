@@ -691,6 +691,23 @@ export interface UpdateTravelPhotoRequest {
   sortOrder?: number;
 }
 
+/** 用户照片存储用量（GET /users/me/storage） */
+export interface UserPhotoStorageInfo {
+  level: number;
+  usedBytes: number;
+  maxBytes: number;
+  usedCount: number;
+  maxCount: number;
+  maxFileBytes: number;
+}
+
+/** 用户全站旅行照片列表项（GET /journey-albums/photos） */
+export interface UserTravelPhotoListItem extends TravelPhotoInfo {
+  albumTitle: string;
+  routeId: number;
+  routeName: string | null;
+}
+
 /** 数据分析概览 */
 export interface AnalyticsOverview {
   users: {

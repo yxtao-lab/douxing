@@ -85,8 +85,36 @@
             </div>
           </div>
 
+          <!-- 行程 / 相册 Tab -->
+          <div v-if="showDetailTabs" class="flex gap-2">
+            <button
+              type="button"
+              class="flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition"
+              :class="
+                detailTab === 'itinerary'
+                  ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                  : 'border-dx-border bg-white text-dx-muted hover:border-dx-primary/40'
+              "
+              @click="detailTab = 'itinerary'"
+            >
+              {{ t('routes.tabItinerary') }}
+            </button>
+            <button
+              type="button"
+              class="flex-1 rounded-xl border px-4 py-2.5 text-sm font-medium transition"
+              :class="
+                detailTab === 'album'
+                  ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                  : 'border-dx-border bg-white text-dx-muted hover:border-dx-primary/40'
+              "
+              @click="detailTab = 'album'"
+            >
+              {{ t('routes.tabAlbum') }}
+            </button>
+          </div>
+
           <!-- 行程：地图 + 流程图 -->
-          <div v-if="isUnlocked && days.length > 0" class="dx-card space-y-6">
+          <div v-if="isUnlocked && days.length > 0 && detailTab === 'itinerary'" class="dx-card space-y-6">
             <RouteDayTabs
               v-if="days.length > 1"
               v-model:active-day-index="activeDayIndex"
@@ -109,6 +137,16 @@
               v-model:active-day-index="activeDayIndex"
               :days="days"
               :show-day-tabs="false"
+            />
+          </div>
+
+          <!-- 旅程相册 -->
+          <div v-if="showAlbumTab && detailTab === 'album'" class="dx-card">
+            <RouteJourneyAlbumPanel
+              ref="albumPanelRef"
+              :route-id="numericRouteId"
+              :days="days"
+              :visible="detailTab === 'album'"
             />
           </div>
 
@@ -270,6 +308,7 @@ import RouteDayFlowChart from '@/components/route/RouteDayFlowChart.vue';
 import RouteDayTabs from '@/components/route/RouteDayTabs.vue';
 import RouteMapByDay from '@/components/route/RouteMapByDay.vue';
 import RoutePosterSheet from '@/components/route/RoutePosterSheet.vue';
+import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vue';
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
@@ -280,6 +319,8 @@ const { t } = useLocale();
 const { joinLabels } = useInterestTagLabels();
 
 const posterSheetVisible = ref(false);
+const detailTab = ref<'itinerary' | 'album'>('itinerary');
+const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
 const publishedStatusForPoster = RouteStatus.PUBLISHED;
 
 const numericRouteId = computed(() => Number(vueRoute.params.id));
@@ -333,6 +374,10 @@ const canGeneratePoster = computed(
     days.value.length > 0 &&
     route.value?.status === publishedStatusForPoster,
 );
+
+const showDetailTabs = computed(() => isOwner.value && isUnlocked.value && days.value.length > 0);
+
+const showAlbumTab = computed(() => showDetailTabs.value);
 
 const heroMeta = computed(() => {
   if (!route.value) return '';

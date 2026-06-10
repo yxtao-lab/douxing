@@ -180,6 +180,10 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_DELETE_SUCCESS]: '照片已删除',
   [ApiMessageKey.TRAVEL_PHOTO_UPDATED]: '照片已更新',
   [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: '照片文件过大',
+  [ApiMessageKey.PHOTO_QUOTA_EXCEEDED]:
+    '照片存储已达上限（已用 {usedCount}/{maxCount} 张，{usedBytes}/{maxBytes}）',
+  [ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED]: '获取存储用量失败',
+  [ApiMessageKey.TRAVEL_PHOTO_LIST_FAILED]: '获取照片列表失败',
 
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
 
@@ -373,6 +377,10 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_DELETE_SUCCESS]: 'Photo deleted',
   [ApiMessageKey.TRAVEL_PHOTO_UPDATED]: 'Photo updated',
   [ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE]: 'Photo file is too large',
+  [ApiMessageKey.PHOTO_QUOTA_EXCEEDED]:
+    'Photo storage limit reached ({usedCount}/{maxCount} photos, {usedBytes}/{maxBytes})',
+  [ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED]: 'Failed to load storage usage',
+  [ApiMessageKey.TRAVEL_PHOTO_LIST_FAILED]: 'Failed to load photos',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
 

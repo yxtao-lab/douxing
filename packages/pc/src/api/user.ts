@@ -1,8 +1,13 @@
 import http from './http';
-import type { ApiResponse, MembershipInfo, UpdateUserProfileRequest, UserInfo } from '@douxing/shared';
+import type { ApiResponse, MembershipInfo, UpdateUserProfileRequest, UserInfo, UserPhotoStorageInfo } from '@douxing/shared';
 
 export async function fetchMembershipInfo() {
   const { data } = await http.get<ApiResponse<MembershipInfo>>('/users/me/membership');
+  return data.data;
+}
+
+export async function fetchPhotoStorage() {
+  const { data } = await http.get<ApiResponse<UserPhotoStorageInfo>>('/users/me/storage');
   return data.data;
 }
 

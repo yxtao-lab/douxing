@@ -70,6 +70,7 @@ const checkInSchema = z.object({
   gpsAccuracy: z.number().positive().max(500).optional(),
   photos: z.array(z.string().url().max(512)).max(CHECKIN_MAX_PHOTOS).optional(),
   remark: z.string().max(512).optional(),
+  addToAlbum: z.boolean().optional(),
 });
 
 router.post('/photos', authMiddleware, (req, res, next) => {

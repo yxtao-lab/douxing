@@ -1,5 +1,36 @@
 import { MemberLevel } from './constants.js';
 
+/** 各会员等级照片存储配额 */
+export interface MemberPhotoQuota {
+  maxBytes: number;
+  maxCount: number;
+  maxFileBytes: number;
+}
+
+/** 各会员等级照片存储配额（容量 + 张数 + 单张上限） */
+export const MEMBER_PHOTO_QUOTAS: Record<number, MemberPhotoQuota> = {
+  [MemberLevel.FREE]: {
+    maxBytes: 500 * 1024 * 1024,
+    maxCount: 200,
+    maxFileBytes: 10 * 1024 * 1024,
+  },
+  [MemberLevel.SILVER]: {
+    maxBytes: 2 * 1024 * 1024 * 1024,
+    maxCount: 1000,
+    maxFileBytes: 15 * 1024 * 1024,
+  },
+  [MemberLevel.GOLD]: {
+    maxBytes: 10 * 1024 * 1024 * 1024,
+    maxCount: 5000,
+    maxFileBytes: 20 * 1024 * 1024,
+  },
+  [MemberLevel.VIP]: {
+    maxBytes: 50 * 1024 * 1024 * 1024,
+    maxCount: 20000,
+    maxFileBytes: 25 * 1024 * 1024,
+  },
+};
+
 /** 各会员等级可生成的规划候选方案数 */
 export const MEMBER_PLAN_CANDIDATE_COUNTS: Record<number, number> = {
   [MemberLevel.FREE]: 1,
@@ -76,11 +107,18 @@ export function canAppendPlanByMemberLevel(level: number | null | undefined): bo
   return MEMBER_PLAN_APPEND_ALLOWED[normalized] ?? false;
 }
 
+/** 根据会员等级返回照片存储配额 */
+export function getPhotoQuotaByMemberLevel(level: number | null | undefined): MemberPhotoQuota {
+  const normalized = normalizeMemberLevel(level);
+  return MEMBER_PHOTO_QUOTAS[normalized] ?? MEMBER_PHOTO_QUOTAS[MemberLevel.FREE];
+}
+
 export function getAllMembershipTiers() {
   return ORDERED_LEVELS.map((level) => ({
     level,
     planCandidateCount: getPlanCandidateCountByMemberLevel(level),
     canAppendPlan: canAppendPlanByMemberLevel(level),
+    photoQuota: getPhotoQuotaByMemberLevel(level),
   }));
 }
 

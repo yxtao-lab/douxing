@@ -1,4 +1,4 @@
-import type { UserInfo, UpdateUserProfileRequest, MembershipInfo } from '@douxing/shared';
+import type { UserInfo, UpdateUserProfileRequest, MembershipInfo, UserPhotoStorageInfo } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
 import { resolveClientRequestErrorMessage } from '@douxing/shared';
@@ -13,6 +13,10 @@ export function fetchCurrentUser() {
 
 export function fetchMembershipInfo() {
   return request<MembershipInfo>('/users/me/membership');
+}
+
+export function fetchPhotoStorage() {
+  return request<UserPhotoStorageInfo>('/users/me/storage');
 }
 
 export async function updateUserProfile(data: UpdateUserProfileRequest) {

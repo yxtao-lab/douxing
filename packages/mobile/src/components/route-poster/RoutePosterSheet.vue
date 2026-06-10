@@ -164,7 +164,8 @@ import {
 } from '@/poster/registry';
 import { loadPosterImages, loadPosterWxacode, POSTER_WXACODE_KEY } from '@/poster/load-poster-image';
 import { fetchRouteShareLink } from '@/api/share';
-import { getAppErrorMessage } from '@/utils/request';
+import { buildJourneyPosterMaps, fetchJourneyAlbumByRoute } from '@/api/journey-albums';
+import { getAppErrorMessage, getStoredUser } from '@/utils/request';
 
 const props = defineProps<{
   visible: boolean;
@@ -269,6 +270,20 @@ async function selectTemplate(id: PosterTemplateId) {
 
 async function generatePreview() {
   if (!props.route || generating.value) return;
+
+  let journeyHighlightByDay: string[][] | undefined;
+  let journeyPhotoByPoiKey: Record<string, string> | undefined;
+  if (getStoredUser()) {
+    try {
+      const albumDetail = await fetchJourneyAlbumByRoute(props.route.id);
+      const maps = buildJourneyPosterMaps(albumDetail);
+      journeyHighlightByDay = maps.journeyHighlightByDay;
+      journeyPhotoByPoiKey = maps.journeyPhotoByPoiKey;
+    } catch {
+      // 无相册或无权访问时回退路线封面
+    }
+  }
+
   const payload = buildPosterPayload({
     route: props.route,
     locale: currentLocale.value,
@@ -276,6 +291,8 @@ async function generatePreview() {
     brandTagline: t('routes.poster.brandTagline'),
     scanHint: payloadScanHint(),
     options: renderOptions.value,
+    journeyHighlightByDay,
+    journeyPhotoByPoiKey,
   });
   if (!payload) {
     uni.showToast({ title: t('routes.poster.noItinerary'), icon: 'none' });

@@ -10,7 +10,14 @@ import {
   themeColorForDay,
 } from './poster-options';
 
-function collectDayHighlightImages(nodes: RouteFlowNode[]): string[] {
+function collectDayHighlightImages(
+  nodes: RouteFlowNode[],
+  journeyUrls?: string[],
+): string[] {
+  if (journeyUrls && journeyUrls.length > 0) {
+    return journeyUrls.slice(0, MAX_HIGHLIGHT_IMAGES_PER_DAY);
+  }
+
   const urls: string[] = [];
   const seen = new Set<string>();
   for (const node of nodes) {
@@ -24,7 +31,11 @@ function collectDayHighlightImages(nodes: RouteFlowNode[]): string[] {
   return urls;
 }
 
-function flowNodeToPosterItem(node: RouteFlowNode, labels: PosterLabels): PosterPoiItem {
+function flowNodeToPosterItem(
+  node: RouteFlowNode,
+  labels: PosterLabels,
+  poiPhotoUrl?: string | null,
+): PosterPoiItem {
   let meta: string | undefined;
   if (node.kind === 'transit' && node.transit) {
     meta = labels.transitDuration.replace('{minutes}', String(node.transit.durationMinutes));
@@ -39,8 +50,13 @@ function flowNodeToPosterItem(node: RouteFlowNode, labels: PosterLabels): Poster
     desc: (node.description ?? '').trim(),
     meta,
     poiType: node.spot?.poiType,
-    imageUrl: node.spot?.coverImageUrl,
+    imageUrl: poiPhotoUrl ?? node.spot?.coverImageUrl,
   };
+}
+
+function buildPoiPhotoKey(dayIndex: number, poiName: string, attractionId?: number | null): string {
+  if (attractionId != null) return `a:${attractionId}`;
+  return `d:${dayIndex}::${poiName}`;
 }
 
 function buildDayBlocks(
@@ -48,6 +64,8 @@ function buildDayBlocks(
   locale: LocaleCode,
   labels: PosterLabels,
   options: PosterRenderOptions,
+  journeyHighlightByDay?: string[][],
+  journeyPhotoByPoiKey?: Record<string, string>,
 ): PosterDayBlock[] {
   return days.map((day, index) => {
     const dayNo = index + 1;
@@ -57,7 +75,14 @@ function buildDayBlocks(
       (locale === 'en-US' ? `${labels.dayPrefix} ${dayNo}` : `第 ${dayNo} 天`);
 
     const flowNodes = buildRouteDayFlow(day);
-    const allItems = flowNodes.map((node) => flowNodeToPosterItem(node, labels));
+    const allItems = flowNodes.map((node) => {
+      const poiKey =
+        node.kind === 'play' && node.spot
+          ? buildPoiPhotoKey(index, node.spot.name, node.spot.attractionId)
+          : null;
+      const poiPhotoUrl = poiKey ? journeyPhotoByPoiKey?.[poiKey] : undefined;
+      return flowNodeToPosterItem(node, labels, poiPhotoUrl);
+    });
     const { items: limitedItems, hiddenItemCount } = limitDayItemsByPlayCount(
       allItems,
       options.poisPerDay,
@@ -77,7 +102,7 @@ function buildDayBlocks(
       label,
       themeColor: themeColorForDay(options.themePresetId, index),
       items,
-      highlightImages: collectDayHighlightImages(visibleNodes),
+      highlightImages: collectDayHighlightImages(visibleNodes, journeyHighlightByDay?.[index]),
       hiddenItemCount,
     };
   });
@@ -115,6 +140,10 @@ export interface BuildPosterPayloadInput {
   brandTagline: string;
   scanHint: string;
   options?: Partial<PosterRenderOptions>;
+  /** 旅程相册按天聚合的高亮图（J4） */
+  journeyHighlightByDay?: string[][];
+  /** 旅程相册 POI 封面图，key 见 buildPoiPhotoKey */
+  journeyPhotoByPoiKey?: Record<string, string>;
 }
 
 /** 从路线详情抽取统一 PosterPayload（含交通 / 游玩 / 住宿，与行程路径一致） */
@@ -140,7 +169,14 @@ export function buildPosterPayload(input: BuildPosterPayloadInput): PosterPayloa
     title: input.route.name?.trim() || '—',
     subtitle,
     dayCount,
-    days: buildDayBlocks(days, input.locale, labels, options),
+    days: buildDayBlocks(
+      days,
+      input.locale,
+      labels,
+      options,
+      input.journeyHighlightByDay,
+      input.journeyPhotoByPoiKey,
+    ),
     hiddenDayCount: 0,
     brand: {
       name: input.brandName,
