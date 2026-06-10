@@ -63,13 +63,16 @@ export const menuIconMap: Record<string, Component> = {
   FileTextOutlined,
 };
 
+/** 可选图标列表（按名称排序，供菜单图标选择器使用） */
+export const menuIconOptions = Object.keys(menuIconMap).sort();
+
 const MENU_GROUPS = [
-  { key: 'web.menu.biz', groupId: 'group-biz' },
-  { key: 'web.menu.content', groupId: 'group-content' },
-  { key: 'web.menu.data', groupId: 'group-data' },
-  { key: 'web.menu.system', groupId: 'group-system' },
-  { key: 'web.menu.monitor', groupId: 'group-monitor' },
-  { key: 'web.menu.log', groupId: 'group-log' },
+  { key: 'web.menu.biz', groupId: 'group-biz', icon: 'UnorderedListOutlined' },
+  { key: 'web.menu.content', groupId: 'group-content', icon: 'AuditOutlined' },
+  { key: 'web.menu.data', groupId: 'group-data', icon: 'BarChartOutlined' },
+  { key: 'web.menu.system', groupId: 'group-system', icon: 'SettingOutlined' },
+  { key: 'web.menu.monitor', groupId: 'group-monitor', icon: 'RadarChartOutlined' },
+  { key: 'web.menu.log', groupId: 'group-log', icon: 'FileTextOutlined' },
 ] as const;
 
 export interface AppRouteMeta {
@@ -92,7 +95,7 @@ function toMenuPath(path: string) {
   return path.startsWith('/') ? path : `/${path}`;
 }
 
-function renderIcon(name?: string) {
+export function renderMenuIcon(name?: string | null) {
   if (!name || !menuIconMap[name]) return undefined;
   return () => h(menuIconMap[name]);
 }
@@ -113,7 +116,7 @@ export function useAppMenu() {
 
     const toMenuItem = (item: MenuRouteItem) => ({
       key: toMenuPath(item.path),
-      icon: renderIcon(item.meta?.icon),
+      icon: renderMenuIcon(item.meta?.icon),
       label: t(item.meta!.titleKey!),
       title: t(item.meta!.titleKey!),
     });
@@ -126,6 +129,7 @@ export function useAppMenu() {
       if (children.length) {
         groups.push({
           key: group.groupId,
+          icon: renderMenuIcon(group.icon),
           label: t(group.key),
           title: t(group.key),
           children: children.map(toMenuItem),

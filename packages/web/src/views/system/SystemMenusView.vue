@@ -44,7 +44,7 @@
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'menuName'">
           <span class="menu-name-cell">
-            <component :is="resolveMenuIcon(record.icon)" v-if="resolveMenuIcon(record.icon)" />
+            <component :is="renderMenuIcon(record.icon)" v-if="renderMenuIcon(record.icon)" />
             <span>{{ record.menuName }}</span>
           </span>
         </template>
@@ -153,13 +153,7 @@
           </a-col>
           <a-col :span="12">
             <a-form-item :label="t('system.colIcon')">
-              <a-select
-                v-model:value="form.icon"
-                allow-clear
-                show-search
-                :placeholder="t('system.iconPlaceholder')"
-                :options="iconOptions"
-              />
+              <MenuIconPicker v-model="form.icon" />
             </a-form-item>
           </a-col>
           <a-col :span="12">
@@ -179,7 +173,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, h, onMounted, reactive, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
@@ -195,7 +189,8 @@ import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
-import { menuIconMap } from '@/composables/useAppMenu';
+import MenuIconPicker from '@/components/admin/MenuIconPicker.vue';
+import { renderMenuIcon } from '@/composables/useAppMenu';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 
@@ -248,10 +243,6 @@ const menuTypeOptions = computed(() => [
   { label: t('system.menuTypeMenu'), value: MENU_TYPE.MENU },
   { label: t('system.menuTypeButton'), value: MENU_TYPE.BUTTON },
 ]);
-
-const iconOptions = computed(() =>
-  Object.keys(menuIconMap).map((name) => ({ label: name, value: name })),
-);
 
 function flattenMenus(nodes: MenuRow[]): MenuRow[] {
   const result: MenuRow[] = [];
@@ -319,11 +310,6 @@ function menuTypeColor(type: number) {
   if (type === MENU_TYPE.DIRECTORY) return 'processing';
   if (type === MENU_TYPE.BUTTON) return 'default';
   return 'cyan';
-}
-
-function resolveMenuIcon(name?: string | null) {
-  if (!name || !menuIconMap[name]) return undefined;
-  return () => h(menuIconMap[name]);
 }
 
 function resetForm() {

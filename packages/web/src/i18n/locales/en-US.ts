@@ -449,6 +449,7 @@ export const webEnUS = {
     noLabel: 'No',
     parentMenuRoot: 'None',
     iconPlaceholder: 'e.g. HomeOutlined',
+    iconPreviewEmpty: 'None',
     addChildMenu: 'Add child',
     viewMenu: 'View',
     onlineTitle: 'Online users',

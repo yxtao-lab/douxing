@@ -448,6 +448,7 @@ export const webZhCN = {
     noLabel: '否',
     parentMenuRoot: '无',
     iconPlaceholder: '如 HomeOutlined',
+    iconPreviewEmpty: '无',
     addChildMenu: '新增子菜单',
     viewMenu: '查看',
     onlineTitle: '在线用户',
