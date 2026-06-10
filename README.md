@@ -26,6 +26,7 @@
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
+| AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
@@ -277,7 +278,7 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就；**打卡地图**（移动端 / Web / PC） |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
-| 旅程相册 | 按路线存旅行照 | `GET/POST /api/journey-albums`；会员配额 `GET /api/users/me/storage`；打卡归并 · 手帐选图 |
+| 旅程相册 | 按路线存旅行照 | `GET/POST /api/journey-albums`；EXIF 智能归类 · 相册分享 · 拍摄参数/同参数拼图；我的相册选路线上传；会员配额 `GET /api/users/me/storage`；打卡归并 · 手帐选图 |
 | 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航；路线详情相册 Tab |
 | 管理端 | 路线 / 订单 / 打卡 / **数据分析** / 系统管理 | 需 admin；Leaflet 打卡地图；见 [PC双平台分工.md](docs/PC双平台分工.md) |
 | PC 用户端 | 规划 / 路线 / 个人中心 / 相册 / 打卡地图 | `http://localhost:5176`；与移动端能力对齐 |
@@ -610,13 +611,9 @@ pnpm install
 
 ## 当前项目里「还不是」典型 monorepo 的部分
 
-为了脚手架简单，没有引入：
+为了脚手架简单，没有引入 Turborepo、Changesets、统一 ESLint 等；**可按需选型**，完整说明与落地顺序见 **[docs/外部工具与插件推荐.md](./docs/外部工具与插件推荐.md)**。
 
-- **Turborepo / Nx** — 构建缓存、任务依赖图
-- **Changesets** — 多包版本发布与 changelog
-- **统一 ESLint/Prettier 根配置包** — 可再加 `packages/eslint-config`
-
-这些可以后续按需加；**现有结构已经是标准的 workspace monorepo**（pnpm + npm 双支持）。
+**现有结构已经是标准的 workspace monorepo**（pnpm + npm 双支持）。
 
 ---
 

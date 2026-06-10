@@ -23,6 +23,8 @@
         </view>
       </view>
 
+      <MyAlbumUploadBar @uploaded="refresh" />
+
       <DouxingEmptyState
         v-if="!loading && items.length === 0"
         variant="checkins"
@@ -66,6 +68,7 @@ import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
+import MyAlbumUploadBar from '@/components/my-album/MyAlbumUploadBar.vue';
 
 usePageTitle('nav.myAlbum');
 const { t, tf } = useTf();

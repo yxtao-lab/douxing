@@ -2191,7 +2191,24 @@ components:
           enum: [upload, checkin, import]
         placementSuggestion:
           $ref: '#/components/schemas/TravelPhotoPlacementSuggestion'
+        shootingParams:
+          $ref: '#/components/schemas/TravelPhotoShootingParams'
         createdAt: { type: string, format: date-time }
+
+    TravelPhotoShootingParams:
+      type: object
+      description: 上传时从 EXIF 解析的拍摄参数（J5+）
+      properties:
+        deviceMake: { type: string, nullable: true }
+        deviceModel: { type: string, nullable: true }
+        lensModel: { type: string, nullable: true }
+        iso: { type: integer, nullable: true }
+        fNumber: { type: number, nullable: true }
+        exposureTimeSec: { type: number, nullable: true }
+        focalLengthMm: { type: number, nullable: true }
+        focalLength35mm: { type: number, nullable: true }
+        flash: { type: boolean, nullable: true }
+        whiteBalance: { type: string, nullable: true }
 
     TravelPhotoPlacementSuggestion:
       type: object

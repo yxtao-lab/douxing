@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)。
 
-**最后更新：** 2026-06-10
+**最后更新：** 2026-06-10（J5+ 我的相册上传 · 相册分享页）
 
 ---
 
@@ -53,14 +53,15 @@ Web 管理端 (:5173)     ──┘
 | 个人中心 | `/profile` | ✅ | 入口聚合：成就、徽章、打卡、订单等 |
 | 资料编辑 | `/profile/edit` | ✅ | 头像、兴趣标签等（`GET/PATCH /api/users/me`） |
 | 会员权益 | `/profile/membership` | ✅ | 会员等级与权益说明 |
-| 旅程相册 | `/journey-albums` | ✅ | 按路线存旅行照（J 线，与移动端对齐） |
+| 旅程相册 | `/journey-albums` | ✅ | 全站照片列表 · **选路线上传**（批量/拖拽/预览）· 存储用量 |
 | 成就 | `/achievements` | ✅ | 个人成就列表与解锁状态 |
 | 徽章 | `/badges` | ✅ | 徽章进度 |
 | 排行榜 | `/leaderboard` | ✅ | 周榜/月榜参与视图 |
 | 我的打卡 | `/checkins` | ✅ | 仅本人打卡记录 |
 | 我的打卡地图 | `/checkins/map` | ✅ | Leaflet + 高德；**个人足迹** |
 | 我的订单 | `/orders` | ✅ | 本人订单；待支付可 **继续支付** |
-| 分享与手帐 | `/share/routes/:id` | ✅ | 只读分享页；Canvas 手帐 **下载 PNG** |
+| 分享与手帐 | `/share/routes/:id` | ✅ | 路线只读分享页；Canvas 手帐 **下载 PNG** |
+| 旅程相册分享 | `/share/journey-albums/:token` | ✅ | 相册 token 只读 H5（J5） |
 | 登录 | `/login` | ✅ | 密码/短信；普通用户 JWT |
 
 ### 2.1 规划中的用户端专属
@@ -195,7 +196,9 @@ Web 管理端 (:5173)     ──┘
 | `/checkins` | ✅ 我的打卡 | ✅ 全站打卡 |
 | `/checkins/map` | ✅ 个人地图 | ✅ 全站地图 |
 | `/orders` | ✅ 我的订单+支付 | ✅ 全站订单 |
-| `/share/routes/:id` | ✅ 分享页 | — |
+| `/share/routes/:id` | ✅ 路线分享页 | — |
+| `/share/journey-albums/:token` | ✅ 相册分享页 | — |
+| `/journey-albums` | ✅ 我的相册 + 上传 | — |
 | `/attractions/*` | — | ✅ 审核与管理 |
 | `/playbooks/manage` | — | ✅ |
 | `/analytics` | — | ✅ |

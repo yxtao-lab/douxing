@@ -41,7 +41,8 @@
         <input
           ref="fileInputRef"
           type="file"
-          accept="image/*"
+          :accept="TRAVEL_PHOTO_ACCEPT"
+          multiple
           class="hidden"
           @change="handleFileChange"
         />
@@ -221,6 +222,7 @@ import {
 } from '@/api/journey-albums';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
+import { partitionTravelPhotoFiles, TRAVEL_PHOTO_ACCEPT } from '@/utils/travel-photo-file';
 
 const props = defineProps<{
   routeId: number;
@@ -365,20 +367,35 @@ function triggerUpload() {
 
 async function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
+  const files = input.files;
   input.value = '';
-  if (!file || !album.value) return;
+  if (!files?.length || !album.value) return;
+
+  const { accepted, rejectedCount } = partitionTravelPhotoFiles(files);
+  if (rejectedCount > 0) {
+    window.alert(t('myAlbum.invalidFileSkipped', { count: rejectedCount }));
+  }
+  if (accepted.length === 0) return;
 
   uploading.value = true;
   try {
-    const photo = await uploadJourneyAlbumPhoto(album.value.id, file);
-    if (photo.placementSuggestion?.confidence === 'high') {
-      window.alert(t('journeyAlbum.exifAutoAssigned'));
-    } else if (
-      photo.placementSuggestion &&
-      photo.placementSuggestion.confidence !== 'none'
-    ) {
-      window.alert(t('journeyAlbum.exifSuggestionHint'));
+    let exifHintShown = false;
+    for (const file of accepted) {
+      const photo = await uploadJourneyAlbumPhoto(album.value.id, file);
+      if (!exifHintShown && photo.placementSuggestion?.confidence === 'high') {
+        window.alert(t('journeyAlbum.exifAutoAssigned'));
+        exifHintShown = true;
+      } else if (
+        !exifHintShown &&
+        photo.placementSuggestion &&
+        photo.placementSuggestion.confidence !== 'none'
+      ) {
+        window.alert(t('journeyAlbum.exifSuggestionHint'));
+        exifHintShown = true;
+      }
+    }
+    if (accepted.length > 1) {
+      window.alert(t('myAlbum.uploadSuccessCount', { count: accepted.length }));
     }
     await loadAlbum();
   } catch (err) {

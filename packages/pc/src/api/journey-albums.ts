@@ -103,7 +103,6 @@ export async function uploadJourneyAlbumPhoto(
   const { data } = await http.post<ApiResponse<TravelPhotoInfo>>(
     `/journey-albums/${albumId}/photos`,
     formData,
-    { headers: { 'Content-Type': 'multipart/form-data' } },
   );
   return data.data;
 }

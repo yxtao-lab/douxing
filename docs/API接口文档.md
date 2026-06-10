@@ -771,9 +771,9 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ## 18. 旅程相册 journey-albums
 
-前缀：`/api/journey-albums` — **J1～J5 旅程相册**
+前缀：`/api/journey-albums` — **J1～J5 旅程相册**（含 J5+ 拍摄参数与同参数拼图）
 
-一路线一相册；照片按天/POI 分组；详见 [旅行照片存储系统.md](./旅行照片存储系统.md)。
+一路线一相册；照片按天/POI 分组；上传解析 EXIF（GPS + `shootingParams`）；详见 [旅行照片存储系统.md](./旅行照片存储系统.md)。
 
 ### GET `/`
 
@@ -832,7 +832,9 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 | `caption` | 可选，备注 |
 | `sortOrder` | 可选，排序 |
 
-**响应 `data`**：`TravelPhotoInfo`（含可选 `placementSuggestion`：EXIF GPS 建议归类）
+**响应 `data`**：`TravelPhotoInfo`（含可选 `placementSuggestion`：EXIF GPS 建议归类；`shootingParams`：EXIF 拍摄参数）
+
+**`TravelPhotoShootingParams` 字段**（均可为 null）：`deviceMake`、`deviceModel`、`lensModel`、`iso`、`fNumber`、`exposureTimeSec`、`focalLengthMm`、`focalLength35mm`、`flash`、`whiteBalance`
 
 ### POST `/:id/share`
 
@@ -968,7 +970,9 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 日期 | 说明 |
 |------|------|
-| 2026-06-10 | 旅程相册补全 `by-route`、`/photos`；用户 `GET /me/storage`；总览 79 接口 |
+| 2026-06-10 | J5：`share`、`apply-exif-suggestions`、`GET /share/journey-albums/:token`；总览 **82** 接口 |
+| 2026-06-10 | J5+：`shootingParams` 字段；客户端同参数拼图 · 我的相册选路线上传 |
+| 2026-06-10 | 旅程相册补全 `by-route`、`/photos`；用户 `GET /me/storage` |
 | 2026-06-09 | 新增 §19 数据分析 `/api/analytics/*`（4 个接口）；OpenAPI 同步 |
 | 2026-06-09 | 初版：汇总全项目 REST 接口 + 静态资源说明；含 J1 旅程相册 |
 

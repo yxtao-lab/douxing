@@ -15,6 +15,8 @@
       </div>
     </div>
 
+    <MyAlbumUploadBar @uploaded="handleUploaded" />
+
     <div v-if="loading && items.length === 0" class="dx-card text-center text-dx-muted">
       {{ t('common.loading') }}
     </div>
@@ -77,6 +79,7 @@ import {
   fetchTravelPhotosPage,
   formatStorageBytes,
 } from '@/api/journey-albums';
+import MyAlbumUploadBar from '@/components/journey-album/MyAlbumUploadBar.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useLocale } from '@/i18n/useLocale';
 
@@ -154,6 +157,10 @@ async function fetchPage(nextPage: number, append: boolean) {
 async function loadMore() {
   if (!hasMore.value || loadingMore.value) return;
   await fetchPage(page.value + 1, true);
+}
+
+async function handleUploaded() {
+  await Promise.all([fetchPage(1, false), loadStorage()]);
 }
 
 onMounted(async () => {
