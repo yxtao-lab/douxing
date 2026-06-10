@@ -23,6 +23,7 @@
 | 功能路线图（含 S/M 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
+| 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
@@ -270,11 +271,12 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
 | 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
 | 景点库 | 城市景点基础数据 | `GET /api/attractions`；AI 生成路线自动同步（pending + 合并）；管理员审核 |
-| 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就 |
+| 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就；**打卡地图**（移动端 / Web `/checkins/map` / PC `/checkins/map`） |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
 | 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航 |
-| 管理端 | 路线 / 订单 / 打卡一览 | 需 admin 账号登录 |
+| 管理端 | 路线 / 订单 / 打卡列表 / **打卡地图** | 需 admin 账号登录；地图为 Leaflet + 高德瓦片 |
+| PC 用户端 | 规划 / 路线 / 个人中心 / **打卡地图** | `http://localhost:5176`；打卡地图见 `/checkins/map` |
 
 ### AI 模型接入（DeepSeek / LM Studio）
 
