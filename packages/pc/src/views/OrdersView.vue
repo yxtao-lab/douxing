@@ -46,11 +46,12 @@
           {{ t('orders.viewRoute') }}
         </RouterLink>
       </div>
-      <div class="text-center">
-        <button v-if="hasMore" type="button" class="dx-btn-secondary" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? t('common.loading') : t('common.loadMore') }}
-        </button>
-      </div>
+      <InfiniteScrollFooter
+        :has-more="hasMore"
+        :loading="loading"
+        :loading-more="loadingMore"
+        :on-load-more="loadMore"
+      />
     </div>
   </SubPageShell>
 </template>
@@ -60,6 +61,7 @@ import { computed, ref, watch } from 'vue';
 import type { OrderInfo, OrderListTab } from '@douxing/shared';
 import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
 import { cancelOrder, continuePayForOrder, fetchOrdersPage } from '@/api/orders';
+import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
@@ -127,6 +129,7 @@ async function reload() {
 }
 
 async function loadMore() {
+  if (!hasMore.value || loadingMore.value || loading.value) return;
   loadingMore.value = true;
   try {
     await fetchPage(page.value + 1, true);

@@ -7,7 +7,8 @@ import { users } from '../db/schema/users.js';
 import { RouteStatus, buildPaginatedResult } from '@douxing/shared';
 import type { PaginatedResult, RouteListQuery, TravelRouteInfo } from '@douxing/shared';
 import { toRouteInfo } from '../utils/route-info.util.js';
-import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
+import { resolvePublicAssetUrl, rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
+import { enrichRoutesWithListCoverImages } from './route-list-cover.service.js';
 
 export async function enrichRoutesWithUserFlags(
   routes: TravelRouteInfo[],
@@ -78,6 +79,9 @@ async function finalizeRouteList(routes: TravelRouteInfo[], userId: number, with
   if (withCreator) {
     result = await enrichRoutesWithCreatorInfo(result);
   }
+  result = await enrichRoutesWithListCoverImages(result, (stored) =>
+    resolvePublicAssetUrl(stored, {}) ?? stored,
+  );
   return result;
 }
 

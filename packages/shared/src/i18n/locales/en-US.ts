@@ -45,6 +45,7 @@ export const sharedEnUS = {
     paginationJumpTo: 'Go to',
     paginationPage: 'Page',
     paginationItemsPerPage: '/ page',
+    backToTop: 'Back to top',
   },
   orderStatus: {
     pending: 'Pending',

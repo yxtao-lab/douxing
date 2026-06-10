@@ -45,6 +45,7 @@ export const sharedZhCN = {
     paginationJumpTo: '跳至',
     paginationPage: '页',
     paginationItemsPerPage: '条/页',
+    backToTop: '回到顶部',
   },
   orderStatus: {
     pending: '待支付',

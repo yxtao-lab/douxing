@@ -21,7 +21,14 @@
 | 项目框架架构（AI 模板） | [docs/项目框架架构-AI模板.md](docs/项目框架架构-AI模板.md) · 配置 [`project.manifest.yaml`](project.manifest.yaml) |
 | 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
 | 详细设计（Markdown + §17 补充） | [docs/详细设计文档.md](docs/详细设计文档.md) |
-| 功能路线图（含 S/M 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 功能路线图（含 S/M/F/K-A/P6 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
+| 下一步工作（当前 Sprint） | [docs/下一步工作.md](docs/下一步工作.md) |
+| API 接口文档 + OpenAPI | [docs/API接口文档.md](docs/API接口文档.md) · [docs/openapi.yaml](docs/openapi.yaml) |
+| 旅程相册（J 线） | [docs/旅行照片存储系统.md](docs/旅行照片存储系统.md) |
+| 旅行日记博客（K-A 线） | [docs/旅行日记博客.md](docs/旅行日记博客.md) |
+| 项目概述与工作区说明 | [docs/项目概述.md](docs/项目概述.md) |
+| 国际化规范 | [docs/国际化.md](docs/国际化.md) |
+| 文档索引 | [docs/README.md](docs/README.md) |
 | PC 双平台分工（用户端/管理端） | [docs/PC双平台分工.md](docs/PC双平台分工.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |

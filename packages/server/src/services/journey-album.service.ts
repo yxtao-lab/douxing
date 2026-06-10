@@ -714,6 +714,28 @@ export async function updateTravelPhoto(
   return updatedRows[0] ? toTravelPhotoInfo(updatedRows[0]) : null;
 }
 
+export async function deleteJourneyAlbum(albumId: number, userId: number): Promise<boolean> {
+  const album = await getAlbumRowForUser(albumId, userId);
+  if (!album) return false;
+
+  const db = getDb();
+  const photos = await db
+    .select()
+    .from(travelPhotos)
+    .where(and(eq(travelPhotos.albumId, albumId), eq(travelPhotos.userId, userId)));
+
+  for (const photo of photos) {
+    await deleteStoredTravelPhoto(photo.storedUrl);
+  }
+
+  if (photos.length > 0) {
+    await db.delete(travelPhotos).where(eq(travelPhotos.albumId, albumId));
+  }
+
+  await db.delete(journeyAlbums).where(eq(journeyAlbums.id, albumId));
+  return true;
+}
+
 export async function deleteTravelPhoto(
   albumId: number,
   photoId: number,

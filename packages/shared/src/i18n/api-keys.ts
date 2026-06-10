@@ -170,6 +170,8 @@ export const ApiMessageKey = {
   JOURNEY_ALBUM_INVALID_ID: 'api.journeyAlbumInvalidId',
   JOURNEY_ALBUM_ROUTE_NOT_OWNED: 'api.journeyAlbumRouteNotOwned',
   JOURNEY_ALBUM_CREATED: 'api.journeyAlbumCreated',
+  JOURNEY_ALBUM_DELETE_SUCCESS: 'api.journeyAlbumDeleteSuccess',
+  JOURNEY_ALBUM_DELETE_FAILED: 'api.journeyAlbumDeleteFailed',
   TRAVEL_PHOTO_UPLOAD_FAILED: 'api.travelPhotoUploadFailed',
   TRAVEL_PHOTO_UPLOAD_SUCCESS: 'api.travelPhotoUploadSuccess',
   TRAVEL_PHOTO_NOT_FOUND: 'api.travelPhotoNotFound',

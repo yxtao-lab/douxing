@@ -54,12 +54,12 @@
           />
         </div>
       </div>
-      <div class="text-center">
-        <button v-if="hasMore" type="button" class="dx-btn-secondary" :disabled="loadingMore" @click="loadMore">
-          {{ loadingMore ? t('common.loading') : t('common.loadMore') }}
-        </button>
-        <p v-else class="text-sm text-dx-muted">{{ t('common.noMore') }}</p>
-      </div>
+      <InfiniteScrollFooter
+        :has-more="hasMore"
+        :loading="loading"
+        :loading-more="loadingMore"
+        :on-load-more="loadMore"
+      />
     </div>
   </SubPageShell>
 </template>
@@ -68,6 +68,7 @@
 import { computed, ref, watch } from 'vue';
 import type { CheckInInfo, CheckInTimeRange } from '@douxing/shared';
 import { fetchCheckInsPage } from '@/api/checkins';
+import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useLocale } from '@/i18n/useLocale';
 
@@ -112,6 +113,7 @@ async function reload() {
 }
 
 async function loadMore() {
+  if (!hasMore.value || loadingMore.value || loading.value) return;
   loadingMore.value = true;
   try {
     await fetchPage(page.value + 1, true);

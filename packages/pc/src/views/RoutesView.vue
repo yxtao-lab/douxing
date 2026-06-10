@@ -73,18 +73,13 @@
       />
     </div>
 
-    <div v-if="routes.length > 0" class="mt-8 text-center">
-      <button
-        v-if="hasMore"
-        type="button"
-        class="dx-btn-secondary"
-        :disabled="loadingMore"
-        @click="loadMore"
-      >
-        {{ loadingMore ? t('common.loading') : t('common.loadMore') }}
-      </button>
-      <p v-else class="text-sm text-dx-muted">{{ t('common.noMore') }}</p>
-    </div>
+    <InfiniteScrollFooter
+      v-if="routes.length > 0"
+      :has-more="hasMore"
+      :loading="loading"
+      :loading-more="loadingMore"
+      :on-load-more="loadMore"
+    />
   </div>
 </template>
 
@@ -94,6 +89,7 @@ import { useRoute, useRouter } from 'vue-router';
 import type { RouteListScope, TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
+import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import RouteListItem from '@/components/route/RouteListItem.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';

@@ -9,6 +9,7 @@ import { authMiddleware } from '../middleware/auth.js';
 import {
   applyExifSuggestionsForAlbum,
   createJourneyAlbum,
+  deleteJourneyAlbum,
   deleteTravelPhoto,
   getJourneyAlbumDetail,
   getJourneyAlbumByRoute,
@@ -294,6 +295,25 @@ router.patch('/:id/photos/:photoId', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[journey-albums/update-photo]', err);
     return fail(res, ApiMessageKey.TRAVEL_PHOTO_UPDATE_FAILED, 500, 500);
+  }
+});
+
+router.delete('/:id', authMiddleware, async (req, res) => {
+  try {
+    const albumId = parseAlbumId(String(req.params.id));
+    if (!albumId) {
+      return fail(res, ApiMessageKey.JOURNEY_ALBUM_INVALID_ID);
+    }
+
+    const deleted = await deleteJourneyAlbum(albumId, req.auth!.userId);
+    if (!deleted) {
+      return fail(res, ApiMessageKey.JOURNEY_ALBUM_NOT_FOUND, 404, 404);
+    }
+
+    success(res, { albumId }, ApiMessageKey.JOURNEY_ALBUM_DELETE_SUCCESS);
+  } catch (err) {
+    console.error('[journey-albums/delete]', err);
+    return fail(res, ApiMessageKey.JOURNEY_ALBUM_DELETE_FAILED, 500, 500);
   }
 });
 

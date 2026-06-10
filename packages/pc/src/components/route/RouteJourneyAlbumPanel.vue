@@ -20,9 +20,21 @@
       </div>
 
       <div class="mb-4 flex flex-wrap items-center gap-3">
-        <button type="button" class="dx-btn-primary" :disabled="uploading" @click="triggerUpload">
+        <label
+          class="dx-btn-primary inline-flex cursor-pointer items-center"
+          :class="uploading ? 'pointer-events-none opacity-60' : ''"
+        >
           {{ uploading ? t('common.loading') : t('journeyAlbum.upload') }}
-        </button>
+          <input
+            ref="fileInputRef"
+            type="file"
+            :accept="TRAVEL_PHOTO_ACCEPT"
+            multiple
+            class="sr-only"
+            :disabled="uploading"
+            @change="handleFileChange"
+          />
+        </label>
         <button
           v-if="unassignedPhotos.length > 0"
           type="button"
@@ -38,14 +50,6 @@
         <span class="text-sm text-dx-muted">
           {{ t('journeyAlbum.photoCount', { count: album.photoCount }) }}
         </span>
-        <input
-          ref="fileInputRef"
-          type="file"
-          :accept="TRAVEL_PHOTO_ACCEPT"
-          multiple
-          class="hidden"
-          @change="handleFileChange"
-        />
       </div>
 
       <div v-if="unassignedPhotos.length > 0" class="mb-4 rounded-xl border border-dx-border">
@@ -220,6 +224,7 @@ import {
   updateTravelPhotoMeta,
   uploadJourneyAlbumPhoto,
 } from '@/api/journey-albums';
+import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
 import { partitionTravelPhotoFiles, TRAVEL_PHOTO_ACCEPT } from '@/utils/travel-photo-file';
@@ -297,11 +302,11 @@ const sameParamsMatchCount = computed(() => {
 
 function openSameParamsSheet() {
   if (!canSameParamsExport.value) {
-    window.alert(t('journeyAlbum.sameParamsNoParams'));
+    appMessage.warning(t('journeyAlbum.sameParamsNoParams'));
     return;
   }
   if (sameParamsMatchCount.value <= 1) {
-    window.alert(t('journeyAlbum.sameParamsNoMatch'));
+    appMessage.warning(t('journeyAlbum.sameParamsNoMatch'));
     return;
   }
   sameParamsVisible.value = true;
@@ -361,21 +366,29 @@ async function loadAlbum() {
   }
 }
 
-function triggerUpload() {
-  fileInputRef.value?.click();
-}
-
 async function handleFileChange(event: Event) {
   const input = event.target as HTMLInputElement;
-  const files = input.files;
+  const fileList = input.files;
+  if (!fileList?.length) return;
+
+  const files = Array.from(fileList);
   input.value = '';
-  if (!files?.length || !album.value) return;
+
+  if (!album.value) {
+    appMessage.error(t('journeyAlbum.loadFailed'));
+    return;
+  }
 
   const { accepted, rejectedCount } = partitionTravelPhotoFiles(files);
   if (rejectedCount > 0) {
-    window.alert(t('myAlbum.invalidFileSkipped', { count: rejectedCount }));
+    appMessage.warning(t('myAlbum.invalidFileSkipped', { count: rejectedCount }));
   }
-  if (accepted.length === 0) return;
+  if (accepted.length === 0) {
+    if (rejectedCount === 0) {
+      appMessage.warning(t('myAlbum.previewEmpty'));
+    }
+    return;
+  }
 
   uploading.value = true;
   try {
@@ -383,23 +396,23 @@ async function handleFileChange(event: Event) {
     for (const file of accepted) {
       const photo = await uploadJourneyAlbumPhoto(album.value.id, file);
       if (!exifHintShown && photo.placementSuggestion?.confidence === 'high') {
-        window.alert(t('journeyAlbum.exifAutoAssigned'));
+        appMessage.info(t('journeyAlbum.exifAutoAssigned'));
         exifHintShown = true;
       } else if (
         !exifHintShown &&
         photo.placementSuggestion &&
         photo.placementSuggestion.confidence !== 'none'
       ) {
-        window.alert(t('journeyAlbum.exifSuggestionHint'));
+        appMessage.info(t('journeyAlbum.exifSuggestionHint'));
         exifHintShown = true;
       }
     }
     if (accepted.length > 1) {
-      window.alert(t('myAlbum.uploadSuccessCount', { count: accepted.length }));
+      appMessage.success(t('myAlbum.uploadSuccessCount', { count: accepted.length }));
     }
     await loadAlbum();
   } catch (err) {
-    window.alert(getAppErrorMessage(err, t('journeyAlbum.uploadFailed')));
+    appMessage.error(getAppErrorMessage(err, t('journeyAlbum.uploadFailed')));
   } finally {
     uploading.value = false;
   }
@@ -410,7 +423,7 @@ async function handleApplyExif() {
   applyingExif.value = true;
   try {
     const result = await applyExifSuggestions(album.value.id);
-    window.alert(
+    appMessage.success(
       t('journeyAlbum.applyExifSuccess', {
         applied: result.applied,
         skipped: result.skipped,
@@ -418,7 +431,7 @@ async function handleApplyExif() {
     );
     await loadAlbum();
   } catch (err) {
-    window.alert(getAppErrorMessage(err, t('journeyAlbum.applyExifFailed')));
+    appMessage.error(getAppErrorMessage(err, t('journeyAlbum.applyExifFailed')));
   } finally {
     applyingExif.value = false;
   }
@@ -432,9 +445,9 @@ async function handleShare() {
     const path = state.sharePath ?? `/share/journey-albums/${state.shareToken}`;
     const url = path.startsWith('http') ? path : `${window.location.origin}${path}`;
     await navigator.clipboard.writeText(url);
-    window.alert(t('journeyAlbum.shareCopied'));
+    appMessage.success(t('journeyAlbum.shareCopied'));
   } catch (err) {
-    window.alert(getAppErrorMessage(err, t('journeyAlbum.shareFailed')));
+    appMessage.error(getAppErrorMessage(err, t('journeyAlbum.shareFailed')));
   } finally {
     sharing.value = false;
   }
@@ -467,11 +480,11 @@ async function saveOrganize() {
       poiName: organizeDayIndex.value == null ? null : organizePoiName.value,
       attractionId: organizeDayIndex.value == null ? null : organizeAttractionId.value,
     });
-    window.alert(t('journeyAlbum.organizeSuccess'));
+    appMessage.success(t('journeyAlbum.organizeSuccess'));
     closeOrganize();
     await loadAlbum();
   } catch (err) {
-    window.alert(getAppErrorMessage(err, t('journeyAlbum.organizeFailed')));
+    appMessage.error(getAppErrorMessage(err, t('journeyAlbum.organizeFailed')));
   } finally {
     savingOrganize.value = false;
   }

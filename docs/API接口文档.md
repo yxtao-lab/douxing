@@ -1,6 +1,6 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 J1～J4 旅程相册）  
+> **版本**：与代码同步（含 J1～J5+ 旅程相册 · 删除相册 · 路线列表封面）  
 > **更新日期**：2026-06-10  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
@@ -13,7 +13,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | 全量 82 个 REST 接口，含参数、Schema、JWT 鉴权 |
+| **[openapi.yaml](./openapi.yaml)** | 全量 83 个 REST 接口，含参数、Schema、JWT 鉴权 |
 
 **导入步骤**
 
@@ -213,12 +213,13 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 76 | POST | `/api/journey-albums/:id/photos/apply-exif-suggestions` | 登录 | 相册 |
 | 77 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
 | 78 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
-| 79 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
-| 80 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
-| 81 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
-| 82 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
+| 79 | DELETE | `/api/journey-albums/:id` | 登录 | 相册 |
+| 80 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
+| 81 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
+| 82 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
+| 83 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
 
-> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 82 项（C 端 + 数据分析主链）。
+> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 83 项（C 端 + 数据分析主链）。
 
 ---
 
@@ -447,6 +448,8 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | `all=1` | **管理员**：全站路线 |
 
 **响应 `data`**：`PaginatedResult<TravelRouteInfo>`
+
+列表项 `TravelRouteInfo` 含可选字段 **`listCoverImageUrl`**：服务端批量填充，优先旅程相册封面图，其次路线 POI/景点封面（`route-list-cover.service`）；用于 mobile/pc 路线卡片缩略图。
 
 ### GET `/plaza`
 
@@ -864,6 +867,17 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 **响应 `data`**：`{ photoId: number }`
 
+### DELETE `/:id`
+
+删除整本旅程相册（须为相册所有者）。
+
+- 级联删除相册内全部 `travel_photos` 记录，并清理磁盘/OSS 上的原图文件  
+- 释放 `bytes_used` / `photo_count` 对应配额  
+
+**响应 `data`**：`{ albumId: number }`
+
+**messageKey**：`api.journeyAlbumDeleteSuccess` / `api.journeyAlbumDeleteFailed`
+
 ---
 
 ## 19. 数据分析 analytics
@@ -970,6 +984,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 日期 | 说明 |
 |------|------|
+| 2026-06-10 | J5++：`DELETE /journey-albums/:id`；路线列表 `listCoverImageUrl`；总览 **83** 接口 |
 | 2026-06-10 | J5：`share`、`apply-exif-suggestions`、`GET /share/journey-albums/:token`；总览 **82** 接口 |
 | 2026-06-10 | J5+：`shootingParams` 字段；客户端同参数拼图 · 我的相册选路线上传 |
 | 2026-06-10 | 旅程相册补全 `by-route`、`/photos`；用户 `GET /me/storage` |

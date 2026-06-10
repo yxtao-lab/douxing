@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)。
 
-**最后更新：** 2026-06-10（J5+ 我的相册上传 · 相册分享页）
+**最后更新：** 2026-06-10（J5++ PC 相册列表/详情 · 删除相册 API · 路线列表封面）
 
 ---
 
@@ -53,7 +53,8 @@ Web 管理端 (:5173)     ──┘
 | 个人中心 | `/profile` | ✅ | 入口聚合：成就、徽章、打卡、订单等 |
 | 资料编辑 | `/profile/edit` | ✅ | 头像、兴趣标签等（`GET/PATCH /api/users/me`） |
 | 会员权益 | `/profile/membership` | ✅ | 会员等级与权益说明 |
-| 旅程相册 | `/journey-albums` | ✅ | 全站照片列表 · **选路线上传**（批量/拖拽/预览）· 存储用量 |
+| 旅程相册列表 | `/journey-albums` | ✅ | 相册卡片 · 创建/删除 · 存储用量 |
+| 旅程相册详情 | `/journey-albums/:albumId` | ✅ | 本册照片上传/删除/预览 · 跳转关联路线 |
 | 成就 | `/achievements` | ✅ | 个人成就列表与解锁状态 |
 | 徽章 | `/badges` | ✅ | 徽章进度 |
 | 排行榜 | `/leaderboard` | ✅ | 周榜/月榜参与视图 |
@@ -198,7 +199,8 @@ Web 管理端 (:5173)     ──┘
 | `/orders` | ✅ 我的订单+支付 | ✅ 全站订单 |
 | `/share/routes/:id` | ✅ 路线分享页 | — |
 | `/share/journey-albums/:token` | ✅ 相册分享页 | — |
-| `/journey-albums` | ✅ 我的相册 + 上传 | — |
+| `/journey-albums` | ✅ 我的相册列表 | — |
+| `/journey-albums/:albumId` | ✅ 相册详情 + 上传 | — |
 | `/attractions/*` | — | ✅ 审核与管理 |
 | `/playbooks/manage` | — | ✅ |
 | `/analytics` | — | ✅ |

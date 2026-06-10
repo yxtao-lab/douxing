@@ -1540,6 +1540,30 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/JourneyAlbumDetail'
+    delete:
+      tags: [旅程相册]
+      summary: 删除旅程相册
+      description: 删除相册及全部照片文件，释放存储配额。须为相册所有者。
+      operationId: journeyAlbumsDelete
+      parameters:
+        - $ref: '#/components/parameters/AlbumId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          albumId:
+                            type: integer
+        '404':
+          description: 相册不存在或无权访问
 
   /api/journey-albums/{id}/photos:
     post:

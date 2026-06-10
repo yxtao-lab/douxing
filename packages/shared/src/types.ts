@@ -238,6 +238,11 @@ export interface TravelRouteInfo {
   llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
   /** AI 生成时用户输入的原始需求 */
   sourcePrompt?: string | null;
+  /**
+   * 列表卡片封面：优先旅程相册图，其次路线生成时的景点封面
+   * （GET /routes、/routes/plaza 等列表接口填充）
+   */
+  listCoverImageUrl?: string | null;
 }
 
 /** 路线列表查询（GET /routes） */

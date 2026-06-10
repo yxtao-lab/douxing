@@ -14,33 +14,10 @@
       <div class="upload-modal flex w-full max-w-3xl flex-col rounded-2xl bg-white shadow-xl" @mousedown.stop>
         <div class="border-b border-dx-border px-6 py-5">
           <h3 class="text-xl font-semibold text-dx-text">{{ t('myAlbum.uploadModalTitle') }}</h3>
-          <p class="mt-1 text-sm text-dx-muted">{{ t('myAlbum.pickRouteHint') }}</p>
+          <p class="mt-1 text-sm text-dx-muted">{{ t('myAlbum.uploadInAlbumHint') }}</p>
         </div>
 
         <div class="modal-body flex-1 space-y-5 overflow-y-auto px-6 py-5">
-          <div>
-            <label class="mb-2 block text-sm font-medium text-dx-text">
-              {{ t('myAlbum.pickRouteTitle') }}
-            </label>
-            <div v-if="routesLoading" class="text-sm text-dx-muted">{{ t('common.loading') }}</div>
-            <div v-else-if="routes.length === 0" class="text-sm text-dx-muted">
-              <p>{{ t('myAlbum.noRoutes') }}</p>
-              <RouterLink :to="{ name: 'routes' }" class="mt-2 text-dx-primary hover:underline">
-                {{ t('profile.actionRoutes') }}
-              </RouterLink>
-            </div>
-            <select
-              v-else
-              v-model.number="selectedRouteId"
-              class="w-full rounded-xl border border-dx-border px-3 py-2.5 text-sm outline-none focus:border-dx-primary"
-            >
-              <option :value="0" disabled>{{ t('myAlbum.selectRoutePlaceholder') }}</option>
-              <option v-for="route in routes" :key="route.id" :value="route.id">
-                {{ route.name }}（{{ t('pc.route.days', { count: route.days }) }}）
-              </option>
-            </select>
-          </div>
-
           <div
             class="drop-zone rounded-xl border-2 border-dashed p-8 text-center transition"
             :class="
@@ -58,7 +35,6 @@
             <label class="dx-btn-secondary mt-5 inline-flex cursor-pointer items-center justify-center">
               {{ t('myAlbum.selectFiles') }}
               <input
-                id="my-album-file-input"
                 ref="fileInputRef"
                 type="file"
                 :accept="TRAVEL_PHOTO_ACCEPT"
@@ -81,11 +57,7 @@
               <p class="text-sm font-medium text-dx-text">
                 {{ t('myAlbum.previewTitle', { count: pendingItems.length }) }}
               </p>
-              <p v-if="pendingItems.length > 0" class="text-xs text-dx-muted">
-                {{ t('myAlbum.previewReady') }}
-              </p>
             </div>
-
             <div v-if="pendingItems.length === 0" class="preview-empty">
               <p class="text-sm text-dx-muted">{{ t('myAlbum.previewEmpty') }}</p>
             </div>
@@ -104,11 +76,6 @@
                 >
                   ×
                 </button>
-                <p
-                  class="absolute bottom-0 left-0 right-0 truncate bg-black/50 px-1 py-0.5 text-[10px] text-white"
-                >
-                  {{ item.file.name }}
-                </p>
               </div>
             </div>
           </div>
@@ -135,10 +102,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue';
-import type { TravelRouteInfo } from '@douxing/shared';
-import { fetchJourneyAlbumByRoute, uploadJourneyAlbumPhoto } from '@/api/journey-albums';
-import { fetchRoutesPage } from '@/api/routes';
+import { computed, onBeforeUnmount, ref } from 'vue';
+import { uploadJourneyAlbumPhoto } from '@/api/journey-albums';
+import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
 import {
@@ -155,6 +121,10 @@ interface PendingItem {
   previewUrl: string;
 }
 
+const props = defineProps<{
+  albumId: number;
+}>();
+
 const emit = defineEmits<{
   uploaded: [];
 }>();
@@ -162,15 +132,11 @@ const emit = defineEmits<{
 const { t } = useLocale();
 
 const uploadModalOpen = ref(false);
-const routesLoading = ref(false);
-const routes = ref<TravelRouteInfo[]>([]);
-const selectedRouteId = ref(0);
 const pendingItems = ref<PendingItem[]>([]);
 const uploading = ref(false);
 const uploadProgress = ref('');
 const isDragging = ref(false);
 const dragDepth = ref(0);
-const fileInputRef = ref<HTMLInputElement | null>(null);
 const lastAddedNotice = ref('');
 const ignoreBackdropCloseUntil = ref(0);
 
@@ -178,11 +144,7 @@ let pendingIdSeq = 0;
 let noticeTimer: ReturnType<typeof setTimeout> | null = null;
 
 const canSubmitUpload = computed(
-  () =>
-    !uploading.value &&
-    selectedRouteId.value > 0 &&
-    pendingItems.value.length > 0 &&
-    routes.value.length > 0,
+  () => !uploading.value && props.albumId > 0 && pendingItems.value.length > 0,
 );
 
 const submitLabel = computed(() => {
@@ -221,19 +183,19 @@ function addFiles(files: File[]) {
 
   const { accepted, rejectedCount } = partitionTravelPhotoFiles(files);
   if (rejectedCount > 0) {
-    window.alert(t('myAlbum.invalidFileSkipped', { count: rejectedCount }));
+    appMessage.warning(t('myAlbum.invalidFileSkipped', { count: rejectedCount }));
   }
   if (accepted.length === 0) return;
 
   const room = MAX_BATCH_SIZE - pendingItems.value.length;
   if (room <= 0) {
-    window.alert(t('myAlbum.batchLimit', { max: MAX_BATCH_SIZE }));
+    appMessage.warning(t('myAlbum.batchLimit', { max: MAX_BATCH_SIZE }));
     return;
   }
 
   const toAdd = accepted.slice(0, room);
   if (accepted.length > room) {
-    window.alert(t('myAlbum.batchLimit', { max: MAX_BATCH_SIZE }));
+    appMessage.warning(t('myAlbum.batchLimit', { max: MAX_BATCH_SIZE }));
   }
 
   const newItems: PendingItem[] = [];
@@ -256,10 +218,7 @@ function handleFileInputChange(event: Event) {
   const input = event.target as HTMLInputElement;
   const fileList = input.files;
   if (!fileList?.length) return;
-
-  const files = Array.from(fileList);
-  // 必须在处理完后再清空，避免部分浏览器 FileList 失效
-  addFiles(files);
+  addFiles(Array.from(fileList));
   input.value = '';
 }
 
@@ -279,25 +238,12 @@ function removePending(id: string) {
   pendingItems.value = pendingItems.value.filter((row) => row.id !== id);
 }
 
-async function openUploadModal() {
+function openUploadModal() {
+  if (props.albumId <= 0) return;
   uploadModalOpen.value = true;
-  selectedRouteId.value = 0;
   revokeAllPreviews();
   uploadProgress.value = '';
   lastAddedNotice.value = '';
-  routesLoading.value = true;
-  await nextTick();
-  try {
-    const result = await fetchRoutesPage({ scope: 'mine', page: 1, pageSize: 100 });
-    routes.value = result.items;
-    if (result.items.length === 1) {
-      selectedRouteId.value = result.items[0].id;
-    }
-  } catch {
-    routes.value = [];
-  } finally {
-    routesLoading.value = false;
-  }
 }
 
 function closeUploadModal() {
@@ -326,10 +272,8 @@ function onDragLeave() {
 
 async function submitUpload() {
   if (!canSubmitUpload.value) {
-    if (selectedRouteId.value <= 0) {
-      window.alert(t('myAlbum.selectRouteFirst'));
-    } else if (pendingItems.value.length === 0) {
-      window.alert(t('myAlbum.previewEmpty'));
+    if (pendingItems.value.length === 0) {
+      appMessage.warning(t('myAlbum.previewEmpty'));
     }
     return;
   }
@@ -337,11 +281,9 @@ async function submitUpload() {
   uploading.value = true;
   let successCount = 0;
   const total = pendingItems.value.length;
-  const routeId = selectedRouteId.value;
   const snapshot = [...pendingItems.value];
 
   try {
-    const album = await fetchJourneyAlbumByRoute(routeId);
     for (let i = 0; i < snapshot.length; i += 1) {
       const item = snapshot[i];
       uploadProgress.value = t('myAlbum.uploadProgress', {
@@ -349,21 +291,19 @@ async function submitUpload() {
         total,
       });
       try {
-        await uploadJourneyAlbumPhoto(album.id, item.file);
+        await uploadJourneyAlbumPhoto(props.albumId, item.file);
         successCount += 1;
       } catch (err) {
-        window.alert(getAppErrorMessage(err, t('myAlbum.uploadFailed')));
+        appMessage.error(getAppErrorMessage(err, t('myAlbum.uploadFailed')));
         break;
       }
     }
 
     if (successCount > 0) {
-      window.alert(t('myAlbum.uploadSuccessCount', { count: successCount }));
+      appMessage.success(t('myAlbum.uploadSuccessCount', { count: successCount }));
       emit('uploaded');
       closeUploadModal();
     }
-  } catch (err) {
-    window.alert(getAppErrorMessage(err, t('myAlbum.uploadFailed')));
   } finally {
     uploading.value = false;
     uploadProgress.value = '';
@@ -378,7 +318,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .upload-modal {
-  min-height: min(640px, 92vh);
+  min-height: min(560px, 92vh);
   max-height: 92vh;
 }
 .modal-body {
@@ -388,7 +328,7 @@ onBeforeUnmount(() => {
   min-height: 140px;
 }
 .preview-panel {
-  min-height: 180px;
+  min-height: 160px;
 }
 .preview-empty {
   display: flex;
@@ -399,7 +339,6 @@ onBeforeUnmount(() => {
   border-radius: 12px;
   background: white;
 }
-/* 透明覆盖在按钮上，避免 display:none 导致部分环境 change 不触发 */
 .file-input-overlay {
   position: absolute;
   inset: 0;

@@ -14,9 +14,28 @@ import type {
   UserTravelPhotoListItem,
 } from '@douxing/shared';
 
+export async function fetchJourneyAlbums() {
+  const { data } = await http.get<ApiResponse<{ items: JourneyAlbumSummary[] }>>('/journey-albums');
+  return data.data.items;
+}
+
+export async function fetchJourneyAlbumDetail(albumId: number) {
+  const { data } = await http.get<ApiResponse<JourneyAlbumDetail>>(
+    `/journey-albums/${albumId}`,
+  );
+  return data.data;
+}
+
 export async function fetchJourneyAlbumByRoute(routeId: number) {
   const { data } = await http.get<ApiResponse<JourneyAlbumDetail>>(
     `/journey-albums/by-route/${routeId}`,
+  );
+  return data.data;
+}
+
+export async function deleteJourneyAlbum(albumId: number) {
+  const { data } = await http.delete<ApiResponse<{ albumId: number }>>(
+    `/journey-albums/${albumId}`,
   );
   return data.data;
 }
@@ -28,13 +47,7 @@ export async function fetchTravelPhotosPage(params: { page: number; pageSize: nu
   return data.data;
 }
 
-export async function createJourneyAlbum(routeId: number, title?: string) {
-  const { data } = await http.post<ApiResponse<JourneyAlbumSummary>>('/journey-albums', {
-    routeId,
-    title,
-  });
-  return data.data;
-}
+export { createJourneyAlbum } from './journey-album-create';
 
 export async function updateTravelPhotoMeta(
   albumId: number,
