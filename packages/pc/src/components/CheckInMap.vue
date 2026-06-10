@@ -18,6 +18,7 @@ import {
   getMarkerIconSize,
 } from '@/utils/checkin-map-marker';
 import { mountCheckInTileLayer } from '@/utils/checkin-map-tiles';
+import { useLocale } from '@/i18n/useLocale';
 import '@/styles/checkin-map-marker.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -31,11 +32,19 @@ const emit = defineEmits<{
   select: [id: number];
 }>();
 
+const { t } = useLocale();
+
 const mapRoot = ref<HTMLElement | null>(null);
 let map: L.Map | null = null;
 let markerLayer: L.LayerGroup | null = null;
 let polyline: L.Polyline | null = null;
 let resizeObserver: ResizeObserver | null = null;
+
+const popupLabels = computed(() => ({
+  unknownPlace: t('common.unknownPlace'),
+  unknownCity: t('common.unknownCity'),
+  pointsBadge: t('checkinMap.pointsBadge'),
+}));
 
 const rootStyle = computed(() => {
   if (props.height && props.height > 0) {
@@ -86,6 +95,9 @@ function renderMarkers() {
   if (!map || !markerLayer) return;
   markerLayer.clearLayers();
 
+  const unknownPlace = t('common.unknownPlace');
+  const labels = popupLabels.value;
+
   for (const item of getCheckInsWithCoords(props.items)) {
     const lat = item.location.latitude!;
     const lng = item.location.longitude!;
@@ -94,13 +106,13 @@ function renderMarkers() {
 
     const icon = L.divIcon({
       className: 'checkin-leaflet-icon',
-      html: buildCheckInMarkerHtml(item, active),
+      html: buildCheckInMarkerHtml(item, active, unknownPlace),
       iconSize: [width, height],
       iconAnchor: [width / 2, height],
     });
 
     const marker = L.marker([lat, lng], { icon });
-    marker.bindPopup(buildCheckInPopupHtml(item), { maxWidth: 240 });
+    marker.bindPopup(buildCheckInPopupHtml(item, labels), { maxWidth: 240 });
     marker.on('click', () => emit('select', item.id));
     markerLayer.addLayer(marker);
   }
@@ -118,7 +130,7 @@ function renderPolyline() {
 
   polyline = L.polyline(
     points.map((point) => [point.lat, point.lng] as L.LatLngExpression),
-    { color: '#008cba', weight: 4, opacity: 0.65 },
+    { color: '#6a30b4', weight: 4, opacity: 0.65 },
   ).addTo(map);
 }
 
@@ -185,6 +197,11 @@ watch(
   },
 );
 
+watch(popupLabels, () => {
+  if (!map) return;
+  renderMarkers();
+});
+
 onMounted(async () => {
   await nextTick();
   if (!mapRoot.value) return;
@@ -211,7 +228,8 @@ onUnmounted(() => {
 <style scoped>
 .checkin-map-root {
   width: 100%;
-  min-height: 320px;
+  height: 100%;
+  min-height: 0;
   border-radius: 8px;
   overflow: hidden;
   background: #e5e7eb;

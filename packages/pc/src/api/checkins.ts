@@ -24,3 +24,16 @@ export async function fetchCheckInsPage(params: {
     pageSize: params.pageSize,
   });
 }
+
+export async function fetchAllCheckInsForMap(range?: CheckInTimeRange) {
+  const items: CheckInInfo[] = [];
+  let page = 1;
+  const pageSize = 50;
+  while (true) {
+    const result = await fetchCheckInsPage({ page, pageSize, range });
+    items.push(...result.items);
+    if (!result.hasMore) break;
+    page += 1;
+  }
+  return items;
+}

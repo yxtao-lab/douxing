@@ -25,6 +25,7 @@
         <a-card class="map-panel" :body-style="mapPanelBodyStyle">
           <a-spin :spinning="loading">
             <CheckInMap
+              ref="checkInMapRef"
               :height="mapHeight"
               :items="filteredList"
               :selected-id="selectedId"
@@ -166,8 +167,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { onMounted } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { ClockCircleOutlined, DownOutlined, EnvironmentOutlined, UpOutlined, UserOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { CheckInInfo } from '@douxing/shared';
@@ -229,6 +229,7 @@ const timeRange = ref<CheckInTimeRange>('all');
 const filterDraft = ref<MapFilterState>(createEmptyFilter());
 const appliedFilter = ref<MapFilterState>(createEmptyFilter());
 const filterVisible = ref(false);
+const checkInMapRef = ref<InstanceType<typeof CheckInMap> | null>(null);
 const selectedId = ref<number | null>(null);
 const loading = ref(false);
 const error = ref('');
@@ -351,6 +352,9 @@ async function loadList() {
 
 function resetMapView() {
   selectedId.value = null;
+  nextTick(() => {
+    checkInMapRef.value?.resetToChinaView();
+  });
 }
 
 watch(timeRange, () => {

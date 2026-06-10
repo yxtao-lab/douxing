@@ -7,6 +7,9 @@
     --dx-primary: #6a30b4;
     --dx-primary-dark: #5b2c91;
     --dx-primary-light: #f3e8ff;
+    --color-primary: var(--dx-primary);
+    --color-primary-dark: var(--dx-primary-dark);
+    --color-primary-light: var(--dx-primary-light);
     --dx-accent: #00c2cb;
     --dx-accent-dark: #00a8b0;
     --dx-bg: #f5f7fa;

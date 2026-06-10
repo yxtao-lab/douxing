@@ -84,6 +84,12 @@ const router = createRouter({
           meta: { titleKey: 'nav.checkins', navKey: 'profile', requiresAuth: true },
         },
         {
+          path: 'checkins/map',
+          name: 'checkins-map',
+          component: () => import('@/views/CheckinsMapView.vue'),
+          meta: { titleKey: 'nav.checkinMap', navKey: 'profile', requiresAuth: true },
+        },
+        {
           path: 'leaderboard',
           name: 'leaderboard',
           component: () => import('@/views/LeaderboardView.vue'),

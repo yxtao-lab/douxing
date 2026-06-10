@@ -18,7 +18,7 @@
         />
       </div>
       <template #overlay>
-        <a-menu @click="makeContextHandler(tab)">
+        <a-menu @click="(info) => handleContextAction(info, tab)">
           <a-menu-item key="close">{{ t('web.tabs.close') }}</a-menu-item>
           <a-menu-item key="closeOthers">{{ t('web.tabs.closeOthers') }}</a-menu-item>
           <a-menu-item key="closeAll">{{ t('web.tabs.closeAll') }}</a-menu-item>
@@ -56,10 +56,6 @@ function switchTab(tab: VisitedTab) {
 
 function closeTab(path: string) {
   layoutStore.closeView(path, route.path, router);
-}
-
-function makeContextHandler(tab: VisitedTab) {
-  return (info: { key: string | number }) => handleContextAction(info, tab);
 }
 
 function handleContextAction(

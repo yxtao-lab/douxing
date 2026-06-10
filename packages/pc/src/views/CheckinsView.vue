@@ -5,6 +5,14 @@
     :back-to="{ name: 'profile' }"
     :back-label="t('pc.nav.profile')"
   >
+    <template #actions>
+      <RouterLink
+        :to="{ name: 'checkins-map', query: { range: timeRange } }"
+        class="text-sm text-dx-primary hover:underline"
+      >
+        {{ t('checkins.mapLink') }}
+      </RouterLink>
+    </template>
     <div class="mb-4 flex flex-wrap gap-2">
       <button
         v-for="opt in rangeOptions"

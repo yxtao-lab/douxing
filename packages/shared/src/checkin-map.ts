@@ -136,6 +136,23 @@ export const DEFAULT_CHECKIN_MAP_CENTER = {
   zoom: 4,
 };
 
+/** 全国地图 fitBounds 范围（与海报中国陆域范围一致） */
+export const CHINA_MAP_GEO_BOUNDS = {
+  south: 18.0,
+  west: 73.62,
+  north: 53.5,
+  east: 135.04,
+} as const;
+
+export type ChinaMapLatLngBounds = [[number, number], [number, number]];
+
+export function getChinaMapBounds(): ChinaMapLatLngBounds {
+  return [
+    [CHINA_MAP_GEO_BOUNDS.south, CHINA_MAP_GEO_BOUNDS.west],
+    [CHINA_MAP_GEO_BOUNDS.north, CHINA_MAP_GEO_BOUNDS.east],
+  ];
+}
+
 export function getDefaultChinaMapView() {
   return { ...DEFAULT_CHECKIN_MAP_CENTER };
 }
