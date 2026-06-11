@@ -1,21 +1,80 @@
-node_modules
-# 构建产物（含 packages/mobile/dist、各包 dist/）
-dist
-packages/mobile/dist
-packages/mobile/unpackage
+# ============================================================
+# 兜行 · Git 忽略规则
+# 含服务端发版/运行时会生成的文件，避免在服务器 git pull 后误提交
+# ============================================================
+
+# --- 依赖 ---
+node_modules/
+
+# --- 构建产物 ---
+dist/
+packages/mobile/dist/
+packages/mobile/unpackage/
 packages/mobile/project.private.config.json
-.unpackage
-.DS_Store
+.unpackage/
+
+# --- 服务端发版静态目录（pnpm deploy:release 发布到 static/pc、static/web）---
+static/
+
+# --- 环境变量与密钥（仅保留 *.example 模板）---
+.env
+.env.*
+!.env.example
+!**/*.example
+
+# --- 日志与运行时 ---
 *.log
 logs/
+.pm2/
+
+# --- Nginx 生成配置（模板 deploy/nginx/*.template 保留在仓库）---
 deploy/nginx/douxing-api.conf
-.env
-.env.local
-.env.*.local
-coverage
-.idea
+deploy/nginx/douxing-pc.conf
+deploy/nginx/douxing-web.conf
+
+# --- SSL / 证书（勿入库）---
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+*_nginx/
+**/ssl/
+
+# --- Python（ai-service 虚拟环境与字节码）---
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+packages/ai-service/.venv/
+
+# --- 用户上传（服务端本地存储）---
+packages/server/uploads/
+
+# --- 测试与覆盖率 ---
+coverage/
+
+# --- IDE / 系统 ---
+.DS_Store
+.idea/
 .vscode/*
 !.vscode/extensions.json
 !.vscode/settings.json
 *.local
-packages/server/uploads
+
+# --- 临时 / 备份 ---
+*.bak
+*.backup
+*.swp
+*~
+backup.sql
+*.sql.gz
+
+# --- 包管理器调试 ---
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
