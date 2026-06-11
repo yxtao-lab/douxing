@@ -4,6 +4,9 @@
 # 手动: bash scripts/gitee-webhook-deploy.sh
 # 自动: Gitee Webhook → gitee-webhook-server.mjs → 本脚本
 #
+# 手动运行时终端无输出？脚本默认写日志，请另开窗口:
+#   tail -f /opt/douxing/logs/webhook-deploy.log
+#
 # .env 可选:
 #   DEPLOY_PATH=/opt/douxing
 #   DEPLOY_TARGET=server,pc
@@ -27,7 +30,17 @@ LOG_DIR="${WEBHOOK_DEPLOY_LOG_DIR:-$DEPLOY_PATH/logs}"
 mkdir -p "$LOG_DIR"
 LOG_FILE="${WEBHOOK_DEPLOY_LOG:-$LOG_DIR/webhook-deploy.log}"
 
-exec >>"$LOG_FILE" 2>&1
+setupLogging() {
+  if [[ -t 1 || "${WEBHOOK_VERBOSE:-}" == "1" ]]; then
+    echo "[webhook-deploy] 日志: $LOG_FILE"
+    exec > >(tee -a "$LOG_FILE") 2>&1
+  else
+    exec >>"$LOG_FILE" 2>&1
+  fi
+}
+
+setupLogging
+
 echo ""
 echo "========== [webhook-deploy] $(date -Iseconds) =========="
 
@@ -43,6 +56,7 @@ cd "$DEPLOY_PATH"
 BRANCH="${WEBHOOK_BRANCH:-$(git branch --show-current 2>/dev/null || echo main)}"
 echo "[webhook-deploy] 分支: $BRANCH"
 
+echo "[webhook-deploy] git fetch / pull ..."
 git fetch origin
 git pull origin "$BRANCH"
 
@@ -51,7 +65,10 @@ if command -v corepack >/dev/null 2>&1; then
   corepack prepare pnpm@9.15.0 --activate
 fi
 
+echo "[webhook-deploy] pnpm install（含 dev，可能 1～3 分钟）..."
 pnpm install --frozen-lockfile --prod=false
+
+echo "[webhook-deploy] 开始发版: $DEPLOY_TARGET（PC 构建在 2G 机上可能 5～15 分钟，请耐心等待）..."
 pnpm deploy:release -- --target="$DEPLOY_TARGET" --skip-docker
 
 echo "[webhook-deploy] ✓ 发版完成"
