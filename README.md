@@ -36,6 +36,7 @@
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
+| AI 规划与 Agent 演进（C7 线） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |

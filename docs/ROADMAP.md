@@ -3,7 +3,7 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.34  
+**文档版本**：3.35  
 **更新日期**：2026-06-11  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/pc` · `packages/mobile` · `packages/server` · `packages/shared`）  
 **新增专题**：[系统管理.md](./系统管理.md) · [发单接单平台.md](./发单接单平台.md) · [数字孪生与三维建模.md](./数字孪生与三维建模.md) · [AI旅行宠物.md](./AI旅行宠物.md) · [旅行日记博客.md](./旅行日记博客.md)
@@ -17,9 +17,9 @@
    - [2.4 开发记录（重难点与方案）](#24-开发记录重难点与方案)
 3. [当前实现概况](#3-当前实现概况)
 4. [模块对照总表](#4-模块对照总表)
-5. [分步实施路线图](#5-分步实施路线图)（含 [阶段 P：PC 用户端](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) · [阶段 P6：PC 体验基建](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) · [阶段 S：系统管理](#阶段-s系统管理2026-06-09-录入) · [阶段 M：发单接单](#阶段-m发单接单平台2026-06-09-录入) · [阶段 F：数字孪生/3D](#阶段-farvr-数字孪生与三维建模可后置) · [阶段 K-A：旅行日记博客](#阶段-ka旅行日记博客2026-06-10-定稿) · [阶段 K-B：品牌博客](#阶段-kb品牌博客后期待办2026-06-10-录入)）
+5. [分步实施路线图](#5-分步实施路线图)（含 [阶段 C7：AI Agent](#阶段-c7ai-agent-演进2026-06-11-录入) · [阶段 P：PC 用户端](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) · [阶段 P6：PC 体验基建](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) · [阶段 S：系统管理](#阶段-s系统管理2026-06-09-录入) · [阶段 M：发单接单](#阶段-m发单接单平台2026-06-09-录入) · [阶段 F：数字孪生/3D](#阶段-farvr-数字孪生与三维建模可后置) · [阶段 K-A：旅行日记博客](#阶段-ka旅行日记博客2026-06-10-定稿) · [阶段 K-B：品牌博客](#阶段-kb品牌博客后期待办2026-06-10-录入)）
 6. [与文档 Sprint 对应](#6-与文档-sprint-对应)
-7. [推荐实施顺序](#7-推荐实施顺序)
+7. [推荐实施顺序](#7-推荐实施顺序)（含 [§7.5 C7 Agent 执行顺序](#75-c7-agent-演进推荐执行顺序)）
 8. [验收与协作说明](#8-验收与协作说明)
 9. [产品待办池（新增关键点）](#9-产品待办池新增关键点)
    - [9.4 宣传类目](#94-宣传类目2026-05-29-录入)
@@ -33,7 +33,7 @@
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
 | **当前焦点** | **生产 OSS 照片** · 开发环境联调 · **H9-3 扫尾** · **S1 RBAC** | **P5 Webhook 发版** · **P6 体验基建** · **J1～J5 已完成**（2026-06-10）；G4/DT1、P0～P4+打卡地图已落地；见 [下一步工作.md](./下一步工作.md) |
-| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** | 联调 → H9-3 → **S1** → DT3/DT2 → 行中 H8/H7 |
+| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** | 联调 → H9-3 → **S1** → **C7-a Agent**（后置）→ DT3/DT2 → H8/H7 |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -166,6 +166,7 @@ gantt
 | v0.9.18 | 2026-06-10 | **P6-0/1 PC 体验基建** | Tailwind 组件选型定稿 · `appMessage` 全局轻提示 · 相册/路线相册替换 `window.alert` | 见 [§ 阶段 P6](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) |
 | v0.9.20 | 2026-06-10 | **P6-2/3 + P5 CI/CD 初版** | Headless UI 确认框 · 全局 appMessage 扫尾 · `deploy:release` · PC Nginx 模板 |
 | v0.9.21 | 2026-06-11 | **P5 Webhook 自动发版** | Gitee Push Hook → `gitee-webhook-server` · 增量 `detect-deploy-targets` · PC/Web 静态发版 · [发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) · [服务端命令手册.md](./服务端命令手册.md) |
+| v0.9.22 | 2026-06-11 | **C7 · AI Agent 演进设计** | [AI规划与Agent演进.md](./AI规划与Agent演进.md) 设计全稿 · ROADMAP §C7 执行流程 · §7.5 推荐顺序 | 文档定稿；C7-a 代码未启动 |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -268,6 +269,7 @@ gantt
 | 2026-06-10 | P6-0/1 PC 体验基建 | [§ 阶段 P6](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) · `appMessage` 全局轻提示 |
 | 2026-06-10 | P6-2/3 PC 体验扫尾 | Headless UI 确认框 · 全局 `appMessage` 统一 |
 | 2026-06-11 | P5 Webhook 自动发版 | [§ P5](./开发记录-重难点与亮点.md#p5-webhook-自动发版与增量-deploy) · [发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) |
+| 2026-06-11 | C7 · AI Agent 演进（方案定稿） | [§ C7](./开发记录-重难点与亮点.md#c7-ai-agent-演进设计录入2026-06-11) · [AI规划与Agent演进.md](./AI规划与Agent演进.md) |
 | 2026-06-10 | S0 系统管理骨架 | [§ S0](./开发记录-重难点与亮点.md#s0-系统管理骨架web-crud与监控页) · [系统管理.md](./系统管理.md) |
 | 2026-05-26 | A3-3 路线详情地图预览动画 | [§ A3-3](./开发记录-重难点与亮点.md#a3-3-路线详情地图预览动画) |
 | 2026-05-26 | A3+++ 草稿编辑弹窗 | [§ A3+++](./开发记录-重难点与亮点.md#a3-草稿编辑弹窗与发布状态) |
@@ -401,7 +403,7 @@ POST /api/analytics/events
 | 设计文档章节 | 模块 | 已实现 | 未实现 / 仅简化 |
 |-------------|------|--------|----------------|
 | §2 | 系统架构 | 单体 Express、多端脚本 | 微服务、K8s、API 网关、消息队列 |
-| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案；**语音输入（ASR）**；**H9 全 Phase** LLM 排 POI + Enricher 住/行 + 路网 polyline + Catalog 班次 + **玩法 RAG**；**C3 景点 RAG** | H8 实时重规划；**[H3 AI 旅行宠物](./AI旅行宠物.md)**；H7 错过景点；[H9+ 远期增强](#h9-远期增强phase-4-之后)；多 Agent、向量库、图片输入 |
+| §3 | AI 智能规划 | 单轮/多轮 LLM + 模板；plan_sessions 追问改方案；**语音输入（ASR）**；**H9 全 Phase** LLM 排 POI + Enricher 住/行 + 路网 polyline + Catalog 班次 + **玩法 RAG**；**C3 景点 RAG** | **[C7 AI Agent 演进](./AI规划与Agent演进.md)**；H8 实时重规划；**[H3 AI 旅行宠物](./AI旅行宠物.md)**；H7 错过景点；[H9+ 远期增强](#h9-远期增强phase-4-之后)；向量库、图片输入 |
 | §4.3 | 打卡地图 | GPS 围栏、地图足迹、照片字段；**路线详情 POI 路径动画**（高德 direction polyline，失败降级直线）；Web/PC Leaflet 打卡地图 | 热力图；**3D 旅行地图 / 足迹孪生**（阶段 **F0/F4**）；足迹页多路线 `mergeRoutePaths` 动画；**错过景点**（H7） |
 | §4.6 | 成就系统 | 8 种配置化成就 + 徽章 + 排行榜 | 事件驱动（Kafka）；**旅行游戏化**任务链/关卡（H4） |
 | §4.4 | 搭子匹配 | — | 发布需求、匹配算法、邀请组队；**社交 IM 聊天**（H5） |
@@ -476,6 +478,113 @@ POST /api/analytics/events
 | C4 | [x] | 2026-05-22 | 多方案生成 | §3.7 | 一次返回 2～3 条候选路线 | 用户可选择方案 |
 | C5 | [x] | 2026-05-22 | Python AI 微服务（可选） | §1.4 | `packages/ai-service` + FastAPI/LangChain | Node 可调用，失败降级 |
 | C6 | [x] | 2026-06-01 | ML 训练数据管线 | §3、专属模型 | `ml:generate-dataset` / `ml:validate-dataset`；`training-data.service`；`packages/ml-training` | 种子 prompt → DeepSeek 造 SFT JSONL → Zod + POI 命中率校验 → train/val 划分 |
+
+### 阶段 C7：AI Agent 演进（§3.3，2026-06-11 录入）
+
+> **设计全稿**（思考过程 · LangChain/Agent 释义 · 多 Agent 模式 · 场景流程）：**[AI规划与Agent演进.md](./AI规划与Agent演进.md)**  
+> **原则**：复用 C1～H9 管道为 **Tool**；**Supervisor + 3 专家 Agent**；`AGENT_PLAN_ENABLED=false` 默认关；**不推倒** `generateRoute`；Tool 执行以 **Node 为权威**，Python `ai-service` 负责 LangGraph 编排。
+
+#### C7 架构总览
+
+```text
+现在（流水线）                    目标（Agent）
+─────────────────                ─────────────────
+用户 → plan_sessions            用户 → plan_sessions
+  → generateRoute（固定顺序）       → Supervisor Agent（LangGraph）
+  → 追问 = 整段重生成                 → 路由 → 规划/记忆/行中 专家
+                                      → Tools（Node HTTP）
+                                      → 追问可 patch_day 局部修改
+```
+
+```mermaid
+flowchart LR
+  subgraph now [现状 C1至H9]
+    U1[用户] --> PS1[plan_sessions]
+    PS1 --> GR[generateRoute 固定管道]
+    GR --> R1[路线]
+  end
+  subgraph target [目标 C7]
+    U2[用户] --> PS2[plan_sessions]
+    PS2 --> SUP[Supervisor Agent]
+    SUP --> PA[规划专家]
+    SUP --> MA[记忆专家]
+    SUP --> TA[行中专家]
+    PA --> TOOLS[Node Tools]
+    MA --> TOOLS
+    TA --> TOOLS
+    TOOLS --> R2[路线]
+  end
+```
+
+| 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
+|----|------|----------|------|------|----------|----------|
+| **C7-a** | [ ] | 待定 | Tool 化 + 协调器 POC | C5、H9 | Node `agent/tools/*`；`POST /api/agent/tools/:name`；ai-service LangGraph；`POST /v1/agent/plan`；`AGENT_PLAN_ENABLED` | 与 `generateRoute` 等价率 ≥95%；Langfuse trace；flag 关时零影响 |
+| **C7-b** | [ ] | 待定 | 多轮 Agent 规划 | C7-a、C1 | `patch_route_day`；Supervisor 意图路由；`plan_sessions` Agent 路径；`agent_state` 列；SSE | 10 条追问用例通过；toolTrace 可观测 |
+| **C7-c** | [ ] | 待定 | 记忆 + 全站 Agent | C7-b、H3-a～b | `recall_user_memory` / `write_trip_memory`；memory_agent；H3 悬浮层共用 orchestrator | 第二轮规划带偏好 |
+| **C7-d** | [ ] | 待定 | 评估 Tool + 专属模型 | C7-a、I3 | `validate_route`；`douxing-lora` 作 plan_agent 子模型 | warnings 自动提示；JSON 合法率不低于基线 |
+
+**建议时机**：**S1** 或 **H9-3 扫尾** 后启动 **C7-a**（约 2～3 周）；**C7-c** 与 **H3-a～b** 并行；**C7-d** 在 **I3** 后。
+
+#### C7-a 执行流程（Tool 化 + 协调器 POC）
+
+| 序 | 任务 | 预估 | 落点 | 说明 |
+|----|------|------|------|------|
+| a1 | 封装 5 核心 Tool | 2d | `server/src/agent/tools/` | parse_intent · retrieve_attractions · retrieve_playbooks · generate_route · enrich_route |
+| a2 | Node Tool HTTP API | 1d | `routes/agent-tools.ts` | 内网鉴权；Zod 入参/出参 |
+| a3 | Python 调 Node Tool | 1d | `ai-service/app/tools/node_client.py` | 统一超时与错误 |
+| a4 | LangGraph 图 + Supervisor | 2～3d | `ai-service/app/agent/graph.py` | 首句全量生成路径 |
+| a5 | `POST /v1/agent/plan` | 0.5d | `ai-service/app/main.py` | 对齐 `GenerateRouteRequest` 扩展 |
+| a6 | Node `agent-plan-client` + flag | 1d | `agent-plan-client.service.ts` | `AGENT_PLAN_ENABLED=false` 默认 |
+| a7 | 管道 vs Agent 对比脚本 | 1d | `server/scripts/` 或测试 | 等价率 ≥95% 报告 |
+| a8 | Langfuse（推荐） | 1d | ai-service | tool 名 · 耗时 · token |
+
+```text
+C7-a 数据流：
+  客户端 → Node plan_sessions（flag 开时）
+         → ai-service POST /v1/agent/plan
+         → LangGraph Supervisor → plan_agent
+         → HTTP POST /api/agent/tools/generate_route_draft 等
+         → Node 现有 services
+         → 返回 routeSnapshot + toolTrace
+```
+
+#### C7-b 执行流程（多轮 Agent）
+
+| 序 | 任务 | 预估 | 说明 |
+|----|------|------|------|
+| b1 | `patch_route_day` Tool | 2d | 局部改 POI；避免整段重生 |
+| b2 | Supervisor 意图分类 | 1～2d | plan_new · tweak_day · qa · select_variant |
+| b3 | 10 条追问用例集 | 1d | 文档化 + 自动化断言 |
+| b4 | `appendPlanSessionMessage` 接 Agent | 1d | feature flag 切换 |
+| b5 | `plan_sessions.agent_state` 迁移 | 0.5d | JSON 存 PlanAgentState |
+| b6 | SSE 流式状态 | 1～2d | thinking · tool_call · assistant |
+| b7 | i18n `agent.status.*` | 0.5d | shared zh-CN / en-US |
+
+**C7-b 追问路由示意**：
+
+```text
+「第三天轻松点」     → tweak_day  → patch_route_day → enrich_route(day=3)
+「预算降到 3000」   → budget_tune → parse_intent → generate 或 patch
+「成都有什么好吃的」→ qa_food    → retrieve_attractions → 文字答（不生成全路线）
+「就方案 B」         → select_variant → 现有 selectCandidate（可无 LLM）
+```
+
+#### C7-c / C7-d 执行流程（摘要）
+
+| 步 | 关键任务 | 依赖线 |
+|----|----------|--------|
+| C7-c | H3 `pet_memories` → memory_agent 节点 → 悬浮层调 `/v1/agent/plan` | H3-a～b |
+| C7-d | `validate_route` 抽离 → 生成后 warnings；I3 LoRA 替换 plan_agent 默认模型 | I3 |
+
+**C7 降级链**（与现网一致）：
+
+```text
+Agent 路径（flag 开）
+  ↓ 超时 / 校验失败 / Tool 异常
+generateRoute 管道（现 C1～H9）
+  ↓
+Python ai-service → Node LLM → 模板/RAG
+```
 
 ---
 
@@ -907,7 +1016,7 @@ POST /api/analytics/events
 |----------------|-------------|------------|----------|
 | Sprint 1–2 | MVP | **M0（已完成）** | 2026-05-19 ～ 2026-05-20（含 M0-7 验证码登录） |
 | Sprint 1–2 补全 | MVP 缺口 | **阶段 A** | 计划 2026-05-21 起 |
-| Sprint 5–6 | AI 增强 | **C + F** | C1～C5 已完成（2026-05-22）；M0 已含基础 LLM |
+| Sprint 5–6 | AI 增强 | **C + C7 + F** | C1～C6 已完成；**C7 Agent 未开始**（见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)） |
 | Sprint 3–4 | 社交功能 | **B + D** | B 已完成（2026-05-22）；D 未开始 |
 | Sprint 7–8 | 商业闭环 | **E + M** | E 盲盒/CPS 等未开始；**M 发单接单**已规划（模块 B，见 [发单接单平台.md](./发单接单平台.md)） |
 | 平台治理 | 贯穿 | **S（系统管理）** | S0 已完成；S1 RBAC 待做 |
@@ -922,7 +1031,8 @@ POST /api/analytics/events
 | 目标 | 建议步骤顺序 |
 |------|-------------|
 | 产品尽快好用 | A1 → A2 → B2 → B4 |
-| AI 对齐设计文档 | C2 → C3 → C4 → C5 |
+| AI 对齐设计文档 | C2 → C3 → C4 → C5（**已完成**） |
+| **AI 升级 Agent（C7）** | **[C7-a](#c7-a-执行流程tool-化--协调器-poc)** → **C7-b** → **C7-c**（∥ H3）→ **C7-d**（∥ I3） | 见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)；**S1 或 H9-3 后启动 C7-a** |
 | 商业化变现 | A4 → E1 → E2 → E3 |
 | 社交差异化 | D1 → D2 → D3 → **H5** → D5 + **H2** |
 | 智能行程升级 | **H9-1**（a→g）→ **H9-2** → **H9-4a**（止血）→ **H9-4b～d**（玩法 RAG）→ **H9-3** → **H8** → **H7** → C2/C3 增强 |
@@ -970,6 +1080,9 @@ POST /api/analytics/events
 | 迭代 11g | 2026-06-08 | **双端品牌** | **已完成** — 管理后台 Logo1 + 青蓝主题 · PC Logo2 + 紫青主题 |
 | 迭代 11h | 远期 | **P5** | PC 生产部署与域名 |
 | 迭代 11c | 2026-08 起 | H3 + H4 | AI 旅行宠物 · 旅行游戏化 |
+| 迭代 11i | S1/H9-3 后 | **C7-a～b** | Tool 化 + Supervisor Agent + 多轮追问路由 |
+| 迭代 11j | H3 并行 | **C7-c** | 记忆 Agent + 全站悬浮共用 orchestrator |
+| 迭代 11k | I3 后 | **C7-d** | validate_route + 专属 LoRA 规划模型 |
 | 迭代 10f | 2026-07 起 | H8 + H7 | 实时重规划 · 错过景点（宣传 Sprint 后） |
 | 迭代 12 | 待定 | H5 + H6 | 社交 IM · 实名认证（依赖资质） |
 
@@ -980,6 +1093,7 @@ POST /api/analytics/events
 | **P0** | **发版验收** | H2-a+ / H2-b / A2+++ P2 实机 + 生产 OSS（若上生产） |
 | P0.5 | [I2、I3](#阶段-i专属模型2026-06-01-录入) | 专属模型 PAI 微调与百炼接入 |
 | P0.5 | [H9+-1、H9+-2](#h9-远期增强phase-4-之后) | Playbook 库扩充 + Web CRUD |
+| P1.5 | [C7-a、C7-b](#阶段-c7ai-agent-演进2026-06-11-录入) | Agent 升级；S1/H9-3 后启动；见 [AI规划与Agent演进.md](./AI规划与Agent演进.md) |
 | P0 | H8、H7 | 宣传 Sprint 后推进行中智能 |
 | P2 | H2-c | 拖拽画布与「我的模板」；单独立项 |
 | P1 | `guide-map` / `path-scrapbook` 模板 | 在 H2-a 骨架稳定后追加第三、四套版式 |
@@ -987,6 +1101,10 @@ POST /api/analytics/events
 | **P1** | [J1～J4](#阶段-j旅程相册与照片存储2026-06-03-录入) | 旅程相册 + 会员配额 + 打卡/手帐打通；见 [旅行照片存储系统](./旅行照片存储系统.md) |
 | **P1** | [P5](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) · [J1～J4](#阶段-j旅程相册与照片存储2026-06-03-录入) | PC 生产部署 · 旅程相册；见 [旅行照片存储系统.md](./旅行照片存储系统.md) |
 | **P1** | [P6-2、P6-3](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) | Headless UI 确认框 · 全局反馈扫尾；与 P5 可并行 |
+| P2 | H3、H4 | 差异化体验与游戏化，可并行设计 |
+| P3 | H5 | 依赖 D 阶段社交关系链 |
+| P3 | H6 | 依赖公司主体与第三方核身资质，见 [后期待办](./后期待办.md) |
+| P1～P2 | [H10](#h10-路线可信度--ugc-短视频与点评2026-06-01-录入) | 旅行短视频 + POI/路线跳转 + 景点说明与热评；提升「按此路线出行」说服力 |
 
 ### 7.4 H2-a 开发拆解（建议执行顺序）
 
@@ -1002,10 +1120,42 @@ POST /api/analytics/events
 
 **本阶段不做**：H2-c 拖拽编辑、`path-scrapbook` 曲线排版、每 POI 定制水彩图。
 
-| P2 | H3、H4 | 差异化体验与游戏化，可并行设计 |
-| P3 | H5 | 依赖 D 阶段社交关系链 |
-| P3 | H6 | 依赖公司主体与第三方核身资质，见 [后期待办](./后期待办.md) |
-| P1～P2 | [H10](#h10-路线可信度--ugc-短视频与点评2026-06-01-录入) | 旅行短视频 + POI/路线跳转 + 景点说明与热评；提升「按此路线出行」说服力 |
+### 7.5 C7 Agent 演进：推荐执行顺序
+
+> 设计思路与概念全稿：[AI规划与Agent演进.md](./AI规划与Agent演进.md)
+
+**触发条件**：S1 RBAC 或 H9-3 扫尾完成；`ai-service` 本地可启；DeepSeek/LM Studio 可用。
+
+```text
+总顺序：
+  C7-a（Tool + Supervisor POC，2～3 周）
+    → C7-b（多轮追问 + patch_day + SSE，2～3 周）
+    → C7-c（∥ H3-a～b：记忆 Agent + 悬浮层）
+    → C7-d（∥ I3：validate + LoRA）
+```
+
+| 优先级 | 步骤 | 理由 |
+|--------|------|------|
+| **P1.5** | C7-a | 证明 Agent 不劣于管道；风险可控（feature flag） |
+| **P1.5** | C7-b | 解决「追问整段重生」核心痛点 |
+| P2 | C7-c | 依赖 H3 表结构；与宠物线并行 |
+| P2 | C7-d | 依赖 I3 模型；可后置 |
+
+**与周边线关系**：
+
+```text
+S1 / H9-3 扫尾
+    ↓
+C7-a → C7-b          （Agent 主链）
+    ↓
+H3-a/b ──∥── C7-c    （记忆 + 悬浮）
+    ↓
+H8 ────────── C7-c 行中专家扩展
+    ↓
+I3 ────────── C7-d    （专属模型）
+```
+
+**本阶段不做（C7 范围外）**：Group Chat 多 Agent 讨论 · 6 独立 Agent 进程 · 推倒 `generateRoute` · LLM 直接算交通票价 · 预订 Agent（无 OTA API）。
 
 ---
 
@@ -1231,4 +1381,4 @@ POST /api/analytics/events
 
 ---
 
-*文档版本 3.34 · 最后更新：2026-06-10*
+*文档版本 3.35 · 最后更新：2026-06-11*
