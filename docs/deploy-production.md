@@ -493,6 +493,7 @@ bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 | 现象 | 处理 |
 |------|------|
 | 401 invalid token | Gitee WebHook 密码与 `WEBHOOK_SECRET` 不一致 |
+| systemd `203/EXEC` | `/usr/bin/node` 不存在（nvm/fnm 安装） | `which node` 后重装：`sudo bash scripts/install-webhook-service.sh --node $(which node)` |
 | 200 ignored branch | 仅 `WEBHOOK_DEPLOY_BRANCHES` 中的分支会发版 |
 | 发版卡住 | 2G 机用 `SERVER_RUNTIME=tsx`；见 §11 |
 | 重复触发 | 脚本有 `flock` 锁，并发 Push 会跳过第二次 |

@@ -5,9 +5,10 @@ After=network.target
 [Service]
 Type=simple
 User=root
-WorkingDirectory=/opt/douxing
+WorkingDirectory=__ROOT__
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node /opt/douxing/scripts/gitee-webhook-server.mjs
+Environment=PATH=__SERVICE_PATH__
+ExecStart=__NODE_BIN__ __ROOT__/scripts/gitee-webhook-server.mjs
 Restart=on-failure
 RestartSec=5
 
