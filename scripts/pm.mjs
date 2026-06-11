@@ -116,7 +116,8 @@ export function pmFilterExecCmd(workspace, bin, args = []) {
 export function pmRecursiveCmd(script) {
   const pm = detectPm();
   if (pm === 'pnpm') return `pnpm run -r ${script}`;
-  return `npm run ${script} --workspaces --if-present`;
+  // 必须排除根 workspace：根 package.json 的 build 会再调 pm.mjs recursive，否则死循环
+  return `npm run ${script} --workspaces --if-present --no-include-workspace-root`;
 }
 
 export function pmExecCmd(args = []) {

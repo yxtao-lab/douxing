@@ -408,9 +408,9 @@ bash scripts/ci-build.sh
 
 | 日志 | 原因 | 处理 |
 |------|------|------|
-| `npm run build --workspaces --if-present` | 仍在用 Gitee 默认模板，未装 pnpm | 确认 `.workflow/master-pipeline.yml` 已提交并指向 `ci-build.sh` |
-| Node 版本过低 | 模板默认 Node 14 | 流水线中 `nodeVersion` 改为 **18.20.0** 或更高 |
-| mobile 包构建失败 | 全量 `pnpm build` 含 UniApp | 使用 `ci-build.sh`（只构建 shared/server/pc/web） |
+| `npm run build --workspaces --if-present` 死循环 | 根 workspace 的 build 递归 | 已修 pm.mjs；CI 勿用 `npm run build` |
+| `$'\r': command not found` | Windows CRLF 脚本在 Linux CI 执行 | 加 `.gitattributes`；流水线命令内联到 YAML |
+| Node 版本无效 | `nodeVersion: 18.20.0` 不在 Gitee 列表 | 改为 `20.18.0` 或在 Gitee 可视化里选可用版本 |
 
 ### 10.3 无 Gitee Go 时的 Webhook 发版（备选）
 

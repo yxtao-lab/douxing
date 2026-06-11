@@ -1,5 +1,5 @@
 # 兜行 · Gitee Go 主干流水线（push master/main 自动 CI）
-# 注意：Gitee 默认识别小写 master-pipeline.yml，勿与 MasterPipeline.yml 重复维护
+# 构建命令内联，避免 .sh 在 Windows 下 CRLF 导致 Linux CI 失败
 
 version: '1.0'
 name: master-pipeline
@@ -22,12 +22,19 @@ stages:
       - step: build@nodejs
         name: ci_build
         displayName: Monorepo 构建（pnpm）
-        nodeVersion: 18.20.0
+        nodeVersion: 20.18.0
         commands:
+          - set -e
           - export DOUXING_PM=pnpm
+          - npm config set registry https://registry.npmmirror.com
           - npm install -g pnpm@9.15.0
-          - chmod +x scripts/ci-build.sh
-          - bash scripts/ci-build.sh
+          - pnpm config set registry https://registry.npmmirror.com
+          - pnpm install --frozen-lockfile
+          - pnpm --filter @douxing/shared build
+          - pnpm --filter @douxing/pc lint
+          - pnpm build:server
+          - pnpm build:pc
+          - pnpm build:web
         artifacts:
           - name: PC_DIST
             path:

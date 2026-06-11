@@ -23,6 +23,7 @@
     "env:status": "node scripts/env-status.mjs",
     "dev:with-ai": "node scripts/run-dev-all.mjs",
     "build": "node scripts/pm.mjs recursive build",
+    "build:ci": "bash scripts/ci-build.sh",
     "build:only": "node scripts/run-build.mjs",
     "build:web": "node scripts/pm.mjs filter @douxing/web build",
     "build:web:staging": "node scripts/pm.mjs filter @douxing/web build:staging",
