@@ -7,7 +7,11 @@ cd "$ROOT"
 
 echo "[ci-build] 项目根目录: $ROOT"
 
-if command -v corepack >/dev/null 2>&1; then
+export DOUXING_PM=pnpm
+
+if command -v pnpm >/dev/null 2>&1; then
+  echo "[ci-build] 使用已安装的 pnpm: $(pnpm -v)"
+elif command -v corepack >/dev/null 2>&1; then
   corepack enable
   corepack prepare pnpm@9.15.0 --activate
 else

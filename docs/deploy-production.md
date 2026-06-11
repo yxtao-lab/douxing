@@ -376,9 +376,12 @@ sudo certbot --nginx -d pc.yxtao.site
 
 | 文件 | 触发 | 作用 |
 |------|------|------|
-| `.workflow/MasterPipeline.yml` | push `master` / `main` | 全量 CI 构建 |
-| `.workflow/PRPipeline.yml` | Pull Request | 共享包 + PC 校验 + 后端编译 |
-| `.workflow/ReleasePipeline.yml` | 打 `v*` 标签 + **手动**部署阶段 | SSH 远程 `pnpm deploy:release` |
+| `.workflow/master-pipeline.yml` | push `master` / `main` | 全量 CI 构建 |
+| `.workflow/pr-pipeline.yml` | Pull Request | 共享包 + PC 校验 + 后端编译 |
+| `.workflow/branch-pipeline.yml` | 其它分支 push | 轻量校验（不发布） |
+| `.workflow/release-pipeline.yml` | 打 `v*` 标签 + **手动**部署 | SSH 远程发版 |
+
+> **注意**：Gitee Go 开通时会自动生成小写 `master-pipeline.yml` 等文件；勿保留模板里的 `npm run build`（会递归构建含 mobile 在内的全部 workspace 导致失败）。本项目已改为 `bash scripts/ci-build.sh` + **pnpm**。
 
 **首次启用：**
 
@@ -400,6 +403,14 @@ sudo certbot --nginx -d pc.yxtao.site
 ```bash
 bash scripts/ci-build.sh
 ```
+
+**常见构建失败**
+
+| 日志 | 原因 | 处理 |
+|------|------|------|
+| `npm run build --workspaces --if-present` | 仍在用 Gitee 默认模板，未装 pnpm | 确认 `.workflow/master-pipeline.yml` 已提交并指向 `ci-build.sh` |
+| Node 版本过低 | 模板默认 Node 14 | 流水线中 `nodeVersion` 改为 **18.20.0** 或更高 |
+| mobile 包构建失败 | 全量 `pnpm build` 含 UniApp | 使用 `ci-build.sh`（只构建 shared/server/pc/web） |
 
 ### 10.3 无 Gitee Go 时的 Webhook 发版（备选）
 
