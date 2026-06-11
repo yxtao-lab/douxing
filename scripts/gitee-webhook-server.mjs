@@ -111,6 +111,14 @@ function triggerDeploy(meta) {
   return { logPath, pid: child.pid, triggeredAt: stamp };
 }
 
+const PUSH_EVENTS = new Set(['Push Hook', 'push_hooks', 'push hook']);
+
+function isPushEvent(event) {
+  if (!event) return true;
+  const normalized = String(event).trim().toLowerCase();
+  return PUSH_EVENTS.has(event) || normalized === 'push hook' || normalized === 'push_hooks';
+}
+
 const server = createServer(async (req, res) => {
   try {
     if (req.method === 'GET' && req.url === '/health') {
@@ -133,7 +141,7 @@ const server = createServer(async (req, res) => {
     const payload = parseJson(rawBody);
     const event = req.headers['x-gitee-event'] || req.headers['x-git-oschina-event'] || '';
 
-    if (event && event !== 'Push Hook') {
+    if (!isPushEvent(event)) {
       sendJson(res, 200, { ok: true, ignored: true, event });
       return;
     }

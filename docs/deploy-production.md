@@ -494,9 +494,20 @@ bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 |------|------|
 | 401 invalid token | Gitee WebHook 密码与 `WEBHOOK_SECRET` 不一致 |
 | systemd `203/EXEC` | `/usr/bin/node` 不存在（nvm/fnm 安装） | `which node` 后重装：`sudo bash scripts/install-webhook-service.sh --node $(which node)` |
+| Gitee 测试 **404** | Nginx 未反代到 `:9090`，或 443 块缺 `include` | 见下方「404 排查」 |
 | 200 ignored branch | 仅 `WEBHOOK_DEPLOY_BRANCHES` 中的分支会发版 |
 | 发版卡住 | 2G 机用 `SERVER_RUNTIME=tsx`；见 §11 |
 | 重复触发 | 脚本有 `flock` 锁，并发 Push 会跳过第二次 |
+
+**404 排查（本地 health 正常但 Gitee 404）**
+
+1. Gitee 走 **HTTPS 443**，必须在 **listen 443** 的 `server { }` 里加（不是只加 80）：
+   ```nginx
+   include snippets/douxing-webhook.conf;
+   ```
+2. 消除重复配置：`grep -r "api.yxtao.site" /etc/nginx/sites-enabled/`，只保留一份 api 站点。
+3. 服务器自检：`bash scripts/verify-webhook-nginx.sh api.yxtao.site`
+4. Gitee 测试事件为 `push_hooks`、分支为 `test_version` 时返回 **200**（忽略发版）属正常；**404** 才是 Nginx 问题。
 
 ---
 
