@@ -24,7 +24,7 @@ if [[ -f .env ]]; then
 fi
 
 DEPLOY_PATH="${DEPLOY_PATH:-$ROOT}"
-DEPLOY_TARGET="${DEPLOY_TARGET:-server,pc}"
+DEPLOY_TARGET="${DEPLOY_TARGET:-server,pc,web}"
 LOCK_FILE="${WEBHOOK_DEPLOY_LOCK:-/tmp/douxing-deploy.lock}"
 LOG_DIR="${WEBHOOK_DEPLOY_LOG_DIR:-$DEPLOY_PATH/logs}"
 mkdir -p "$LOG_DIR"

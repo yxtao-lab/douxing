@@ -366,6 +366,11 @@ pnpm deploy:release -- --target=pc
 # 首次配置 PC Nginx（Debian/Ubuntu）
 sudo bash scripts/install-nginx-pc.sh pc.yxtao.site
 sudo certbot --nginx -d pc.yxtao.site
+
+# Web 管理端（web.yxtao.site）
+sudo bash scripts/deploy-web-site.sh web.yxtao.site --certbot
+# 或 PC + Web 一起：
+sudo bash scripts/deploy-static-sites.sh --certbot
 ```
 
 `.env` 新增项见 `deploy/env.production.example`：`STATIC_ROOT`、`PC_NGINX_DOMAIN`。

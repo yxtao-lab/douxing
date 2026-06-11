@@ -122,6 +122,27 @@ function setupPcNginx() {
   }
 }
 
+function setupWebNginx() {
+  const domain = process.env.WEB_NGINX_DOMAIN?.trim();
+  if (!domain) {
+    console.log('[deploy:release] 未设置 WEB_NGINX_DOMAIN，跳过 Web Nginx 配置');
+    return;
+  }
+  const staticRoot = resolveStaticRoot();
+  const serverPort = process.env.SERVER_PORT || '3000';
+  renderNginxFromTemplate('douxing-web.conf.template', 'douxing-web.conf', {
+    __WEB_DOMAIN__: domain,
+    __STATIC_ROOT__: staticRoot,
+    __SERVER_PORT__: serverPort,
+  });
+  if (tryRun('nginx -v')) {
+    console.log('');
+    console.log('  安装 Web 管理端 Nginx 站点:');
+    console.log(`    sudo bash scripts/install-nginx-web.sh ${domain}`);
+    console.log(`    sudo bash scripts/install-nginx-web.sh ${domain} --certbot`);
+  }
+}
+
 function deployPcStatic() {
   const buildCmd = staging ? 'build:pc:staging' : 'build:pc';
   console.log('\n[deploy:release] 构建 PC 用户端...');
@@ -142,6 +163,10 @@ function deployWebStatic() {
 
   const staticRoot = resolveStaticRoot();
   publishStaticDist(resolve(root, 'packages/web/dist'), resolve(staticRoot, 'web'), 'Web 管理端');
+
+  if (!skipNginx) {
+    setupWebNginx();
+  }
 }
 
 function deployServer() {
@@ -184,6 +209,9 @@ async function main() {
   console.log('========================================');
   if (targets.includes('pc') && process.env.PC_NGINX_DOMAIN) {
     console.log(`  PC 站点: https://${process.env.PC_NGINX_DOMAIN}`);
+  }
+  if (targets.includes('web') && process.env.WEB_NGINX_DOMAIN) {
+    console.log(`  Web 管理端: https://${process.env.WEB_NGINX_DOMAIN}`);
   }
   if (targets.includes('server')) {
     const apiBase =
