@@ -1,7 +1,8 @@
 # 兜行 · scripts 目录说明
 
 > 根目录 `package.json` 里的 `pnpm xxx` 命令，多数会转发到本目录下的脚本。  
-> 日常只需记住：**开发 `pnpm dev`**、**查环境 `pnpm env:status`**、**部署 `pnpm bootstrap` / `pnpm deploy:server`**。
+> 日常只需记住：**开发 `pnpm dev`**、**查环境 `pnpm env:status`**、**部署 `pnpm bootstrap` / `pnpm deploy:server`**。  
+> **生产服务器命令速查** → [docs/服务端命令手册.md](../docs/服务端命令手册.md)
 
 ---
 
