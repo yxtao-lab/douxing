@@ -8,6 +8,7 @@ node_modules/
 
 # --- 构建产物 ---
 dist/
+*.tsbuildinfo
 packages/mobile/dist/
 packages/mobile/unpackage/
 packages/mobile/project.private.config.json
