@@ -62,6 +62,7 @@
     "deploy:server:nginx": "node scripts/deploy-server.mjs --nginx-only",
     "deploy:release": "node scripts/deploy-release.mjs",
     "deploy:pc": "node scripts/deploy-release.mjs --target=pc",
+    "deploy:pc-site": "bash scripts/deploy-pc-site.sh",
     "ci:build": "bash scripts/ci-build.sh",
     "webhook:serve": "node scripts/gitee-webhook-server.mjs",
     "setup:nginx-pc": "bash scripts/install-nginx-pc.sh",
