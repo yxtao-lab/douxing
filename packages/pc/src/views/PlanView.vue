@@ -52,14 +52,6 @@
       {{ llmIssueMessage }}
     </div>
 
-    <div
-      v-if="toastMessage"
-      class="mb-3 flex shrink-0 items-center justify-between gap-2 rounded-xl border border-dx-border bg-white px-4 py-2 text-sm shadow-sm"
-    >
-      <span>{{ toastMessage }}</span>
-      <button type="button" class="text-dx-muted hover:text-dx-text" @click="dismissToast">×</button>
-    </div>
-
     <div class="grid min-h-0 flex-1 gap-4 lg:grid-cols-2">
       <!-- 左侧：对话 -->
       <section class="flex min-h-0 flex-col rounded-2xl border border-dx-border bg-white shadow-card">
@@ -278,7 +270,6 @@ const {
   membershipHint,
   appendLockedHint,
   llmIssueMessage,
-  toastMessage,
   scrollAnchor,
   aiPlanning,
   aiPlanMessage,
@@ -302,7 +293,6 @@ const {
   goMembership,
   openRouteDetail,
   cancelAiPlan,
-  dismissToast,
 } = plan;
 
 function resolveProviderLabel(opt: LlmProviderOption): string {

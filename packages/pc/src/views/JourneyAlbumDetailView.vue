@@ -94,6 +94,7 @@ import {
 import AlbumPhotoUploadBar from '@/components/journey-album/AlbumPhotoUploadBar.vue';
 import PhotoPreviewLightbox from '@/components/PhotoPreviewLightbox.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
+import { appDialog } from '@/composables/useAppDialog';
 import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
@@ -179,7 +180,11 @@ async function loadStorageQuietly() {
 
 async function handleDeletePhoto(photoId: number) {
   if (!album.value) return;
-  if (!window.confirm(t('myAlbum.deletePhotoConfirm'))) return;
+  const confirmed = await appDialog.confirm({
+    content: t('myAlbum.deletePhotoConfirm'),
+    danger: true,
+  });
+  if (!confirmed) return;
 
   deletingPhotoId.value = photoId;
   try {
@@ -201,7 +206,11 @@ async function handleDeletePhoto(photoId: number) {
 
 async function handleDeleteAlbum() {
   if (!album.value) return;
-  if (!window.confirm(t('myAlbum.deleteAlbumConfirm'))) return;
+  const confirmed = await appDialog.confirm({
+    content: t('myAlbum.deleteAlbumConfirm'),
+    danger: true,
+  });
+  if (!confirmed) return;
 
   deletingAlbum.value = true;
   try {

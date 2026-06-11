@@ -56,7 +56,6 @@
         </div>
       </div>
 
-      <p v-if="toastMessage" class="mb-4 text-sm text-red-600">{{ toastMessage }}</p>
       <button type="button" class="dx-btn-primary w-full" :disabled="saving" @click="handleSave">
         {{ saving ? t('common.loading') : t('common.save') }}
       </button>
@@ -74,6 +73,7 @@ import {
 } from '@douxing/shared';
 import { fetchUserProfile, updateUserProfile, uploadUserAvatar } from '@/api/user';
 import SubPageShell from '@/components/SubPageShell.vue';
+import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';
 import { getAppErrorMessage } from '@/utils/error-message';
@@ -84,7 +84,6 @@ const { t, currentLocale } = useLocale();
 
 const loading = ref(true);
 const saving = ref(false);
-const toastMessage = ref('');
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const presets = interestTagPresets;
 
@@ -111,7 +110,7 @@ function toggleTag(tag: string) {
     return;
   }
   if (form.value.interestTags.length >= USER_INTEREST_MAX) {
-    toastMessage.value = t('profileEdit.maxTagsToast', { max: USER_INTEREST_MAX });
+    appMessage.warning(t('profileEdit.maxTagsToast', { max: USER_INTEREST_MAX }));
     return;
   }
   form.value.interestTags.push(tag);
@@ -129,17 +128,16 @@ async function onAvatarSelected(event: Event) {
     form.value.avatar = user.avatar;
     if (userStore.token) userStore.setAuth(userStore.token, user);
   } catch (err) {
-    toastMessage.value = getAppErrorMessage(err, t('profileEdit.uploadFailed'));
+    appMessage.error(getAppErrorMessage(err, t('profileEdit.uploadFailed')));
   }
 }
 
 async function handleSave() {
   if (!form.value.nickname.trim()) {
-    toastMessage.value = t('profileEdit.nicknameRequired');
+    appMessage.warning(t('profileEdit.nicknameRequired'));
     return;
   }
   saving.value = true;
-  toastMessage.value = '';
   try {
     const user = await updateUserProfile({
       nickname: form.value.nickname.trim(),
@@ -147,10 +145,10 @@ async function handleSave() {
       interestTags: form.value.interestTags,
     });
     if (userStore.token) userStore.setAuth(userStore.token, user);
-    toastMessage.value = t('profileEdit.saveSuccess');
+    appMessage.success(t('profileEdit.saveSuccess'));
     setTimeout(() => router.push({ name: 'profile' }), 600);
   } catch (err) {
-    toastMessage.value = getAppErrorMessage(err, t('profileEdit.saveFailed'));
+    appMessage.error(getAppErrorMessage(err, t('profileEdit.saveFailed')));
   } finally {
     saving.value = false;
   }

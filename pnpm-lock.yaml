@@ -92,6 +92,9 @@ importers:
       '@douxing/shared':
         specifier: workspace:*
         version: link:../shared
+      '@headlessui/vue':
+        specifier: ^1.7.23
+        version: 1.7.23(vue@3.5.34(typescript@5.9.3))
       axios:
         specifier: ^1.7.9
         version: 1.16.1
@@ -1750,6 +1753,12 @@ packages:
     resolution: {integrity: sha512-nwc2iesjyc9hkuzcrMCBXQRn653XuAUKorfWM8PZyJawiy1QzLj4vahwzaI25+pfpwOLvMzbJ0uKpWLDNmo16w==}
     engines: {node: '>= 8'}
 
+  '@headlessui/vue@1.7.23':
+    resolution: {integrity: sha512-JzdCNqurrtuu0YW6QaDtR2PIYCKPUWq28csDyMvN4zmGccmE7lz40Is6hc3LA4HFeCI7sekZ/PQMTNmn9I/4Wg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      vue: ^3.2.0
+
   '@intlify/core-base@9.1.9':
     resolution: {integrity: sha512-x5T0p/Ja0S8hs5xs+ImKyYckVkL4CzcEXykVYYV6rcbXxJTe2o58IquSqX9bdncVKbRZP7GlBU1EcRaQEEJ+vw==}
     engines: {node: '>= 10'}
@@ -2318,6 +2327,14 @@ packages:
 
   '@sinonjs/fake-timers@8.1.0':
     resolution: {integrity: sha512-OAPJUAtgeINhh/TAlUID4QTs53Njm7xzddaVlEs/SXwgtiD1tW22zAB/W1wdqfrpmikgaWQ9Fw6Ws+hsiRm5Vg==}
+
+  '@tanstack/virtual-core@3.17.0':
+    resolution: {integrity: sha512-gOxY/hFkPh/XQYhnThBHzkbkX3Ed+z/iushyz+R+JAr213aXxUDgQoTgTdrDpBSRsjFM73P/KfUyWmaF9WHMkQ==}
+
+  '@tanstack/vue-virtual@3.13.28':
+    resolution: {integrity: sha512-A+jWpXtMpWXKhGLKQrXeC9mk1VgYeMWSJ+o0CTCEi+HLYMSQFdVmPG9lJz7d4XJyIkc5xVwZU9QY67QpScqnxA==}
+    peerDependencies:
+      vue: ^2.7.0 || ^3.0.0
 
   '@tootallnate/once@1.1.2':
     resolution: {integrity: sha512-RbzJvlNzmRq5c3O09UipeuXno4tA1FE6ikOjxZK0tuxVv3412l64l5t1W5pj4+rJq9vpkm/kwiR07aZXnsKPxw==}
@@ -7454,6 +7471,11 @@ snapshots:
       '@fidm/asn1': 1.0.4
       tweetnacl: 1.0.3
 
+  '@headlessui/vue@1.7.23(vue@3.5.34(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/vue-virtual': 3.13.28(vue@3.5.34(typescript@5.9.3))
+      vue: 3.5.34(typescript@5.9.3)
+
   '@intlify/core-base@9.1.9':
     dependencies:
       '@intlify/devtools-if': 9.1.9
@@ -8191,6 +8213,13 @@ snapshots:
   '@sinonjs/fake-timers@8.1.0':
     dependencies:
       '@sinonjs/commons': 1.8.6
+
+  '@tanstack/virtual-core@3.17.0': {}
+
+  '@tanstack/vue-virtual@3.13.28(vue@3.5.34(typescript@5.9.3))':
+    dependencies:
+      '@tanstack/virtual-core': 3.17.0
+      vue: 3.5.34(typescript@5.9.3)
 
   '@tootallnate/once@1.1.2': {}
 

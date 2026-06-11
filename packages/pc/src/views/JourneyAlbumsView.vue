@@ -95,6 +95,7 @@ import {
 } from '@/api/journey-albums';
 import MyAlbumCreateBar from '@/components/journey-album/MyAlbumCreateBar.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
+import { appDialog } from '@/composables/useAppDialog';
 import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
@@ -168,7 +169,11 @@ async function handleAlbumCreated(albumId: number) {
 }
 
 async function handleDeleteAlbum(album: JourneyAlbumSummary) {
-  if (!window.confirm(t('myAlbum.deleteAlbumConfirm'))) return;
+  const confirmed = await appDialog.confirm({
+    content: t('myAlbum.deleteAlbumConfirm'),
+    danger: true,
+  });
+  if (!confirmed) return;
 
   deletingAlbumId.value = album.id;
   try {

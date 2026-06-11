@@ -1,0 +1,49 @@
+# 兜行 · Gitee Go 发版流水线（手动触发 SSH 远程部署）
+#
+# 在 Gitee Go「流水线变量 / 机密」中配置：
+#   DEPLOY_HOST、DEPLOY_USER、DEPLOY_SSH_KEY（机密）
+#   DEPLOY_PATH（可选，默认 /opt/douxing）
+#   DEPLOY_TARGET（可选，默认 server,pc）
+#   DEPLOY_HEALTH_URL（可选）
+#
+# 也可打 v* 标签后手动运行本流水线。
+
+version: '1.0'
+name: douxing-release
+displayName: 兜行 · 生产发版
+
+triggers:
+  push:
+    tags:
+      prefix:
+        - v
+  # 标签 push 后仍建议手动确认部署阶段
+
+stages:
+  - stage: build
+    name: build
+    displayName: 构建
+    strategy: fast
+    trigger: auto
+    steps:
+      - step: build@nodejs
+        name: release_build
+        displayName: 全量构建
+        nodeVersion: 20.18.0
+        commands:
+          - chmod +x scripts/ci-build.sh
+          - bash scripts/ci-build.sh
+
+  - stage: deploy
+    name: deploy
+    displayName: 远程发版
+    strategy: fast
+    trigger: manual
+    steps:
+      - step: shell@agent
+        name: ssh_deploy
+        displayName: SSH 部署到生产服务器
+        hostGroupID: gitee-go
+        script: |
+          chmod +x scripts/gitee-deploy-remote.sh
+          bash scripts/gitee-deploy-remote.sh

@@ -164,7 +164,7 @@ gantt
 | v0.9.16 | 2026-06-10 | **K 线 · 个人博客（后期待办）** | ROADMAP §9.6 · K0 方案 · K1 MVP | 录入待办；代码未启动 |
 | v0.9.17 | 2026-06-10 | **K-A · 旅行日记博客（方案定稿）** | [旅行日记博客.md](./旅行日记博客.md) · K-A0～K-A5 · 与 K-B 拆分 | K-A0 文档定稿；代码未启动 |
 | v0.9.18 | 2026-06-10 | **P6-0/1 PC 体验基建** | Tailwind 组件选型定稿 · `appMessage` 全局轻提示 · 相册/路线相册替换 `window.alert` | 见 [§ 阶段 P6](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) |
-| v0.9.19 | 2026-06-10 | **J5++ PC 相册 UX** | 我的相册改为相册卡片列表 + `/journey-albums/:albumId` 详情 · `DELETE /journey-albums/:id` · 路线列表 `listCoverImageUrl` | 见 [旅行照片存储系统 §6.1](./旅行照片存储系统.md#61-我的相册pc--移动端) |
+| v0.9.20 | 2026-06-10 | **P6-2/3 + P5 CI/CD** | Headless UI 确认框 · 全局 appMessage 扫尾 · `deploy:release` · **Gitee Go** · PC Nginx 模板 |
 
 ### 2.3 下一步时间节点（计划）
 
@@ -202,10 +202,8 @@ gantt
 | 2026-06-10 | **P3+** | PC 打卡地图 | **已完成** — Leaflet 足迹页 `/checkins/map`；见 [B3+](./开发记录-重难点与亮点.md#b3-webpc-leaflet-打卡地图) |
 | 2026-06-08 | **P4** | PC 分享与手帐 | **已完成** — 只读分享页 · Canvas 手帐海报 · PNG 下载 |
 | 2026-06-08 | **双端品牌** | Logo + 主题色 | **已完成** — 管理后台 Logo1 青蓝+橙 · PC Logo2 紫青 · 见 [品牌视觉规范 §14～15](./品牌视觉规范.md) |
-| — | **P5** | PC 生产部署 | Nginx 静态 · 子域 · HTTPS |
-| 2026-06-10 | **P6-0/1** | PC 体验基建（方案 + 全局 Toast） | **已完成** — 选型定稿 · `appMessage`；见 [§ 阶段 P6](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) |
-| 待定 | **P6-2** | Headless UI 封装 | `@headlessui/vue` · `DxDialog` 等 · 替代 `window.confirm` |
-| 待定 | **P6-3** | PC 全局反馈扫尾 | 规划/路线/订单等统一 `appMessage` |
+| — | **P5** | PC 生产部署 | Nginx 静态 · 子域 · HTTPS · CI/CD（`deploy:release`） |
+| 2026-06-10 | **P6-2/3** | PC 体验扫尾 | Headless UI 确认框 · 全局 `appMessage` 统一 |
 | 待定 | **I2 + I3** | 专属模型 — PAI 微调与百炼接入 | OSS 上传 → PAI LoRA → DashScope Endpoint → API `llmProvider` 切换；见 [阿里云专属模型](./阿里云-兜行专属模型训练与部署.md) |
 | — | **H8 / H7** | 行中智能 | 位置实时重规划 · 错过景点；宣传 Sprint 后推进 |
 | 待定 | **K-A** | **旅行日记博客** | 块级可见性 · 多模板公开页 · token 分享；见 [旅行日记博客.md](./旅行日记博客.md) |
@@ -628,7 +626,7 @@ POST /api/analytics/events
 | **P3** | [x] | 2026-06-08 | 个人中心与子页 | B4～B6、A1、P0 | 资料编辑 · 成就/徽章/打卡列表/排行榜 · 订单 · 会员权益 | 与移动端子页能力对齐；G9 i18n |
 | **P3+** | [x] | 2026-06-10 | 打卡地图 | B3、P3 | Leaflet `/checkins/map` · 时间/城市筛选 · 全国视野 · 列表互跳 | 个人中心与打卡列表可进地图；见 [B3+](./开发记录-重难点与亮点.md#b3-webpc-leaflet-打卡地图) |
 | **P4** | [x] | 2026-06-08 | 分享与手帐 | H2-a、D5-a、P2 | `/share/routes/:id` 只读页 · `RoutePosterSheet` Canvas 预览 · **浏览器下载 PNG** | 公开路线可分享；手帐模板可选并导出 |
-| **P5** | [ ] | 远期 | 生产部署与域名 | G8 | Nginx 静态资源 · `www` / `pc` 子域 · 与 API/CDN 联调 | HTTPS 可访问；与 H5/小程序 QR 策略一致 |
+| **P5** | [~] | 2026-06-10 | 生产部署与域名 | G8 | `deploy:release` · `install-nginx-pc.sh` · **Gitee Go** CI/CD · Nginx 静态 + `/api` 反代 | `pnpm deploy:release --target=pc`；HTTPS 待 Certbot |
 
 **推荐顺序**：**P1**（规划，核心差异化）→ **P2**（路线详情）→ **P3**（账户与游戏化）→ **P4**（传播）→ **P5**（上线）。  
 **暂不做**：PC 端社交 IM（H5）、原生能力（小程序码生成可沿用服务端 API）。
@@ -658,8 +656,8 @@ POST /api/analytics/events
 |----|------|----------|------|------|----------|----------|
 | **P6-0** | [x] | 2026-06-10 | 方案定稿 | P0 | 上表选型；ROADMAP 本节；与 K-A/K-B 博客片段策略对齐 | 团队共识：PC 不接 antd 整包 |
 | **P6-1** | [x] | 2026-06-10 | 全局轻提示 `appMessage` | P6-0 | `composables/useAppMessage.ts` · `AppMessage.vue` · `AppLayout` 挂载；`success/error/warning/info` | 相册上传成功等顶部提示；zh-CN/en-US 文案由调用方 `t()` 传入 |
-| **P6-2** | [ ] | 待定 | 接入 Headless UI | P6-1 | `pnpm --filter @douxing/pc add @headlessui/vue`；封装 `DxDialog`（确认/删除）、`DxMenu`、`DxListbox`（筛选） | 删相册/删照片用 Dialog 替代 `window.confirm`；样式沿用 `dx-btn-*` |
-| **P6-3** | [ ] | 待定 | 全局反馈扫尾 | P6-2 | 规划页/路线详情/订单等页内 `toastMessage` ref 逐步统一为 `appMessage`；清除剩余 `window.alert` | PC 主流程操作反馈无原生 alert（破坏性确认除外） |
+| **P6-2** | [x] | 2026-06-10 | 接入 Headless UI | P6-1 | `@headlessui/vue` · `AppDialogHost` · `appDialog.confirm` | 删相册/删照片/取消订单用 Dialog 替代 `window.confirm` |
+| **P6-3** | [x] | 2026-06-10 | 全局反馈扫尾 | P6-2 | 规划/路线/订单/资料/手帐统一 `appMessage` | PC 主流程无 `window.alert` 与页内 toast ref |
 | **P6-4** | [ ] | 远期 | 博客布局片段库 | K-A1 或 K-B1 | `packages/pc/src/components/blog/`（或 `shared`）摘录 **文章列表 / 详情 / 作者卡** Tailwind 片段；**不**引入完整博客框架 | K-A 公开日记页或 K-B MVP 可直接复用布局组件 |
 
 **推荐顺序**：`P6-1`（已完成）→ **`P6-2`**（删确认体验）→ **`P6-3`**（扫尾）→ **`P6-4`**（与 **K-A2** 或 **K-B1** 对齐，不抢 Sprint）。
@@ -670,7 +668,7 @@ POST /api/analytics/events
 |----------------|---------|
 | `message.success()` | `appMessage.success()` ✅ |
 | `message.error()` | `appMessage.error()` ✅ |
-| `Modal.confirm()` | `DxDialog` + Headless UI（**P6-2**） |
+| `Modal.confirm()` | `appDialog.confirm()` + `AppDialogHost` ✅ |
 | `notification` | 暂不实现；长通知可用 `appMessage` 延长 duration 或 P6-3 后评估 |
 
 **博客模板策略（与 K-A / K-B 关系）**：

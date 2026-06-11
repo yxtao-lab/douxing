@@ -131,6 +131,7 @@ import { buildJourneyPosterMaps, fetchJourneyAlbumByRoute } from '@/api/journey-
 import { getAppErrorMessage } from '@/utils/error-message';
 import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
+import { appMessage } from '@/composables/useAppMessage';
 import { buildPosterPayload } from '@/poster/build-poster-payload';
 import {
   createPosterCanvas,
@@ -181,7 +182,6 @@ const renderOptions = ref<PosterRenderOptions>(loadStoredPosterRenderOptions());
 const subtitleDraft = ref('');
 const previewPath = ref('');
 const generating = ref(false);
-const toastMessage = ref('');
 
 const poisPerDayChoices: PosterPoisPerDay[] = [2, 3, 4];
 
@@ -272,7 +272,7 @@ async function generatePreview() {
     journeyPhotoByPoiKey,
   });
   if (!payload) {
-    toastMessage.value = t('routes.poster.noItinerary');
+    appMessage.warning(t('routes.poster.noItinerary'));
     return;
   }
 
@@ -314,7 +314,7 @@ async function generatePreview() {
     previewPath.value = path;
     emit('generated', path);
   } catch (err) {
-    toastMessage.value = getAppErrorMessage(err, t('routes.poster.generateFailed'));
+    appMessage.error(getAppErrorMessage(err, t('routes.poster.generateFailed')));
   } finally {
     generating.value = false;
   }

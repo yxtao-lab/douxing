@@ -352,6 +352,67 @@ pnpm build:mp-weixin
 
 ---
 
+## 10. CI/CD 与 PC 发版（2026-06-10）
+
+### 10.1 本地 / 服务器一键发版
+
+```bash
+# 默认：后端 + PC 静态（服务器上执行，需已配置 .env）
+pnpm deploy:release
+
+# 仅 PC 用户端静态
+pnpm deploy:release -- --target=pc
+
+# 首次配置 PC Nginx（Debian/Ubuntu）
+sudo bash scripts/install-nginx-pc.sh pc.yxtao.site
+sudo certbot --nginx -d pc.yxtao.site
+```
+
+`.env` 新增项见 `deploy/env.production.example`：`STATIC_ROOT`、`PC_NGINX_DOMAIN`。
+
+### 10.2 Gitee Go 流水线（推荐）
+
+代码仓库在 **Gitee** 时，使用 `.workflow/` 目录下的流水线配置（非 GitHub Actions）。
+
+| 文件 | 触发 | 作用 |
+|------|------|------|
+| `.workflow/MasterPipeline.yml` | push `master` / `main` | 全量 CI 构建 |
+| `.workflow/PRPipeline.yml` | Pull Request | 共享包 + PC 校验 + 后端编译 |
+| `.workflow/ReleasePipeline.yml` | 打 `v*` 标签 + **手动**部署阶段 | SSH 远程 `pnpm deploy:release` |
+
+**首次启用：**
+
+1. Gitee 仓库 → **服务** → **Gitee Go** → 开通（单仓库约 200 分钟/月免费构建时长）
+2. 关联仓库后，系统会识别 `.workflow/` 下 YAML；或手动导入三条流水线
+3. 发版流水线在 **ReleasePipeline** 的「远程发版」阶段配置机密变量：
+
+| 变量名 | 类型 | 说明 |
+|--------|------|------|
+| `DEPLOY_HOST` | 普通 | 服务器 IP 或域名 |
+| `DEPLOY_USER` | 普通 | SSH 用户名 |
+| `DEPLOY_SSH_KEY` | **机密** | SSH 私钥全文 |
+| `DEPLOY_PATH` | 普通 | 可选，默认 `/opt/douxing` |
+| `DEPLOY_TARGET` | 普通 | 可选，默认 `server,pc` |
+| `DEPLOY_HEALTH_URL` | 普通 | 可选，默认 `https://api.yxtao.site/api/health` |
+
+**本地自检（与云端 CI 相同）：**
+
+```bash
+bash scripts/ci-build.sh
+```
+
+### 10.3 无 Gitee Go 时的 Webhook 发版（备选）
+
+若暂未开通 Gitee Go，可在服务器上配置 **Push Webhook** 或定时任务，执行：
+
+```bash
+bash /opt/douxing/scripts/gitee-webhook-deploy.sh
+```
+
+脚本会 `git pull` + `pnpm deploy:release --skip-docker`，无需在 Gitee 云端构建。
+
+---
+
 ## 11. 常见问题
 
 ### certbot 报 ssl_certificate is not defined

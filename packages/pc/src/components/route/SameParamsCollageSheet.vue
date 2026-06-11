@@ -46,6 +46,7 @@ import {
   hasMatchableShootingParams,
 } from '@douxing/shared';
 import { useLocale } from '@/i18n/useLocale';
+import { appMessage } from '@/composables/useAppMessage';
 import { getAppErrorMessage } from '@/utils/error-message';
 import { downloadDataUrl, renderSameParamsCollage } from '@/utils/same-params-collage';
 
@@ -88,12 +89,12 @@ watch(
 async function generatePreview() {
   if (generating.value || !props.referencePhoto) return;
   if (!hasMatchableShootingParams(props.referencePhoto.shootingParams)) {
-    window.alert(t('journeyAlbum.sameParamsNoParams'));
+    appMessage.warning(t('journeyAlbum.sameParamsNoParams'));
     return;
   }
   const photos = matchedPhotos.value;
   if (photos.length === 0) {
-    window.alert(t('journeyAlbum.sameParamsNoMatch'));
+    appMessage.warning(t('journeyAlbum.sameParamsNoMatch'));
     return;
   }
 
@@ -105,7 +106,7 @@ async function generatePreview() {
     });
     previewDataUrl.value = result.dataUrl;
   } catch (err) {
-    window.alert(getAppErrorMessage(err, t('routes.poster.generateFailed')));
+    appMessage.error(getAppErrorMessage(err, t('routes.poster.generateFailed')));
   } finally {
     generating.value = false;
   }

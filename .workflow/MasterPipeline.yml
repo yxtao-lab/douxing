@@ -1,0 +1,36 @@
+# 兜行 · Gitee Go 主干流水线（master/main push 自动 CI）
+# 启用：仓库 → 服务 → Gitee Go → 开通并关联本文件
+# 文档：docs/deploy-production.md §10
+
+version: '1.0'
+name: douxing-master-ci
+displayName: 兜行 · 主干 CI 构建
+
+triggers:
+  push:
+    branches:
+      precise:
+        - master
+        - main
+
+stages:
+  - stage: build
+    name: build
+    displayName: 构建与校验
+    strategy: fast
+    trigger: auto
+    steps:
+      - step: build@nodejs
+        name: ci_build
+        displayName: Monorepo 构建
+        nodeVersion: 20.18.0
+        commands:
+          - chmod +x scripts/ci-build.sh
+          - bash scripts/ci-build.sh
+        artifacts:
+          - name: PC_DIST
+            path:
+              - packages/pc/dist
+          - name: WEB_DIST
+            path:
+              - packages/web/dist

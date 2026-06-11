@@ -20,6 +20,7 @@ import {
 import { completeRouteUnlockPayment, fetchOrderPaymentConfig } from '@/api/orders';
 import { isAiPlanCancelledError } from '@/api/ai-plan';
 import { useLocale } from '@/i18n/useLocale';
+import { appMessage } from '@/composables/useAppMessage';
 import { useUserStore } from '@/stores/user';
 import { getAppErrorMessage } from '@/utils/error-message';
 
@@ -30,7 +31,6 @@ export function useRouteDetail(routeId: () => number) {
   const route = ref<TravelRouteInfo | null>(null);
   const loading = ref(false);
   const loadError = ref('');
-  const toastMessage = ref('');
   const activeDayIndex = ref(0);
   const routeUnlockPaymentRequired = ref(false);
   const paying = ref(false);
@@ -153,12 +153,8 @@ export function useRouteDetail(routeId: () => number) {
     }
   }
 
-  function showToast(message: string) {
-    toastMessage.value = message;
-  }
-
-  function dismissToast() {
-    toastMessage.value = '';
+  function showToast(message: string, type: 'success' | 'error' | 'warning' | 'info' = 'info') {
+    appMessage[type](message);
   }
 
   function openEditModal() {
@@ -178,10 +174,10 @@ export function useRouteDetail(routeId: () => number) {
     sharing.value = true;
     try {
       route.value = await setRoutePublicShare(id, { isPublic });
-      showToast(isPublic ? t('routes.shareOn') : t('routes.shareOff'));
+      showToast(isPublic ? t('routes.shareOn') : t('routes.shareOff'), 'success');
       await loadComments();
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.shareSetFailed')));
+      showToast(getAppErrorMessage(err, t('routes.shareSetFailed')), 'error');
       await loadDetail();
     } finally {
       sharing.value = false;
@@ -192,7 +188,7 @@ export function useRouteDetail(routeId: () => number) {
     const id = routeId();
     const text = commentText.value.trim();
     if (!id || !text) {
-      showToast(t('routes.commentRequired'));
+      showToast(t('routes.commentRequired'), 'warning');
       return;
     }
     postingComment.value = true;
@@ -203,9 +199,9 @@ export function useRouteDetail(routeId: () => number) {
         route.value.commentCount = (route.value.commentCount ?? 0) + 1;
       }
       commentText.value = '';
-      showToast(t('routes.commentSuccess'));
+      showToast(t('routes.commentSuccess'), 'success');
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.commentFailed')));
+      showToast(getAppErrorMessage(err, t('routes.commentFailed')), 'error');
     } finally {
       postingComment.value = false;
     }
@@ -221,7 +217,7 @@ export function useRouteDetail(routeId: () => number) {
         route.value.likeCount = result.likeCount;
       }
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.operationFailed')));
+      showToast(getAppErrorMessage(err, t('routes.operationFailed')), 'error');
     }
   }
 
@@ -235,7 +231,7 @@ export function useRouteDetail(routeId: () => number) {
         route.value.collectCount = result.collectCount;
       }
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.operationFailed')));
+      showToast(getAppErrorMessage(err, t('routes.operationFailed')), 'error');
     }
   }
 
@@ -243,7 +239,7 @@ export function useRouteDetail(routeId: () => number) {
     const id = routeId();
     const name = editName.value.trim();
     if (!id || !name) {
-      showToast(t('routes.nameRequired'));
+      showToast(t('routes.nameRequired'), 'warning');
       return;
     }
     savingDraft.value = true;
@@ -252,10 +248,10 @@ export function useRouteDetail(routeId: () => number) {
         name,
         description: editDesc.value.trim() || null,
       });
-      showToast(t('routes.draftSaved'));
+      showToast(t('routes.draftSaved'), 'success');
       editModalVisible.value = false;
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.saveFailed')));
+      showToast(getAppErrorMessage(err, t('routes.saveFailed')), 'error');
     } finally {
       savingDraft.value = false;
     }
@@ -265,7 +261,7 @@ export function useRouteDetail(routeId: () => number) {
     const id = routeId();
     const text = regeneratePrompt.value.trim();
     if (!id || !text) {
-      showToast(t('routes.regeneratePromptRequired'));
+      showToast(t('routes.regeneratePromptRequired'), 'warning');
       return;
     }
     try {
@@ -281,13 +277,13 @@ export function useRouteDetail(routeId: () => number) {
                 ? t('routes.regenerateLmstudio')
                 : t('routes.regenerateAi');
       }
-      showToast(tip);
+      showToast(tip, 'success');
       route.value = result;
       regeneratePrompt.value = result.sourcePrompt ?? text;
       activeDayIndex.value = 0;
     } catch (err) {
       if (!isAiPlanCancelledError(err)) {
-        showToast(getAppErrorMessage(err, t('routes.regenerateFailed')));
+        showToast(getAppErrorMessage(err, t('routes.regenerateFailed')), 'error');
       }
     }
   }
@@ -298,12 +294,12 @@ export function useRouteDetail(routeId: () => number) {
     paying.value = true;
     try {
       await completeRouteUnlockPayment(id);
-      showToast(t('routes.unlockSuccess'));
+      showToast(t('routes.unlockSuccess'), 'success');
       await loadDetail();
     } catch (err) {
       const msg = getAppErrorMessage(err, t('routes.payFailed'));
       if (msg !== t('routes.payCancelled')) {
-        showToast(msg);
+        showToast(msg, 'warning');
       }
     } finally {
       paying.value = false;
@@ -315,9 +311,9 @@ export function useRouteDetail(routeId: () => number) {
     if (!id) return;
     try {
       route.value = await publishRoute(id);
-      showToast(t('routes.publishSuccess'));
+      showToast(t('routes.publishSuccess'), 'success');
     } catch (err) {
-      showToast(getAppErrorMessage(err, t('routes.publishFailed')));
+      showToast(getAppErrorMessage(err, t('routes.publishFailed')), 'error');
     }
   }
 
@@ -325,7 +321,6 @@ export function useRouteDetail(routeId: () => number) {
     route,
     loading,
     loadError,
-    toastMessage,
     activeDayIndex,
     paying,
     sharing,
@@ -351,7 +346,6 @@ export function useRouteDetail(routeId: () => number) {
     regenerateHint,
     loadPaymentConfig,
     loadDetail,
-    dismissToast,
     openEditModal,
     closeEditModal,
     handleShareToggle,

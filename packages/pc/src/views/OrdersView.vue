@@ -63,6 +63,8 @@ import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
 import { cancelOrder, continuePayForOrder, fetchOrdersPage } from '@/api/orders';
 import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
+import { appDialog } from '@/composables/useAppDialog';
+import { appMessage } from '@/composables/useAppMessage';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
 
@@ -76,7 +78,6 @@ const loading = ref(false);
 const loadingMore = ref(false);
 const payingId = ref<number | null>(null);
 const cancellingId = ref<number | null>(null);
-const toastMessage = ref('');
 
 const tabs = computed(() => [
   { key: 'all' as OrderListTab, label: t('orders.tabAll') },
@@ -142,24 +143,28 @@ async function handlePay(orderId: number) {
   payingId.value = orderId;
   try {
     await continuePayForOrder(orderId);
-    toastMessage.value = t('orders.paySuccess');
+    appMessage.success(t('orders.paySuccess'));
     await reload();
   } catch (err) {
-    toastMessage.value = getAppErrorMessage(err, t('routes.payFailed'));
+    appMessage.error(getAppErrorMessage(err, t('routes.payFailed')));
   } finally {
     payingId.value = null;
   }
 }
 
 async function handleCancel(orderId: number) {
-  if (!window.confirm(t('orders.cancelModalContent'))) return;
+  const confirmed = await appDialog.confirm({
+    content: t('orders.cancelModalContent'),
+    danger: true,
+  });
+  if (!confirmed) return;
   cancellingId.value = orderId;
   try {
     await cancelOrder(orderId);
-    toastMessage.value = t('orders.cancelSuccess');
+    appMessage.success(t('orders.cancelSuccess'));
     await reload();
   } catch (err) {
-    toastMessage.value = getAppErrorMessage(err, t('orders.cancelFailed'));
+    appMessage.error(getAppErrorMessage(err, t('orders.cancelFailed')));
   } finally {
     cancellingId.value = null;
   }

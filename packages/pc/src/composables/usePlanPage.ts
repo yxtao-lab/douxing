@@ -10,6 +10,7 @@ import {
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoading, aiPlanMessage, cancelAiPlanRequest, isAiPlanCancelledError } from '@/api/ai-plan';
 import { useLocale } from '@/i18n/useLocale';
+import { appMessage } from '@/composables/useAppMessage';
 import { useUserStore } from '@/stores/user';
 import { getAppErrorMessage } from '@/utils/error-message';
 import type {
@@ -57,7 +58,6 @@ export function usePlanPage() {
   const llmIssueMessage = ref('');
   const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
   const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
-  const toastMessage = ref('');
   const scrollAnchor = ref('');
 
   const showModelPicker = import.meta.env.DEV;
@@ -227,7 +227,7 @@ export function usePlanPage() {
       await loadSession(previousSessionId.value);
       previousSessionId.value = null;
     } catch (err) {
-      toastMessage.value = getAppErrorMessage(err, t('plan.restoreSessionFailed'));
+      appMessage.error(getAppErrorMessage(err, t('plan.restoreSessionFailed')));
     }
   }
 
@@ -256,7 +256,7 @@ export function usePlanPage() {
     const value = (event.target as HTMLSelectElement).value as LlmProviderChoice;
     const opt = providerOptions.value.find((o) => o.id === value);
     if (!opt?.available) {
-      toastMessage.value = t('plan.providerUnavailableToast');
+      appMessage.warning(t('plan.providerUnavailableToast'));
       return;
     }
     provider.value = value;
@@ -289,9 +289,9 @@ export function usePlanPage() {
       syncCurrentRoute(result.id, result);
       candidates.value = result.candidates ?? [];
       ragMatchedCount.value = result.ragMatchedCount ?? 0;
-      toastMessage.value = t('plan.candidateSwitched');
+      appMessage.success(t('plan.candidateSwitched'));
     } catch (err) {
-      toastMessage.value = getAppErrorMessage(err, t('plan.candidateSwitchFailed'));
+      appMessage.error(getAppErrorMessage(err, t('plan.candidateSwitchFailed')));
     }
   }
 
@@ -308,10 +308,6 @@ export function usePlanPage() {
     inputText.value = text;
   }
 
-  function dismissToast() {
-    toastMessage.value = '';
-  }
-
   async function handleSend() {
     if (aiPlanning.value) return;
     if (!userStore.token) {
@@ -321,11 +317,11 @@ export function usePlanPage() {
 
     const content = inputText.value.trim();
     if (!content) {
-      toastMessage.value = t('plan.inputRequired');
+      appMessage.warning(t('plan.inputRequired'));
       return;
     }
     if (sessionId.value && !canAppendPlan.value) {
-      toastMessage.value = t('plan.appendLockedHint');
+      appMessage.warning(t('plan.appendLockedHint'));
       return;
     }
 
@@ -351,7 +347,7 @@ export function usePlanPage() {
         candidates.value = loaded.candidates ?? result.candidates ?? [];
         syncCurrentRoute(result.id, loaded.route ?? result);
         scrollToBottom();
-        toastMessage.value = t('plan.plansGenerated');
+        appMessage.success(t('plan.plansGenerated'));
         return;
       }
 
@@ -365,11 +361,11 @@ export function usePlanPage() {
       candidates.value = loaded.candidates ?? result.candidates ?? [];
       syncCurrentRoute(result.id, result);
       scrollToBottom();
-      toastMessage.value = t('plan.planUpdated');
+      appMessage.success(t('plan.planUpdated'));
     } catch (err) {
       messages.value = messages.value.filter((m) => m.id !== pendingId);
       if (!isAiPlanCancelledError(err)) {
-        toastMessage.value = getAppErrorMessage(err, t('plan.sendFailed'));
+        appMessage.error(getAppErrorMessage(err, t('plan.sendFailed')));
         inputText.value = content;
       }
     }
@@ -449,7 +445,6 @@ export function usePlanPage() {
     membershipHint,
     appendLockedHint,
     llmIssueMessage,
-    toastMessage,
     scrollAnchor,
     aiPlanning,
     aiPlanMessage,
@@ -475,6 +470,5 @@ export function usePlanPage() {
     goMembership,
     openRouteDetail,
     cancelAiPlan: cancelAiPlanRequest,
-    dismissToast,
   };
 }

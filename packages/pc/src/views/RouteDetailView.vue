@@ -10,14 +10,6 @@
     </div>
 
     <template v-else-if="route">
-      <div
-        v-if="toastMessage"
-        class="mb-4 flex items-center justify-between gap-2 rounded-xl border border-dx-border bg-white px-4 py-2 text-sm shadow-sm"
-      >
-        <span>{{ toastMessage }}</span>
-        <button type="button" class="text-dx-muted hover:text-dx-text" @click="dismissToast">×</button>
-      </div>
-
       <!-- Hero -->
       <section class="mb-6 overflow-hidden rounded-2xl bg-dx-hero text-white shadow-hero">
         <div class="p-6 lg:p-8">
@@ -329,7 +321,6 @@ const {
   route,
   loading,
   loadError,
-  toastMessage,
   activeDayIndex,
   paying,
   sharing,
@@ -355,7 +346,6 @@ const {
   regenerateHint,
   loadPaymentConfig,
   loadDetail,
-  dismissToast,
   openEditModal,
   closeEditModal,
   handleShareToggle,
