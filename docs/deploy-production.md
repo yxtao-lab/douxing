@@ -4,7 +4,7 @@
 > 将 API 公有化：域名 + HTTPS + Nginx 反代 + PM2 + Docker（MySQL/Redis）  
 > 示例域名：`api.yxtao.site`（请替换为你的域名）
 
-**关联文档**：[环境配置与打包说明](env-environments.md) · [服务端命令手册](服务端命令手册.md) · [微信小程序部署](../scripts/mp-weixin.md) · [包管理与命令](包管理与命令.md)
+**关联文档**：[环境配置与打包说明](env-environments.md) · [发版流程与 CI/CD 解析](发版流程与CI-CD解析.md) · [服务端命令手册](服务端命令手册.md) · [微信小程序部署](../scripts/mp-weixin.md) · [包管理与命令](包管理与命令.md)
 
 > **说明**：生产服务器初始化脚本默认安装 **pnpm**（与 `pnpm-lock.yaml` 一致）。本地开发若仅用 npm，见 [包管理与命令.md](包管理与命令.md)；发版与服务器部署仍推荐 pnpm。
 
