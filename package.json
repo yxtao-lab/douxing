@@ -63,6 +63,7 @@
     "deploy:release": "node scripts/deploy-release.mjs",
     "deploy:pc": "node scripts/deploy-release.mjs --target=pc",
     "ci:build": "bash scripts/ci-build.sh",
+    "webhook:serve": "node scripts/gitee-webhook-server.mjs",
     "setup:nginx-pc": "bash scripts/install-nginx-pc.sh",
     "setup:debian12": "bash scripts/setup-debian12.sh",
     "setup:ubuntu22": "bash scripts/setup-ubuntu22.sh",

@@ -1,16 +1,13 @@
 #!/usr/bin/env bash
-# 兜行 · 服务器 Webhook 发版（无 Gitee Go 时的轻量方案）
+# 兜行 · 服务器 Webhook 发版（Gitee Push 触发或手动执行）
 #
-# 在 Gitee 仓库 → 管理 → WebHooks 添加：
-#   URL: https://你的域名/hooks/douxing-deploy  （或内网 curl 触发）
-#   密码: 与下方 WEBHOOK_SECRET 一致
+# 手动: bash scripts/gitee-webhook-deploy.sh
+# 自动: Gitee Webhook → gitee-webhook-server.mjs → 本脚本
 #
-# 更简单的做法：cron 或手动在服务器执行：
-#   bash scripts/gitee-webhook-deploy.sh
-#
-# 环境变量（写入服务器 .env 或 /etc/douxing/deploy.env）：
+# .env 可选:
 #   DEPLOY_PATH=/opt/douxing
 #   DEPLOY_TARGET=server,pc
+#   WEBHOOK_DEPLOY_BRANCHES=main,master
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -25,11 +22,27 @@ fi
 
 DEPLOY_PATH="${DEPLOY_PATH:-$ROOT}"
 DEPLOY_TARGET="${DEPLOY_TARGET:-server,pc}"
+LOCK_FILE="${WEBHOOK_DEPLOY_LOCK:-/tmp/douxing-deploy.lock}"
+LOG_DIR="${WEBHOOK_DEPLOY_LOG_DIR:-$DEPLOY_PATH/logs}"
+mkdir -p "$LOG_DIR"
+LOG_FILE="${WEBHOOK_DEPLOY_LOG:-$LOG_DIR/webhook-deploy.log}"
+
+exec >>"$LOG_FILE" 2>&1
+echo ""
+echo "========== [webhook-deploy] $(date -Iseconds) =========="
+
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "[webhook-deploy] 已有发版任务进行中，跳过"
+  exit 0
+fi
 
 echo "[webhook-deploy] 目录: $DEPLOY_PATH"
 cd "$DEPLOY_PATH"
 
-BRANCH="$(git branch --show-current 2>/dev/null || echo main)"
+BRANCH="${WEBHOOK_BRANCH:-$(git branch --show-current 2>/dev/null || echo main)}"
+echo "[webhook-deploy] 分支: $BRANCH"
+
 git fetch origin
 git pull origin "$BRANCH"
 

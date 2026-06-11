@@ -1,0 +1,15 @@
+[Unit]
+Description=Douxing Gitee Webhook Deploy Listener
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/douxing
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node /opt/douxing/scripts/gitee-webhook-server.mjs
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

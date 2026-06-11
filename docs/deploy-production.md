@@ -412,15 +412,90 @@ bash scripts/ci-build.sh
 | `$'\r': command not found` | Windows CRLF 脚本在 Linux CI 执行 | 加 `.gitattributes`；流水线命令内联到 YAML |
 | Node 版本无效 | `nodeVersion: 18.20.0` 不在 Gitee 列表 | 改为 `20.18.0` 或在 Gitee 可视化里选可用版本 |
 
-### 10.3 无 Gitee Go 时的 Webhook 发版（备选）
+### 10.3 Gitee Webhook 发版（方案 C，推荐替代 Gitee Go）
 
-若暂未开通 Gitee Go，可在服务器上配置 **Push Webhook** 或定时任务，执行：
+Push 到 `main` 后，Gitee 回调服务器 → 自动 `git pull` + 构建发版。**构建在服务器本地完成**，无需 Gitee Go。
+
+#### 架构
+
+```
+本地 push → Gitee 仓库
+              ↓ POST (Push Hook)
+         Nginx /hooks/douxing-deploy
+              ↓
+    gitee-webhook-server.mjs (:9090)
+              ↓ 后台 spawn
+    gitee-webhook-deploy.sh → pnpm deploy:release
+```
+
+#### 一次性配置（服务器）
+
+```bash
+cd /opt/douxing
+
+# 1. .env 增加（密码自行生成，≥32 位随机串）
+echo 'WEBHOOK_SECRET=你的随机密码' >> .env
+echo 'WEBHOOK_PORT=9090' >> .env
+echo 'DEPLOY_TARGET=server,pc' >> .env
+
+# 2. 安装 systemd 服务 + 生成 Nginx 片段
+sudo bash scripts/install-webhook-service.sh --nginx-domain api.yxtao.site
+
+# 3. 在 api 站点配置中启用片段（/etc/nginx/sites-available/douxing-api）
+#    server { ... } 内取消注释或添加：
+#    include snippets/douxing-webhook.conf;
+sudo nginx -t && sudo systemctl reload nginx
+
+# 4. 自检
+curl -s http://127.0.0.1:9090/health
+```
+
+#### Gitee 仓库配置
+
+1. 仓库 → **管理** → **WebHooks** → **添加 WebHook**
+2. 填写：
+
+| 项 | 值 |
+|----|-----|
+| URL | `https://api.yxtao.site/hooks/douxing-deploy` |
+| 密码 | 与 `.env` 中 `WEBHOOK_SECRET` **完全一致** |
+| 事件 | 勾选 **Push** |
+
+3. 保存后点 **测试**，应返回 HTTP 202；查看日志：
+
+```bash
+tail -f /opt/douxing/logs/webhook-deploy.log
+sudo journalctl -u douxing-webhook -f
+```
+
+#### 本地开发自检
+
+```bash
+# 终端 1：启动监听（可不设 WEBHOOK_SECRET）
+node scripts/gitee-webhook-server.mjs
+
+# 终端 2：模拟 Gitee Push
+curl -X POST http://127.0.0.1:9090/hooks/douxing-deploy \
+  -H 'Content-Type: application/json' \
+  -H 'X-Gitee-Event: Push Hook' \
+  -H 'X-Gitee-Token: 你的密码' \
+  -d '{"ref":"refs/heads/main","commits":[]}'
+```
+
+#### 手动发版（不经过 Webhook）
 
 ```bash
 bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 ```
 
-脚本会 `git pull` + `pnpm deploy:release --skip-docker`，无需在 Gitee 云端构建。
+#### 常见问题
+
+| 现象 | 处理 |
+|------|------|
+| 401 invalid token | Gitee WebHook 密码与 `WEBHOOK_SECRET` 不一致 |
+| 200 ignored branch | 仅 `WEBHOOK_DEPLOY_BRANCHES` 中的分支会发版 |
+| 发版卡住 | 2G 机用 `SERVER_RUNTIME=tsx`；见 §11 |
+| 重复触发 | 脚本有 `flock` 锁，并发 Push 会跳过第二次 |
 
 ---
 

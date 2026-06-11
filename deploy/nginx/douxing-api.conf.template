@@ -22,6 +22,9 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
+    # Gitee Webhook 发版（可选，需先 bash scripts/install-webhook-service.sh）
+    # include snippets/douxing-webhook.conf;
+
     location / {
         proxy_pass http://127.0.0.1:__SERVER_PORT__;
         proxy_http_version 1.1;
