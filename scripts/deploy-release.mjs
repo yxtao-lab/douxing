@@ -48,6 +48,16 @@ function loadEnvFile() {
 loadEnvFile();
 
 function parseTargets() {
+  const eqArg = args.find((item) => item.startsWith('--target='));
+  if (eqArg) {
+    const raw = eqArg.slice('--target='.length);
+    if (!raw) {
+      console.error('[deploy:release] 用法: --target=server,pc,web');
+      process.exit(1);
+    }
+    return raw.split(',').map((item) => item.trim()).filter(Boolean);
+  }
+
   const idx = args.indexOf('--target');
   if (idx === -1) {
     if (skipServer) return ['pc'];
