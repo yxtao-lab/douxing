@@ -65,7 +65,7 @@
     "deploy:pc-site": "bash scripts/deploy-pc-site.sh",
     "deploy:web-site": "bash scripts/deploy-web-site.sh",
     "deploy:static-sites": "bash scripts/deploy-static-sites.sh",
-    "ci:build": "bash scripts/ci-build.sh",
+    "detect:deploy-targets": "node scripts/detect-deploy-targets.mjs",
     "webhook:serve": "node scripts/gitee-webhook-server.mjs",
     "setup:nginx-pc": "bash scripts/install-nginx-pc.sh",
     "setup:nginx-web": "bash scripts/install-nginx-web.sh",

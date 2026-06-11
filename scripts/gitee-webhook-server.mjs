@@ -89,6 +89,29 @@ function verifyToken(req) {
   return typeof token === 'string' && token === secret;
 }
 
+function collectChangedFiles(payload) {
+  const files = new Set();
+  const commits = Array.isArray(payload?.commits) ? payload.commits : [];
+  for (const commit of commits) {
+    for (const key of ['added', 'modified', 'removed']) {
+      const list = commit?.[key];
+      if (Array.isArray(list)) {
+        for (const file of list) {
+          if (typeof file === 'string' && file) files.add(file);
+        }
+      }
+    }
+  }
+  return [...files];
+}
+
+function collectCommitMessages(payload) {
+  const commits = Array.isArray(payload?.commits) ? payload.commits : [];
+  return commits
+    .map((commit) => commit?.message)
+    .filter((message) => typeof message === 'string' && message.trim());
+}
+
 function triggerDeploy(meta) {
   if (!existsSync(deployScript)) {
     throw new Error(`发版脚本不存在: ${deployScript}`);
@@ -105,6 +128,10 @@ function triggerDeploy(meta) {
       WEBHOOK_TRIGGERED_AT: stamp,
       WEBHOOK_REF: meta.ref || '',
       WEBHOOK_BRANCH: meta.branch || '',
+      WEBHOOK_BEFORE: meta.before || '',
+      WEBHOOK_AFTER: meta.after || '',
+      WEBHOOK_CHANGED_FILES: JSON.stringify(meta.changedFiles || []),
+      WEBHOOK_COMMIT_MESSAGES: JSON.stringify(meta.commitMessages || []),
     },
   });
   child.unref();
@@ -159,9 +186,18 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    const changedFiles = collectChangedFiles(payload);
+    const commitMessages = collectCommitMessages(payload);
+    const before = payload?.before || '';
+    const after = payload?.after || '';
+
     const result = triggerDeploy({
       ref,
       branch,
+      before,
+      after,
+      changedFiles,
+      commitMessages,
       commits: payload?.commits?.length ?? 0,
     });
 
@@ -169,6 +205,8 @@ const server = createServer(async (req, res) => {
       ok: true,
       message: 'deploy started',
       branch,
+      mode: process.env.WEBHOOK_DEPLOY_MODE || 'auto',
+      changedFiles: changedFiles.slice(0, 30),
       ...result,
     });
   } catch (err) {

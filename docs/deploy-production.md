@@ -430,7 +430,43 @@ Push 到 `main` 后，Gitee 回调服务器 → 自动 `git pull` + 构建发版
               ↓
     gitee-webhook-server.mjs (:9090)
               ↓ 后台 spawn
-    gitee-webhook-deploy.sh → pnpm deploy:release
+    gitee-webhook-deploy.sh → detect-deploy-targets → pnpm deploy:release（仅变更 package）
+```
+
+#### 日常用法（push 即发版，无需 SSH）
+
+```bash
+# 本地
+pnpm ci:build          # 可选自检
+git push origin main   # 自动触发 Webhook 发版
+```
+
+服务器 `.env` 建议：
+
+```bash
+WEBHOOK_DEPLOY_MODE=auto
+WEBHOOK_DEPLOY_ALLOW=server,pc,web
+```
+
+#### 按 package 增量发版（`WEBHOOK_DEPLOY_MODE=auto`）
+
+| 变更路径 | 自动发版目标 |
+|----------|--------------|
+| `packages/server/` | server |
+| `packages/pc/` | pc |
+| `packages/web/` | web |
+| `packages/shared/` | server + pc + web |
+| `packages/ai-service/` | server |
+| `pnpm-lock.yaml` / 根 `package.json` / `deploy/` | 全部允许的目标 |
+| 仅 `docs/` | **跳过**（不发版） |
+| `packages/mobile/` | **跳过**（小程序/H5 需微信上传，不走服务器静态发版） |
+
+提交信息可**强制指定**发版范围（优先级高于路径检测）：
+
+```text
+feat(web): 调整订单页 [deploy:web]
+fix: 全端类型 [deploy:all]
+chore: 仅后端 [deploy:server]
 ```
 
 #### 一次性配置（服务器）
@@ -441,7 +477,8 @@ cd /opt/douxing
 # 1. .env 增加（密码自行生成，≥32 位随机串）
 echo 'WEBHOOK_SECRET=你的随机密码' >> .env
 echo 'WEBHOOK_PORT=9090' >> .env
-echo 'DEPLOY_TARGET=server,pc' >> .env
+echo 'WEBHOOK_DEPLOY_MODE=auto' >> .env
+echo 'WEBHOOK_DEPLOY_ALLOW=server,pc,web' >> .env
 
 # 2. 安装 systemd 服务 + 生成 Nginx 片段
 sudo bash scripts/install-webhook-service.sh --nginx-domain api.yxtao.site
@@ -502,6 +539,7 @@ bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 | Gitee 测试 **404** | Nginx 未反代到 `:9090`，或 443 块缺 `include` | 见下方「404 排查」 |
 | 发版 `tsx` 找不到 | `NODE_ENV=production` 时跳过了 devDependencies | 发版脚本已加 `--prod=false`；服务器 `git pull` 后重试 |
 | 200 ignored branch | 仅 `WEBHOOK_DEPLOY_BRANCHES` 中的分支会发版 |
+| push 后无发版 | 仅改了 docs；或 `WEBHOOK_DEPLOY_MODE=auto` 判定无需发版 | 提交加 `[deploy:web]` 或设 `WEBHOOK_DEPLOY_MODE=full` |
 | 发版卡住 | 2G 机用 `SERVER_RUNTIME=tsx`；见 §11 |
 | 重复触发 | 脚本有 `flock` 锁，并发 Push 会跳过第二次 |
 
