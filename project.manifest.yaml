@@ -69,7 +69,7 @@ packages:
     name: "@douxing/ml"
 
 domains:
-  root: yxtao.site # 主域名（备案主体下）
+  root: yxtao.site # 主域名（备案主体下，当前技术域）
   production:
     apiHost: api.yxtao.site
     apiBaseUrl: https://api.yxtao.site/api
@@ -81,6 +81,32 @@ domains:
   development:
     apiBaseUrl: http://127.0.0.1:3000/api
     publicBaseUrl: http://127.0.0.1:3000
+  # 品牌域名候选（尚未注册；选型与迁移见 docs/域名规划.md）
+  candidates:
+    - id: douxingai
+      preferred: true # 首选：强调 AI 规划差异化
+      primary: douxingai.com
+      alternates: [douxing.ai, douxingai.cn]
+      displayNameZh: 兜行 AI
+      displayNameEn: Douxing AI
+      plannedHosts:
+        www: www.douxingai.com
+        mobile: m.douxingai.com
+        api: api.douxingai.com
+        apiStaging: api-test.douxingai.com
+        admin: admin.douxingai.com
+    - id: douxingtravel
+      preferred: false # 备选：旅游品类直观、偏大众传播
+      primary: douxingtravel.com
+      alternates: [douxingtravel.cn]
+      displayNameZh: 兜行
+      displayNameEn: Douxing Travel
+      plannedHosts:
+        www: www.douxingtravel.com
+        mobile: m.douxingtravel.com
+        api: api.douxingtravel.com
+        apiStaging: api-test.douxingtravel.com
+        admin: admin.douxingtravel.com
 
 database:
   engine: mysql

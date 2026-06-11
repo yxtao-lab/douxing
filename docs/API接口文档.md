@@ -1,7 +1,7 @@
 # 兜行 API 接口文档
 
 > **版本**：与代码同步（含 J1～J5+ 旅程相册 · 删除相册 · 路线列表封面）  
-> **更新日期**：2026-06-10  
+> **更新日期**：2026-06-11  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -984,6 +984,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 日期 | 说明 |
 |------|------|
+| 2026-06-11 | 文档同步：P5 Webhook 自动发版 · 发版/命令手册 · 命令 `build:ci` 校正 |
 | 2026-06-10 | J5++：`DELETE /journey-albums/:id`；路线列表 `listCoverImageUrl`；总览 **83** 接口 |
 | 2026-06-10 | J5：`share`、`apply-exif-suggestions`、`GET /share/journey-albums/:token`；总览 **82** 接口 |
 | 2026-06-10 | J5+：`shootingParams` 字段；客户端同参数拼图 · 我的相册选路线上传 |

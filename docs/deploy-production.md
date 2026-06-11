@@ -352,7 +352,9 @@ pnpm build:mp-weixin
 
 ---
 
-## 10. CI/CD 与 PC 发版（2026-06-10）
+## 10. CI/CD 与 PC 发版（2026-06-11）
+
+> **当前推荐方案**：**Gitee Webhook 增量发版**（§10.2）。完整链路解析见 [发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) · 命令速查见 [服务端命令手册.md](./服务端命令手册.md)。
 
 ### 10.1 本地 / 服务器一键发版
 
@@ -375,49 +377,7 @@ sudo bash scripts/deploy-static-sites.sh --certbot
 
 `.env` 新增项见 `deploy/env.production.example`：`STATIC_ROOT`、`PC_NGINX_DOMAIN`。
 
-### 10.2 Gitee Go 流水线（推荐）
-
-代码仓库在 **Gitee** 时，使用 `.workflow/` 目录下的流水线配置（非 GitHub Actions）。
-
-| 文件 | 触发 | 作用 |
-|------|------|------|
-| `.workflow/master-pipeline.yml` | push `master` / `main` | 全量 CI 构建 |
-| `.workflow/pr-pipeline.yml` | Pull Request | 共享包 + PC 校验 + 后端编译 |
-| `.workflow/branch-pipeline.yml` | 其它分支 push | 轻量校验（不发布） |
-| `.workflow/release-pipeline.yml` | 打 `v*` 标签 + **手动**部署 | SSH 远程发版 |
-
-> **注意**：Gitee Go 开通时会自动生成小写 `master-pipeline.yml` 等文件；勿保留模板里的 `npm run build`（会递归构建含 mobile 在内的全部 workspace 导致失败）。本项目已改为 `bash scripts/ci-build.sh` + **pnpm**。
-
-**首次启用：**
-
-1. Gitee 仓库 → **服务** → **Gitee Go** → 开通（单仓库约 200 分钟/月免费构建时长）
-2. 关联仓库后，系统会识别 `.workflow/` 下 YAML；或手动导入三条流水线
-3. 发版流水线在 **ReleasePipeline** 的「远程发版」阶段配置机密变量：
-
-| 变量名 | 类型 | 说明 |
-|--------|------|------|
-| `DEPLOY_HOST` | 普通 | 服务器 IP 或域名 |
-| `DEPLOY_USER` | 普通 | SSH 用户名 |
-| `DEPLOY_SSH_KEY` | **机密** | SSH 私钥全文 |
-| `DEPLOY_PATH` | 普通 | 可选，默认 `/opt/douxing` |
-| `DEPLOY_TARGET` | 普通 | 可选，默认 `server,pc` |
-| `DEPLOY_HEALTH_URL` | 普通 | 可选，默认 `https://api.yxtao.site/api/health` |
-
-**本地自检（与云端 CI 相同）：**
-
-```bash
-bash scripts/ci-build.sh
-```
-
-**常见构建失败**
-
-| 日志 | 原因 | 处理 |
-|------|------|------|
-| `npm run build --workspaces --if-present` 死循环 | 根 workspace 的 build 递归 | 已修 pm.mjs；CI 勿用 `npm run build` |
-| `$'\r': command not found` | Windows CRLF 脚本在 Linux CI 执行 | 加 `.gitattributes`；流水线命令内联到 YAML |
-| Node 版本无效 | `nodeVersion: 18.20.0` 不在 Gitee 列表 | 改为 `20.18.0` 或在 Gitee 可视化里选可用版本 |
-
-### 10.3 Gitee Webhook 发版（方案 C，推荐替代 Gitee Go）
+### 10.2 Gitee Webhook 发版（推荐，当前方案）
 
 Push 到 `main` 后，Gitee 回调服务器 → 自动 `git pull` + 构建发版。**构建在服务器本地完成**，无需 Gitee Go。
 
@@ -437,7 +397,7 @@ Push 到 `main` 后，Gitee 回调服务器 → 自动 `git pull` + 构建发版
 
 ```bash
 # 本地
-pnpm ci:build          # 可选自检
+pnpm build:ci          # 可选自检
 git push origin main   # 自动触发 Webhook 发版
 ```
 
@@ -552,6 +512,40 @@ bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 2. 消除重复配置：`grep -r "api.yxtao.site" /etc/nginx/sites-enabled/`，只保留一份 api 站点。
 3. 服务器自检：`bash scripts/verify-webhook-nginx.sh api.yxtao.site`
 4. Gitee 测试事件为 `push_hooks`、分支为 `test_version` 时返回 **200**（忽略发版）属正常；**404** 才是 Nginx 问题。
+
+### 10.3 Gitee Go 流水线（备选，需云端构建额度）
+
+代码仓库在 **Gitee** 时，可使用 `.workflow/` 目录下的流水线配置（非 GitHub Actions）。**本项目日常发版已改用 §10.2 Webhook**；Gitee Go 适合 PR 门禁或需云端构建日志时启用。
+
+| 文件 | 触发 | 作用 |
+|------|------|------|
+| `.workflow/master-pipeline.yml` | push `master` / `main` | 全量 CI 构建 |
+| `.workflow/pr-pipeline.yml` | Pull Request | 共享包 + PC 校验 + 后端编译 |
+| `.workflow/branch-pipeline.yml` | 其它分支 push | 轻量校验（不发布） |
+| `.workflow/release-pipeline.yml` | 打 `v*` 标签 + **手动**部署 | SSH 远程发版 |
+
+> **注意**：Gitee Go 开通时会自动生成小写 `master-pipeline.yml` 等文件；勿保留模板里的 `npm run build`（会递归构建含 mobile 在内的全部 workspace 导致失败）。本项目已改为 `bash scripts/ci-build.sh` + **pnpm**。
+
+**首次启用：**
+
+1. Gitee 仓库 → **服务** → **Gitee Go** → 开通（单仓库约 200 分钟/月免费构建时长）
+2. 关联仓库后，系统会识别 `.workflow/` 下 YAML；或手动导入三条流水线
+3. 发版流水线在 **ReleasePipeline** 的「远程发版」阶段配置机密变量：`DEPLOY_HOST`、`DEPLOY_USER`、`DEPLOY_SSH_KEY`（机密）等
+
+**本地自检（与云端 CI 相同）：**
+
+```bash
+pnpm build:ci
+# 或 bash scripts/ci-build.sh
+```
+
+**常见构建失败**
+
+| 日志 | 原因 | 处理 |
+|------|------|------|
+| `npm run build --workspaces --if-present` 死循环 | 根 workspace 的 build 递归 | 已修 pm.mjs；CI 勿用 `npm run build` |
+| `$'\r': command not found` | Windows CRLF 脚本在 Linux CI 执行 | 加 `.gitattributes`；流水线命令内联到 YAML |
+| Node 版本无效 | `nodeVersion: 18.20.0` 不在 Gitee 列表 | 改为 `20.18.0` 或在 Gitee 可视化里选可用版本 |
 
 ---
 

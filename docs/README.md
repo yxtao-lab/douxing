@@ -11,6 +11,9 @@
 | [项目框架架构-AI模板.md](./项目框架架构-AI模板.md) | 新建/改造 Monorepo 的 AI 架构说明 · [`project.manifest.yaml`](../project.manifest.yaml) |
 | [包管理与命令.md](./包管理与命令.md) | pnpm / npm workspaces 安装与命令对照 |
 | [启动与部署流程.md](./启动与部署流程.md) | **开发/测试/生产启动命令、打包与部署流程总览** |
+| [域名规划.md](./域名规划.md) | **当前技术域与品牌域候选**（douxingai / douxingtravel）、迁移清单 |
+| [发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) | **push → Webhook → 增量发版**全链路、脚本职责与故障排查 |
+| [服务端命令手册.md](./服务端命令手册.md) | **生产服务器**命令速查（`/opt/douxing`） |
 | [env-environments.md](./env-environments.md) | 环境文件说明与切换方式（`pnpm env:status`） |
 | [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [国际化.md](./国际化.md) | zh-CN / en-US 强制规范（移动 + Web + API） |
@@ -47,10 +50,12 @@
 - **研发 · 系统管理（S 线）**：[系统管理.md](./系统管理.md)  
 - **研发 · 发单接单（M 线）**：[发单接单平台.md](./发单接单平台.md)（M0 代码未启动）  
 - **研发 · 数字孪生 / 3D（F 线）**：[数字孪生与三维建模.md](./数字孪生与三维建模.md)（F0 代码未启动）  
+- **运维 / 发版**：[发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) → [服务端命令手册.md](./服务端命令手册.md) → [deploy-production.md](./deploy-production.md)  
+- **运维 / 域名**：[域名规划.md](./域名规划.md)（当前 `yxtao.site` · 后期 `douxingai` / `douxingtravel`）  
 - **运维 / 安全**：详细设计 §8、§9、§11；[后期待办.md](./后期待办.md)  
 - **平台工程 / 工具选型**：[外部工具与插件推荐.md](./外部工具与插件推荐.md)  
 - **国际化（强制）**：[国际化.md](./国际化.md)
 
 日常开发脚本说明见 [../scripts/README.md](../scripts/README.md)。详细设计以 **Markdown 版** [详细设计文档.md](./详细设计文档.md) 为准（含 **§17 实施补充**）。
 
-**最后更新**：2026-06-10
+**最后更新**：2026-06-11（域名规划 · douxingai / douxingtravel 候选）

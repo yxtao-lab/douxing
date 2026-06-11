@@ -47,7 +47,26 @@
 | 脚本 | 对应命令 | 作用 |
 |------|----------|------|
 | `deploy-server.mjs` | `pnpm deploy:server` | 生产/测试机：Docker、构建、迁移、PM2、Nginx |
+| `deploy-release.mjs` | `pnpm deploy:release` | 统一发版：按 `--target=` 调度 server / pc / web |
+| `deploy-pc-site.sh` | `pnpm deploy:pc-site` | PC 用户端：构建 + 复制到 `static/pc` + Nginx |
+| `deploy-web-site.sh` | `pnpm deploy:web-site` | Web 管理端：构建 + 复制到 `static/web` + Nginx |
+| `deploy-static-sites.sh` | `pnpm deploy:static-sites` | PC + Web 静态站点一键部署 |
 | `deploy-app.mjs` | `pnpm deploy:app` | 原生 App 资源构建 + 可选后端 + 可选 dev |
+
+### 4.1 CI/CD 与 Webhook 发版
+
+| 脚本 | 对应命令 | 作用 |
+|------|----------|------|
+| `gitee-webhook-server.mjs` | `pnpm webhook:serve` | 监听 Gitee Push Hook（`:9090`），spawn 后台发版 |
+| `gitee-webhook-deploy.sh` | （Webhook / 手动） | `git pull` → install → 检测 target → `deploy:release` |
+| `detect-deploy-targets.mjs` | `pnpm detect:deploy-targets` | 按变更 package 计算发版目标（server/pc/web） |
+| `ci-build.sh` | `pnpm build:ci` | 与云端 CI 相同的本地构建自检 |
+| `install-webhook-service.sh` | （服务器手动） | 安装 systemd `douxing-webhook` + Nginx snippet |
+| `verify-webhook-nginx.sh` | （服务器手动） | 检查 Webhook 反代是否生效 |
+| `install-nginx-pc.sh` | `pnpm setup:nginx-pc` | PC 用户端 Nginx 站点模板 |
+| `install-nginx-web.sh` | `pnpm setup:nginx-web` | Web 管理端 Nginx 站点模板 |
+
+详细原理见 [docs/发版流程与CI-CD解析.md](../docs/发版流程与CI-CD解析.md)。
 
 专项文档：
 
@@ -127,6 +146,12 @@ pnpm env:status             → env-status.mjs
 pnpm build:only web         → run-build.mjs
 pnpm bootstrap              → deploy.mjs
 pnpm deploy:server          → deploy-server.mjs
+pnpm deploy:release         → deploy-release.mjs
+pnpm deploy:pc-site         → deploy-pc-site.sh
+pnpm deploy:web-site        → deploy-web-site.sh
+pnpm webhook:serve          → gitee-webhook-server.mjs
+pnpm detect:deploy-targets  → detect-deploy-targets.mjs
+pnpm build:ci               → ci-build.sh
 pnpm deploy:app             → deploy-app.mjs
 pnpm stop                   → stop.mjs
 pnpm fix:mysql-password     → fix-mysql-password.mjs

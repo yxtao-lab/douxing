@@ -3,6 +3,8 @@
 > 本文说明：**从代码提交到线上生效**的完整链路、各脚本职责、实现原理，以及首次手动配置与后续 CI/CD 参考。  
 > 速查命令见 [服务端命令手册](服务端命令手册.md) · 生产步骤见 [deploy-production.md](deploy-production.md)
 
+**最后更新**：2026-06-11
+
 ---
 
 ## 目录
@@ -121,7 +123,7 @@ sequenceDiagram
 
 ```bash
 # 1. 本地可选自检
-pnpm ci:build
+pnpm build:ci
 
 # 2. 提交并推送
 git commit -m "feat(web): 订单页 [deploy:web]"
@@ -495,7 +497,7 @@ ssh user@server 'cd /opt/douxing && git pull && bash scripts/gitee-webhook-deplo
 | `pnpm deploy:server` | `deploy-server.mjs` |
 | `pnpm deploy:pc-site` | `deploy-pc-site.sh` |
 | `pnpm deploy:web-site` | `deploy-web-site.sh` |
-| `pnpm ci:build` | `ci-build.sh` |
+| `pnpm build:ci` | `ci-build.sh` |
 | `pnpm detect:deploy-targets` | `detect-deploy-targets.mjs` |
 | `pnpm webhook:serve` | `gitee-webhook-server.mjs` |
 | `pnpm diagnose:server` | `diagnose-server.sh` |

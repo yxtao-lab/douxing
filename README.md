@@ -29,6 +29,9 @@
 | 项目概述与工作区说明 | [docs/项目概述.md](docs/项目概述.md) |
 | 国际化规范 | [docs/国际化.md](docs/国际化.md) |
 | 文档索引 | [docs/README.md](docs/README.md) |
+| 发版流程与 CI/CD | [docs/发版流程与CI-CD解析.md](docs/发版流程与CI-CD解析.md) |
+| 服务端命令手册 | [docs/服务端命令手册.md](docs/服务端命令手册.md) |
+| 启动与部署流程 | [docs/启动与部署流程.md](docs/启动与部署流程.md) |
 | PC 双平台分工（用户端/管理端） | [docs/PC双平台分工.md](docs/PC双平台分工.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
@@ -46,11 +49,12 @@
 ```
 project/
 ├── packages/
-│   ├── web/      # Vue3 Web 管理端（:5173）
-│   ├── pc/       # Vue3 PC 用户端（:5176）
-│   ├── mobile/   # UniApp 移动端
-│   ├── server/   # Node 后端 API
-│   └── shared/   # 跨端共享类型
+│   ├── web/        # Vue3 Web 管理端（:5173）
+│   ├── pc/         # Vue3 PC 用户端（:5176）
+│   ├── mobile/     # UniApp 移动端
+│   ├── server/     # Node 后端 API
+│   ├── shared/     # 跨端共享类型
+│   └── ai-service/ # Python AI 微服务（可选，:8100）
 ├── docs/         # 路线图等文档
 ├── scripts/      # 部署脚本
 ├── docker-compose.yml
@@ -182,7 +186,7 @@ pnpm --filter @douxing/server start
 
 **生产环境公有化部署（腾讯云轻量 Debian 12 + HTTPS）：**
 
-详见 [docs/deploy-production.md](docs/deploy-production.md)
+详见 [docs/deploy-production.md](docs/deploy-production.md) · 发版原理 [docs/发版流程与CI-CD解析.md](docs/发版流程与CI-CD解析.md)
 
 ```bash
 # Debian 12 重装后（服务器上）
@@ -190,6 +194,10 @@ sudo bash scripts/setup-debian12.sh     # 环境初始化，完成后重新 SSH 
 cp deploy/env.production.example .env  # 编辑域名、密码、密钥
 pnpm deploy:server                     # Docker + 构建 + PM2
 # Nginx + HTTPS 见 deploy-production.md 第 8 节
+
+# 日常发版（配置 Webhook 后）：本地 push main 即可自动增量发版
+git push origin main
+# 手动发版：pnpm deploy:release -- --target=server,pc,web
 ```
 
 ### 原生 App（iOS / Android）一键部署
@@ -320,8 +328,9 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
-> **完整接口文档**（72 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
-> **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）
+> **完整接口文档**（83 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）  
+> **系统管理接口**（`/api/system/*`）见 [docs/系统管理.md](./docs/系统管理.md)，未纳入 OpenAPI 主链
 
 - `POST /api/auth/register` — 注册
 - `GET /api/routes/llm-status` — 检测各模型是否可用
@@ -533,9 +542,11 @@ packages:
 project/                    ← 根包（douxing），只做编排，不写业务
 ├── packages/
 │   ├── web/                ← @douxing/web     管理端
+│   ├── pc/                 ← @douxing/pc      PC 用户端
 │   ├── mobile/             ← @douxing/mobile  移动端
 │   ├── server/             ← @douxing/server  后端
-│   └── shared/             ← @douxing/shared  跨端共享
+│   ├── shared/             ← @douxing/shared  跨端共享
+│   └── ai-service/         ← @douxing/ai      Python AI 微服务
 ├── scripts/                ← 全仓库级脚本（bootstrap）
 ├── docker-compose.yml      ← 全仓库级基础设施
 └── .env                    ← 全仓库级环境变量

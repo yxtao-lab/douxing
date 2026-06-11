@@ -56,6 +56,8 @@ VITE_API_BASE_URL=http://192.168.x.x:3000/api
 | 测试 | `https://api-test.yxtao.site/api` | `https://api-test.yxtao.site` |
 | 生产 | `https://api.yxtao.site/api` | `https://api.yxtao.site` |
 
+> 后期品牌域（`douxingai` / `douxingtravel`）注册与迁移步骤见 [域名规划.md](./域名规划.md)。
+
 ---
 
 ## 4. 本地开发
