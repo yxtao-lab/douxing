@@ -86,11 +86,22 @@ export function getRunHint(script) {
 
 export function pmInstallCmd(opts = {}) {
   const pm = detectPm();
+  const includeDev = opts.includeDev !== false;
   if (pm === 'pnpm') {
-    return opts.frozen ? 'pnpm install --frozen-lockfile' : 'pnpm install';
+    let cmd = opts.frozen ? 'pnpm install --frozen-lockfile' : 'pnpm install';
+    if (includeDev && process.env.NODE_ENV === 'production') {
+      cmd += ' --prod=false';
+    }
+    return cmd;
   }
   if (opts.frozen && existsSync(resolve(projectRoot, 'package-lock.json'))) {
+    if (includeDev && process.env.NODE_ENV === 'production') {
+      return 'npm ci --include=dev';
+    }
     return 'npm ci';
+  }
+  if (includeDev && process.env.NODE_ENV === 'production') {
+    return 'npm install --include=dev';
   }
   return 'npm install';
 }

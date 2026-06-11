@@ -495,6 +495,7 @@ bash /opt/douxing/scripts/gitee-webhook-deploy.sh
 | 401 invalid token | Gitee WebHook 密码与 `WEBHOOK_SECRET` 不一致 |
 | systemd `203/EXEC` | `/usr/bin/node` 不存在（nvm/fnm 安装） | `which node` 后重装：`sudo bash scripts/install-webhook-service.sh --node $(which node)` |
 | Gitee 测试 **404** | Nginx 未反代到 `:9090`，或 443 块缺 `include` | 见下方「404 排查」 |
+| 发版 `tsx` 找不到 | `NODE_ENV=production` 时跳过了 devDependencies | 发版脚本已加 `--prod=false`；服务器 `git pull` 后重试 |
 | 200 ignored branch | 仅 `WEBHOOK_DEPLOY_BRANCHES` 中的分支会发版 |
 | 发版卡住 | 2G 机用 `SERVER_RUNTIME=tsx`；见 §11 |
 | 重复触发 | 脚本有 `flock` 锁，并发 Push 会跳过第二次 |

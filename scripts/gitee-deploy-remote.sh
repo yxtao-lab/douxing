@@ -49,7 +49,7 @@ if command -v corepack >/dev/null 2>&1; then
   corepack enable
   corepack prepare pnpm@9.15.0 --activate
 fi
-pnpm install --frozen-lockfile
+pnpm install --frozen-lockfile --prod=false
 pnpm deploy:release -- ${RELEASE_ARGS}
 EOF
 
