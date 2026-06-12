@@ -84,10 +84,28 @@ export async function getSiteStatusSummary(): Promise<SiteStatusSummary> {
 
 export async function setSiteOnline(online: boolean): Promise<void> {
   const db = getDb();
-  await db
-    .update(systemConfig)
-    .set({ configValue: online ? 'false' : 'true' })
-    .where(eq(systemConfig.configKey, SystemConfigKey.MAINTENANCE_MODE));
+  const configValue = online ? 'false' : 'true';
+  const [existing] = await db
+    .select({ id: systemConfig.id })
+    .from(systemConfig)
+    .where(eq(systemConfig.configKey, SystemConfigKey.MAINTENANCE_MODE))
+    .limit(1);
+
+  if (existing) {
+    await db.update(systemConfig).set({ configValue }).where(eq(systemConfig.id, existing.id));
+  } else {
+    await db.insert(systemConfig).values({
+      configKey: SystemConfigKey.MAINTENANCE_MODE,
+      configValue,
+      remark: '站点维护模式（true=下线）',
+    });
+  }
+
   invalidateSiteStatusCache();
   syncPcSiteOfflineFlag(!online);
+
+  const summary = await getSiteStatusSummary();
+  if (summary.online !== online) {
+    throw new Error(`site status persist failed: expected online=${online}, got ${summary.online}`);
+  }
 }

@@ -662,9 +662,10 @@ router.put('/site-status', async (req, res) => {
   try {
     const parsed = z.object({ online: z.boolean() }).safeParse(req.body);
     if (!parsed.success) return fail(res, ApiMessageKey.PARAM_ERROR);
-    await withAdminWrite(req, res, parsed.data.online ? '站点上线' : '站点下线', () =>
+    const result = await withAdminWrite(req, res, parsed.data.online ? '站点上线' : '站点下线', () =>
       setSiteOnline(parsed.data.online),
     );
+    if (result === undefined) return;
     success(res, await getSiteStatusSummary(), ApiMessageKey.SITE_STATUS_UPDATED);
   } catch (err) {
     console.error('[system/site-status/update]', err);
