@@ -27,7 +27,7 @@
             :loading="savingKey === record.configKey"
             :checked-children="t('system.siteOnline')"
             :un-checked-children="t('system.siteOffline')"
-            @change="(checked: boolean) => toggleMaintenance(record, checked)"
+            @change="(checked) => toggleMaintenance(record, checked === true)"
           />
         </template>
         <template v-else-if="column.key === 'action'">

@@ -46,7 +46,8 @@ async function load() {
   }
 }
 
-async function onToggle(nextOnline: boolean) {
+async function onToggle(checked: boolean | string | number) {
+  const nextOnline = checked === true;
   saving.value = true;
   try {
     const status = await updateSiteOnline(nextOnline);
