@@ -17,6 +17,10 @@ export async function fetchSiteStatus(): Promise<SiteStatusPayload> {
 }
 
 export async function updateSiteOnline(online: boolean): Promise<SiteStatusPayload> {
-  const { data } = await http.put<ApiResponse<SiteStatusPayload>>('/system/site-status', { online });
+  const { data } = await http.put<ApiResponse<SiteStatusPayload>>(
+    '/system/site-status',
+    { online },
+    { timeout: 30000 },
+  );
   return data.data;
 }

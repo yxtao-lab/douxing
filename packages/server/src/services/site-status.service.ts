@@ -82,30 +82,30 @@ export async function getSiteStatusSummary(): Promise<SiteStatusSummary> {
   return { online: !maintenanceMode, maintenanceMode };
 }
 
-export async function setSiteOnline(online: boolean): Promise<void> {
+export async function setSiteOnline(online: boolean): Promise<SiteStatusSummary> {
   const db = getDb();
   const configValue = online ? 'false' : 'true';
-  const [existing] = await db
-    .select({ id: systemConfig.id })
-    .from(systemConfig)
-    .where(eq(systemConfig.configKey, SystemConfigKey.MAINTENANCE_MODE))
-    .limit(1);
+  const maintenanceMode = !online;
 
-  if (existing) {
-    await db.update(systemConfig).set({ configValue }).where(eq(systemConfig.id, existing.id));
-  } else {
-    await db.insert(systemConfig).values({
+  await db
+    .insert(systemConfig)
+    .values({
       configKey: SystemConfigKey.MAINTENANCE_MODE,
       configValue,
       remark: '站点维护模式（true=下线）',
+    })
+    .onDuplicateKeyUpdate({
+      set: { configValue },
     });
-  }
 
-  invalidateSiteStatusCache();
-  syncPcSiteOfflineFlag(!online);
+  cachedMaintenance = { value: maintenanceMode, expiresAt: Date.now() + CACHE_TTL_MS };
+  queueMicrotask(() => {
+    try {
+      syncPcSiteOfflineFlag(maintenanceMode);
+    } catch (err) {
+      console.error('[site-status] async pc offline flag failed', err);
+    }
+  });
 
-  const summary = await getSiteStatusSummary();
-  if (summary.online !== online) {
-    throw new Error(`site status persist failed: expected online=${online}, got ${summary.online}`);
-  }
+  return { online, maintenanceMode };
 }

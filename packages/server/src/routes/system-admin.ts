@@ -664,13 +664,17 @@ router.get('/site-status', async (req, res) => {
 
 router.put('/site-status', async (req, res) => {
   try {
+    if (!(await requireAdmin(req, res))) return;
     const parsed = z.object({ online: z.boolean() }).safeParse(req.body);
     if (!parsed.success) return fail(res, ApiMessageKey.PARAM_ERROR);
-    const result = await withAdminWrite(req, res, parsed.data.online ? '站点上线' : '站点下线', () =>
-      setSiteOnline(parsed.data.online),
-    );
-    if (result === undefined) return;
-    success(res, await getSiteStatusSummary(), ApiMessageKey.SITE_STATUS_UPDATED);
+
+    const summary = await setSiteOnline(parsed.data.online);
+    success(res, summary, ApiMessageKey.SITE_STATUS_UPDATED);
+
+    const logTitle = parsed.data.online ? '站点上线' : '站点下线';
+    void recordOperLogFromRequest(req, logTitle).catch((err) => {
+      console.warn('[system/site-status] 操作日志写入失败:', err);
+    });
   } catch (err) {
     console.error('[system/site-status/update]', err);
     fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);

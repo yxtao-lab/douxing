@@ -19,7 +19,7 @@ export function getPool() {
       password,
       database: database || undefined,
       waitForConnections: true,
-      connectionLimit: 10,
+      connectionLimit: 20,
       connectTimeout: 10000,
       enableKeepAlive: true,
       /** 与业务时区一致（中国 UTC+8），避免 TIMESTAMP 读写差 8 小时 */

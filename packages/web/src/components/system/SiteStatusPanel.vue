@@ -8,6 +8,7 @@
       <a-switch
         :checked="online"
         :loading="saving"
+        :disabled="saving"
         :checked-children="t('system.siteOnline')"
         :un-checked-children="t('system.siteOffline')"
         @change="onToggle"
