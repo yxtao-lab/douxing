@@ -71,11 +71,15 @@ async function withAdminWrite(
   if (!(await requireAdmin(req, res))) return;
   try {
     const result = await handler();
-    await recordOperLogFromRequest(req, title);
+    void recordOperLogFromRequest(req, title).catch((err) => {
+      console.warn('[system] 操作日志写入失败:', err);
+    });
     return result;
   } catch (err) {
     const msg = err instanceof Error ? err.message : '操作失败';
-    await recordOperLogFromRequest(req, title, 0, msg);
+    void recordOperLogFromRequest(req, title, 0, msg).catch((logErr) => {
+      console.warn('[system] 操作日志写入失败:', logErr);
+    });
     throw err;
   }
 }

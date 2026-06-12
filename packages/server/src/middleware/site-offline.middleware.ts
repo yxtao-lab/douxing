@@ -24,11 +24,6 @@ export async function siteOfflineMiddleware(
   next: NextFunction,
 ): Promise<void> {
   try {
-    if (await isSiteOnline()) {
-      next();
-      return;
-    }
-
     const path = req.path;
 
     if (isPublicStatusPath(path, req.method)) {
@@ -42,6 +37,11 @@ export async function siteOfflineMiddleware(
     }
 
     if (isAdminLoginPath(path, req.method)) {
+      next();
+      return;
+    }
+
+    if (await isSiteOnline()) {
       next();
       return;
     }

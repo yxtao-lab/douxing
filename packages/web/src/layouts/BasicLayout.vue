@@ -72,7 +72,7 @@ import AppTabs from './components/AppTabs.vue';
   flex-direction: column;
 }
 
-.content-inner > :deep(> :not(.page-container)) {
+.content-inner > :deep(*:not(.page-container)) {
   flex: 1;
   min-height: 0;
   overflow-x: hidden;

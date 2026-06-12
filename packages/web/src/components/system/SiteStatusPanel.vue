@@ -47,9 +47,11 @@ async function load() {
 }
 
 async function onToggle(checked: boolean | string | number) {
+  if (saving.value) return;
+
   const nextOnline = checked === true;
-  const previousOnline = online.value;
-  online.value = nextOnline;
+  if (nextOnline === online.value) return;
+
   saving.value = true;
   try {
     const status = await updateSiteOnline(nextOnline);
@@ -59,7 +61,6 @@ async function onToggle(checked: boolean | string | number) {
     }
     message.success(t('system.siteStatusUpdated'));
   } catch (err) {
-    online.value = previousOnline;
     message.error(err instanceof Error ? err.message : t('common.failed'));
     try {
       const status = await fetchSiteStatus();
