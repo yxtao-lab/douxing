@@ -26,6 +26,7 @@
 | API 接口文档 + OpenAPI | [docs/API接口文档.md](docs/API接口文档.md) · [docs/openapi.yaml](docs/openapi.yaml) |
 | 旅程相册（J 线） | [docs/旅行照片存储系统.md](docs/旅行照片存储系统.md) |
 | 旅行日记博客（K-A 线） | [docs/旅行日记博客.md](docs/旅行日记博客.md) |
+| 用户粘性与旅友圈战略 | [docs/用户粘性与旅友圈战略.md](docs/用户粘性与旅友圈战略.md) |
 | 项目概述与工作区说明 | [docs/项目概述.md](docs/项目概述.md) |
 | 国际化规范 | [docs/国际化.md](docs/国际化.md) |
 | 文档索引 | [docs/README.md](docs/README.md) |
