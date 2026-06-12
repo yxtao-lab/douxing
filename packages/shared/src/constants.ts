@@ -2,6 +2,14 @@ export const APP_NAME = '兜行';
 
 export const API_PREFIX = '/api';
 
+/** 系统参数键（system_config.config_key） */
+export const SystemConfigKey = {
+  APP_NAME: 'app_name',
+  APP_VERSION: 'app_version',
+  /** true / 1 表示站点下线（维护模式） */
+  MAINTENANCE_MODE: 'maintenance_mode',
+} as const;
+
 export const UserStatus = {
   ACTIVE: 1,
   DISABLED: 0,

@@ -87,6 +87,8 @@
 
       <a-col :xs="24" :lg="8">
         <div class="side-stack">
+          <SiteStatusPanel />
+
           <WorkbenchPanel :title="t('home.latestNotices')">
             <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE">
               <template #description>
@@ -167,6 +169,7 @@ import {
 } from '@/data/workbench-system-info';
 import WorkbenchChangelog from '@/components/workbench/WorkbenchChangelog.vue';
 import WorkbenchPanel from '@/components/workbench/WorkbenchPanel.vue';
+import SiteStatusPanel from '@/components/system/SiteStatusPanel.vue';
 import { useUserStore } from '@/stores/user';
 import { usePageTitle } from '@/i18n/usePageTitle';
 

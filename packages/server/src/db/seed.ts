@@ -12,6 +12,13 @@ import { sysDept, sysPost, sysDictType, sysDictData, sysNotice, sysMenu } from '
 import { DEFAULT_MENU_SEED } from '../services/sys-admin.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
+import {
+  DEV_DEFAULT_ADMIN_PASSWORD,
+  isProductionEnv,
+  readAdminInitialPassword,
+  readAdminInitialUsername,
+  validateAdminPassword,
+} from '../utils/admin-password.util.js';
 
 async function seedRoles() {
   const db = getDb();
@@ -31,15 +38,37 @@ async function seedRoles() {
 
 async function seedAdminUser() {
   const db = getDb();
-  const username = 'admin';
+  const username = readAdminInitialUsername();
   const existing = await db.select().from(users).where(eq(users.username, username)).limit(1);
 
   if (existing.length > 0) {
-    console.log('[seed] Admin user already exists, skip');
+    console.log(`[seed] Admin user "${username}" already exists, skip`);
     return;
   }
 
-  const hashed = await bcrypt.hash('admin123', 10);
+  let password: string;
+  const envPassword = readAdminInitialPassword();
+
+  if (isProductionEnv()) {
+    if (!envPassword) {
+      console.log(
+        '[seed] Production: 未设置 ADMIN_INITIAL_PASSWORD，跳过创建管理员（请用 reset-admin-password 或手动设置 env 后重跑 seed）',
+      );
+      return;
+    }
+    const validationError = validateAdminPassword(envPassword);
+    if (validationError) {
+      throw new Error(`[seed] Production: ADMIN_INITIAL_PASSWORD 不符合要求: ${validationError}`);
+    }
+    password = envPassword;
+  } else {
+    password = envPassword ?? DEV_DEFAULT_ADMIN_PASSWORD;
+    if (!envPassword) {
+      console.log('[seed] Development: 使用默认 admin/admin123（仅本地，勿用于生产）');
+    }
+  }
+
+  const hashed = await bcrypt.hash(password, isProductionEnv() ? 12 : 10);
   const [result] = await db.insert(users).values({
     username,
     passwordHash: hashed,
@@ -58,10 +87,15 @@ async function seedAdminUser() {
     });
   }
 
-  console.log('[seed] Created admin user (username: admin, password: admin123)');
+  console.log(`[seed] Created admin user (username: ${username})`);
 }
 
-async function seedDemoUser() {
+async function seedDemoUser(): Promise<number | null> {
+  if (isProductionEnv()) {
+    console.log('[seed] Production: skip demo user (demo/demo123)');
+    return null;
+  }
+
   const db = getDb();
   const username = 'demo';
   const existing = await db.select().from(users).where(eq(users.username, username)).limit(1);
@@ -90,7 +124,12 @@ async function seedDemoUser() {
   return userId;
 }
 
-async function seedSampleRoutes(creatorId: number) {
+async function seedSampleRoutes(creatorId: number | null) {
+  if (creatorId == null) {
+    console.log('[seed] No demo creator, skip sample routes');
+    return;
+  }
+
   const db = getDb();
   const existing = await db.select().from(travelRoutes).limit(1);
   if (existing.length > 0) {
@@ -141,7 +180,7 @@ async function seedSystemConfig() {
   const configs = [
     { configKey: 'app_name', configValue: '兜行', remark: '应用名称' },
     { configKey: 'app_version', configValue: '1.0.0', remark: '应用版本' },
-    { configKey: 'maintenance_mode', configValue: 'false', remark: '维护模式' },
+    { configKey: 'maintenance_mode', configValue: 'false', remark: '站点维护模式（true=下线）' },
   ];
 
   for (const cfg of configs) {
@@ -249,7 +288,7 @@ async function main() {
   }
   await ensureDatabase(url);
 
-  console.log('[seed] Starting...');
+  console.log(`[seed] Starting... (NODE_ENV=${process.env.NODE_ENV ?? 'development'})`);
   await seedRoles();
   await seedAdminUser();
   const demoUserId = await seedDemoUser();

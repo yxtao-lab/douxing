@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>站点维护中 · 兜行</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+        color: #111827;
+      }
+      .card {
+        width: min(420px, 100%);
+        padding: 40px 28px;
+        border-radius: 16px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        text-align: center;
+      }
+      .icon {
+        font-size: 48px;
+        line-height: 1;
+        margin-bottom: 16px;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 24px;
+      }
+      p {
+        margin: 0 0 24px;
+        font-size: 14px;
+        line-height: 1.6;
+        color: #6b7280;
+      }
+      button {
+        min-width: 140px;
+        padding: 10px 18px;
+        border: none;
+        border-radius: 999px;
+        background: #1677ff;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.65;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="icon" aria-hidden="true">🛠️</div>
+      <h1 id="title">站点维护中</h1>
+      <p id="desc">我们正在升级服务，请稍后再试。</p>
+      <button id="retry" type="button">刷新状态</button>
+    </div>
+    <script>
+      (function () {
+        var lang = (navigator.language || 'zh-CN').toLowerCase();
+        var en = lang.startsWith('en');
+        if (en) {
+          document.documentElement.lang = 'en';
+          document.title = 'Under maintenance · Douxing';
+          document.getElementById('title').textContent = 'Under maintenance';
+          document.getElementById('desc').textContent =
+            'We are upgrading our service. Please try again later.';
+          document.getElementById('retry').textContent = 'Check again';
+        }
+        document.getElementById('retry').addEventListener('click', function () {
+          var btn = document.getElementById('retry');
+          btn.disabled = true;
+          fetch('/api/status')
+            .then(function (res) {
+              return res.json();
+            })
+            .then(function (body) {
+              if (body && body.data && body.data.online) {
+                window.location.href = '/';
+              }
+            })
+            .catch(function () {})
+            .finally(function () {
+              btn.disabled = false;
+            });
+        });
+      })();
+    </script>
+  </body>
+</html>

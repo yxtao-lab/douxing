@@ -532,4 +532,11 @@ export const mobileEnUS = {
     wxLoginFailed: 'WeChat sign-in failed, try again',
     wechatPayParamsMissing: 'WeChat Pay parameters missing',
   },
+  siteStatus: {
+    pageTitle: 'Maintenance',
+    title: 'Under maintenance',
+    desc: 'We are upgrading our service. Please try again later.',
+    retry: 'Check again',
+    checking: 'Checking…',
+  },
 } as const;

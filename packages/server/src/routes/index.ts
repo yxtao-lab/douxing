@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { API_PREFIX } from '@douxing/shared';
 import healthRouter from './health.js';
+import statusRouter from './status.js';
 import authRouter from './auth.js';
 import routesRouter from './routes.js';
 import checkinsRouter from './checkins.js';
@@ -21,6 +22,7 @@ import systemAdminRouter from './system-admin.js';
 const router = Router();
 
 router.use(`${API_PREFIX}/health`, healthRouter);
+router.use(`${API_PREFIX}/status`, statusRouter);
 router.use(`${API_PREFIX}/auth`, authRouter);
 router.use(`${API_PREFIX}/users`, usersRouter);
 router.use(`${API_PREFIX}/attractions`, attractionsRouter);

@@ -507,4 +507,11 @@ export const pcZhCN = {
     dayPathEmpty: '当日暂无可展示的地图路线',
     dayPathLoadFailed: '当日路线加载失败',
   },
+  siteStatus: {
+    pageTitle: '维护中',
+    title: '站点维护中',
+    desc: '我们正在升级服务，请稍后再试。',
+    retry: '刷新状态',
+    checking: '检查中…',
+  },
 };

@@ -530,4 +530,11 @@ export const mobileZhCN = {
     wxLoginFailed: '微信登录失败，请重试',
     wechatPayParamsMissing: '微信支付参数缺失',
   },
+  siteStatus: {
+    pageTitle: '维护中',
+    title: '站点维护中',
+    desc: '我们正在升级服务，请稍后再试。',
+    retry: '刷新状态',
+    checking: '检查中…',
+  },
 } as const;

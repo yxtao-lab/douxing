@@ -17,6 +17,7 @@
     "migrate:covers-to-oss": "tsx src/scripts/migrate-attraction-covers-to-oss.ts",
     "ml:generate-dataset": "tsx src/scripts/generate-training-dataset.ts",
     "ml:validate-dataset": "tsx src/scripts/validate-training-dataset.ts",
+    "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"
   },
   "dependencies": {

@@ -49,3 +49,26 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
     return fail(res, ApiMessageKey.TOKEN_EXPIRED, 401, 401);
   }
 }
+
+/** 解析 Bearer Token 但不强制登录，供站点下线中间件识别管理员 */
+export function optionalAuthMiddleware(req: Request, _res: Response, next: NextFunction) {
+  const header = req.headers.authorization;
+  if (!header?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const token = header.slice(7);
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    next();
+    return;
+  }
+
+  try {
+    req.auth = jwt.verify(token, secret) as AuthPayload;
+  } catch {
+    /* 无效 token 忽略，由业务路由自行鉴权 */
+  }
+  next();
+}

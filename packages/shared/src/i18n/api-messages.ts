@@ -21,6 +21,8 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.INVALID_SMS_CODE_LENGTH]: '验证码为6位数字',
   [ApiMessageKey.SMS_CODE_INVALID]: '验证码错误或已过期',
   [ApiMessageKey.SMS_RATE_LIMIT]: '请 {seconds} 秒后再试',
+  [ApiMessageKey.LOGIN_RATE_LIMITED]: '登录尝试过于频繁，请 15 分钟后再试',
+  [ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK]: '管理员密码至少 12 位，且须含大小写字母与数字',
   [ApiMessageKey.SMS_SEND_FAILED]: '发送失败',
   [ApiMessageKey.SMS_SENT]: '验证码已发送',
 
@@ -192,6 +194,8 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_EXIF_APPLIED]: '已应用 EXIF 归类建议',
 
   [ApiMessageKey.SERVER_RUNNING]: '兜行 API 服务运行中',
+  [ApiMessageKey.SITE_OFFLINE]: '站点维护中，请稍后再试',
+  [ApiMessageKey.SITE_STATUS_UPDATED]: '站点状态已更新',
 
   [ApiMessageKey.ANALYTICS_OVERVIEW_FAILED]: '获取数据分析概览失败',
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: '获取趋势数据失败',
@@ -219,6 +223,9 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.INVALID_SMS_CODE_LENGTH]: 'Verification code must be 6 digits',
   [ApiMessageKey.SMS_CODE_INVALID]: 'Invalid or expired verification code',
   [ApiMessageKey.SMS_RATE_LIMIT]: 'Try again in {seconds} seconds',
+  [ApiMessageKey.LOGIN_RATE_LIMITED]: 'Too many login attempts. Please try again in 15 minutes.',
+  [ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK]:
+    'Admin password must be at least 12 characters and include upper/lowercase letters and digits.',
   [ApiMessageKey.SMS_SEND_FAILED]: 'Failed to send code',
   [ApiMessageKey.SMS_SENT]: 'Verification code sent',
 
@@ -395,6 +402,8 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.TRAVEL_PHOTO_EXIF_APPLIED]: 'EXIF placement suggestions applied',
 
   [ApiMessageKey.SERVER_RUNNING]: 'Douxing API is running',
+  [ApiMessageKey.SITE_OFFLINE]: 'Site is under maintenance. Please try again later.',
+  [ApiMessageKey.SITE_STATUS_UPDATED]: 'Site status updated',
 
   [ApiMessageKey.ANALYTICS_OVERVIEW_FAILED]: 'Failed to load analytics overview',
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: 'Failed to load trend data',

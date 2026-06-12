@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { ApiMessageKey } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
@@ -52,6 +53,10 @@ import {
   listCacheKeys,
   deleteCacheKey,
 } from '../services/sys-admin.service.js';
+import {
+  getSiteStatusSummary,
+  setSiteOnline,
+} from '../services/site-status.service.js';
 
 const router = Router();
 
@@ -123,7 +128,17 @@ router.put('/users/:id/roles', async (req, res) => {
 router.post('/users/:id/reset-password', async (req, res) => {
   try {
     const userId = parseInt(String(req.params.id), 10);
-    const parsed = z.object({ password: z.string().min(6).max(64) }).safeParse(req.body);
+    const parsed = z
+      .object({
+        password: z
+          .string()
+          .min(12, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK)
+          .max(64)
+          .regex(/[a-z]/, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK)
+          .regex(/[A-Z]/, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK)
+          .regex(/[0-9]/, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK),
+      })
+      .safeParse(req.body);
     if (Number.isNaN(userId) || !parsed.success) return fail(res, '参数错误');
     await withAdminWrite(req, res, '重置用户密码', () =>
       resetAdminUserPassword(userId, parsed.data.password),
@@ -630,6 +645,30 @@ router.get('/config', async (req, res) => {
   } catch (err) {
     console.error('[system/config]', err);
     fail(res, '获取参数失败', 500, 500);
+  }
+});
+
+router.get('/site-status', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, await getSiteStatusSummary());
+  } catch (err) {
+    console.error('[system/site-status]', err);
+    fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+router.put('/site-status', async (req, res) => {
+  try {
+    const parsed = z.object({ online: z.boolean() }).safeParse(req.body);
+    if (!parsed.success) return fail(res, ApiMessageKey.PARAM_ERROR);
+    await withAdminWrite(req, res, parsed.data.online ? '站点上线' : '站点下线', () =>
+      setSiteOnline(parsed.data.online),
+    );
+    success(res, await getSiteStatusSummary(), ApiMessageKey.SITE_STATUS_UPDATED);
+  } catch (err) {
+    console.error('[system/site-status/update]', err);
+    fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
   }
 });
 

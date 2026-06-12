@@ -5,12 +5,17 @@ import {
   APP_NAME,
   buildPaginatedResult,
   RoleCode,
+  SystemConfigKey,
   UserStatus,
   type PaginatedResult,
   type UserInfo,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { users, roles, userRoles, systemConfig } from '../db/schema/index.js';
+import {
+  invalidateSiteStatusCache,
+  syncPcSiteOfflineFlag,
+} from './site-status.service.js';
 import {
   sysDept,
   sysPost,
@@ -795,9 +800,19 @@ export async function listConfigs(): Promise<ConfigRow[]> {
 
 export async function updateConfig(id: number, configValue: string, remark?: string) {
   const db = getDb();
+  const [existing] = await db.select().from(systemConfig).where(eq(systemConfig.id, id)).limit(1);
   const patch: Partial<typeof systemConfig.$inferInsert> = { configValue };
   if (remark !== undefined) patch.remark = remark;
   await db.update(systemConfig).set(patch).where(eq(systemConfig.id, id));
+  if (existing?.configKey === SystemConfigKey.MAINTENANCE_MODE) {
+    invalidateSiteStatusCache();
+    syncPcSiteOfflineFlag(parseMaintenanceConfigValue(configValue));
+  }
+}
+
+function parseMaintenanceConfigValue(raw: string): boolean {
+  const value = raw.trim().toLowerCase();
+  return value === 'true' || value === '1' || value === 'yes' || value === 'on';
 }
 
 export async function listOperLogsPaginated(

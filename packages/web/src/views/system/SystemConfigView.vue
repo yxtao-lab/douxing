@@ -21,7 +21,16 @@
       :pagination="false"
     >
       <template #bodyCell="{ column, record }">
-        <template v-if="column.key === 'action'">
+        <template v-if="column.key === 'configValue' && record.configKey === MAINTENANCE_MODE_KEY">
+          <a-switch
+            :checked="isMaintenanceConfigOnline(record.configValue)"
+            :loading="savingKey === record.configKey"
+            :checked-children="t('system.siteOnline')"
+            :un-checked-children="t('system.siteOffline')"
+            @change="(checked: boolean) => toggleMaintenance(record, checked)"
+          />
+        </template>
+        <template v-else-if="column.key === 'action'">
           <TableActionBar :show-delete="false" @edit="openEdit(record)" />
         </template>
       </template>
@@ -50,6 +59,8 @@ import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { fetchConfigs, updateConfig, type ConfigRow } from '@/api/system';
+import { updateSiteOnline } from '@/api/site-status';
+import { SystemConfigKey } from '@douxing/shared';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -65,10 +76,12 @@ const modalOpen = ref(false);
 const saving = ref(false);
 const editing = ref<ConfigRow | null>(null);
 const form = reactive({ configValue: '', remark: '' });
+const MAINTENANCE_MODE_KEY = SystemConfigKey.MAINTENANCE_MODE;
+const savingKey = ref<string | null>(null);
 
 const columns = computed<TableColumnsType<ConfigRow>>(() => [
   { title: t('system.colConfigKey'), dataIndex: 'configKey', width: 180 },
-  { title: t('system.colConfigValue'), dataIndex: 'configValue', ellipsis: true },
+  { title: t('system.colConfigValue'), key: 'configValue', dataIndex: 'configValue', ellipsis: true },
   { title: t('system.colRemark'), dataIndex: 'remark', ellipsis: true },
   {
     title: t('system.colCreatedAt'),
@@ -86,6 +99,11 @@ async function load() {
   } finally {
     loading.value = false;
   }
+}
+
+function isMaintenanceConfigOnline(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return !(normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'on');
 }
 
 function openEdit(record: ConfigRow) {
@@ -107,6 +125,19 @@ async function submit() {
     message.error(err instanceof Error ? err.message : t('common.failed'));
   } finally {
     saving.value = false;
+  }
+}
+
+async function toggleMaintenance(record: ConfigRow, online: boolean) {
+  savingKey.value = record.configKey;
+  try {
+    await updateSiteOnline(online);
+    message.success(t('system.siteStatusUpdated'));
+    await load();
+  } catch (err) {
+    message.error(err instanceof Error ? err.message : t('common.failed'));
+  } finally {
+    savingKey.value = null;
   }
 }
 

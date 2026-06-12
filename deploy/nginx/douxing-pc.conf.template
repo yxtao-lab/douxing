@@ -13,6 +13,14 @@ server {
 
     client_max_body_size 20m;
 
+    error_page 503 @pc_maintenance;
+
+    location @pc_maintenance {
+        root __STATIC_ROOT__/pc;
+        try_files /maintenance.html =503;
+        add_header Cache-Control "no-store";
+    }
+
     location /api/ {
         proxy_pass http://127.0.0.1:__SERVER_PORT__;
         proxy_http_version 1.1;
@@ -40,6 +48,9 @@ server {
     }
 
     location / {
+        if (-f __STATIC_ROOT__/.pc-site-offline) {
+            return 503;
+        }
         try_files $uri $uri/ /index.html;
     }
 }

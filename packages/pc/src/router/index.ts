@@ -116,6 +116,12 @@ const router = createRouter({
       ],
     },
     {
+      path: '/maintenance',
+      name: 'maintenance',
+      component: () => import('@/views/MaintenanceView.vue'),
+      meta: { hideNav: true, titleKey: 'siteStatus.pageTitle' },
+    },
+    {
       path: '/share/routes/:id',
       name: 'share-route',
       component: () => import('@/views/ShareRouteView.vue'),
@@ -130,7 +136,18 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+import { isPublicSiteOnline } from '@/utils/site-status-guard';
+
+router.beforeEach(async (to) => {
+  const onMaintenancePage = to.name === 'maintenance';
+  const online = await isPublicSiteOnline();
+  if (!online && !onMaintenancePage) {
+    return { name: 'maintenance' };
+  }
+  if (online && onMaintenancePage) {
+    return { name: 'home' };
+  }
+
   const userStore = useUserStore();
   if (to.meta.requiresAuth && !userStore.token) {
     return { name: 'login', query: { redirect: to.fullPath } };

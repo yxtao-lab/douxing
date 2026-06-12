@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { onLaunch } from '@dcloudio/uni-app';
+import { onLaunch, onShow } from '@dcloudio/uni-app';
 import { APP_NAME } from '@douxing/shared';
 import { initAppTheme } from '@/i18n/useTheme';
+import { guardSiteOnlineRoute } from '@/utils/site-status-guard';
 
-onLaunch(() => {
+onLaunch(async () => {
   initAppTheme();
   console.log(`${APP_NAME} 移动端启动`);
-  // H5 不支持 pages.json custom-tab-bar 目录方案，使用页面内 DouxingTabBar + 隐藏原生栏
   hideNativeTabBar();
+  await guardSiteOnlineRoute();
+});
+
+onShow(() => {
+  void guardSiteOnlineRoute();
 });
 
 function hideNativeTabBar() {

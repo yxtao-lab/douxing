@@ -507,4 +507,11 @@ export const pcEnUS = {
     dayPathEmpty: 'No map path for this day',
     dayPathLoadFailed: 'Failed to load day route',
   },
+  siteStatus: {
+    pageTitle: 'Maintenance',
+    title: 'Under maintenance',
+    desc: 'We are upgrading our service. Please try again later.',
+    retry: 'Check again',
+    checking: 'Checking…',
+  },
 };

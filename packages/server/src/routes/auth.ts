@@ -16,6 +16,7 @@ import { ApiMessageKey, RoleCode, UserStatus, UserType } from '@douxing/shared';
 import type { LoginResult } from '@douxing/shared';
 import { success, fail, failFromError } from '../utils/response.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { recordFailedLoginAttempt } from '../middleware/login-rate-limit.middleware.js';
 import { getClientIp, parseUserAgent, recordLoginLog } from '../services/sys-log.service.js';
 import { touchOnlineSession } from '../services/online-session.service.js';
 
@@ -199,6 +200,7 @@ router.post('/login', async (req, res) => {
   const { username, password } = parsed.data;
   const user = await findUserByUsername(username);
   if (!user) {
+    await recordFailedLoginAttempt(req, username);
     return fail(res, ApiMessageKey.INVALID_CREDENTIALS);
   }
 
@@ -208,6 +210,7 @@ router.post('/login', async (req, res) => {
 
   const match = await bcrypt.compare(password, user.passwordHash);
   if (!match) {
+    await recordFailedLoginAttempt(req, username);
     const ua = parseUserAgent(req.headers['user-agent']);
     await recordLoginLog({
       username,

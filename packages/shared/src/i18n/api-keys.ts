@@ -19,6 +19,8 @@ export const ApiMessageKey = {
   INVALID_SMS_CODE_LENGTH: 'api.invalidSmsCodeLength',
   SMS_CODE_INVALID: 'api.smsCodeInvalid',
   SMS_RATE_LIMIT: 'api.smsRateLimit',
+  LOGIN_RATE_LIMITED: 'api.loginRateLimited',
+  ADMIN_PASSWORD_TOO_WEAK: 'api.adminPasswordTooWeak',
   SMS_SEND_FAILED: 'api.smsSendFailed',
   SMS_SENT: 'api.smsSent',
 
@@ -189,6 +191,8 @@ export const ApiMessageKey = {
   TRAVEL_PHOTO_EXIF_APPLIED: 'api.travelPhotoExifApplied',
 
   SERVER_RUNNING: 'api.serverRunning',
+  SITE_OFFLINE: 'api.siteOffline',
+  SITE_STATUS_UPDATED: 'api.siteStatusUpdated',
 
   ANALYTICS_OVERVIEW_FAILED: 'api.analyticsOverviewFailed',
   ANALYTICS_TRENDS_FAILED: 'api.analyticsTrendsFailed',

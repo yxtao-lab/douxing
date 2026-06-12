@@ -12,7 +12,11 @@ import { wechatPayNotifyHandler } from './routes/payments.js';
 import { getCheckinConfigSummary } from './config/checkin.js';
 import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
 import { getConfiguredPublicBase } from './utils/public-asset-url.util.js';
+import { syncPcSiteOfflineFlagFromDb, isMaintenanceMode } from './services/site-status.service.js';
 import { localeMiddleware } from './middleware/locale.js';
+import { optionalAuthMiddleware } from './middleware/auth.js';
+import { siteOfflineMiddleware } from './middleware/site-offline.middleware.js';
+import { loginRateLimitMiddleware } from './middleware/login-rate-limit.middleware.js';
 import { success } from './utils/response.js';
 import { ApiMessageKey } from '@douxing/shared';
 
@@ -30,6 +34,9 @@ app.post(
 );
 app.use(express.json());
 app.use(localeMiddleware);
+app.use(optionalAuthMiddleware);
+app.use(loginRateLimitMiddleware);
+app.use(siteOfflineMiddleware);
 app.use('/uploads/avatars', express.static(uploadsDir));
 app.use('/uploads/checkins', express.static(checkInPhotosDir));
 app.use('/uploads/attractions', express.static(attractionCoversDir));
@@ -55,4 +62,10 @@ app.listen(port, () => {
   console.log(
     `[assets] 静态资源公网基址 ${publicBase ?? '未设置 API_PUBLIC_BASE_URL(_DVE/_PROD)，接口返回 uploads 相对路径'}`,
   );
+  void syncPcSiteOfflineFlagFromDb().then(async () => {
+    const offline = await isMaintenanceMode();
+    console.log(
+      `[site-status] PC 静态站 ${offline ? '已下线' : '已上线'}（${process.env.STATIC_ROOT ?? 'static'}/.pc-site-offline）`,
+    );
+  });
 });
