@@ -34,6 +34,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.logLogin"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -67,14 +72,16 @@
 import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import { fetchLoginLogsPage, type LoginLogRow } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.logLogin');
 
@@ -100,13 +107,19 @@ const { items, loading, pagination, load, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<TableColumnsType<LoginLogRow>>(() => [
+const columns = computed<AdminExportColumn<LoginLogRow>[]>(() => [
   { title: t('system.colUsername'), dataIndex: 'username', width: 120 },
   { title: t('system.colOperIp'), dataIndex: 'ip', width: 130 },
   { title: t('system.colBrowser'), dataIndex: 'browser', width: 100 },
   { title: t('system.colOs'), dataIndex: 'os', width: 100 },
   { title: t('system.colMsg'), dataIndex: 'msg', ellipsis: true },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('common.failed'),
+  },
   {
     title: t('system.colLoginTime'),
     dataIndex: 'loginTime',
@@ -114,6 +127,20 @@ const columns = computed<TableColumnsType<LoginLogRow>>(() => [
     customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
   },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchLoginLogsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

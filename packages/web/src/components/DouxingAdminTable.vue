@@ -32,6 +32,7 @@ import type { ColumnType } from 'ant-design-vue/es/table';
 import type { SizeType } from 'ant-design-vue/es/config-provider';
 import { useAdminResizableColumns } from '@/composables/useAdminResizableColumns';
 import { mergeAdminPagination, type AdminPaginationInput } from '@/utils/adminPagination';
+import { withAdminTableEmptyPlaceholder } from '@/utils/adminTableColumns';
 
 const props = withDefaults(
   defineProps<{
@@ -56,7 +57,9 @@ const TABLE_PAGINATION_HEIGHT = 88;
 const LAYOUT_BOTTOM_GAP = 16;
 const ROW_HEIGHT_ESTIMATE = 49;
 
-const sourceColumns = computed(() => attrs.columns as ColumnType[] | undefined);
+const sourceColumns = computed(() =>
+  withAdminTableEmptyPlaceholder(attrs.columns as ColumnType[] | undefined),
+);
 
 const { columns: resizableColumns } = useAdminResizableColumns(
   sourceColumns,

@@ -23,6 +23,12 @@
           </a-button>
         </template>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :rows="items"
+            name-key="web.sysMenus"
+            flatten-tree
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="load">
               <template #icon><ReloadOutlined /></template>
@@ -179,7 +185,6 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { message, Modal } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import {
   createMenu,
   deleteMenu,
@@ -188,6 +193,7 @@ import {
   type MenuRow,
 } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
@@ -196,6 +202,7 @@ import MenuIconPicker from '@/components/admin/MenuIconPicker.vue';
 import { renderMenuIcon } from '@/composables/useAppMenu';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 
 usePageTitle('web.sysMenus');
 
@@ -230,13 +237,39 @@ const form = reactive({
   remark: '',
 });
 
-const columns = computed<TableColumnsType<MenuRow>>(() => [
-  { title: t('system.colMenuName'), key: 'menuName', dataIndex: 'menuName', width: 220 },
+const columns = computed<AdminExportColumn<MenuRow>[]>(() => [
+  {
+    title: t('system.colMenuName'),
+    key: 'menuName',
+    dataIndex: 'menuName',
+    width: 220,
+    exportValue: (record) => record.menuName,
+  },
   { title: t('system.menuPath'), dataIndex: 'path', width: 160, ellipsis: true },
   { title: t('system.colPerms'), dataIndex: 'perms', width: 160, ellipsis: true },
-  { title: t('system.colMenuType'), key: 'menuType', dataIndex: 'menuType', width: 90 },
-  { title: t('system.colVisible'), key: 'visible', dataIndex: 'visible', width: 90 },
-  { title: t('system.colStatus'), key: 'status', dataIndex: 'status', width: 90 },
+  {
+    title: t('system.colMenuType'),
+    key: 'menuType',
+    dataIndex: 'menuType',
+    width: 90,
+    exportValue: (record) => menuTypeLabel(record.menuType),
+  },
+  {
+    title: t('system.colVisible'),
+    key: 'visible',
+    dataIndex: 'visible',
+    width: 90,
+    exportValue: (record) =>
+      record.visible === 1 ? t('system.visibleShow') : t('system.visibleHide'),
+  },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    dataIndex: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('system.statusDisabled'),
+  },
   { title: t('system.colSort'), dataIndex: 'sortOrder', width: 72 },
   { title: t('system.colAction'), key: 'action', width: 260, fixed: 'right' },
 ]);

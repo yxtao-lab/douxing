@@ -32,6 +32,7 @@
           </a-button>
         </template>
         <template #right>
+          <AdminTableExportButton :columns="columns" :rows="items" name-key="web.sysDepts" />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="load">
               <template #icon><ReloadOutlined /></template>
@@ -87,14 +88,15 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import { createDept, deleteDept, fetchDepts, updateDept, type DeptRow } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 
 usePageTitle('web.sysDepts');
 
@@ -118,11 +120,17 @@ const parentOptions = computed(() => [
   ...items.value.map((d) => ({ label: d.name, value: d.id })),
 ]);
 
-const columns = computed<TableColumnsType<DeptRow>>(() => [
+const columns = computed<AdminExportColumn<DeptRow>[]>(() => [
   { title: t('system.colName'), dataIndex: 'name' },
   { title: t('system.colParent'), dataIndex: 'parentId', width: 100 },
   { title: t('system.colSort'), dataIndex: 'sortOrder', width: 80 },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('system.statusDisabled'),
+  },
   { title: t('system.colAction'), key: 'action', width: 160, fixed: 'right' },
 ]);
 

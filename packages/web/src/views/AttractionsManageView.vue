@@ -17,6 +17,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.attractionsManage"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -45,10 +50,10 @@
             :height="64"
             class="cover-thumb"
           />
-          <span v-else class="muted">{{ t('attractions.noCover') }}</span>
+          <span v-else class="muted">{{ ADMIN_TABLE_EMPTY_PLACEHOLDER }}</span>
         </template>
         <template v-else-if="column.key === 'name'">
-          <div>{{ record.name }}</div>
+          <div>{{ formatAdminTableCell(record.name) }}</div>
           <div v-if="record.description" class="sub">{{ record.description }}</div>
         </template>
         <template v-else-if="column.key === 'imageSource'">
@@ -93,7 +98,6 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { UploadProps } from 'ant-design-vue';
-import type { TableColumnsType } from 'ant-design-vue';
 import type { AttractionInfo } from '@douxing/shared';
 import {
   fetchAdminAttractionCatalogPage,
@@ -104,12 +108,19 @@ import { useServerTablePagination } from '@/composables/useServerTablePagination
 import { getAppErrorMessage } from '@/utils/error-message';
 import { ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import {
+  ADMIN_TABLE_EMPTY_PLACEHOLDER,
+  formatAdminTableCell,
+} from '@/utils/adminTableColumns';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.attractionsManage');
 
@@ -128,7 +139,7 @@ const uploadingId = ref<number | null>(null);
 const refreshingId = ref<number | null>(null);
 
 function imageSourceLabel(source?: string | null) {
-  if (!source) return t('attractions.imageSourceNone');
+  if (!source) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
   const map: Record<string, string> = {
     manual: t('attractions.imageSourceManual'),
     amap: t('attractions.imageSourceAmap'),
@@ -177,13 +188,41 @@ async function doUpload(item: AttractionInfo, file: File) {
   }
 }
 
-const columns = computed<TableColumnsType<AttractionInfo>>(() => [
-  { title: t('attractions.colCover'), key: 'cover', width: 96 },
-  { title: t('attractions.colName'), key: 'name', dataIndex: 'name', ellipsis: true },
+const columns = computed<AdminExportColumn<AttractionInfo>[]>(() => [
+  {
+    title: t('attractions.colCover'),
+    key: 'cover',
+    width: 96,
+    exportValue: (record) => formatAdminTableCell(record.coverImageUrl),
+  },
+  {
+    title: t('attractions.colName'),
+    key: 'name',
+    dataIndex: 'name',
+    ellipsis: true,
+    exportValue: (record) =>
+      record.description ? `${record.name}\n${record.description}` : record.name,
+  },
   { title: t('attractions.colCity'), dataIndex: 'city', width: 100 },
-  { title: t('attractions.colImageSource'), key: 'imageSource', width: 120 },
+  {
+    title: t('attractions.colImageSource'),
+    key: 'imageSource',
+    width: 120,
+    exportValue: (record) => imageSourceLabel(record.imageSource),
+  },
   { title: t('attractions.colAction'), key: 'action', width: 140 },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchAdminAttractionCatalogPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 onMounted(load);
 </script>

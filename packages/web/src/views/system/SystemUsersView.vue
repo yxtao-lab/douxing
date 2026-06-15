@@ -17,6 +17,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.sysUsers"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -42,7 +47,7 @@
           </a-tag>
         </template>
         <template v-else-if="column.key === 'roles'">
-          {{ record.roles.join(', ') }}
+          {{ formatAdminTableCell(record.roles.join(', ')) }}
         </template>
         <template v-else-if="column.key === 'action'">
           <TableActionBar :show-edit="false" :show-delete="false">
@@ -94,7 +99,6 @@ import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined, TeamOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import {
   fetchAdminUsersPage,
   fetchRoles,
@@ -106,12 +110,16 @@ import {
 } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { formatAdminTableCell } from '@/utils/adminTableColumns';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.sysUsers');
 
@@ -132,13 +140,24 @@ const { items, loading, pagination, load, reload, handleTableChange } =
 
 const roleOptions = computed(() => roles.value.map((r) => ({ label: r.name, value: r.code })));
 
-const columns = computed<TableColumnsType<AdminUserRow>>(() => [
+const columns = computed<AdminExportColumn<AdminUserRow>[]>(() => [
   { title: t('system.colUsername'), dataIndex: 'username', width: 120 },
   { title: t('system.colNickname'), dataIndex: 'nickname', width: 120 },
   { title: t('system.colPhone'), dataIndex: 'phone', width: 130 },
   { title: t('system.colEmail'), dataIndex: 'email', ellipsis: true },
-  { title: t('system.colRoles'), key: 'roles', width: 140 },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colRoles'),
+    key: 'roles',
+    width: 140,
+    exportValue: (record) => record.roles.join(', '),
+  },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('system.statusDisabled'),
+  },
   {
     title: t('system.colCreatedAt'),
     dataIndex: 'createdAt',
@@ -147,6 +166,13 @@ const columns = computed<TableColumnsType<AdminUserRow>>(() => [
   },
   { title: t('system.colAction'), key: 'action', width: 300, fixed: 'right' },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchAdminUsersPage(page, pageSize, keyword.value.trim() || undefined),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

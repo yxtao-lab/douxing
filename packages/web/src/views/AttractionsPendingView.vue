@@ -61,6 +61,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.attractionsPending"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -82,14 +87,14 @@
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'name'">
-          <div>{{ record.name }}</div>
+          <div>{{ formatAdminTableCell(record.name) }}</div>
           <div v-if="record.description" class="sub">{{ record.description }}</div>
         </template>
         <template v-else-if="column.key === 'coord'">
-          <a-tag v-if="hasCoords(record)" color="success">
+          <template v-if="hasCoords(record)">
             {{ formatCoord(record.latitude!) }}, {{ formatCoord(record.longitude!) }}
-          </a-tag>
-          <a-tag v-else color="warning">{{ t('attractions.missingCoord') }}</a-tag>
+          </template>
+          <template v-else>{{ ADMIN_TABLE_EMPTY_PLACEHOLDER }}</template>
         </template>
         <template v-else-if="column.key === 'category'">
           {{ categoryLabel(record.category) }}
@@ -98,7 +103,7 @@
           {{ sourceLabel(record.source) }}
         </template>
         <template v-else-if="column.key === 'price'">
-          {{ record.ticketPrice > 0 ? `¥${record.ticketPrice}` : '-' }}
+          {{ record.ticketPrice > 0 ? `¥${record.ticketPrice}` : ADMIN_TABLE_EMPTY_PLACEHOLDER }}
         </template>
         <template v-else-if="column.key === 'action'">
           <TableActionBar :show-edit="false" :show-delete="false">
@@ -120,18 +125,24 @@ import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { Modal } from 'ant-design-vue';
-import type { TableColumnsType } from 'ant-design-vue';
 import type { AttractionInfo } from '@douxing/shared';
 import { approveAttraction, fetchPendingAttractionsPage } from '@/api/attractions';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
+import {
+  ADMIN_TABLE_EMPTY_PLACEHOLDER,
+  formatAdminTableCell,
+} from '@/utils/adminTableColumns';
 
 usePageTitle('web.attractionsPending');
 
@@ -184,6 +195,7 @@ const error = ref('');
 const approvingId = ref<number | null>(null);
 
 function categoryLabel(category: string) {
+  if (!category) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
   const map: Record<string, string> = {
     attraction: t('attractions.typeAttraction'),
     restaurant: t('attractions.typeRestaurant'),
@@ -193,6 +205,7 @@ function categoryLabel(category: string) {
 }
 
 function sourceLabel(source: string) {
+  if (!source) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
   const map: Record<string, string> = {
     seed: t('attractions.sourceSeed'),
     llm: t('attractions.sourceLlm'),
@@ -245,16 +258,69 @@ async function doApprove(item: AttractionInfo) {
   }
 }
 
-const columns = computed<TableColumnsType<AttractionInfo>>(() => [
+const columns = computed<AdminExportColumn<AttractionInfo>[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 80 },
-  { title: t('attractions.colName'), key: 'name', dataIndex: 'name', ellipsis: true },
+  {
+    title: t('attractions.colName'),
+    key: 'name',
+    dataIndex: 'name',
+    ellipsis: true,
+    exportValue: (record) =>
+      record.description ? `${record.name}\n${record.description}` : record.name,
+  },
   { title: t('attractions.colCity'), dataIndex: 'city', width: 100 },
-  { title: t('attractions.colType'), key: 'category', width: 100 },
-  { title: t('attractions.colCoord'), key: 'coord', width: 180 },
-  { title: t('attractions.colSource'), key: 'source', width: 100 },
-  { title: t('attractions.colPrice'), key: 'price', width: 100 },
+  {
+    title: t('attractions.colType'),
+    key: 'category',
+    width: 100,
+    exportValue: (record) => categoryLabel(record.category),
+  },
+  {
+    title: t('attractions.colCoord'),
+    key: 'coord',
+    width: 180,
+    exportValue: (record) =>
+      hasCoords(record)
+        ? `${formatCoord(record.latitude!)}, ${formatCoord(record.longitude!)}`
+        : ADMIN_TABLE_EMPTY_PLACEHOLDER,
+  },
+  {
+    title: t('attractions.colSource'),
+    key: 'source',
+    width: 100,
+    exportValue: (record) => sourceLabel(record.source),
+  },
+  {
+    title: t('attractions.colPrice'),
+    key: 'price',
+    width: 100,
+    exportValue: (record) =>
+      record.ticketPrice > 0 ? `¥${record.ticketPrice}` : ADMIN_TABLE_EMPTY_PLACEHOLDER,
+  },
   { title: t('attractions.colAction'), key: 'action', width: 120, fixed: 'right' },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchPendingAttractionsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      city: cityFilter.value.trim() || undefined,
+      category: categoryFilter.value,
+      source: sourceFilter.value,
+      missingCoord:
+        missingCoordFilter.value === 'missing'
+          ? true
+          : missingCoordFilter.value === 'complete'
+            ? false
+            : undefined,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 onMounted(load);
 </script>

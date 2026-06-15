@@ -29,6 +29,11 @@
           <a-button type="primary" @click="openCreate">{{ t('playbooks.create') }}</a-button>
         </template>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.playbooksManage"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -155,7 +160,6 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import type { RoutePlaybookInfo, RoutePlaybookSegmentEdge } from '@douxing/shared';
 import {
   createPlaybook,
@@ -166,12 +170,15 @@ import {
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.playbooksManage');
 
@@ -345,15 +352,43 @@ async function handleDelete(item: RoutePlaybookInfo) {
   }
 }
 
-const columns = computed<TableColumnsType<RoutePlaybookInfo>>(() => [
-  { title: t('playbooks.colId'), key: 'id', width: 160 },
+const columns = computed<AdminExportColumn<RoutePlaybookInfo>[]>(() => [
+  { title: t('playbooks.colId'), key: 'id', width: 160, exportValue: (record) => record.id },
   { title: t('playbooks.colCity'), dataIndex: 'city', width: 100 },
   { title: t('playbooks.colScope'), dataIndex: 'scope', ellipsis: true },
-  { title: t('playbooks.colThemes'), key: 'themes', ellipsis: true },
-  { title: t('playbooks.colOrder'), key: 'order', width: 80 },
-  { title: t('playbooks.colEnabled'), key: 'enabled', width: 80 },
+  {
+    title: t('playbooks.colThemes'),
+    key: 'themes',
+    ellipsis: true,
+    exportValue: (record) => record.themes.join('、'),
+  },
+  {
+    title: t('playbooks.colOrder'),
+    key: 'order',
+    width: 80,
+    exportValue: (record) => record.classicOrder.length,
+  },
+  {
+    title: t('playbooks.colEnabled'),
+    key: 'enabled',
+    width: 80,
+    exportValue: (record) =>
+      record.enabled ? t('playbooks.enabledYes') : t('playbooks.enabledNo'),
+  },
   { title: t('playbooks.colAction'), key: 'action', width: 140 },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchAdminPlaybooksPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      city: cityFilter.value.trim() || undefined,
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 onMounted(load);
 </script>

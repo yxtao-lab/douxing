@@ -26,6 +26,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.membershipLogs"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -56,10 +61,12 @@ import { MembershipChangeSource, getMemberLevelI18nKey, type MembershipChangeLog
 import { fetchMembershipLogsPage } from '@/api/membership';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.membershipLogs');
 
@@ -122,6 +129,16 @@ const columns = computed<TableColumnsType<MembershipChangeLog>>(() => [
     customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
   },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchMembershipLogsPage(page, pageSize, {
+      keyword: keyword.value.trim() || undefined,
+      source: sourceFilter.value,
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

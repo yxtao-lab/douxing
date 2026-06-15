@@ -49,6 +49,11 @@
           </a-button>
         </template>
         <template #right>
+          <AdminTableExportButton
+            :columns="typeColumns"
+            :rows="filteredDictTypes"
+            name-key="system.exportDictTypes"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="loadAll">
               <template #icon><ReloadOutlined /></template>
@@ -83,9 +88,17 @@
       <div class="admin-sub-card">
         <div class="admin-sub-card-head">
           <span>{{ selectedType ? selectedType.dictName : t('system.colDictLabel') }}</span>
-          <a-button type="link" size="small" :disabled="!selectedType" @click="openDataCreate">
-            {{ t('system.add') }}
-          </a-button>
+          <a-space :size="4">
+            <AdminTableExportButton
+              :columns="dataColumns"
+              :rows="dictData"
+              name-key="system.exportDictData"
+              size="small"
+            />
+            <a-button type="link" size="small" :disabled="!selectedType" @click="openDataCreate">
+              {{ t('system.add') }}
+            </a-button>
+          </a-space>
         </div>
         <div class="admin-sub-card-body">
           <DouxingAdminTable
@@ -156,11 +169,13 @@ import {
   type DictTypeRow,
 } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 
 usePageTitle('web.sysDict');
 
@@ -215,10 +230,16 @@ const filteredDictTypes = computed(() => {
   });
 });
 
-const typeColumns = computed(() => [
+const typeColumns = computed<AdminExportColumn<DictTypeRow>[]>(() => [
   { title: t('system.colDictType'), dataIndex: 'dictType', width: 160 },
   { title: t('system.colName'), dataIndex: 'dictName', width: 140 },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('system.statusDisabled'),
+  },
   {
     title: t('system.colCreatedAt'),
     dataIndex: 'createdAt',

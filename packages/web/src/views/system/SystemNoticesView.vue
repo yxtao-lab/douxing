@@ -49,6 +49,11 @@
           </a-button>
         </template>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.sysNotices"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -112,7 +117,6 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import {
   createNotice,
   deleteNotice,
@@ -122,11 +126,14 @@ import {
 } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.sysNotices');
 
@@ -163,10 +170,22 @@ const { items, loading, pagination, load, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<TableColumnsType<NoticeRow>>(() => [
+const columns = computed<AdminExportColumn<NoticeRow>[]>(() => [
   { title: t('system.colTitle'), dataIndex: 'title', ellipsis: true },
-  { title: t('system.colType'), key: 'noticeType', width: 90 },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colType'),
+    key: 'noticeType',
+    width: 90,
+    exportValue: (record) =>
+      record.noticeType === 2 ? t('system.noticeTypeAnnounce') : t('system.noticeTypeNotify'),
+  },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('system.statusDisabled'),
+  },
   {
     title: t('system.colCreatedAt'),
     dataIndex: 'createdAt',
@@ -175,6 +194,21 @@ const columns = computed<TableColumnsType<NoticeRow>>(() => [
   },
   { title: t('system.colAction'), key: 'action', width: 160, fixed: 'right' },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchNoticesPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      noticeType: noticeTypeFilter.value,
+      status: statusFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

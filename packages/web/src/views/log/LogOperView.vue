@@ -43,6 +43,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.logOper"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -76,14 +81,16 @@
 import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import { fetchOperLogsPage, type OperLogRow } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.logOper');
 
@@ -111,13 +118,19 @@ const { items, loading, pagination, load, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<TableColumnsType<OperLogRow>>(() => [
+const columns = computed<AdminExportColumn<OperLogRow>[]>(() => [
   { title: t('system.colOperTitle'), dataIndex: 'title', width: 120 },
   { title: t('system.colOperName'), dataIndex: 'operName', width: 100 },
   { title: t('system.colOperUrl'), dataIndex: 'operUrl', ellipsis: true },
   { title: t('system.colMethod'), dataIndex: 'method', width: 80 },
   { title: t('system.colOperIp'), dataIndex: 'operIp', width: 120 },
-  { title: t('system.colStatus'), key: 'status', width: 90 },
+  {
+    title: t('system.colStatus'),
+    key: 'status',
+    width: 90,
+    exportValue: (record) =>
+      record.status === 1 ? t('system.statusNormal') : t('common.failed'),
+  },
   {
     title: t('system.colOperTime'),
     dataIndex: 'operTime',
@@ -125,6 +138,21 @@ const columns = computed<TableColumnsType<OperLogRow>>(() => [
     customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
   },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchOperLogsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      operName: operName.value.trim() || undefined,
+      status: statusFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

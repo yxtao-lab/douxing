@@ -25,6 +25,7 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton :columns="columns" :rows="products" name-key="web.membershipProducts" />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="load">
               <template #icon><ReloadOutlined /></template>
@@ -57,6 +58,7 @@ import {
 } from '@douxing/shared';
 import { fetchMembershipProducts } from '@/api/membership';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';

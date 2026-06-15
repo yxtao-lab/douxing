@@ -17,6 +17,7 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton :columns="columns" :rows="items" name-key="web.monitorOnline" />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="load">
               <template #icon><ReloadOutlined /></template>
@@ -44,6 +45,7 @@ import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { fetchOnlineUsers, type OnlineUserRow } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';

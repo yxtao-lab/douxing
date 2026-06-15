@@ -26,6 +26,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.membershipUsers"
+          />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -108,7 +113,6 @@ import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   MemberLevel,
@@ -118,12 +122,15 @@ import {
 import { fetchMembershipUsersPage, updateMembershipUser } from '@/api/membership';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.membershipUsers');
 
@@ -155,13 +162,22 @@ const { items, loading, pagination, load, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<TableColumnsType<AdminMembershipUserRow>>(() => [
+const columns = computed<AdminExportColumn<AdminMembershipUserRow>[]>(() => [
   { title: t('membershipAdmin.colUsername'), dataIndex: 'username', width: 120 },
   { title: t('membershipAdmin.colNickname'), dataIndex: 'nickname', width: 120 },
   { title: t('membershipAdmin.colPhone'), dataIndex: 'phone', width: 130 },
-  { title: t('membershipAdmin.colStoredLevel'), key: 'memberLevel', width: 110 },
-  { title: t('membershipAdmin.colEffectiveLevel'), key: 'effectiveLevel', width: 120 },
-  { title: t('membershipAdmin.colExpiresAt'), key: 'memberExpiresAt', width: 180 },
+  { title: t('membershipAdmin.colStoredLevel'), key: 'memberLevel', width: 110, exportValue: (record) => memberLevelLabel(record.memberLevel) },
+  { title: t('membershipAdmin.colEffectiveLevel'), key: 'effectiveLevel', width: 120, exportValue: (record) => memberLevelLabel(record.effectiveLevel) },
+  {
+    title: t('membershipAdmin.colExpiresAt'),
+    key: 'memberExpiresAt',
+    width: 180,
+    exportValue: (record) => {
+      if (!record.memberExpiresAt) return '-';
+      const date = formatDate(record.memberExpiresAt);
+      return record.isExpired ? `${date} (${t('membershipAdmin.expired')})` : date;
+    },
+  },
   {
     title: t('membershipAdmin.colCreatedAt'),
     dataIndex: 'createdAt',
@@ -177,6 +193,16 @@ function memberLevelLabel(level: number) {
 
 function formatDate(value: string) {
   return value.slice(0, 16).replace('T', ' ');
+}
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchMembershipUsersPage(page, pageSize, {
+      keyword: keyword.value.trim() || undefined,
+      level: levelFilter.value,
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
 }
 
 function resetSearch() {

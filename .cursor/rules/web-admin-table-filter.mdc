@@ -13,6 +13,28 @@ alwaysApply: false
 - 整表禁用：`column-resizable="false"`
 - 列定义推荐 `computed` + `width`；无 `width` 的列在首次拖动时按当前渲染宽度计算
 - 分析页内嵌表可设 `auto-body-scroll` 避免外层滚动冲突
+- **空值占位**：`null` / `undefined` / 空白字符串 / 空数组统一显示 `-`；由 `DouxingAdminTable` 自动注入（有 `dataIndex` 或 `customRender` 的列），导出层 `formatAdminTableCell` 同步
+- 禁止在列中手写 `|| '-'`、`?? '-'` 等空值兜底；`#bodyCell` 自定义列须使用 `formatAdminTableCell()` 或 `ADMIN_TABLE_EMPTY_PLACEHOLDER`（`@/utils/adminTableColumns`）
+- 操作列、开关/标签等有业务语义的非空值展示（如状态 Tag）不受此约束；纯缺失数据须为 `-`
+
+## 报表导出
+
+- 所有 `DouxingAdminTable` 列表**必须**提供 `AdminTableExportButton` 导出能力（含分析页内嵌小表、字典双表等）
+- 导出按钮放在 `AdminToolbar` 的 `#right` 插槽，位于刷新按钮**左侧**；无工具栏的内嵌表可放在卡片 `#extra` 或子卡片标题栏
+- 表头须与当前 UI 语言一致：列 `title` 使用 `t('...')`；单元格须与表格展示一致，优先 `customRender` 返回字符串，或使用 `exportValue`（见 `AdminExportColumn`）
+- 操作列（`key: 'action'`）自动排除，勿写入 CSV
+- 服务端分页：通过 `fetch-rows` + `fetchAllPaginatedRows` 按**当前筛选条件**拉全量后再导出；禁止只导出当前页
+- 树形表：设 `flatten-tree` 以导出全部节点
+- 导出格式为 **XLSX**（列宽按内容自适应，自动换行，冻结表头）；`name-key` 对应 i18n 功能名，文件名格式 `{t(nameKey)}-{YYYY-MM-DD-HHmmss}.xlsx`
+- 禁止硬编码导出按钮文案，使用 `common.exportReport` 等 shared i18n 键
+
+```vue
+<AdminTableExportButton
+  :columns="columns"
+  :fetch-rows="fetchExportRows"
+  name-key="web.orders"
+/>
+```
 
 ## 筛选条件
 

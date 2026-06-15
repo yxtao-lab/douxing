@@ -48,6 +48,10 @@ export const sharedEnUS = {
     paginationPage: 'Page',
     paginationItemsPerPage: '/ page',
     backToTop: 'Back to top',
+    exportReport: 'Export report',
+    exportEmpty: 'No data to export',
+    exportSuccess: 'Report exported',
+    exportFailed: 'Export failed',
   },
   orderStatus: {
     pending: 'Pending',

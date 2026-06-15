@@ -60,7 +60,15 @@
         <a-col :xs="24" :xl="16">
           <a-card :title="t('analytics.trendsTitle')">
             <template #extra>
-              <a-segmented v-model:value="trendDays" :options="trendDayOptions" @change="loadTrends" />
+              <a-space :size="8">
+                <AdminTableExportButton
+                  :columns="trendColumns"
+                  :rows="trendTableRows"
+                  name-key="analytics.trendsTitle"
+                  size="small"
+                />
+                <a-segmented v-model:value="trendDays" :options="trendDayOptions" @change="loadTrends" />
+              </a-space>
             </template>
 
             <AnalyticsTrendLineChart
@@ -84,6 +92,14 @@
 
         <a-col :xs="24" :xl="8">
           <a-card :title="t('analytics.cityRankTitle')">
+            <template #extra>
+              <AdminTableExportButton
+                :columns="cityColumns"
+                :rows="cityRows"
+                name-key="analytics.cityRankTitle"
+                size="small"
+              />
+            </template>
             <DouxingAdminTable
               :columns="cityColumns"
               :data-source="cityRows"
@@ -111,6 +127,7 @@ import {
   fetchTopCheckinCities,
 } from '@/api/analytics';
 import AnalyticsTrendLineChart from '@/components/analytics/AnalyticsTrendLineChart.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { createClientAdminPaginationConfig } from '@/utils/adminPagination';

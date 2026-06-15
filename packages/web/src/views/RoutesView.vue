@@ -42,6 +42,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.routes"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -72,16 +77,18 @@
 import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.routes');
 
@@ -122,7 +129,7 @@ function statusColor(status: number) {
   return 'processing';
 }
 
-const columns = computed<TableColumnsType<TravelRouteInfo>>(() => [
+const columns = computed<AdminExportColumn<TravelRouteInfo>[]>(() => [
   { title: 'ID', dataIndex: 'id', width: 80 },
   { title: t('routes.colName'), dataIndex: 'name', ellipsis: true },
   { title: t('routes.colDays'), dataIndex: 'days', width: 80 },
@@ -130,14 +137,34 @@ const columns = computed<TableColumnsType<TravelRouteInfo>>(() => [
     title: t('routes.colBudget'),
     dataIndex: 'budgetRange',
     width: 120,
-    customRender: ({ text }) => text || '-',
   },
-  { title: t('routes.colStatus'), key: 'status', dataIndex: 'status', width: 100 },
+  {
+    title: t('routes.colStatus'),
+    key: 'status',
+    dataIndex: 'status',
+    width: 100,
+    exportValue: (record) => statusLabel(record.status),
+  },
   { title: t('routes.colViews'), dataIndex: 'viewCount', width: 90 },
   { title: t('routes.colLikes'), dataIndex: 'likeCount', width: 90 },
   { title: t('routes.colFavorites'), dataIndex: 'collectCount', width: 90 },
   { title: t('routes.colCreator'), dataIndex: 'creatorId', width: 100 },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchRoutesPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+      creatorId: creatorIdFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

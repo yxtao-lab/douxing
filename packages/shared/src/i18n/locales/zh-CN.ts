@@ -48,6 +48,10 @@ export const sharedZhCN = {
     paginationPage: '页',
     paginationItemsPerPage: '条/页',
     backToTop: '回到顶部',
+    exportReport: '导出报表',
+    exportEmpty: '暂无数据可导出',
+    exportSuccess: '报表已导出',
+    exportFailed: '导出失败',
   },
   orderStatus: {
     pending: '待支付',

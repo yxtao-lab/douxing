@@ -51,6 +51,11 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.orders"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -82,10 +87,12 @@ import { getOrderStatusI18nKey, OrderStatus, OrderType } from '@douxing/shared';
 import { fetchOrdersPage } from '@/api/orders';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.orders');
 
@@ -168,6 +175,21 @@ function resetSearch() {
   userIdFilter.value = undefined;
   dateRange.value = undefined;
   reload();
+}
+
+async function fetchExportRows() {
+  return fetchAllPaginatedRows((page, pageSize) =>
+    fetchOrdersPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      orderType: orderTypeFilter.value,
+      status: statusFilter.value,
+      userId: userIdFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 }
 
 onMounted(load);

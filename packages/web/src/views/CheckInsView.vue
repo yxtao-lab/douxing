@@ -53,6 +53,11 @@
           <router-link to="/checkins/map">
             <a-button>{{ t('checkins.mapLink') }}</a-button>
           </router-link>
+          <AdminTableExportButton
+            :columns="columns"
+            :fetch-rows="fetchExportRows"
+            name-key="web.checkins"
+          />
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
               <template #icon><ReloadOutlined /></template>
@@ -88,7 +93,7 @@
               </span>
             </a-space>
           </a-image-preview-group>
-          <span v-else>-</span>
+          <span v-else>{{ ADMIN_TABLE_EMPTY_PLACEHOLDER }}</span>
         </template>
       </template>
     </DouxingAdminTable>
@@ -99,15 +104,21 @@
 import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import type { CheckInInfo } from '@douxing/shared';
 import { fetchCheckInsPage } from '@/api/checkins';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import {
+  ADMIN_TABLE_EMPTY_PLACEHOLDER,
+  formatAdminTableCell,
+} from '@/utils/adminTableColumns';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
+import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
 usePageTitle('web.checkins');
 
@@ -133,14 +144,14 @@ const { items, loading, pagination, load, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<TableColumnsType<CheckInInfo>>(() => [
+const columns = computed<AdminExportColumn<CheckInInfo>[]>(() => [
   { title: t('checkins.colUser'), dataIndex: 'userId', width: 100 },
   { title: t('checkins.colRoute'), dataIndex: 'routeId', width: 100 },
   {
     title: t('checkins.colPlace'),
     dataIndex: ['location', 'placeName'],
     ellipsis: true,
-    customRender: ({ record }) => record.location.placeName || '-',
+    customRender: ({ record }) => record.location?.placeName,
   },
   {
     title: t('checkins.colCity'),
@@ -148,7 +159,12 @@ const columns = computed<TableColumnsType<CheckInInfo>>(() => [
     customRender: ({ record }) => record.city || record.cityCode,
   },
   { title: t('checkins.colPoints'), dataIndex: 'pointsEarned', width: 90 },
-  { title: t('checkins.colPhotos'), key: 'photos', width: 160 },
+  {
+    title: t('checkins.colPhotos'),
+    key: 'photos',
+    width: 160,
+    exportValue: (record) => formatAdminTableCell(record.photos),
+  },
   {
     title: t('checkins.colTime'),
     dataIndex: 'checkedAt',
@@ -156,6 +172,23 @@ const columns = computed<TableColumnsType<CheckInInfo>>(() => [
     customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
   },
 ]);
+
+async function fetchExportRows(): Promise<Record<string, unknown>[]> {
+  const rows = await fetchAllPaginatedRows((page, pageSize) =>
+    fetchCheckInsPage({
+      page,
+      pageSize,
+      all: true,
+      keyword: keyword.value.trim() || undefined,
+      userId: userIdFilter.value,
+      routeId: routeIdFilter.value,
+      cityCode: cityCodeFilter.value.trim() || undefined,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
+  return rows as unknown as Record<string, unknown>[];
+}
 
 function resetSearch() {
   keyword.value = '';

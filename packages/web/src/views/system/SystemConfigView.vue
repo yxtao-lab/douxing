@@ -17,6 +17,7 @@
     <template #toolbar>
       <AdminToolbar>
         <template #right>
+          <AdminTableExportButton :columns="columns" :rows="items" name-key="web.sysConfig" />
           <a-tooltip :title="t('system.refresh')">
             <a-button :loading="loading" @click="load">
               <template #icon><ReloadOutlined /></template>
@@ -71,16 +72,17 @@ import { computed, onMounted, reactive, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
-import type { TableColumnsType } from 'ant-design-vue';
 import { fetchConfigs, updateConfig, type ConfigRow } from '@/api/system';
 import { updateSiteOnline } from '@/api/site-status';
 import { SystemConfigKey } from '@douxing/shared';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 
 usePageTitle('web.sysConfig');
 
@@ -95,9 +97,20 @@ const form = reactive({ configValue: '', remark: '' });
 const MAINTENANCE_MODE_KEY = SystemConfigKey.MAINTENANCE_MODE;
 const savingKey = ref<string | null>(null);
 
-const columns = computed<TableColumnsType<ConfigRow>>(() => [
+const columns = computed<AdminExportColumn<ConfigRow>[]>(() => [
   { title: t('system.colConfigKey'), dataIndex: 'configKey', width: 180 },
-  { title: t('system.colConfigValue'), key: 'configValue', dataIndex: 'configValue', ellipsis: true },
+  {
+    title: t('system.colConfigValue'),
+    key: 'configValue',
+    dataIndex: 'configValue',
+    ellipsis: true,
+    exportValue: (record) =>
+      record.configKey === MAINTENANCE_MODE_KEY
+        ? isMaintenanceConfigOnline(record.configValue)
+          ? t('system.siteOnline')
+          : t('system.siteOffline')
+        : record.configValue,
+  },
   { title: t('system.colRemark'), dataIndex: 'remark', ellipsis: true },
   {
     title: t('system.colCreatedAt'),
