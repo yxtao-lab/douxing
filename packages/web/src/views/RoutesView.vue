@@ -1,5 +1,56 @@
 <template>
-  <PageContainer :title="t('routes.title')" :description="t('routes.desc')">
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('routes.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('routes.searchKeyword')"
+            allow-clear
+            style="width: 220px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('routes.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('routes.allStatuses')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('routes.colCreator')">
+          <a-input-number
+            v-model:value="creatorIdFilter"
+            :min="1"
+            :placeholder="t('routes.colCreator')"
+            style="width: 120px"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colCreatedAt')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
+    <template #toolbar>
+      <AdminToolbar>
+        <template #right>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
+    </template>
+
     <DouxingAdminTable
       :columns="columns"
       :data-source="items"
@@ -18,13 +69,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -32,9 +86,29 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.routes');
 
 const { t } = useI18n();
-const { items, loading, pagination, load, handleTableChange } = useServerTablePagination<TravelRouteInfo>(
-  fetchRoutesPage,
-);
+const keyword = ref('');
+const statusFilter = ref<number | undefined>();
+const creatorIdFilter = ref<number | undefined>();
+const dateRange = ref<[string, string] | undefined>();
+
+const statusOptions = computed(() => [
+  { label: t('routeStatus.draft'), value: RouteStatus.DRAFT },
+  { label: t('routeStatus.published'), value: RouteStatus.PUBLISHED },
+  { label: t('routeStatus.archived'), value: RouteStatus.ARCHIVED },
+]);
+
+const { items, loading, pagination, load, reload, handleTableChange } =
+  useServerTablePagination<TravelRouteInfo>((page, pageSize) =>
+    fetchRoutesPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+      creatorId: creatorIdFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 
 function statusLabel(status: number) {
   if (status === RouteStatus.PUBLISHED) return t('routeStatus.published');
@@ -64,6 +138,14 @@ const columns = computed<TableColumnsType<TravelRouteInfo>>(() => [
   { title: t('routes.colFavorites'), dataIndex: 'collectCount', width: 90 },
   { title: t('routes.colCreator'), dataIndex: 'creatorId', width: 100 },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  statusFilter.value = undefined;
+  creatorIdFilter.value = undefined;
+  dateRange.value = undefined;
+  reload();
+}
 
 onMounted(load);
 </script>

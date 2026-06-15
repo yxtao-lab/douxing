@@ -1,5 +1,45 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('system.colTitle')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchNoticeKeyword')"
+            allow-clear
+            style="width: 240px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colType')">
+          <a-select
+            v-model:value="noticeTypeFilter"
+            :options="noticeTypeOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('system.allNoticeTypes')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('common.statusAll')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colCreatedAt')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #left>
@@ -81,6 +121,7 @@ import {
   type NoticeRow,
 } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -90,13 +131,37 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.sysNotices');
 
 const { t } = useI18n();
+const keyword = ref('');
+const noticeTypeFilter = ref<number | undefined>();
+const statusFilter = ref<number | undefined>();
+const dateRange = ref<[string, string] | undefined>();
 const modalOpen = ref(false);
 const saving = ref(false);
 const editing = ref<NoticeRow | null>(null);
 const form = reactive({ title: '', noticeType: 1, status: 1, content: '' });
 
+const noticeTypeOptions = computed(() => [
+  { label: t('system.noticeTypeNotify'), value: 1 },
+  { label: t('system.noticeTypeAnnounce'), value: 2 },
+]);
+
+const statusOptions = computed(() => [
+  { label: t('system.statusNormal'), value: 1 },
+  { label: t('system.statusDisabled'), value: 0 },
+]);
+
 const { items, loading, pagination, load, reload, handleTableChange } =
-  useServerTablePagination<NoticeRow>(fetchNoticesPage);
+  useServerTablePagination<NoticeRow>((page, pageSize) =>
+    fetchNoticesPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      noticeType: noticeTypeFilter.value,
+      status: statusFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 
 const columns = computed<TableColumnsType<NoticeRow>>(() => [
   { title: t('system.colTitle'), dataIndex: 'title', ellipsis: true },
@@ -110,6 +175,14 @@ const columns = computed<TableColumnsType<NoticeRow>>(() => [
   },
   { title: t('system.colAction'), key: 'action', width: 160, fixed: 'right' },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  noticeTypeFilter.value = undefined;
+  statusFilter.value = undefined;
+  dateRange.value = undefined;
+  reload();
+}
 
 function openCreate() {
   editing.value = null;

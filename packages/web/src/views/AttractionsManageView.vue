@@ -1,17 +1,30 @@
 <template>
-  <PageContainer :title="t('attractions.manageTitle')" :description="t('attractions.manageDesc')">
-    <template #extra>
-      <a-button :loading="loading" @click="loadList">{{ t('common.refresh') }}</a-button>
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('attractions.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('attractions.searchPlaceholder')"
+            allow-clear
+            style="width: 280px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+      </AdminSearchBar>
     </template>
 
-    <a-space class="filters" wrap>
-      <a-input-search
-        v-model:value="keyword"
-        :placeholder="t('attractions.searchPlaceholder')"
-        style="width: 280px"
-        @search="loadList"
-      />
-    </a-space>
+    <template #toolbar>
+      <AdminToolbar>
+        <template #right>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
+    </template>
 
     <DouxingAdminTable
       :columns="columns"
@@ -90,6 +103,8 @@ import {
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
 import { ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
@@ -124,8 +139,8 @@ function imageSourceLabel(source?: string | null) {
   return map[source] ?? source;
 }
 
-async function loadList() {
-  error.value = '';
+function resetSearch() {
+  keyword.value = '';
   reload();
 }
 
@@ -174,10 +189,6 @@ onMounted(load);
 </script>
 
 <style scoped>
-.filters {
-  margin-bottom: 16px;
-}
-
 .cover-thumb {
   object-fit: cover;
   border-radius: 8px;

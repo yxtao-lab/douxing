@@ -1,5 +1,19 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="load" @reset="resetSearch">
+        <a-form-item :label="t('system.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchKeyword')"
+            allow-clear
+            style="width: 240px"
+            @press-enter="load"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #left>
@@ -65,6 +79,7 @@ import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { createRole, deleteRole, fetchRoles, updateRole, type RoleRow } from '@/api/system';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -74,6 +89,7 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.sysRoles');
 
 const { t } = useI18n();
+const keyword = ref('');
 const items = ref<RoleRow[]>([]);
 const loading = ref(false);
 const modalOpen = ref(false);
@@ -92,10 +108,17 @@ const columns = computed<TableColumnsType<RoleRow>>(() => [
 async function load() {
   loading.value = true;
   try {
-    items.value = await fetchRoles();
+    items.value = await fetchRoles({
+      keyword: keyword.value.trim() || undefined,
+    });
   } finally {
     loading.value = false;
   }
+}
+
+function resetSearch() {
+  keyword.value = '';
+  void load();
 }
 
 function openCreate() {

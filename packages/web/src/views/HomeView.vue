@@ -258,10 +258,10 @@ function syncServerTimeFromHealth() {
 
 async function loadStats() {
   const [routes, orders, checkins, pending] = await Promise.allSettled([
-    fetchRoutesPage(1, 1),
-    fetchOrdersPage(1, 1),
+    fetchRoutesPage({ page: 1, pageSize: 1 }),
+    fetchOrdersPage({ page: 1, pageSize: 1 }),
     fetchCheckInsPage({ page: 1, pageSize: 1, all: true }),
-    fetchPendingAttractionsPage(1, 1),
+    fetchPendingAttractionsPage({ page: 1, pageSize: 1 }),
   ]);
   stats.value.routes =
     routes.status === 'fulfilled' ? normalizePaginatedResult(routes.value).total : 0;

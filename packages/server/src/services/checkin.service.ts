@@ -1,4 +1,4 @@
-import { eq, desc, and, inArray, sql, count, gte } from 'drizzle-orm';
+import { eq, desc, and, inArray, sql, count, gte, lte, or, like } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { checkIns, type CheckInLocation } from '../db/schema/check-ins.js';
 import { attractions } from '../db/schema/attractions.js';
@@ -261,6 +261,51 @@ export async function listRouteCheckInsPaginated(
   return paginateCheckIns(and(eq(checkIns.routeId, routeId), eq(checkIns.userId, userId)), page, pageSize);
 }
 
-export async function listAllCheckInsForAdminPaginated(page: number, pageSize: number) {
-  return paginateCheckIns(undefined, page, pageSize);
+export interface AdminCheckInListFilter {
+  keyword?: string;
+  userId?: number;
+  routeId?: number;
+  cityCode?: string;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildAdminCheckInWhere(filter?: AdminCheckInListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(
+        like(checkIns.cityCode, pattern),
+        like(checkIns.remark, pattern),
+        sql`JSON_UNQUOTE(JSON_EXTRACT(${checkIns.location}, '$.placeName')) LIKE ${pattern}`,
+      )!,
+    );
+  }
+  if (filter?.userId != null) {
+    conditions.push(eq(checkIns.userId, filter.userId));
+  }
+  if (filter?.routeId != null) {
+    conditions.push(eq(checkIns.routeId, filter.routeId));
+  }
+  const cityCode = filter?.cityCode?.trim();
+  if (cityCode) {
+    conditions.push(like(checkIns.cityCode, `%${cityCode}%`));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(checkIns.checkedAt, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(checkIns.checkedAt, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+export async function listAllCheckInsForAdminPaginated(
+  page: number,
+  pageSize: number,
+  filter?: AdminCheckInListFilter,
+) {
+  return paginateCheckIns(buildAdminCheckInWhere(filter), page, pageSize);
 }

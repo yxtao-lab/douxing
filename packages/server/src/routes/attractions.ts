@@ -22,6 +22,10 @@ import { refreshAttractionCoverFromAmap } from '../services/attraction-image-enr
 import { persistAttractionCoverBuffer } from '../services/attraction-cover-storage.service.js';
 import { isOssEnabled } from '../config/oss.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
+import {
+  parseDateRangeFilter,
+  parseOptionalString,
+} from '../utils/admin-list-filter.js';
 import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
 const router = Router();
@@ -95,11 +99,45 @@ const adminCatalogSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
 });
 
+const adminPendingSchema = z.object({
+  keyword: z.string().max(64).optional(),
+  city: z.string().max(64).optional(),
+  category: z.enum(['attraction', 'restaurant', 'hotel']).optional(),
+  source: z.enum(['seed', 'llm', 'manual', 'amap']).optional(),
+  missingCoord: z
+    .union([z.literal('1'), z.literal('0'), z.literal('true'), z.literal('false')])
+    .optional()
+    .transform((v) => {
+      if (v === '1' || v === 'true') return true;
+      if (v === '0' || v === 'false') return false;
+      return undefined;
+    }),
+  dateStart: z.string().max(10).optional(),
+  dateEnd: z.string().max(10).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
 router.get('/admin/pending', authMiddleware, async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-    const result = await listPendingAttractionsPaginated(page, pageSize);
+    const parsed = adminPendingSchema.safeParse(req.query);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
+    }
+    const { page, pageSize } = parsePaginationQuery({
+      page: parsed.data.page,
+      pageSize: parsed.data.pageSize,
+    });
+    const result = await listPendingAttractionsPaginated(page, pageSize, {
+      keyword: parsed.data.keyword,
+      city: parsed.data.city,
+      category: parsed.data.category,
+      source: parsed.data.source,
+      missingCoord: parsed.data.missingCoord,
+      dateStart: parsed.data.dateStart,
+      dateEnd: parsed.data.dateEnd,
+    });
     success(res, result);
   } catch (err) {
     console.error('[attractions/admin/pending]', err);

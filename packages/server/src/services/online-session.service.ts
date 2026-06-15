@@ -39,9 +39,19 @@ export function touchOnlineSession(input: {
   });
 }
 
-export function listOnlineSessions(): OnlineSession[] {
+export function listOnlineSessions(filter?: { keyword?: string }): OnlineSession[] {
   pruneExpired();
-  return [...sessions.values()].sort(
+  const keyword = filter?.keyword?.trim().toLowerCase();
+  let rows = [...sessions.values()];
+  if (keyword) {
+    rows = rows.filter(
+      (row) =>
+        row.username.toLowerCase().includes(keyword) ||
+        row.nickname.toLowerCase().includes(keyword) ||
+        row.ip.toLowerCase().includes(keyword),
+    );
+  }
+  return rows.sort(
     (a, b) => new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime(),
   );
 }

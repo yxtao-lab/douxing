@@ -70,24 +70,28 @@
             />
             <a-empty v-else :description="t('common.noData')" />
 
-            <a-table
+            <DouxingAdminTable
               :columns="trendColumns"
               :data-source="trendTableRows"
               :pagination="trendTablePagination"
               size="small"
               row-key="date"
+              :auto-body-scroll="false"
+              class="analytics-embed-table"
             />
           </a-card>
         </a-col>
 
         <a-col :xs="24" :xl="8">
           <a-card :title="t('analytics.cityRankTitle')">
-            <a-table
+            <DouxingAdminTable
               :columns="cityColumns"
               :data-source="cityRows"
               :pagination="false"
               size="small"
               row-key="cityCode"
+              :auto-body-scroll="false"
+              class="analytics-embed-table"
             />
           </a-card>
         </a-col>
@@ -107,6 +111,7 @@ import {
   fetchTopCheckinCities,
 } from '@/api/analytics';
 import AnalyticsTrendLineChart from '@/components/analytics/AnalyticsTrendLineChart.vue';
+import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { createClientAdminPaginationConfig } from '@/utils/adminPagination';
 
@@ -203,7 +208,7 @@ onMounted(() => {
   color: #6b7280;
 }
 
-.content-row :deep(.ant-table-wrapper) {
+.content-row :deep(.analytics-embed-table) {
   margin-top: 16px;
 }
 </style>

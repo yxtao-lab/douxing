@@ -25,6 +25,8 @@ export const sharedZhCN = {
     refresh: '刷新',
     reset: '重置',
     search: '搜索',
+    dateRangeStart: '开始日期',
+    dateRangeEnd: '结束日期',
     loadMore: '加载更多…',
     noMore: '没有更多了',
     edit: '编辑',

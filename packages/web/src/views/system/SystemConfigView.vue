@@ -1,5 +1,19 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="load" @reset="resetSearch">
+        <a-form-item :label="t('system.colConfigKey')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchConfigKeyword')"
+            allow-clear
+            style="width: 280px"
+            @press-enter="load"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #right>
@@ -61,6 +75,7 @@ import type { TableColumnsType } from 'ant-design-vue';
 import { fetchConfigs, updateConfig, type ConfigRow } from '@/api/system';
 import { updateSiteOnline } from '@/api/site-status';
 import { SystemConfigKey } from '@douxing/shared';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -70,6 +85,7 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.sysConfig');
 
 const { t } = useI18n();
+const keyword = ref('');
 const items = ref<ConfigRow[]>([]);
 const loading = ref(false);
 const modalOpen = ref(false);
@@ -95,10 +111,17 @@ const columns = computed<TableColumnsType<ConfigRow>>(() => [
 async function load() {
   loading.value = true;
   try {
-    items.value = await fetchConfigs();
+    items.value = await fetchConfigs({
+      keyword: keyword.value.trim() || undefined,
+    });
   } finally {
     loading.value = false;
   }
+}
+
+function resetSearch() {
+  keyword.value = '';
+  void load();
 }
 
 function isMaintenanceConfigOnline(value: string): boolean {

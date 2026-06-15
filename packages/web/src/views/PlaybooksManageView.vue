@@ -1,27 +1,42 @@
 <template>
-  <PageContainer :title="t('playbooks.title')" :description="t('playbooks.desc')">
-    <template #extra>
-      <a-space>
-        <a-button :loading="loading" @click="loadList">{{ t('common.refresh') }}</a-button>
-        <a-button type="primary" @click="openCreate">{{ t('playbooks.create') }}</a-button>
-      </a-space>
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('playbooks.searchLabel')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('playbooks.searchPlaceholder')"
+            allow-clear
+            style="width: 280px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('playbooks.cityFilter')">
+          <a-input
+            v-model:value="cityFilter"
+            :placeholder="t('playbooks.cityFilter')"
+            allow-clear
+            style="width: 160px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+      </AdminSearchBar>
     </template>
 
-    <a-space class="filters" wrap>
-      <a-input-search
-        v-model:value="keyword"
-        :placeholder="t('playbooks.searchPlaceholder')"
-        style="width: 280px"
-        @search="loadList"
-      />
-      <a-input
-        v-model:value="cityFilter"
-        :placeholder="t('playbooks.cityFilter')"
-        style="width: 140px"
-        @press-enter="loadList"
-      />
-      <a-button :loading="loading" @click="loadList">{{ t('common.search') }}</a-button>
-    </a-space>
+    <template #toolbar>
+      <AdminToolbar>
+        <template #left>
+          <a-button type="primary" @click="openCreate">{{ t('playbooks.create') }}</a-button>
+        </template>
+        <template #right>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
+    </template>
 
     <DouxingAdminTable
       :columns="columns"
@@ -138,6 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { RoutePlaybookInfo, RoutePlaybookSegmentEdge } from '@douxing/shared';
@@ -149,6 +165,8 @@ import {
 } from '@/api/playbooks';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
@@ -253,9 +271,15 @@ function closeEditor() {
   formStep.value = 0;
 }
 
+function resetSearch() {
+  keyword.value = '';
+  cityFilter.value = '';
+  reload();
+}
+
 async function loadList() {
   error.value = '';
-  reload();
+  await reload();
 }
 
 function buildPayload(): RoutePlaybookInfo | null {
@@ -335,10 +359,6 @@ onMounted(load);
 </script>
 
 <style scoped>
-.filters {
-  margin-bottom: 16px;
-}
-
 .form-steps {
   margin-bottom: 20px;
 }

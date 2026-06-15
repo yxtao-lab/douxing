@@ -88,6 +88,22 @@
   font-weight: 600;
 }
 
+/* 列宽拖动手柄 */
+.admin-pro-table .ant-table-thead > tr > th.admin-table-col-resizable {
+  position: relative;
+}
+
+.admin-pro-table .ant-table-thead > tr > th.admin-table-col-resizable::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  z-index: 1;
+}
+
 .admin-pro-table .ant-table-tbody > tr:hover > td {
   background: var(--color-primary-light) !important;
 }

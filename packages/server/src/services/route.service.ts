@@ -1,4 +1,4 @@
-import { eq, desc, and, count } from 'drizzle-orm';
+import { eq, desc, and, count, like, or, gte, lte } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { RouteStatus, ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
@@ -276,16 +276,51 @@ export async function unlockRoute(routeId: number, userId: number) {
   return getRouteById(routeId, userId);
 }
 
+export interface AdminRouteListFilter {
+  keyword?: string;
+  status?: number;
+  creatorId?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildAdminRouteWhere(filter?: AdminRouteListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(like(travelRoutes.name, pattern), like(travelRoutes.description, pattern))!,
+    );
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(travelRoutes.status, filter.status));
+  }
+  if (filter?.creatorId != null) {
+    conditions.push(eq(travelRoutes.creatorId, filter.creatorId));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(travelRoutes.createdAt, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(travelRoutes.createdAt, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 export async function listAllRoutesForAdminPaginated(
   page: number,
   pageSize: number,
+  filter?: AdminRouteListFilter,
 ): Promise<PaginatedResult<TravelRouteInfo>> {
   const db = getDb();
-  const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes);
+  const where = buildAdminRouteWhere(filter);
+  const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);
   const offset = (page - 1) * pageSize;
   const rows = await db
     .select()
     .from(travelRoutes)
+    .where(where)
     .orderBy(desc(travelRoutes.createdAt))
     .limit(pageSize)
     .offset(offset);

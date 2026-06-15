@@ -1,7 +1,73 @@
 <template>
-  <PageContainer :title="t('attractions.title')" :description="t('attractions.desc')">
-    <template #extra>
-      <a-button :loading="loading" @click="loadList">{{ t('common.refresh') }}</a-button>
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('attractions.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('attractions.searchKeyword')"
+            allow-clear
+            style="width: 220px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('attractions.colCity')">
+          <a-input
+            v-model:value="cityFilter"
+            :placeholder="t('attractions.colCity')"
+            allow-clear
+            style="width: 140px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('attractions.colType')">
+          <a-select
+            v-model:value="categoryFilter"
+            :options="categoryOptions"
+            allow-clear
+            style="width: 140px"
+            :placeholder="t('attractions.allTypes')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('attractions.colSource')">
+          <a-select
+            v-model:value="sourceFilter"
+            :options="sourceOptions"
+            allow-clear
+            style="width: 140px"
+            :placeholder="t('attractions.allSources')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('attractions.colCoord')">
+          <a-select
+            v-model:value="missingCoordFilter"
+            :options="coordOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('attractions.allCoords')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colCreatedAt')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
+    <template #toolbar>
+      <AdminToolbar>
+        <template #right>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
     </template>
 
     <DouxingAdminTable
@@ -51,6 +117,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import { Modal } from 'ant-design-vue';
 import type { TableColumnsType } from 'ant-design-vue';
@@ -58,6 +125,8 @@ import type { AttractionInfo } from '@douxing/shared';
 import { approveAttraction, fetchPendingAttractionsPage } from '@/api/attractions';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
@@ -67,8 +136,50 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.attractionsPending');
 
 const { t } = useI18n();
+const keyword = ref('');
+const cityFilter = ref('');
+const categoryFilter = ref<string | undefined>();
+const sourceFilter = ref<string | undefined>();
+const missingCoordFilter = ref<'complete' | 'missing' | undefined>();
+const dateRange = ref<[string, string] | undefined>();
+
+const categoryOptions = computed(() => [
+  { label: t('attractions.typeAttraction'), value: 'attraction' },
+  { label: t('attractions.typeRestaurant'), value: 'restaurant' },
+  { label: t('attractions.typeHotel'), value: 'hotel' },
+]);
+
+const sourceOptions = computed(() => [
+  { label: t('attractions.sourceSeed'), value: 'seed' },
+  { label: t('attractions.sourceLlm'), value: 'llm' },
+  { label: t('attractions.sourceManual'), value: 'manual' },
+  { label: t('attractions.sourceAmap'), value: 'amap' },
+]);
+
+const coordOptions = computed(() => [
+  { label: t('attractions.coordComplete'), value: 'complete' },
+  { label: t('attractions.coordMissing'), value: 'missing' },
+]);
+
 const { items: list, loading, pagination, load, reload, handleTableChange } =
-  useServerTablePagination(fetchPendingAttractionsPage);
+  useServerTablePagination<AttractionInfo>((page, pageSize) =>
+    fetchPendingAttractionsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      city: cityFilter.value.trim() || undefined,
+      category: categoryFilter.value,
+      source: sourceFilter.value,
+      missingCoord:
+        missingCoordFilter.value === 'missing'
+          ? true
+          : missingCoordFilter.value === 'complete'
+            ? false
+            : undefined,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 const error = ref('');
 const approvingId = ref<number | null>(null);
 
@@ -99,7 +210,13 @@ function formatCoord(value: number) {
   return value.toFixed(4);
 }
 
-async function loadList() {
+function resetSearch() {
+  keyword.value = '';
+  cityFilter.value = '';
+  categoryFilter.value = undefined;
+  sourceFilter.value = undefined;
+  missingCoordFilter.value = undefined;
+  dateRange.value = undefined;
   reload();
 }
 
@@ -136,7 +253,7 @@ const columns = computed<TableColumnsType<AttractionInfo>>(() => [
   { title: t('attractions.colCoord'), key: 'coord', width: 180 },
   { title: t('attractions.colSource'), key: 'source', width: 100 },
   { title: t('attractions.colPrice'), key: 'price', width: 100 },
-  { title: t('attractions.colAction'), key: 'action', width: 120 },
+  { title: t('attractions.colAction'), key: 'action', width: 120, fixed: 'right' },
 ]);
 
 onMounted(load);

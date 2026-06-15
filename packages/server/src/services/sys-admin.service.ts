@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { count, desc, eq, like, or, and } from 'drizzle-orm';
+import { count, desc, eq, like, or, and, gte, lte } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import {
   APP_NAME,
@@ -371,6 +371,8 @@ export interface MenuSeedItem {
 
 export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'home', menuName: '工作台', menuType: MenuType.MENU, path: '/', icon: 'HomeOutlined', sortOrder: 1 },
+  { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 2 },
+  { menuKey: 'analytics', menuName: '数据分析', parentKey: 'data', menuType: MenuType.MENU, path: '/analytics', perms: 'data:analytics:view', icon: 'BarChartOutlined', sortOrder: 3 },
   { menuKey: 'biz', menuName: '业务管理', menuType: MenuType.DIRECTORY, icon: 'UnorderedListOutlined', sortOrder: 10 },
   { menuKey: 'routes', menuName: '路线', parentKey: 'biz', menuType: MenuType.MENU, path: '/routes', perms: 'biz:routes:list', icon: 'UnorderedListOutlined', sortOrder: 11 },
   { menuKey: 'orders', menuName: '订单', parentKey: 'biz', menuType: MenuType.MENU, path: '/orders', perms: 'biz:orders:list', icon: 'ShoppingOutlined', sortOrder: 12 },
@@ -384,8 +386,6 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'attractions-pending', menuName: '景点审核', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/pending', perms: 'content:attractions:pending', icon: 'AuditOutlined', sortOrder: 21 },
   { menuKey: 'attractions-manage', menuName: '景点封面', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/manage', perms: 'content:attractions:manage', icon: 'PictureOutlined', sortOrder: 22 },
   { menuKey: 'playbooks', menuName: '玩法动线', parentKey: 'content', menuType: MenuType.MENU, path: '/playbooks/manage', perms: 'content:playbooks:list', icon: 'BookOutlined', sortOrder: 23 },
-  { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 30 },
-  { menuKey: 'analytics', menuName: '数据分析', parentKey: 'data', menuType: MenuType.MENU, path: '/analytics', perms: 'data:analytics:view', icon: 'BarChartOutlined', sortOrder: 31 },
   { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
   { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
   { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
@@ -468,9 +468,22 @@ export async function resetAdminUserPassword(userId: number, password: string) {
   await db.update(users).set({ passwordHash: hashed }).where(eq(users.id, userId));
 }
 
-export async function listRolesWithStats(): Promise<RoleRow[]> {
+export async function listRolesWithStats(filter?: { keyword?: string }): Promise<RoleRow[]> {
   const db = getDb();
-  const roleRows = await db.select().from(roles).orderBy(roles.id);
+  const keyword = filter?.keyword?.trim();
+  const roleRows = keyword
+    ? await db
+        .select()
+        .from(roles)
+        .where(
+          or(
+            like(roles.code, `%${keyword}%`),
+            like(roles.name, `%${keyword}%`),
+            like(roles.description, `%${keyword}%`),
+          )!,
+        )
+        .orderBy(roles.id)
+    : await db.select().from(roles).orderBy(roles.id);
   const result: RoleRow[] = [];
   for (const role of roleRows) {
     const [cnt] = await db
@@ -529,9 +542,29 @@ export async function deleteRole(id: number) {
   return { ok: true };
 }
 
-export async function listDepts(): Promise<DeptRow[]> {
+export async function listDepts(filter?: {
+  keyword?: string;
+  status?: number;
+  parentId?: number;
+}): Promise<DeptRow[]> {
   const db = getDb();
-  const rows = await db.select().from(sysDept).orderBy(sysDept.sortOrder, sysDept.id);
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    conditions.push(like(sysDept.name, `%${keyword}%`));
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysDept.status, filter.status));
+  }
+  if (filter?.parentId != null) {
+    conditions.push(eq(sysDept.parentId, filter.parentId));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const rows = await db
+    .select()
+    .from(sysDept)
+    .where(where)
+    .orderBy(sysDept.sortOrder, sysDept.id);
   return rows.map((r) => ({
     id: r.id,
     parentId: r.parentId,
@@ -577,13 +610,27 @@ export async function deleteDept(id: number) {
 export async function listPostsPaginated(
   page: number,
   pageSize: number,
+  filter?: { keyword?: string; status?: number },
 ): Promise<PaginatedResult<PostRow>> {
   const db = getDb();
   const offset = (page - 1) * pageSize;
-  const [totalRow] = await db.select({ total: count() }).from(sysPost);
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(like(sysPost.code, pattern), like(sysPost.name, pattern), like(sysPost.remark, pattern))!,
+    );
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysPost.status, filter.status));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const [totalRow] = await db.select({ total: count() }).from(sysPost).where(where);
   const rows = await db
     .select()
     .from(sysPost)
+    .where(where)
     .orderBy(sysPost.sortOrder, desc(sysPost.id))
     .limit(pageSize)
     .offset(offset);
@@ -739,13 +786,40 @@ export async function deleteDictData(id: number) {
 export async function listNoticesPaginated(
   page: number,
   pageSize: number,
+  filter?: {
+    keyword?: string;
+    noticeType?: number;
+    status?: number;
+    dateStart?: string;
+    dateEnd?: string;
+  },
 ): Promise<PaginatedResult<NoticeRow>> {
   const db = getDb();
   const offset = (page - 1) * pageSize;
-  const [totalRow] = await db.select({ total: count() }).from(sysNotice);
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(or(like(sysNotice.title, pattern), like(sysNotice.content, pattern))!);
+  }
+  if (filter?.noticeType != null) {
+    conditions.push(eq(sysNotice.noticeType, filter.noticeType));
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysNotice.status, filter.status));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(sysNotice.createdAt, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(sysNotice.createdAt, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  const where = conditions.length > 0 ? and(...conditions) : undefined;
+  const [totalRow] = await db.select({ total: count() }).from(sysNotice).where(where);
   const rows = await db
     .select()
     .from(sysNotice)
+    .where(where)
     .orderBy(desc(sysNotice.id))
     .limit(pageSize)
     .offset(offset);
@@ -790,9 +864,22 @@ export async function deleteNotice(id: number) {
   await db.delete(sysNotice).where(eq(sysNotice.id, id));
 }
 
-export async function listConfigs(): Promise<ConfigRow[]> {
+export async function listConfigs(filter?: { keyword?: string }): Promise<ConfigRow[]> {
   const db = getDb();
-  const rows = await db.select().from(systemConfig).orderBy(systemConfig.configKey);
+  const keyword = filter?.keyword?.trim();
+  const rows = keyword
+    ? await db
+        .select()
+        .from(systemConfig)
+        .where(
+          or(
+            like(systemConfig.configKey, `%${keyword}%`),
+            like(systemConfig.configValue, `%${keyword}%`),
+            like(systemConfig.remark, `%${keyword}%`),
+          )!,
+        )
+        .orderBy(systemConfig.configKey)
+    : await db.select().from(systemConfig).orderBy(systemConfig.configKey);
   return rows.map((r) => ({
     id: r.id,
     configKey: r.configKey,
@@ -819,16 +906,89 @@ function parseMaintenanceConfigValue(raw: string): boolean {
   return value === 'true' || value === '1' || value === 'yes' || value === 'on';
 }
 
+export interface AdminOperLogListFilter {
+  keyword?: string;
+  operName?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export interface AdminLoginLogListFilter {
+  keyword?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildOperLogWhere(filter?: AdminOperLogListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(
+        like(sysOperLog.title, pattern),
+        like(sysOperLog.operName, pattern),
+        like(sysOperLog.operUrl, pattern),
+        like(sysOperLog.operIp, pattern),
+      )!,
+    );
+  }
+  const operName = filter?.operName?.trim();
+  if (operName) {
+    conditions.push(like(sysOperLog.operName, `%${operName}%`));
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysOperLog.status, filter.status));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(sysOperLog.operTime, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(sysOperLog.operTime, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+function buildLoginLogWhere(filter?: AdminLoginLogListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(
+        like(sysLoginLog.username, pattern),
+        like(sysLoginLog.ip, pattern),
+        like(sysLoginLog.msg, pattern),
+      )!,
+    );
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysLoginLog.status, filter.status));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(sysLoginLog.loginTime, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(sysLoginLog.loginTime, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
 export async function listOperLogsPaginated(
   page: number,
   pageSize: number,
+  filter?: AdminOperLogListFilter,
 ): Promise<PaginatedResult<OperLogRow>> {
   const db = getDb();
   const offset = (page - 1) * pageSize;
-  const [totalRow] = await db.select({ total: count() }).from(sysOperLog);
+  const where = buildOperLogWhere(filter);
+  const [totalRow] = await db.select({ total: count() }).from(sysOperLog).where(where);
   const rows = await db
     .select()
     .from(sysOperLog)
+    .where(where)
     .orderBy(desc(sysOperLog.id))
     .limit(pageSize)
     .offset(offset);
@@ -849,13 +1009,16 @@ export async function listOperLogsPaginated(
 export async function listLoginLogsPaginated(
   page: number,
   pageSize: number,
+  filter?: AdminLoginLogListFilter,
 ): Promise<PaginatedResult<LoginLogRow>> {
   const db = getDb();
   const offset = (page - 1) * pageSize;
-  const [totalRow] = await db.select({ total: count() }).from(sysLoginLog);
+  const where = buildLoginLogWhere(filter);
+  const [totalRow] = await db.select({ total: count() }).from(sysLoginLog).where(where);
   const rows = await db
     .select()
     .from(sysLoginLog)
+    .where(where)
     .orderBy(desc(sysLoginLog.id))
     .limit(pageSize)
     .offset(offset);
@@ -872,12 +1035,25 @@ export async function listLoginLogsPaginated(
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
 }
 
-export function getOnlineUsers() {
-  return listOnlineSessions();
+export function getOnlineUsers(filter?: { keyword?: string }) {
+  return listOnlineSessions(filter);
 }
 
-export function getScheduledJobs() {
-  return SCHEDULED_JOBS;
+export function getScheduledJobs(filter?: { keyword?: string; status?: string }) {
+  const keyword = filter?.keyword?.trim().toLowerCase();
+  let jobs = SCHEDULED_JOBS;
+  if (keyword) {
+    jobs = jobs.filter(
+      (job) =>
+        job.id.toLowerCase().includes(keyword) ||
+        job.name.toLowerCase().includes(keyword) ||
+        job.remark.toLowerCase().includes(keyword),
+    );
+  }
+  if (filter?.status) {
+    jobs = jobs.filter((job) => job.status === filter.status);
+  }
+  return jobs;
 }
 
 export async function getDataMonitorStats() {

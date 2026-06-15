@@ -1,4 +1,4 @@
-import { eq, desc, and, count, or } from 'drizzle-orm';
+import { eq, desc, and, count, or, like, gte, lte } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { orders } from '../db/schema/orders.js';
 import type { OrderInfo, OrderListTab, PaginatedResult } from '@douxing/shared';
@@ -294,6 +294,44 @@ export async function listUserOrdersPaginated(
   return paginateOrders(buildUserOrderWhere(userId, tab), page, pageSize);
 }
 
-export async function listAllOrdersForAdminPaginated(page: number, pageSize: number) {
-  return paginateOrders(undefined, page, pageSize);
+export interface AdminOrderListFilter {
+  keyword?: string;
+  orderType?: string;
+  status?: number;
+  userId?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildAdminOrderWhere(filter?: AdminOrderListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(or(like(orders.orderNo, pattern), like(orders.productName, pattern))!);
+  }
+  if (filter?.orderType) {
+    conditions.push(eq(orders.orderType, filter.orderType));
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(orders.status, filter.status));
+  }
+  if (filter?.userId != null) {
+    conditions.push(eq(orders.userId, filter.userId));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(orders.createdAt, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(orders.createdAt, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+export async function listAllOrdersForAdminPaginated(
+  page: number,
+  pageSize: number,
+  filter?: AdminOrderListFilter,
+) {
+  return paginateOrders(buildAdminOrderWhere(filter), page, pageSize);
 }

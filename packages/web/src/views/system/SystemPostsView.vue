@@ -1,5 +1,28 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('system.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchKeyword')"
+            allow-clear
+            style="width: 240px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('common.statusAll')"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #left>
@@ -68,6 +91,7 @@ import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { createPost, deletePost, fetchPostsPage, updatePost, type PostRow } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -77,13 +101,27 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.sysPosts');
 
 const { t } = useI18n();
+const keyword = ref('');
+const statusFilter = ref<number | undefined>();
 const modalOpen = ref(false);
 const saving = ref(false);
 const editing = ref<PostRow | null>(null);
 const form = reactive({ code: '', name: '', remark: '', sortOrder: 0, status: 1 });
 
+const statusOptions = computed(() => [
+  { label: t('system.statusNormal'), value: 1 },
+  { label: t('system.statusDisabled'), value: 0 },
+]);
+
 const { items, loading, pagination, load, reload, handleTableChange } =
-  useServerTablePagination<PostRow>(fetchPostsPage);
+  useServerTablePagination<PostRow>((page, pageSize) =>
+    fetchPostsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+    }),
+  );
 
 const columns = computed<TableColumnsType<PostRow>>(() => [
   { title: t('system.colCode'), dataIndex: 'code', width: 120 },
@@ -92,6 +130,12 @@ const columns = computed<TableColumnsType<PostRow>>(() => [
   { title: t('system.colStatus'), key: 'status', width: 90 },
   { title: t('system.colAction'), key: 'action', width: 160, fixed: 'right' },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  statusFilter.value = undefined;
+  reload();
+}
 
 function openCreate() {
   editing.value = null;

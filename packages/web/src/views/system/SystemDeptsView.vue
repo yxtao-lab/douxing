@@ -1,5 +1,28 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="load" @reset="resetSearch">
+        <a-form-item :label="t('system.colName')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchKeyword')"
+            allow-clear
+            style="width: 220px"
+            @press-enter="load"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('common.statusAll')"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #left>
@@ -66,6 +89,7 @@ import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { createDept, deleteDept, fetchDepts, updateDept, type DeptRow } from '@/api/system';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -75,12 +99,19 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.sysDepts');
 
 const { t } = useI18n();
+const keyword = ref('');
+const statusFilter = ref<number | undefined>();
 const items = ref<DeptRow[]>([]);
 const loading = ref(false);
 const modalOpen = ref(false);
 const saving = ref(false);
 const editing = ref<DeptRow | null>(null);
 const form = reactive({ parentId: 0, name: '', sortOrder: 0, status: 1 });
+
+const statusOptions = computed(() => [
+  { label: t('system.statusNormal'), value: 1 },
+  { label: t('system.statusDisabled'), value: 0 },
+]);
 
 const parentOptions = computed(() => [
   { label: '—', value: 0 },
@@ -98,10 +129,19 @@ const columns = computed<TableColumnsType<DeptRow>>(() => [
 async function load() {
   loading.value = true;
   try {
-    items.value = await fetchDepts();
+    items.value = await fetchDepts({
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+    });
   } finally {
     loading.value = false;
   }
+}
+
+function resetSearch() {
+  keyword.value = '';
+  statusFilter.value = undefined;
+  void load();
 }
 
 function openCreate() {

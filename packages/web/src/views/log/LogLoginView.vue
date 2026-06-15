@@ -1,5 +1,36 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('system.colUsername')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchLoginKeyword')"
+            allow-clear
+            style="width: 240px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('common.statusAll')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('system.colLoginTime')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #right>
@@ -33,12 +64,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { fetchLoginLogsPage, type LoginLogRow } from '@/api/system';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
@@ -47,8 +79,26 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.logLogin');
 
 const { t } = useI18n();
+const keyword = ref('');
+const statusFilter = ref<number | undefined>();
+const dateRange = ref<[string, string] | undefined>();
+
+const statusOptions = computed(() => [
+  { label: t('system.statusNormal'), value: 1 },
+  { label: t('common.failed'), value: 0 },
+]);
+
 const { items, loading, pagination, load, reload, handleTableChange } =
-  useServerTablePagination<LoginLogRow>(fetchLoginLogsPage);
+  useServerTablePagination<LoginLogRow>((page, pageSize) =>
+    fetchLoginLogsPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      status: statusFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 
 const columns = computed<TableColumnsType<LoginLogRow>>(() => [
   { title: t('system.colUsername'), dataIndex: 'username', width: 120 },
@@ -64,6 +114,13 @@ const columns = computed<TableColumnsType<LoginLogRow>>(() => [
     customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
   },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  statusFilter.value = undefined;
+  dateRange.value = undefined;
+  reload();
+}
 
 onMounted(load);
 </script>

@@ -1,14 +1,14 @@
 <template>
-  <div class="admin-search-bar">
-    <a-form layout="inline" class="admin-search-form" @finish="emit('search')">
+  <div class="admin-search-bar" @keyup.enter="onSearch">
+    <a-form layout="inline" class="admin-search-form">
       <slot />
       <a-form-item class="admin-search-actions">
         <a-space>
-          <a-button type="primary" html-type="submit">
+          <a-button type="primary" html-type="button" @click="onSearch">
             <template #icon><SearchOutlined /></template>
             {{ t('common.search') }}
           </a-button>
-          <a-button @click="emit('reset')">
+          <a-button html-type="button" @click="onReset">
             <template #icon><ReloadOutlined /></template>
             {{ t('common.reset') }}
           </a-button>
@@ -28,4 +28,12 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+
+function onSearch() {
+  emit('search');
+}
+
+function onReset() {
+  emit('reset');
+}
 </script>

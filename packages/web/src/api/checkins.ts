@@ -6,16 +6,30 @@ import {
   type PaginatedResult,
 } from '@douxing/shared';
 
-export async function fetchCheckInsPage(params: {
+export interface AdminCheckInListParams {
   page: number;
   pageSize: number;
   all?: boolean;
-}) {
+  keyword?: string;
+  userId?: number;
+  routeId?: number;
+  cityCode?: string;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export async function fetchCheckInsPage(params: AdminCheckInListParams) {
   const query = new URLSearchParams({
     page: String(params.page),
     pageSize: String(params.pageSize),
   });
   if (params.all) query.set('all', '1');
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.userId != null) query.set('userId', String(params.userId));
+  if (params.routeId != null) query.set('routeId', String(params.routeId));
+  if (params.cityCode) query.set('cityCode', params.cityCode);
+  if (params.dateStart) query.set('dateStart', params.dateStart);
+  if (params.dateEnd) query.set('dateEnd', params.dateEnd);
   const { data } = await http.get<ApiResponse<PaginatedResult<CheckInInfo>>>(
     `/checkins?${query.toString()}`,
   );

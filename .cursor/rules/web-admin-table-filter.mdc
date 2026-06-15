@@ -1,0 +1,128 @@
+---
+description: Web 管理端表格列宽拖动与筛选栏约束
+globs: packages/web/src/**/*.vue
+alwaysApply: false
+---
+
+# Web 管理端表格与筛选
+
+## 表格
+
+- 数据列表**必须**使用 `DouxingAdminTable`，禁止直接使用裸 `a-table`（分析页内嵌小表亦应迁移）
+- 列宽默认支持表头右侧拖动调整，由组件统一注入；单列禁用：`{ resizable: false }`
+- 整表禁用：`column-resizable="false"`
+- 列定义推荐 `computed` + `width`；无 `width` 的列在首次拖动时按当前渲染宽度计算
+- 分析页内嵌表可设 `auto-body-scroll` 避免外层滚动冲突
+
+## 筛选条件
+
+- 管理端（`PageContainer admin`）有筛选需求时，**必须**使用 `AdminSearchBar` + `#search` 插槽
+- 筛选项用 `a-form-item` + `label`，输入宽度建议 `160px`～`280px`；下拉/日期范围与 `SystemUsersView`、`OrdersView` 保持一致
+- 禁止在表格上方使用 `a-space`、裸 `a-input-search` 等自定义筛选条
+- 搜索/重置按钮由 `AdminSearchBar` 内置（`@click` 直接触发 `search` / `reset` 事件），页面勿重复添加
+- 输入框建议 `@press-enter` 触发查询；`allow-clear` 与 `resetSearch` 清空后重新 `load` / `reload`
+- 日期范围使用 `a-range-picker`，`value-format="YYYY-MM-DD"`，占位符用 `common.dateRangeStart` / `common.dateRangeEnd`
+
+### 分页 vs 全量列表
+
+| 场景 | 查询触发 | 数据加载 |
+|------|----------|----------|
+| 服务端分页 | `@search="reload"` `@reset="resetSearch"` | `useServerTablePagination`，`fetchXxxPage` 闭包传入筛选 ref |
+| 全量/树形列表 | `@search="load"` `@reset="resetSearch"` | 页面内 `load()` 调用 `fetchXxx({ keyword, ... })` |
+
+`resetSearch` 须清空所有筛选 ref（含日期范围），再触发加载。
+
+### 文案（i18n）
+
+- 占位符、筛选项 label **禁止硬编码**；新增 `searchXxxKeyword` 等键须同步 `packages/web/src/i18n/locales/zh-CN.ts` 与 `en-US.ts`
+- 系统模块可复用 `system.searchKeyword`；业务模块用独立键（如 `orders.searchKeyword`）
+
+## 示例
+
+### 全量列表（角色、部门、参数等）
+
+```vue
+<PageContainer admin>
+  <template #search>
+    <AdminSearchBar @search="load" @reset="resetSearch">
+      <a-form-item :label="t('system.colName')">
+        <a-input
+          v-model:value="keyword"
+          :placeholder="t('system.searchKeyword')"
+          allow-clear
+          style="width: 240px"
+          @press-enter="load"
+        />
+      </a-form-item>
+      <a-form-item :label="t('system.colStatus')">
+        <a-select
+          v-model:value="statusFilter"
+          :options="statusOptions"
+          allow-clear
+          style="width: 160px"
+          :placeholder="t('common.statusAll')"
+        />
+      </a-form-item>
+    </AdminSearchBar>
+  </template>
+
+  <DouxingAdminTable :columns="columns" :data-source="items" :pagination="false" />
+</PageContainer>
+```
+
+### 服务端分页（订单、打卡、日志等）
+
+```vue
+<AdminSearchBar @search="reload" @reset="resetSearch">
+  <a-form-item :label="t('orders.colTime')">
+    <a-range-picker
+      v-model:value="dateRange"
+      value-format="YYYY-MM-DD"
+      style="width: 240px"
+      :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+    />
+  </a-form-item>
+</AdminSearchBar>
+```
+
+## 已落地页面（新增筛选须对齐）
+
+| 模块 | 页面 | 主要筛选参数 |
+|------|------|--------------|
+| 订单 | `OrdersView` | keyword, orderType, status, userId, dateStart/End |
+| 打卡 | `CheckInsView` | keyword, userId, routeId, cityCode, dateStart/End |
+| 路线 | `RoutesView` | keyword, status, creatorId, dateStart/End |
+| 景点 | `AttractionsManageView` | keyword, city, category, source, … |
+| 待审景点 | `AttractionsPendingView` | keyword, city, category, source, missingCoord, dateStart/End |
+| 玩法动线 | `PlaybooksManageView` | keyword, status, … |
+| 操作日志 | `LogOperView` | keyword, operName, status, dateStart/End |
+| 登录日志 | `LogLoginView` | keyword, status, dateStart/End |
+| 字典 | `SystemDictView` | dictType, status |
+| 用户 | `SystemUsersView` | keyword, status, deptId, … |
+| 角色 | `SystemRolesView` | keyword |
+| 部门 | `SystemDeptsView` | keyword, status |
+| 岗位 | `SystemPostsView` | keyword, status |
+| 公告 | `SystemNoticesView` | keyword, noticeType, status, dateStart/End |
+| 系统参数 | `SystemConfigView` | keyword |
+| 会员套餐 | `MembershipProductsView` | targetLevel, productId |
+| 会员用户 | `MembershipUsersView` | keyword, level, … |
+| 会员日志 | `MembershipLogsView` | keyword, … |
+| 在线用户 | `MonitorOnlineView` | keyword |
+| 定时任务 | `MonitorJobsView` | keyword, status |
+
+### 暂不强制筛选栏
+
+以统计卡片/监控概览为主、非典型表格列表的页面：`MonitorDataView`、`MonitorServerView`、`MonitorCacheView`。若改为可筛选列表，再按本规范接入。
+
+## 后端 API（新增列表筛选时）
+
+- 路由层用 `packages/server/src/utils/admin-list-filter.ts`：`parseOptionalString`、`parseOptionalInt`、`parseOptionalBoolean`、`parseDateRangeFilter`
+- 查询参数命名与前端 `fetchXxx` / `fetchXxxPage` 保持一致（如 `keyword`、`status`、`dateStart`、`dateEnd`）
+- 错误/成功文案走 `ApiMessageKey`，禁止裸中文字符串（见 `i18n-required.mdc`）
+- 前端 API 封装在 `packages/web/src/api/`，筛选参数通过 `URLSearchParams` 拼 query
+
+## 关联规范
+
+- 操作列按钮见 `web-admin-table-actions.mdc`
+- 样式见 `packages/web/src/styles/admin-page.css`，勿在页面 scoped 覆盖表格/筛选基础样式
+- 国际化见 `i18n-required.mdc`

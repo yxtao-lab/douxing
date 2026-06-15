@@ -1,5 +1,65 @@
 <template>
-  <PageContainer :title="t('orders.title')" :description="t('orders.desc')">
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('orders.colOrderNo')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('orders.searchKeyword')"
+            allow-clear
+            style="width: 220px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('orders.colOrderType')">
+          <a-select
+            v-model:value="orderTypeFilter"
+            :options="orderTypeOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('orders.allTypes')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('orders.colStatus')">
+          <a-select
+            v-model:value="statusFilter"
+            :options="statusOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('orders.allStatuses')"
+          />
+        </a-form-item>
+        <a-form-item :label="t('orders.colUser')">
+          <a-input-number
+            v-model:value="userIdFilter"
+            :min="1"
+            :placeholder="t('orders.colUser')"
+            style="width: 120px"
+          />
+        </a-form-item>
+        <a-form-item :label="t('orders.colTime')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
+    <template #toolbar>
+      <AdminToolbar>
+        <template #right>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
+    </template>
+
     <DouxingAdminTable
       :columns="columns"
       :data-source="items"
@@ -13,13 +73,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { OrderInfo } from '@douxing/shared';
-import { getOrderStatusI18nKey, OrderType } from '@douxing/shared';
+import { getOrderStatusI18nKey, OrderStatus, OrderType } from '@douxing/shared';
 import { fetchOrdersPage } from '@/api/orders';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -27,9 +90,37 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.orders');
 
 const { t } = useI18n();
-const { items, loading, pagination, load, handleTableChange } = useServerTablePagination<OrderInfo>(
-  fetchOrdersPage,
-);
+const keyword = ref('');
+const orderTypeFilter = ref<string | undefined>();
+const statusFilter = ref<number | undefined>();
+const userIdFilter = ref<number | undefined>();
+const dateRange = ref<[string, string] | undefined>();
+
+const orderTypeOptions = computed(() => [
+  { label: t('orderType.route'), value: OrderType.ROUTE },
+  { label: t('orderType.membership'), value: OrderType.MEMBERSHIP },
+]);
+
+const statusOptions = computed(() => [
+  { label: t('orderStatus.pending'), value: OrderStatus.PENDING },
+  { label: t('orderStatus.paid'), value: OrderStatus.PAID },
+  { label: t('orderStatus.completed'), value: OrderStatus.COMPLETED },
+  { label: t('orderStatus.cancelled'), value: OrderStatus.CANCELLED },
+]);
+
+const { items, loading, pagination, load, reload, handleTableChange } =
+  useServerTablePagination<OrderInfo>((page, pageSize) =>
+    fetchOrdersPage({
+      page,
+      pageSize,
+      keyword: keyword.value.trim() || undefined,
+      orderType: orderTypeFilter.value,
+      status: statusFilter.value,
+      userId: userIdFilter.value,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 
 function orderStatusLabel(status: number) {
   return t(getOrderStatusI18nKey(status));
@@ -41,7 +132,7 @@ function orderTypeLabel(orderType: string) {
 }
 
 const columns = computed<TableColumnsType<OrderInfo>>(() => [
-  { title: t('orders.colOrderNo'), dataIndex: 'orderNo', ellipsis: true },
+  { title: t('orders.colOrderNo'), dataIndex: 'orderNo', width: 180, ellipsis: true },
   { title: t('orders.colProduct'), dataIndex: 'productName', ellipsis: true },
   {
     title: t('orders.colOrderType'),
@@ -69,6 +160,15 @@ const columns = computed<TableColumnsType<OrderInfo>>(() => [
     customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
   },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  orderTypeFilter.value = undefined;
+  statusFilter.value = undefined;
+  userIdFilter.value = undefined;
+  dateRange.value = undefined;
+  reload();
+}
 
 onMounted(load);
 </script>

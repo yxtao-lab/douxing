@@ -11,6 +11,11 @@ import {
   listAllOrdersForAdminPaginated,
 } from '../services/order.service.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
+import {
+  parseDateRangeFilter,
+  parseOptionalInt,
+  parseOptionalString,
+} from '../utils/admin-list-filter.js';
 import type { OrderListTab } from '@douxing/shared';
 import { createOrderPrepay } from '../services/payment.service.js';
 import { getPaymentMode, isWechatPayConfigured } from '../config/payment.js';
@@ -54,7 +59,15 @@ router.get('/', authMiddleware, async (req, res) => {
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const result = await listAllOrdersForAdminPaginated(page, pageSize);
+      const { dateStart, dateEnd } = parseDateRangeFilter(req.query as Record<string, unknown>);
+      const result = await listAllOrdersForAdminPaginated(page, pageSize, {
+        keyword: parseOptionalString(req.query as Record<string, unknown>, 'keyword'),
+        orderType: parseOptionalString(req.query as Record<string, unknown>, 'orderType'),
+        status: parseOptionalInt(req.query as Record<string, unknown>, 'status'),
+        userId: parseOptionalInt(req.query as Record<string, unknown>, 'userId'),
+        dateStart,
+        dateEnd,
+      });
       return success(res, result);
     }
     const tabRaw = typeof req.query.tab === 'string' ? req.query.tab : 'all';

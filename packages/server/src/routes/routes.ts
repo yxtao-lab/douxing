@@ -32,6 +32,11 @@ import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
 import { RoleCode } from '@douxing/shared';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
+import {
+  parseDateRangeFilter,
+  parseOptionalInt,
+  parseOptionalString,
+} from '../utils/admin-list-filter.js';
 import planSessionsRouter from './plan-sessions.js';
 
 const router = Router();
@@ -147,7 +152,15 @@ router.get('/', authMiddleware, async (req, res) => {
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
       const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-      const result = await listAllRoutesForAdminPaginated(page, pageSize);
+      const query = req.query as Record<string, unknown>;
+      const { dateStart, dateEnd } = parseDateRangeFilter(query);
+      const result = await listAllRoutesForAdminPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        status: parseOptionalInt(query, 'status'),
+        creatorId: parseOptionalInt(query, 'creatorId'),
+        dateStart,
+        dateEnd,
+      });
       return success(res, result);
     }
     const parsed = listQuerySchema.safeParse(req.query);

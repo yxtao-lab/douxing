@@ -25,6 +25,8 @@ export const sharedEnUS = {
     refresh: 'Refresh',
     reset: 'Reset',
     search: 'Search',
+    dateRangeStart: 'Start date',
+    dateRangeEnd: 'End date',
     loadMore: 'Loading more…',
     noMore: 'No more data',
     edit: 'Edit',

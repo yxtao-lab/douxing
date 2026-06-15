@@ -49,6 +49,7 @@ export interface DictTypeRow {
   dictName: string;
   status: number;
   remark: string | null;
+  createdAt: string;
 }
 
 export interface DictDataRow {
@@ -170,8 +171,11 @@ export async function resetUserPassword(id: number, password: string) {
   await http.post(`/system/users/${id}/reset-password`, { password });
 }
 
-export async function fetchRoles() {
-  return getData<RoleRow[]>('/system/roles');
+export async function fetchRoles(filters?: { keyword?: string }) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return getData<RoleRow[]>(`/system/roles${suffix}`);
 }
 
 export async function createRole(body: { code: string; name: string; description?: string }) {
@@ -230,8 +234,17 @@ export async function deleteMenu(id: number) {
   await http.delete(`/system/menus/${id}`);
 }
 
-export async function fetchDepts() {
-  return getData<DeptRow[]>('/system/depts');
+export async function fetchDepts(filters?: {
+  keyword?: string;
+  status?: number;
+  parentId?: number;
+}) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  if (filters?.status != null) query.set('status', String(filters.status));
+  if (filters?.parentId != null) query.set('parentId', String(filters.parentId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return getData<DeptRow[]>(`/system/depts${suffix}`);
 }
 
 export async function createDept(body: Partial<DeptRow>) {
@@ -246,11 +259,22 @@ export async function deleteDept(id: number) {
   await http.delete(`/system/depts/${id}`);
 }
 
-export async function fetchPostsPage(page: number, pageSize: number) {
+export async function fetchPostsPage(params: {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: number;
+}) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.status != null) query.set('status', String(params.status));
   const { data } = await http.get<ApiResponse<PaginatedResult<PostRow>>>(
-    `/system/posts?page=${page}&pageSize=${pageSize}`,
+    `/system/posts?${query.toString()}`,
   );
-  return normalizePaginatedResult(data.data, { page, pageSize });
+  return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
 }
 
 export async function createPost(body: {
@@ -304,11 +328,28 @@ export async function deleteDictData(id: number) {
   await http.delete(`/system/dict/data/${id}`);
 }
 
-export async function fetchNoticesPage(page: number, pageSize: number) {
+export async function fetchNoticesPage(params: {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  noticeType?: number;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.noticeType != null) query.set('noticeType', String(params.noticeType));
+  if (params.status != null) query.set('status', String(params.status));
+  if (params.dateStart) query.set('dateStart', params.dateStart);
+  if (params.dateEnd) query.set('dateEnd', params.dateEnd);
   const { data } = await http.get<ApiResponse<PaginatedResult<NoticeRow>>>(
-    `/system/notices?page=${page}&pageSize=${pageSize}`,
+    `/system/notices?${query.toString()}`,
   );
-  return normalizePaginatedResult(data.data, { page, pageSize });
+  return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
 }
 
 export async function createNotice(body: Partial<NoticeRow>) {
@@ -323,34 +364,80 @@ export async function deleteNotice(id: number) {
   await http.delete(`/system/notices/${id}`);
 }
 
-export async function fetchConfigs() {
-  return getData<ConfigRow[]>('/system/config');
+export async function fetchConfigs(filters?: { keyword?: string }) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return getData<ConfigRow[]>(`/system/config${suffix}`);
 }
 
 export async function updateConfig(id: number, configValue: string, remark?: string) {
   await http.put(`/system/config/${id}`, { configValue, remark });
 }
 
-export async function fetchOperLogsPage(page: number, pageSize: number) {
+export interface AdminOperLogListParams {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  operName?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export interface AdminLoginLogListParams {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function appendLogQuery(
+  query: URLSearchParams,
+  params: AdminOperLogListParams | AdminLoginLogListParams,
+) {
+  query.set('page', String(params.page));
+  query.set('pageSize', String(params.pageSize));
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.status != null) query.set('status', String(params.status));
+  if (params.dateStart) query.set('dateStart', params.dateStart);
+  if (params.dateEnd) query.set('dateEnd', params.dateEnd);
+}
+
+export async function fetchOperLogsPage(params: AdminOperLogListParams) {
+  const query = new URLSearchParams();
+  appendLogQuery(query, params);
+  if (params.operName) query.set('operName', params.operName);
   const { data } = await http.get<ApiResponse<PaginatedResult<OperLogRow>>>(
-    `/system/logs/oper?page=${page}&pageSize=${pageSize}`,
+    `/system/logs/oper?${query.toString()}`,
   );
-  return normalizePaginatedResult(data.data, { page, pageSize });
+  return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
 }
 
-export async function fetchLoginLogsPage(page: number, pageSize: number) {
+export async function fetchLoginLogsPage(params: AdminLoginLogListParams) {
+  const query = new URLSearchParams();
+  appendLogQuery(query, params);
   const { data } = await http.get<ApiResponse<PaginatedResult<LoginLogRow>>>(
-    `/system/logs/login?page=${page}&pageSize=${pageSize}`,
+    `/system/logs/login?${query.toString()}`,
   );
-  return normalizePaginatedResult(data.data, { page, pageSize });
+  return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
 }
 
-export async function fetchOnlineUsers() {
-  return getData<OnlineUserRow[]>('/system/monitor/online');
+export async function fetchOnlineUsers(filters?: { keyword?: string }) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return getData<OnlineUserRow[]>(`/system/monitor/online${suffix}`);
 }
 
-export async function fetchScheduledJobs() {
-  return getData<ScheduledJobRow[]>('/system/monitor/jobs');
+export async function fetchScheduledJobs(filters?: { keyword?: string; status?: string }) {
+  const query = new URLSearchParams();
+  if (filters?.keyword) query.set('keyword', filters.keyword);
+  if (filters?.status) query.set('status', filters.status);
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  return getData<ScheduledJobRow[]>(`/system/monitor/jobs${suffix}`);
 }
 
 export async function fetchDataMonitor() {

@@ -5,6 +5,11 @@ import { authMiddleware } from '../middleware/auth.js';
 import { requireAdmin } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
+import {
+  parseDateRangeFilter,
+  parseOptionalInt,
+  parseOptionalString,
+} from '../utils/admin-list-filter.js';
 import { recordOperLogFromRequest } from '../services/sys-log.service.js';
 import {
   listAdminUsersPaginated,
@@ -163,7 +168,13 @@ router.post('/users/:id/reset-password', async (req, res) => {
 router.get('/roles', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, await listRolesWithStats());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      await listRolesWithStats({
+        keyword: parseOptionalString(query, 'keyword'),
+      }),
+    );
   } catch (err) {
     console.error('[system/roles]', err);
     fail(res, '获取角色失败', 500, 500);
@@ -327,7 +338,15 @@ router.delete('/menus/:id', async (req, res) => {
 router.get('/depts', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, await listDepts());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      await listDepts({
+        keyword: parseOptionalString(query, 'keyword'),
+        status: parseOptionalInt(query, 'status'),
+        parentId: parseOptionalInt(query, 'parentId'),
+      }),
+    );
   } catch (err) {
     console.error('[system/depts]', err);
     fail(res, '获取部门失败', 500, 500);
@@ -394,7 +413,14 @@ router.get('/posts', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-    success(res, await listPostsPaginated(page, pageSize));
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      await listPostsPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        status: parseOptionalInt(query, 'status'),
+      }),
+    );
   } catch (err) {
     console.error('[system/posts]', err);
     fail(res, '获取岗位失败', 500, 500);
@@ -589,7 +615,18 @@ router.get('/notices', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-    success(res, await listNoticesPaginated(page, pageSize));
+    const query = req.query as Record<string, unknown>;
+    const { dateStart, dateEnd } = parseDateRangeFilter(query);
+    success(
+      res,
+      await listNoticesPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        noticeType: parseOptionalInt(query, 'noticeType'),
+        status: parseOptionalInt(query, 'status'),
+        dateStart,
+        dateEnd,
+      }),
+    );
   } catch (err) {
     console.error('[system/notices]', err);
     fail(res, '获取公告失败', 500, 500);
@@ -651,7 +688,13 @@ router.delete('/notices/:id', async (req, res) => {
 router.get('/config', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, await listConfigs());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      await listConfigs({
+        keyword: parseOptionalString(query, 'keyword'),
+      }),
+    );
   } catch (err) {
     console.error('[system/config]', err);
     fail(res, '获取参数失败', 500, 500);
@@ -708,7 +751,18 @@ router.get('/logs/oper', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-    success(res, await listOperLogsPaginated(page, pageSize));
+    const query = req.query as Record<string, unknown>;
+    const { dateStart, dateEnd } = parseDateRangeFilter(query);
+    success(
+      res,
+      await listOperLogsPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        operName: parseOptionalString(query, 'operName'),
+        status: parseOptionalInt(query, 'status'),
+        dateStart,
+        dateEnd,
+      }),
+    );
   } catch (err) {
     console.error('[system/logs/oper]', err);
     fail(res, '获取操作日志失败', 500, 500);
@@ -719,7 +773,17 @@ router.get('/logs/login', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
-    success(res, await listLoginLogsPaginated(page, pageSize));
+    const query = req.query as Record<string, unknown>;
+    const { dateStart, dateEnd } = parseDateRangeFilter(query);
+    success(
+      res,
+      await listLoginLogsPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        status: parseOptionalInt(query, 'status'),
+        dateStart,
+        dateEnd,
+      }),
+    );
   } catch (err) {
     console.error('[system/logs/login]', err);
     fail(res, '获取登录日志失败', 500, 500);
@@ -729,7 +793,13 @@ router.get('/logs/login', async (req, res) => {
 router.get('/monitor/online', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, getOnlineUsers());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      getOnlineUsers({
+        keyword: parseOptionalString(query, 'keyword'),
+      }),
+    );
   } catch (err) {
     console.error('[system/monitor/online]', err);
     fail(res, '获取在线用户失败', 500, 500);
@@ -739,7 +809,14 @@ router.get('/monitor/online', async (req, res) => {
 router.get('/monitor/jobs', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, getScheduledJobs());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      getScheduledJobs({
+        keyword: parseOptionalString(query, 'keyword'),
+        status: parseOptionalString(query, 'status'),
+      }),
+    );
   } catch (err) {
     console.error('[system/monitor/jobs]', err);
     fail(res, '获取定时任务失败', 500, 500);
@@ -807,7 +884,14 @@ router.delete('/monitor/cache/keys', async (req, res) => {
 router.get('/membership/products', async (req, res) => {
   try {
     if (!(await requireAdmin(req, res))) return;
-    success(res, listMembershipProducts());
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      listMembershipProducts({
+        targetLevel: parseOptionalInt(query, 'targetLevel'),
+        productId: parseOptionalInt(query, 'productId'),
+      }),
+    );
   } catch (err) {
     console.error('[system/membership/products]', err);
     fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);

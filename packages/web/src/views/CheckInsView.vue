@@ -1,9 +1,65 @@
 <template>
-  <PageContainer :title="t('checkins.title')">
-    <template #extra>
-      <router-link to="/checkins/map">
-        <a-button type="link">{{ t('checkins.mapLink') }}</a-button>
-      </router-link>
+  <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="reload" @reset="resetSearch">
+        <a-form-item :label="t('checkins.colPlace')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('checkins.searchKeyword')"
+            allow-clear
+            style="width: 220px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('checkins.colUser')">
+          <a-input-number
+            v-model:value="userIdFilter"
+            :min="1"
+            :placeholder="t('checkins.searchUserId')"
+            style="width: 120px"
+          />
+        </a-form-item>
+        <a-form-item :label="t('checkins.colRoute')">
+          <a-input-number
+            v-model:value="routeIdFilter"
+            :min="1"
+            :placeholder="t('checkins.searchRouteId')"
+            style="width: 120px"
+          />
+        </a-form-item>
+        <a-form-item :label="t('checkins.colCity')">
+          <a-input
+            v-model:value="cityCodeFilter"
+            :placeholder="t('checkins.searchCityCode')"
+            allow-clear
+            style="width: 160px"
+            @press-enter="reload"
+          />
+        </a-form-item>
+        <a-form-item :label="t('checkins.colTime')">
+          <a-range-picker
+            v-model:value="dateRange"
+            value-format="YYYY-MM-DD"
+            style="width: 240px"
+            :placeholder="[t('common.dateRangeStart'), t('common.dateRangeEnd')]"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
+    <template #toolbar>
+      <AdminToolbar>
+        <template #right>
+          <router-link to="/checkins/map">
+            <a-button>{{ t('checkins.mapLink') }}</a-button>
+          </router-link>
+          <a-tooltip :title="t('common.refresh')">
+            <a-button :loading="loading" @click="reload">
+              <template #icon><ReloadOutlined /></template>
+            </a-button>
+          </a-tooltip>
+        </template>
+      </AdminToolbar>
     </template>
 
     <DouxingAdminTable
@@ -40,12 +96,15 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { CheckInInfo } from '@douxing/shared';
 import { fetchCheckInsPage } from '@/api/checkins';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
+import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -53,9 +112,26 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.checkins');
 
 const { t } = useI18n();
-const { items, loading, pagination, load, handleTableChange } = useServerTablePagination<CheckInInfo>(
-  (page, pageSize) => fetchCheckInsPage({ page, pageSize, all: true }),
-);
+const keyword = ref('');
+const userIdFilter = ref<number | undefined>();
+const routeIdFilter = ref<number | undefined>();
+const cityCodeFilter = ref('');
+const dateRange = ref<[string, string] | undefined>();
+
+const { items, loading, pagination, load, reload, handleTableChange } =
+  useServerTablePagination<CheckInInfo>((page, pageSize) =>
+    fetchCheckInsPage({
+      page,
+      pageSize,
+      all: true,
+      keyword: keyword.value.trim() || undefined,
+      userId: userIdFilter.value,
+      routeId: routeIdFilter.value,
+      cityCode: cityCodeFilter.value.trim() || undefined,
+      dateStart: dateRange.value?.[0],
+      dateEnd: dateRange.value?.[1],
+    }),
+  );
 
 const columns = computed<TableColumnsType<CheckInInfo>>(() => [
   { title: t('checkins.colUser'), dataIndex: 'userId', width: 100 },
@@ -80,6 +156,15 @@ const columns = computed<TableColumnsType<CheckInInfo>>(() => [
     customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
   },
 ]);
+
+function resetSearch() {
+  keyword.value = '';
+  userIdFilter.value = undefined;
+  routeIdFilter.value = undefined;
+  cityCodeFilter.value = '';
+  dateRange.value = undefined;
+  reload();
+}
 
 onMounted(load);
 </script>

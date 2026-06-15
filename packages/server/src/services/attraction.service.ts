@@ -1,4 +1,4 @@
-import { eq, and, like, or, sql, inArray, count } from 'drizzle-orm';
+import { eq, and, like, or, sql, inArray, count, gte, lte, isNull, isNotNull } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { attractions } from '../db/schema/attractions.js';
 import {
@@ -261,9 +261,54 @@ export async function seedAttractions() {
   console.log(`[seed] Created ${ATTRACTION_SEEDS.length} attractions`);
 }
 
-export async function listPendingAttractionsPaginated(page: number, pageSize: number) {
+export interface AdminPendingAttractionListFilter {
+  keyword?: string;
+  city?: string;
+  category?: string;
+  source?: string;
+  missingCoord?: boolean;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildPendingAttractionWhere(filter?: AdminPendingAttractionListFilter) {
+  const conditions = [eq(attractions.status, AttractionStatus.PENDING)];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(or(like(attractions.name, pattern), like(attractions.description, pattern))!);
+  }
+  const city = filter?.city?.trim();
+  if (city) {
+    conditions.push(like(attractions.city, `%${city}%`));
+  }
+  if (filter?.category) {
+    conditions.push(eq(attractions.category, filter.category));
+  }
+  if (filter?.source) {
+    conditions.push(eq(attractions.source, filter.source));
+  }
+  if (filter?.missingCoord === true) {
+    conditions.push(or(isNull(attractions.latitude), isNull(attractions.longitude))!);
+  } else if (filter?.missingCoord === false) {
+    conditions.push(and(isNotNull(attractions.latitude), isNotNull(attractions.longitude))!);
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(attractions.updatedAt, new Date(`${filter.dateStart}T00:00:00`)));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(attractions.updatedAt, new Date(`${filter.dateEnd}T23:59:59.999`)));
+  }
+  return and(...conditions);
+}
+
+export async function listPendingAttractionsPaginated(
+  page: number,
+  pageSize: number,
+  filter?: AdminPendingAttractionListFilter,
+) {
   const db = getDb();
-  const where = eq(attractions.status, AttractionStatus.PENDING);
+  const where = buildPendingAttractionWhere(filter);
   const [{ value: total }] = await db.select({ value: count() }).from(attractions).where(where);
   const offset = (page - 1) * pageSize;
   const rows = await db

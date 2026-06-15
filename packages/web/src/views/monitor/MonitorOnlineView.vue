@@ -1,5 +1,19 @@
 <template>
   <PageContainer admin>
+    <template #search>
+      <AdminSearchBar @search="load" @reset="resetSearch">
+        <a-form-item :label="t('system.colUsername')">
+          <a-input
+            v-model:value="keyword"
+            :placeholder="t('system.searchOnlineKeyword')"
+            allow-clear
+            style="width: 240px"
+            @press-enter="load"
+          />
+        </a-form-item>
+      </AdminSearchBar>
+    </template>
+
     <template #toolbar>
       <AdminToolbar>
         <template #right>
@@ -29,6 +43,7 @@ import { ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import { fetchOnlineUsers, type OnlineUserRow } from '@/api/system';
+import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
@@ -37,6 +52,7 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 usePageTitle('web.monitorOnline');
 
 const { t } = useI18n();
+const keyword = ref('');
 const items = ref<OnlineUserRow[]>([]);
 const loading = ref(false);
 
@@ -58,10 +74,17 @@ const columns = computed<TableColumnsType<OnlineUserRow>>(() => [
   },
 ]);
 
+function resetSearch() {
+  keyword.value = '';
+  void load();
+}
+
 async function load() {
   loading.value = true;
   try {
-    items.value = await fetchOnlineUsers();
+    items.value = await fetchOnlineUsers({
+      keyword: keyword.value.trim() || undefined,
+    });
   } finally {
     loading.value = false;
   }

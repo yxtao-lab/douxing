@@ -6,11 +6,37 @@ import {
   type PaginatedResult,
 } from '@douxing/shared';
 
-export async function fetchPendingAttractionsPage(page: number, pageSize: number) {
+export interface AdminPendingAttractionListParams {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  city?: string;
+  category?: string;
+  source?: string;
+  missingCoord?: boolean;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+export async function fetchPendingAttractionsPage(params: AdminPendingAttractionListParams) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.city) query.set('city', params.city);
+  if (params.category) query.set('category', params.category);
+  if (params.source) query.set('source', params.source);
+  if (params.missingCoord != null) query.set('missingCoord', params.missingCoord ? '1' : '0');
+  if (params.dateStart) query.set('dateStart', params.dateStart);
+  if (params.dateEnd) query.set('dateEnd', params.dateEnd);
   const { data } = await http.get<ApiResponse<PaginatedResult<AttractionInfo>>>(
-    `/attractions/admin/pending?page=${page}&pageSize=${pageSize}`,
+    `/attractions/admin/pending?${query.toString()}`,
   );
-  return normalizePaginatedResult(data.data, { page, pageSize });
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
 }
 
 export async function approveAttraction(id: number) {

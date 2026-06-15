@@ -8,8 +8,17 @@ import {
   type PaginatedResult,
 } from '@douxing/shared';
 
-export async function fetchMembershipProducts() {
-  const { data } = await http.get<ApiResponse<MembershipProduct[]>>('/system/membership/products');
+export async function fetchMembershipProducts(filters?: {
+  targetLevel?: number;
+  productId?: number;
+}) {
+  const query = new URLSearchParams();
+  if (filters?.targetLevel != null) query.set('targetLevel', String(filters.targetLevel));
+  if (filters?.productId != null) query.set('productId', String(filters.productId));
+  const suffix = query.toString() ? `?${query.toString()}` : '';
+  const { data } = await http.get<ApiResponse<MembershipProduct[]>>(
+    `/system/membership/products${suffix}`,
+  );
   return data.data;
 }
 

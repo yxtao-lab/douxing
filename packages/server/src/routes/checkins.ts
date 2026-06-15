@@ -13,6 +13,11 @@ import {
   listAllCheckInsForAdminPaginated,
 } from '../services/checkin.service.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
+import {
+  parseDateRangeFilter,
+  parseOptionalInt,
+  parseOptionalString,
+} from '../utils/admin-list-filter.js';
 import type { CheckInTimeRange } from '@douxing/shared';
 import { getUserWithRoles } from '../services/user.service.js';
 import { RoleCode, CHECKIN_MAX_PHOTOS } from '@douxing/shared';
@@ -124,7 +129,16 @@ router.get('/', authMiddleware, async (req, res) => {
 
     const user = await getUserWithRoles(req.auth!.userId);
     if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
-      const result = await listAllCheckInsForAdminPaginated(page, pageSize);
+      const query = req.query as Record<string, unknown>;
+      const { dateStart, dateEnd } = parseDateRangeFilter(query);
+      const result = await listAllCheckInsForAdminPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        userId: parseOptionalInt(query, 'userId'),
+        routeId: parseOptionalInt(query, 'routeId'),
+        cityCode: parseOptionalString(query, 'cityCode'),
+        dateStart,
+        dateEnd,
+      });
       return success(res, result);
     }
     const routeId = req.query.routeId ? parseInt(String(req.query.routeId), 10) : null;

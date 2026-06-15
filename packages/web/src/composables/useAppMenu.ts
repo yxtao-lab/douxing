@@ -73,9 +73,9 @@ export const menuIconMap: Record<string, Component> = {
 export const menuIconOptions = Object.keys(menuIconMap).sort();
 
 const MENU_GROUPS = [
+  { key: 'web.menu.data', groupId: 'group-data', icon: 'BarChartOutlined' },
   { key: 'web.menu.biz', groupId: 'group-biz', icon: 'UnorderedListOutlined' },
   { key: 'web.menu.content', groupId: 'group-content', icon: 'AuditOutlined' },
-  { key: 'web.menu.data', groupId: 'group-data', icon: 'BarChartOutlined' },
   { key: 'web.menu.system', groupId: 'group-system', icon: 'SettingOutlined' },
   { key: 'web.menu.monitor', groupId: 'group-monitor', icon: 'RadarChartOutlined' },
   { key: 'web.menu.log', groupId: 'group-log', icon: 'FileTextOutlined' },

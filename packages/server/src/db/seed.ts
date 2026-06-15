@@ -273,10 +273,15 @@ async function seedSystemAdmin() {
     console.log('[seed] Created sys_menu');
   } else {
     for (const item of DEFAULT_MENU_SEED) {
-      if (!item.icon) continue;
-      await db.update(sysMenu).set({ icon: item.icon }).where(eq(sysMenu.menuKey, item.menuKey));
+      await db
+        .update(sysMenu)
+        .set({
+          ...(item.icon ? { icon: item.icon } : {}),
+          sortOrder: item.sortOrder,
+        })
+        .where(eq(sysMenu.menuKey, item.menuKey));
     }
-    console.log('[seed] Synced menu icons from DEFAULT_MENU_SEED');
+    console.log('[seed] Synced menu icons and sortOrder from DEFAULT_MENU_SEED');
   }
 }
 

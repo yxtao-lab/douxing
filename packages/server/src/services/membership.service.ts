@@ -78,8 +78,18 @@ export async function getMembershipInfoForUser(userId: number): Promise<Membersh
   });
 }
 
-export function listMembershipProducts(): MembershipProduct[] {
-  return MEMBERSHIP_PRODUCTS;
+export function listMembershipProducts(filter?: {
+  targetLevel?: number;
+  productId?: number;
+}): MembershipProduct[] {
+  let items = MEMBERSHIP_PRODUCTS;
+  if (filter?.productId != null) {
+    items = items.filter((item) => item.id === filter.productId);
+  }
+  if (filter?.targetLevel != null) {
+    items = items.filter((item) => item.targetLevel === filter.targetLevel);
+  }
+  return items;
 }
 
 export async function logMembershipChange(input: {
