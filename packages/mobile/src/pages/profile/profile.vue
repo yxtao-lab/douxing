@@ -93,6 +93,7 @@ import {
 import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
 import { fetchCurrentUser } from '@/api/user';
 import { getStoredUser, setAuth } from '@/utils/request';
+import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -288,7 +289,7 @@ function syncPageLayout() {
 }
 
 onShow(async () => {
-  uni.hideTabBar({ animation: false });
+  hideNativeTabBar();
   user.value = getStoredUser();
   if (!user.value) {
     void syncPageLayout();

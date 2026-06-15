@@ -1,16 +1,16 @@
 {
   "pages": [
     {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "兜行"
+      }
+    },
+    {
       "path": "pages/maintenance/index",
       "style": {
         "navigationBarTitleText": "维护中",
         "navigationStyle": "custom"
-      }
-    },
-    {
-      "path": "pages/index/index",
-      "style": {
-        "navigationBarTitleText": "兜行"
       }
     },
     {

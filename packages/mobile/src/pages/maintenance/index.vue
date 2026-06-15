@@ -13,6 +13,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { onShow } from '@dcloudio/uni-app';
 import { useI18n } from 'vue-i18n';
 import { fetchPublicSiteStatus } from '@/utils/site-status';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -22,8 +23,11 @@ usePageTitle('siteStatus.pageTitle');
 const { t } = useI18n();
 const checking = ref(false);
 
-async function retry() {
-  checking.value = true;
+async function checkSiteStatus(silent = false): Promise<void> {
+  if (!silent) {
+    if (checking.value) return;
+    checking.value = true;
+  }
   try {
     const status = await fetchPublicSiteStatus();
     if (status.online) {
@@ -32,9 +36,19 @@ async function retry() {
   } catch {
     /* 保持维护页 */
   } finally {
-    checking.value = false;
+    if (!silent) {
+      checking.value = false;
+    }
   }
 }
+
+function retry() {
+  void checkSiteStatus(false);
+}
+
+onShow(() => {
+  void checkSiteStatus(true);
+});
 </script>
 
 <style scoped>

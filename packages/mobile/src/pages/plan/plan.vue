@@ -203,6 +203,7 @@ import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getAppErrorMessage } from '@/utils/request';
+import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
 import type {
@@ -579,7 +580,7 @@ onMounted(async () => {
 });
 
 onShow(() => {
-  uni.hideTabBar({ animation: false });
+  hideNativeTabBar();
   user.value = authStorage.getStoredUser();
   if (user.value) {
     memberPlanCount.value = getPlanCandidateCountByMemberLevel(user.value.memberLevel);

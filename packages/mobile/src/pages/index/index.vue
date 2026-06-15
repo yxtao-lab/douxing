@@ -147,6 +147,7 @@ import type { TravelRouteInfo } from '@douxing/shared';
 import { normalizePaginatedItems } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
+import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import { useTheme } from '@/i18n/useTheme';
@@ -184,7 +185,7 @@ const welcomeText = computed(() => {
 });
 
 onShow(() => {
-  uni.hideTabBar({ animation: false });
+  hideNativeTabBar();
   user.value = getStoredUser();
   if (user.value) {
     void loadHotRoutes();

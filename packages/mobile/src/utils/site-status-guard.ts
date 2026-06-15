@@ -27,20 +27,26 @@ export async function guardSiteOnlineRoute(): Promise<void> {
   const current = pages[pages.length - 1];
   const route = current?.route ?? '';
   const onMaintenancePage = route.includes('pages/maintenance/index');
+  const isAppLaunching = pages.length === 0;
 
   try {
     const status = await fetchPublicSiteStatus();
     cachedStatus = { online: status.online, checkedAt: Date.now() };
 
-    if (!status.online && !onMaintenancePage) {
-      uni.reLaunch({ url: '/pages/maintenance/index' });
+    if (!status.online) {
+      if (!onMaintenancePage) {
+        uni.reLaunch({ url: '/pages/maintenance/index' });
+      }
       return;
     }
 
-    if (status.online && onMaintenancePage) {
+    if (onMaintenancePage) {
       uni.reLaunch({ url: '/pages/index/index' });
     }
   } catch {
-    /* 网络异常时不阻断 */
+    /* 启动阶段网络未就绪时不阻断；维护页 onShow 会再次检测 */
+    if (isAppLaunching) {
+      return;
+    }
   }
 }

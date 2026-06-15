@@ -94,6 +94,7 @@ import { fetchRoutesPage } from '@/api/routes';
 import { useInfiniteList } from '@/composables/useInfiniteList';
 import { RouteStatus } from '@douxing/shared';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
+import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import type { DouxingEmptyVariant } from '@/components/douxing-empty-state/empty-state-variants';
@@ -256,7 +257,7 @@ function switchScope(scope: RouteListScope) {
 }
 
 onShow(async () => {
-  uni.hideTabBar({ animation: false });
+  hideNativeTabBar();
   const user = getStoredUser();
   if (!user) {
     uni.navigateTo({ url: '/pages/login/login' });

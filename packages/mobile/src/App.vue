@@ -7,21 +7,12 @@ import { guardSiteOnlineRoute } from '@/utils/site-status-guard';
 onLaunch(async () => {
   initAppTheme();
   console.log(`${APP_NAME} 移动端启动`);
-  hideNativeTabBar();
   await guardSiteOnlineRoute();
 });
 
 onShow(() => {
   void guardSiteOnlineRoute();
 });
-
-function hideNativeTabBar() {
-  try {
-    uni.hideTabBar({ animation: false });
-  } catch {
-    // 非 Tab 页可能失败，忽略
-  }
-}
 </script>
 
 <style>
