@@ -8,11 +8,18 @@ import {
   shouldAutoCompleteAfterPay,
   isOrderTerminalStatus,
   buildPaginatedResult,
+  getMembershipProductByLevel,
 } from '@douxing/shared';
 import { getRouteById, unlockRoute } from './route.service.js';
 import { applyOrderStatusTransition } from './order-transition.service.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 import { randomBytes } from 'crypto';
+import {
+  buildMembershipOrderProductName,
+  validateMembershipPurchase,
+  fulfillMembershipOrder,
+  getUserMemberLevel,
+} from './membership.service.js';
 
 function generateOrderNo(): string {
   const ts = Date.now().toString(36).toUpperCase();
@@ -91,6 +98,18 @@ export async function fulfillOrderAfterPaid(orderId: number) {
     await unlockRoute(current.productId, current.userId);
   }
 
+  if (current.orderType === OrderType.MEMBERSHIP && current.status === OrderStatus.PAID) {
+    const upgrade = await fulfillMembershipOrder({
+      id: current.id,
+      userId: current.userId,
+      productId: current.productId,
+      productSnapshot: (current.productSnapshot as Record<string, unknown> | null) ?? null,
+    });
+    if ('error' in upgrade) {
+      return { error: upgrade.error ?? '会员履约失败' as const };
+    }
+  }
+
   if (shouldAutoCompleteAfterPay(current.orderType) && current.status === OrderStatus.PAID) {
     await applyOrderStatusTransition(orderId, OrderStatus.PAID, OrderStatus.COMPLETED);
   }
@@ -141,6 +160,54 @@ export async function createRouteUnlockOrder(userId: number, routeId: number) {
     totalAmount: String(price),
     status: OrderStatus.PENDING,
     productSnapshot: { routeId, routeName: route.name, unlockPrice: price },
+  });
+
+  const id = Number(result.insertId);
+  const rows = await db.select().from(orders).where(eq(orders.id, id)).limit(1);
+  return { order: toOrderInfo(rows[0]!) };
+}
+
+export async function createMembershipUpgradeOrder(userId: number, targetLevel: number) {
+  const product = getMembershipProductByLevel(targetLevel);
+  if (!product) return { error: '会员套餐不存在' as const };
+
+  const currentLevel = await getUserMemberLevel(userId);
+  const validation = validateMembershipPurchase(currentLevel, targetLevel);
+  if (validation.error) return { error: validation.error };
+
+  const db = getDb();
+  const pendingRows = await db
+    .select()
+    .from(orders)
+    .where(
+      and(
+        eq(orders.userId, userId),
+        eq(orders.orderType, OrderType.MEMBERSHIP),
+        eq(orders.productId, product.id),
+        eq(orders.status, OrderStatus.PENDING),
+      ),
+    )
+    .orderBy(desc(orders.createdAt))
+    .limit(1);
+  if (pendingRows[0]) {
+    return { order: toOrderInfo(pendingRows[0]) };
+  }
+
+  const orderNo = generateOrderNo();
+  const productName = buildMembershipOrderProductName(product.targetLevel);
+  const [result] = await db.insert(orders).values({
+    orderNo,
+    userId,
+    orderType: OrderType.MEMBERSHIP,
+    productId: product.id,
+    productName,
+    totalAmount: String(product.price),
+    status: OrderStatus.PENDING,
+    productSnapshot: {
+      targetLevel: product.targetLevel,
+      durationDays: product.durationDays,
+      price: product.price,
+    },
   });
 
   const id = Number(result.insertId);

@@ -1,0 +1,40 @@
+---
+description: Web 管理端表格操作列按钮样式约束
+globs: packages/web/src/**/*.vue
+alwaysApply: false
+---
+
+# Web 管理端表格操作列
+
+## 必须
+
+- 表格「操作」列按钮统一使用 `TableActionBar` + `TableActionButton`
+- 禁止在操作列使用 `a-button type="link"`、`type="primary" size="small"` 或裸 `<a>` 链接样式
+- 样式定义在 `packages/web/src/styles/admin-page.css`，勿在页面内 scoped 覆盖
+
+## 组件
+
+```vue
+<TableActionBar @edit="onEdit(record)" @delete="onDelete(record)" />
+
+<!-- 自定义操作 -->
+<TableActionBar :show-edit="false" :show-delete="false">
+  <TableActionButton variant="edit" label="调整" @click="..." />
+</TableActionBar>
+
+<!-- 删除需二次确认 -->
+<a-popconfirm @confirm="onDelete(record)">
+  <TableActionButton variant="delete" :label="t('system.delete')" />
+</a-popconfirm>
+```
+
+## 变体
+
+| variant   | 用途           | 配色     |
+|-----------|----------------|----------|
+| edit      | 编辑（默认）   | 主题浅色 |
+| delete    | 删除           | 红色浅底 |
+| primary   | 一般主操作     | 主题浅色 |
+| warning   | 重置密码等     | 警示色   |
+| success   | 审核通过等     | 绿色浅底 |
+| info      | 上传/刷新等    | 蓝色浅底 |

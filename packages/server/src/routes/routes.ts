@@ -53,6 +53,7 @@ const listQuerySchema = z.object({
   scope: z.enum(['mine', 'hot', 'favorites', 'plaza']).optional(),
   status: optionalQueryInt(0, 2),
   sort: z.enum(['recent', 'hot', 'views']).optional(),
+  keyword: z.string().max(64).optional(),
   limit: optionalQueryInt(1, 100),
   page: optionalQueryInt(1, 10_000),
   pageSize: optionalQueryInt(1, 100),
@@ -170,6 +171,7 @@ router.get('/plaza', authMiddleware, async (req, res) => {
     const result = await listRoutesForUser(req.auth!.userId, {
       scope: 'plaza',
       sort: sort ?? 'hot',
+      keyword: parsed.success ? parsed.data.keyword : undefined,
       page,
       pageSize,
     });

@@ -254,6 +254,8 @@ export interface RouteListQuery {
   scope?: RouteListScope;
   status?: number;
   sort?: RouteListSort;
+  /** 按路线名称、简介模糊搜索（不含行程景点与 routeDetail） */
+  keyword?: string;
   /** @deprecated 请使用 pageSize */
   limit?: number;
   page?: number;
@@ -476,6 +478,37 @@ export interface OrderInfo {
   totalAmount: string;
   status: number;
   paidAt: string | null;
+  createdAt: string;
+}
+
+/** 会员变更日志 */
+export interface MembershipChangeLog {
+  id: number;
+  userId: number;
+  username?: string;
+  nickname?: string;
+  fromLevel: number;
+  toLevel: number;
+  source: string;
+  remark: string | null;
+  orderId: number | null;
+  operatorId: number | null;
+  operatorName?: string | null;
+  memberExpiresAt: string | null;
+  createdAt: string;
+}
+
+/** 管理端会员用户行 */
+export interface AdminMembershipUserRow {
+  id: number;
+  username: string;
+  nickname: string;
+  phone: string | null;
+  memberLevel: number;
+  effectiveLevel: number;
+  memberExpiresAt: string | null;
+  isExpired: boolean;
+  status: number;
   createdAt: string;
 }
 

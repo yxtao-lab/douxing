@@ -59,6 +59,42 @@ const router = createRouter({
           },
         },
         {
+          path: 'membership/users',
+          name: 'membership-users',
+          component: () => import('@/views/membership/MembershipUsersView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.membershipUsers',
+            menuGroupKey: 'web.menu.biz',
+            menuSubGroupKey: 'web.menu.membership',
+            icon: 'CrownOutlined',
+          },
+        },
+        {
+          path: 'membership/logs',
+          name: 'membership-logs',
+          component: () => import('@/views/membership/MembershipLogsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.membershipLogs',
+            menuGroupKey: 'web.menu.biz',
+            menuSubGroupKey: 'web.menu.membership',
+            icon: 'HistoryOutlined',
+          },
+        },
+        {
+          path: 'membership/products',
+          name: 'membership-products',
+          component: () => import('@/views/membership/MembershipProductsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.membershipProducts',
+            menuGroupKey: 'web.menu.biz',
+            menuSubGroupKey: 'web.menu.membership',
+            icon: 'GiftOutlined',
+          },
+        },
+        {
           path: 'checkins',
           name: 'checkins',
           component: () => import('@/views/CheckInsView.vue'),

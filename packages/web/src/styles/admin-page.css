@@ -179,6 +179,23 @@
   color: var(--color-accent-dark);
 }
 
+.table-action-bar .success-btn {
+  background: #f6ffed;
+  color: #52c41a;
+}
+
+.table-action-bar .info-btn {
+  background: #e6f4ff;
+  color: #1677ff;
+}
+
+.table-action-bar .success-btn .anticon,
+.table-action-bar .info-btn .anticon,
+.table-action-bar .primary-btn .anticon,
+.table-action-bar .warning-btn .anticon {
+  font-size: 12px;
+}
+
 /* 监控/字典等内容区 */
 .admin-panel-grid {
   display: grid;

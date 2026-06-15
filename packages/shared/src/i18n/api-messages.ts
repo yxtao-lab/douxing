@@ -201,6 +201,18 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: '获取趋势数据失败',
   [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: '获取城市排行失败',
   [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: '写入埋点事件失败',
+
+  [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: '会员套餐不存在',
+  [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: '已是最高会员等级',
+  [ApiMessageKey.MEMBERSHIP_DOWNGRADE_NOT_ALLOWED]: '不支持降级购买',
+  [ApiMessageKey.MEMBERSHIP_ORDER_CREATE_FAILED]: '创建会员订单失败',
+  [ApiMessageKey.MEMBERSHIP_UPGRADE_FAILED]: '会员升级失败',
+  [ApiMessageKey.MEMBERSHIP_LOG_LIST_FAILED]: '获取会员日志失败',
+  [ApiMessageKey.MEMBERSHIP_USER_LIST_FAILED]: '获取会员用户失败',
+  [ApiMessageKey.MEMBERSHIP_UPDATE_FAILED]: '更新会员失败',
+  [ApiMessageKey.MEMBERSHIP_ORDER_CREATED]: '会员订单创建成功',
+  [ApiMessageKey.MEMBERSHIP_UPDATED]: '会员信息已更新',
+  [ApiMessageKey.MEMBERSHIP_UPGRADE_SUCCESS]: '会员升级成功',
 };
 
 const enUS: Record<string, string> = {
@@ -409,6 +421,18 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: 'Failed to load trend data',
   [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: 'Failed to load city rankings',
   [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: 'Failed to track analytics event',
+
+  [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: 'Membership plan not found',
+  [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: 'Already at the highest membership tier',
+  [ApiMessageKey.MEMBERSHIP_DOWNGRADE_NOT_ALLOWED]: 'Downgrade purchase is not allowed',
+  [ApiMessageKey.MEMBERSHIP_ORDER_CREATE_FAILED]: 'Failed to create membership order',
+  [ApiMessageKey.MEMBERSHIP_UPGRADE_FAILED]: 'Membership upgrade failed',
+  [ApiMessageKey.MEMBERSHIP_LOG_LIST_FAILED]: 'Failed to load membership logs',
+  [ApiMessageKey.MEMBERSHIP_USER_LIST_FAILED]: 'Failed to load membership users',
+  [ApiMessageKey.MEMBERSHIP_UPDATE_FAILED]: 'Failed to update membership',
+  [ApiMessageKey.MEMBERSHIP_ORDER_CREATED]: 'Membership order created',
+  [ApiMessageKey.MEMBERSHIP_UPDATED]: 'Membership updated',
+  [ApiMessageKey.MEMBERSHIP_UPGRADE_SUCCESS]: 'Membership upgraded successfully',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

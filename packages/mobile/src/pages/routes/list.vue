@@ -29,6 +29,29 @@
           </text>
         </view>
 
+        <view class="search-bar">
+          <text class="iconfont icon-search search-icon" aria-hidden="true" />
+          <input
+            v-model="searchInput"
+            class="search-input"
+            type="text"
+            :placeholder="t('routes.searchPlaceholder')"
+            confirm-type="search"
+            @confirm="applySearchNow"
+          />
+          <text
+            v-if="searchInput"
+            class="search-clear"
+            @click="clearSearch"
+          >
+            {{ t('common.reset') }}
+          </text>
+        </view>
+
+        <view v-if="searchKeyword" class="search-meta">
+          <text class="search-count">{{ tf('routes.searchResultCount', { count: listTotal }) }}</text>
+        </view>
+
         <view v-if="activeScope === 'mine'" class="filters">
           <text
             v-for="f in statusFilters"
@@ -87,7 +110,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo, RouteListScope } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
@@ -108,14 +131,18 @@ usePageTitle('nav.routes');
 
 const activeScope = ref<RouteListScope>('mine');
 const statusFilter = ref<number | undefined>(undefined);
+const searchInput = ref('');
+const searchKeyword = ref('');
 const currentUserLabel = ref('');
 const loadError = ref('');
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
-const { items: routes, loading, loadingMore, hasMore, loadInitial, loadMore } = useInfiniteList(
+const { items: routes, loading, loadingMore, hasMore, total: listTotal, loadInitial, loadMore } = useInfiniteList(
   (page, pageSize) =>
     fetchRoutesPage({
       scope: activeScope.value,
       status: activeScope.value === 'mine' ? statusFilter.value : undefined,
+      keyword: searchKeyword.value || undefined,
       sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
       page,
       pageSize,
@@ -142,6 +169,7 @@ const statusFilterLabel = computed(() => {
 
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
+  if (searchKeyword.value) return t('routes.emptySearch');
   if (activeScope.value === 'plaza') return t('routes.emptyPlaza');
   if (activeScope.value === 'favorites') return t('routes.emptyFavorites');
   return t('routes.emptyMine');
@@ -164,6 +192,9 @@ const emptyVariant = computed((): DouxingEmptyVariant => {
 
 const emptyDescription = computed(() => {
   if (loadError.value) return '';
+  if (searchKeyword.value) {
+    return tf('routes.emptySearchHint', { keyword: searchKeyword.value });
+  }
   if (activeScope.value === 'plaza') return t('emptyState.routesPlazaDesc');
   if (activeScope.value === 'favorites') return t('emptyState.routesFavoritesDesc');
   return t('emptyState.routesMineDesc');
@@ -171,7 +202,7 @@ const emptyDescription = computed(() => {
 
 const emptyHints = computed(() => {
   const hints: string[] = [];
-  if (loadError.value) return hints;
+  if (loadError.value || searchKeyword.value) return hints;
   if (activeScope.value === 'mine' && currentUserLabel.value) {
     hints.push(emptyAccountLine.value);
   }
@@ -183,12 +214,14 @@ const emptyHints = computed(() => {
 
 const emptyActionLabel = computed(() => {
   if (loadError.value) return t('common.refresh');
+  if (searchKeyword.value) return t('common.reset');
   if (activeScope.value === 'mine') return t('routes.goPlan');
   if (activeScope.value === 'favorites') return t('emptyState.explorePlaza');
   return t('routes.goPlan');
 });
 
 const emptySecondaryActionLabel = computed(() => {
+  if (searchKeyword.value) return undefined;
   if (activeScope.value === 'mine' && statusFilter.value !== undefined) {
     return t('emptyState.filterReset');
   }
@@ -198,6 +231,10 @@ const emptySecondaryActionLabel = computed(() => {
 function handleEmptyAction() {
   if (loadError.value) {
     void loadRoutes();
+    return;
+  }
+  if (searchKeyword.value) {
+    clearSearch();
     return;
   }
   if (activeScope.value === 'favorites') {
@@ -256,6 +293,28 @@ function switchScope(scope: RouteListScope) {
   loadRoutes();
 }
 
+function applySearchNow() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+  const next = searchInput.value.trim();
+  if (next === searchKeyword.value) return;
+  searchKeyword.value = next;
+  void loadRoutes();
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  if (!searchKeyword.value) return;
+  searchKeyword.value = '';
+  void loadRoutes();
+}
+
+onBeforeUnmount(() => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+});
+
 onShow(async () => {
   hideNativeTabBar();
   const user = getStoredUser();
@@ -275,6 +334,16 @@ onShow(async () => {
 
 watch(statusFilter, () => {
   if (activeScope.value === 'mine') loadRoutes();
+});
+
+watch(searchInput, (value) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    const next = value.trim();
+    if (next === searchKeyword.value) return;
+    searchKeyword.value = next;
+    void loadRoutes();
+  }, 300);
 });
 </script>
 
@@ -372,6 +441,41 @@ watch(statusFilter, () => {
   color: var(--dx-primary);
   font-weight: 600;
   box-shadow: var(--dx-shadow-sm);
+}
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 16rpx;
+  padding: 0 20rpx;
+  height: 72rpx;
+  background: var(--dx-bg);
+  border-radius: 999rpx;
+}
+.search-icon {
+  flex-shrink: 0;
+  font-size: 28rpx;
+  color: var(--dx-text-muted);
+}
+.search-input {
+  flex: 1;
+  min-width: 0;
+  height: 72rpx;
+  font-size: 26rpx;
+  color: var(--dx-text);
+}
+.search-clear {
+  flex-shrink: 0;
+  font-size: 24rpx;
+  color: var(--dx-primary);
+  padding: 8rpx 0 8rpx 8rpx;
+}
+.search-meta {
+  margin-top: 12rpx;
+}
+.search-count {
+  font-size: 22rpx;
+  color: var(--dx-text-muted);
 }
 .filters {
   display: flex;

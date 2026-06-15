@@ -35,14 +35,14 @@
           {{ record.ticketPrice > 0 ? `¥${record.ticketPrice}` : '-' }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-button
-            type="primary"
-            size="small"
-            :loading="approvingId === record.id"
-            @click="handleApprove(record)"
-          >
-            {{ approvingId === record.id ? t('attractions.approving') : t('attractions.approve') }}
-          </a-button>
+          <TableActionBar :show-edit="false" :show-delete="false">
+            <TableActionButton
+              variant="success"
+              :label="approvingId === record.id ? t('attractions.approving') : t('attractions.approve')"
+              :title="t('attractions.approve')"
+              @click="handleApprove(record)"
+            />
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -59,6 +59,8 @@ import { approveAttraction, fetchPendingAttractionsPage } from '@/api/attraction
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 

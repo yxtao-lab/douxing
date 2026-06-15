@@ -18,6 +18,7 @@ import playbooksRouter from './playbooks.js';
 import journeyAlbumsRouter from './journey-albums.js';
 import analyticsRouter from './analytics.js';
 import systemAdminRouter from './system-admin.js';
+import membershipRouter from './membership.js';
 
 const router = Router();
 
@@ -37,6 +38,7 @@ router.use(`${API_PREFIX}/share`, shareRouter);
 router.use(`${API_PREFIX}/playbooks`, playbooksRouter);
 router.use(`${API_PREFIX}/journey-albums`, journeyAlbumsRouter);
 router.use(`${API_PREFIX}/analytics`, analyticsRouter);
+router.use(`${API_PREFIX}/membership`, membershipRouter);
 router.use(`${API_PREFIX}/system`, systemAdminRouter);
 
 export default router;

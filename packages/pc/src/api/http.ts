@@ -72,6 +72,10 @@ http.interceptors.response.use(
       unauthorizedHandler?.();
     }
 
+    if (axios.isCancel(error)) {
+      return Promise.reject(error);
+    }
+
     const locale = getApiAcceptLanguage();
     if (axios.isAxiosError(error)) {
       const body = error.response?.data as ApiResponse | undefined;

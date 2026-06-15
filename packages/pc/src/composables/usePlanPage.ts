@@ -304,6 +304,12 @@ export function usePlanPage() {
     router.push({ name: 'route-detail', params: { id: String(currentRouteId.value) } });
   }
 
+  function cancelAiPlan() {
+    if (!aiPlanLoading.value) return;
+    cancelAiPlanRequest();
+    appMessage.info(t('plan.cancelled'), 2800);
+  }
+
   function applyQuickPrompt(text: string) {
     inputText.value = text;
   }
@@ -469,6 +475,6 @@ export function usePlanPage() {
     applyQuickPrompt,
     goMembership,
     openRouteDetail,
-    cancelAiPlan: cancelAiPlanRequest,
+    cancelAiPlan,
   };
 }

@@ -1,4 +1,4 @@
-import { eq, desc, and, sql, inArray, count } from 'drizzle-orm';
+import { eq, desc, and, or, like, sql, inArray, count } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { routeLikes } from '../db/schema/route-likes.js';
@@ -60,6 +60,14 @@ export async function enrichRoutesWithCreatorInfo(
   });
 }
 
+/** 仅匹配路线表字段，不检索 routeDetail 中的景点节点 */
+function buildKeywordCondition(keyword?: string) {
+  const trimmed = keyword?.trim();
+  if (!trimmed) return undefined;
+  const kw = `%${trimmed}%`;
+  return or(like(travelRoutes.name, kw), like(travelRoutes.description, kw));
+}
+
 function resolveOrderBy(sort: RouteListQuery['sort'], scope: RouteListQuery['scope']) {
   if (sort === 'views') return desc(travelRoutes.viewCount);
   if (sort === 'hot' || scope === 'hot' || scope === 'plaza') {
@@ -99,8 +107,14 @@ export async function listRoutesForUser(
   const offset = (page - 1) * pageSize;
   const orderBy = resolveOrderBy(query.sort, scope);
 
+  const keywordCondition = buildKeywordCondition(query.keyword);
+
   if (scope === 'plaza' || scope === 'hot') {
-    const where = and(eq(travelRoutes.status, RouteStatus.PUBLISHED), eq(travelRoutes.isPublic, 1));
+    const where = and(
+      eq(travelRoutes.status, RouteStatus.PUBLISHED),
+      eq(travelRoutes.isPublic, 1),
+      keywordCondition,
+    );
     const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);
     const rows = await db
       .select()
@@ -115,7 +129,7 @@ export async function listRoutesForUser(
   }
 
   if (scope === 'favorites') {
-    const where = eq(routeFavorites.userId, userId);
+    const where = and(eq(routeFavorites.userId, userId), keywordCondition);
     const [{ value: total }] = await db
       .select({ value: count() })
       .from(routeFavorites)
@@ -136,6 +150,9 @@ export async function listRoutesForUser(
   const conditions = [eq(travelRoutes.creatorId, userId)];
   if (query.status !== undefined && !Number.isNaN(query.status)) {
     conditions.push(eq(travelRoutes.status, query.status));
+  }
+  if (keywordCondition) {
+    conditions.push(keywordCondition);
   }
   const where = and(...conditions);
   const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);

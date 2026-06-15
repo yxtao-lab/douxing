@@ -10,6 +10,8 @@
             <text class="current-label">{{ t('membership.currentLevel') }}</text>
             <text class="current-name">{{ levelLabel(membership.level) }}</text>
             <text class="current-meta">{{ currentSummary }}</text>
+            <text v-if="expiresText" class="current-expires">{{ expiresText }}</text>
+            <text v-if="membership.isExpired" class="expired-hint">{{ t('membership.expiredHint') }}</text>
           </view>
         </view>
       </view>
@@ -129,6 +131,34 @@
 
           <text v-if="membership.nextLevel" class="upgrade-hint">{{ t('membership.upgradeHint') }}</text>
         </view>
+
+        <view v-if="upgradeProducts.length > 0" class="upgrade-section">
+          <text class="section-title">{{ t('membership.upgradeTitle') }}</text>
+          <view
+            v-for="product in upgradeProducts"
+            :key="product.id"
+            class="upgrade-card"
+            :class="badgeClass(product.targetLevel)"
+          >
+            <view class="upgrade-card-head">
+              <MemberLevelIcon :level="product.targetLevel" size="md" />
+              <view class="upgrade-card-info">
+                <text class="upgrade-card-name">{{ levelLabel(product.targetLevel) }}</text>
+                <text class="upgrade-card-price">{{ tf('membership.priceUnit', { price: product.price }) }}</text>
+              </view>
+            </view>
+            <button
+              class="btn-upgrade"
+              size="mini"
+              :loading="payingLevel === product.targetLevel"
+              :disabled="!!payingLevel"
+              @click="handleUpgrade(product.targetLevel)"
+            >
+              {{ upgradeButtonText(product.targetLevel) }}
+            </button>
+          </view>
+          <text class="pay-mode-hint">{{ payButtonLabel }}</text>
+        </view>
       </view>
     </template>
     <view v-else class="state-text">{{ t('membership.loadFailed') }}</view>
@@ -142,16 +172,22 @@ import {
   getAllMembershipTiers,
   getMemberLevelBadgeClass,
   getMemberLevelI18nKey,
+  MEMBERSHIP_PRODUCTS,
   type MembershipInfo,
+  type MembershipProduct,
 } from '@douxing/shared';
 import { fetchMembershipInfo, fetchPhotoStorage } from '@/api/user';
 import type { UserPhotoStorageInfo } from '@douxing/shared';
 import { formatStorageBytes } from '@/api/journey-albums';
-import { getStoredUser } from '@/utils/request';
+import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
+import {
+  completeMembershipUpgradePayment,
+  getMembershipPayButtonLabel,
+} from '@/utils/membership-payment';
 
 const { t, tf } = useTf();
 const { themeClass } = useTheme();
@@ -160,7 +196,52 @@ usePageTitle('nav.membership');
 const loading = ref(true);
 const membership = ref<MembershipInfo | null>(null);
 const photoStorage = ref<UserPhotoStorageInfo | null>(null);
+const payingLevel = ref<number | null>(null);
 const tiers = getAllMembershipTiers();
+const payButtonLabel = getMembershipPayButtonLabel();
+
+const upgradeProducts = computed<MembershipProduct[]>(() => {
+  if (!membership.value) return [];
+  const effective = membership.value.level;
+  const stored = membership.value.storedLevel;
+  return MEMBERSHIP_PRODUCTS.filter((product) => {
+    if (product.targetLevel > effective) return true;
+    return product.targetLevel === stored && stored > 0;
+  });
+});
+
+const expiresText = computed(() => {
+  if (!membership.value?.memberExpiresAt || membership.value.level <= 0) return '';
+  const date = membership.value.memberExpiresAt.slice(0, 10);
+  return tf('membership.expiresAt', { date });
+});
+
+function upgradeButtonText(targetLevel: number): string {
+  if (!membership.value) return t('membership.upgrade');
+  if (targetLevel === membership.value.level) return t('membership.renew');
+  return t('membership.upgrade');
+}
+
+async function handleUpgrade(targetLevel: number) {
+  payingLevel.value = targetLevel;
+  try {
+    await completeMembershipUpgradePayment(targetLevel);
+    uni.showToast({ title: t('membership.upgradeSuccess'), icon: 'success' });
+    const [membershipInfo, storageInfo] = await Promise.all([
+      fetchMembershipInfo(),
+      fetchPhotoStorage(),
+    ]);
+    membership.value = membershipInfo;
+    photoStorage.value = storageInfo;
+  } catch (e) {
+    uni.showToast({
+      title: getAppErrorMessage(e, t('membership.upgradeFailed')),
+      icon: 'none',
+    });
+  } finally {
+    payingLevel.value = null;
+  }
+}
 
 function levelLabel(level: number): string {
   return t(getMemberLevelI18nKey(level));
@@ -299,6 +380,18 @@ onShow(async () => {
   font-size: 26rpx;
   color: var(--dx-text);
   margin-top: 12rpx;
+}
+.current-expires {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+  margin-top: 8rpx;
+}
+.expired-hint {
+  display: block;
+  font-size: 24rpx;
+  color: #dc2626;
+  margin-top: 8rpx;
 }
 .page-body {
   padding: 0 var(--page-gutter);
@@ -496,6 +589,59 @@ onShow(async () => {
   font-size: 24rpx;
   color: var(--dx-text-secondary);
   line-height: 1.5;
+}
+.upgrade-section {
+  margin-top: 24rpx;
+  padding-top: 8rpx;
+}
+.upgrade-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 16rpx;
+  border-radius: var(--dx-radius-md);
+  border: 2rpx solid var(--dx-border);
+  background: var(--dx-bg);
+}
+.upgrade-card-head {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  min-width: 0;
+}
+.upgrade-card-info {
+  flex: 1;
+  min-width: 0;
+}
+.upgrade-card-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.upgrade-card-price {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dx-primary);
+  margin-top: 6rpx;
+}
+.btn-upgrade {
+  flex-shrink: 0;
+  background: var(--dx-primary);
+  color: #fff;
+  border: none;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  padding: 0 28rpx;
+}
+.pay-mode-hint {
+  display: block;
+  font-size: 22rpx;
+  color: var(--dx-text-secondary);
+  text-align: center;
 }
 .storage-section {
   margin-bottom: 24rpx;

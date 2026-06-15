@@ -22,6 +22,47 @@
       </button>
     </div>
 
+    <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="relative w-full lg:max-w-md">
+        <svg
+          class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-dx-muted"
+          viewBox="0 0 20 20"
+          fill="none"
+          aria-hidden="true"
+        >
+          <path
+            d="M9 3.5a5.5 5.5 0 1 1 0 11 5.5 5.5 0 0 1 0-11Z"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+          <path
+            d="m13.5 13.5 3.5 3.5"
+            stroke="currentColor"
+            stroke-width="1.5"
+            stroke-linecap="round"
+          />
+        </svg>
+        <input
+          v-model="searchInput"
+          type="search"
+          class="w-full rounded-xl border border-dx-border bg-white py-2.5 pl-10 pr-20 text-sm text-dx-text shadow-sm outline-none ring-dx-primary transition focus:ring-2"
+          :placeholder="t('routes.searchPlaceholder')"
+          @keydown.enter.prevent="applySearchNow"
+        />
+        <button
+          v-if="searchInput"
+          type="button"
+          class="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1 text-xs text-dx-primary transition hover:bg-dx-primary-light"
+          @click="clearSearch"
+        >
+          {{ t('common.reset') }}
+        </button>
+      </div>
+      <p v-if="searchKeyword" class="text-xs text-dx-muted lg:text-right">
+        {{ t('routes.searchResultCount', { count: listTotal }) }}
+      </p>
+    </div>
+
     <div v-if="activeScope === 'mine'" class="mb-6 flex flex-wrap gap-2">
       <button
         v-for="f in statusFilters"
@@ -52,9 +93,12 @@
       <p class="mb-2 text-dx-text">{{ emptyText }}</p>
       <p v-if="emptyHint" class="mb-4 text-sm text-dx-muted">{{ emptyHint }}</p>
       <div class="flex flex-wrap justify-center gap-3">
-        <button type="button" class="dx-btn-primary" @click="goPlan">{{ t('routes.goPlan') }}</button>
+        <button v-if="searchKeyword" type="button" class="dx-btn-secondary" @click="clearSearch">
+          {{ t('common.reset') }}
+        </button>
+        <button v-else type="button" class="dx-btn-primary" @click="goPlan">{{ t('routes.goPlan') }}</button>
         <button
-          v-if="activeScope === 'mine' && statusFilter !== undefined"
+          v-if="!searchKeyword && activeScope === 'mine' && statusFilter !== undefined"
           type="button"
           class="dx-btn-secondary"
           @click="statusFilter = undefined"
@@ -84,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import type { RouteListScope, TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
@@ -100,13 +144,17 @@ const { t } = useLocale();
 
 const activeScope = ref<RouteListScope>('mine');
 const statusFilter = ref<number | undefined>(undefined);
+const searchInput = ref('');
+const searchKeyword = ref('');
 const routes = ref<TravelRouteInfo[]>([]);
 const page = ref(1);
 const pageSize = 20;
 const hasMore = ref(true);
+const listTotal = ref(0);
 const loading = ref(false);
 const loadingMore = ref(false);
 const loadError = ref('');
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const scopeTabs = computed(() => [
   { id: 'mine' as RouteListScope, label: t('routes.scopeMine') },
@@ -122,6 +170,7 @@ const statusFilters = computed(() => [
 
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
+  if (searchKeyword.value) return t('routes.emptySearch');
   if (activeScope.value === 'plaza') return t('routes.emptyPlaza');
   if (activeScope.value === 'favorites') return t('routes.emptyFavorites');
   return t('routes.emptyMine');
@@ -129,6 +178,9 @@ const emptyText = computed(() => {
 
 const emptyHint = computed(() => {
   if (loadError.value) return '';
+  if (searchKeyword.value) {
+    return t('routes.emptySearchHint', { keyword: searchKeyword.value });
+  }
   if (activeScope.value === 'mine' && statusFilter.value !== undefined) {
     const filterLabel =
       statusFilter.value === RouteStatus.PUBLISHED
@@ -143,6 +195,7 @@ async function fetchPage(nextPage: number, append: boolean) {
   const result = await fetchRoutesPage({
     scope: activeScope.value,
     status: activeScope.value === 'mine' ? statusFilter.value : undefined,
+    keyword: searchKeyword.value || undefined,
     sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
     page: nextPage,
     pageSize,
@@ -150,6 +203,7 @@ async function fetchPage(nextPage: number, append: boolean) {
   routes.value = append ? [...routes.value, ...result.items] : result.items;
   page.value = nextPage;
   hasMore.value = result.hasMore;
+  listTotal.value = result.total;
 }
 
 async function reload() {
@@ -181,12 +235,44 @@ function switchScope(scope: RouteListScope) {
   activeScope.value = scope;
 }
 
+function applySearchNow() {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = null;
+  }
+  const next = searchInput.value.trim();
+  if (next === searchKeyword.value) return;
+  searchKeyword.value = next;
+  void reload();
+}
+
+function clearSearch() {
+  searchInput.value = '';
+  if (!searchKeyword.value) return;
+  searchKeyword.value = '';
+  void reload();
+}
+
 function goPlan() {
   router.push({ name: 'plan' });
 }
 
 watch([activeScope, statusFilter], () => {
   void reload();
+});
+
+watch(searchInput, (value) => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => {
+    const next = value.trim();
+    if (next === searchKeyword.value) return;
+    searchKeyword.value = next;
+    void reload();
+  }, 300);
+});
+
+onBeforeUnmount(() => {
+  if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
 });
 
 onMounted(() => {

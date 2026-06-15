@@ -198,6 +198,18 @@ export const ApiMessageKey = {
   ANALYTICS_TRENDS_FAILED: 'api.analyticsTrendsFailed',
   ANALYTICS_TOP_CITIES_FAILED: 'api.analyticsTopCitiesFailed',
   ANALYTICS_EVENT_TRACK_FAILED: 'api.analyticsEventTrackFailed',
+
+  MEMBERSHIP_PRODUCT_NOT_FOUND: 'api.membershipProductNotFound',
+  MEMBERSHIP_ALREADY_MAX: 'api.membershipAlreadyMax',
+  MEMBERSHIP_DOWNGRADE_NOT_ALLOWED: 'api.membershipDowngradeNotAllowed',
+  MEMBERSHIP_ORDER_CREATE_FAILED: 'api.membershipOrderCreateFailed',
+  MEMBERSHIP_UPGRADE_FAILED: 'api.membershipUpgradeFailed',
+  MEMBERSHIP_LOG_LIST_FAILED: 'api.membershipLogListFailed',
+  MEMBERSHIP_USER_LIST_FAILED: 'api.membershipUserListFailed',
+  MEMBERSHIP_UPDATE_FAILED: 'api.membershipUpdateFailed',
+  MEMBERSHIP_ORDER_CREATED: 'api.membershipOrderCreated',
+  MEMBERSHIP_UPDATED: 'api.membershipUpdated',
+  MEMBERSHIP_UPGRADE_SUCCESS: 'api.membershipUpgradeSuccess',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

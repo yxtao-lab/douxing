@@ -5,6 +5,7 @@ import {
   resolveClientRequestErrorMessage,
   type LocaleCode,
 } from '@douxing/shared';
+import { getAiPlanCancelledMessage, isAiPlanCancelledError } from '@/api/ai-plan';
 
 function getApiAcceptLanguage(): LocaleCode {
   try {
@@ -17,6 +18,7 @@ function getApiAcceptLanguage(): LocaleCode {
 }
 
 export function getAppErrorMessage(err: unknown, fallback: string): string {
+  if (isAiPlanCancelledError(err)) return getAiPlanCancelledMessage();
   if (!(err instanceof Error)) return fallback;
   return resolveClientRequestErrorMessage(err.message, getApiAcceptLanguage()) || fallback;
 }

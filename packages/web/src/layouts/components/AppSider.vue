@@ -45,7 +45,7 @@ watch(
 
 function onMenuClick(info: Parameters<NonNullable<MenuProps['onClick']>>[0]) {
   const key = info.key;
-  if (typeof key !== 'string' || key.startsWith('group-')) return;
+  if (typeof key !== 'string' || key.startsWith('group-') || key.startsWith('subgroup-')) return;
   router.push(key);
 }
 </script>

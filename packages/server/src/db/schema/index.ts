@@ -9,6 +9,7 @@ export * from './route-favorites.js';
 export * from './route-comments.js';
 export * from './check-ins.js';
 export * from './orders.js';
+export * from './membership-change-logs.js';
 export * from './achievements.js';
 export * from './achievement-definitions.js';
 export * from './badges.js';

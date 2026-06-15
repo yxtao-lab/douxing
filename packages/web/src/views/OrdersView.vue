@@ -17,7 +17,7 @@ import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import type { OrderInfo } from '@douxing/shared';
-import { getOrderStatusI18nKey } from '@douxing/shared';
+import { getOrderStatusI18nKey, OrderType } from '@douxing/shared';
 import { fetchOrdersPage } from '@/api/orders';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
@@ -35,9 +35,20 @@ function orderStatusLabel(status: number) {
   return t(getOrderStatusI18nKey(status));
 }
 
+function orderTypeLabel(orderType: string) {
+  const key = orderType === OrderType.MEMBERSHIP ? 'orderType.membership' : 'orderType.route';
+  return t(key);
+}
+
 const columns = computed<TableColumnsType<OrderInfo>>(() => [
   { title: t('orders.colOrderNo'), dataIndex: 'orderNo', ellipsis: true },
   { title: t('orders.colProduct'), dataIndex: 'productName', ellipsis: true },
+  {
+    title: t('orders.colOrderType'),
+    dataIndex: 'orderType',
+    width: 120,
+    customRender: ({ text }) => orderTypeLabel(String(text)),
+  },
   {
     title: t('orders.colAmount'),
     dataIndex: 'totalAmount',

@@ -42,33 +42,34 @@
           {{ imageSourceLabel(record.imageSource) }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-space direction="vertical" size="small">
+          <TableActionBar :show-edit="false" :show-delete="false">
             <a-upload
               :show-upload-list="false"
               accept="image/*"
               :before-upload="makeUploadHandler(record)"
             >
-              <a-button size="small" :loading="uploadingId === record.id">
-                {{
+              <TableActionButton
+                variant="info"
+                :icon="UploadOutlined"
+                :label="
                   uploadingId === record.id
                     ? t('attractions.uploadingCover')
                     : t('attractions.uploadCover')
-                }}
-              </a-button>
+                "
+              />
             </a-upload>
-            <a-button
+            <TableActionButton
               v-if="record.imageSource !== 'manual'"
-              size="small"
-              :loading="refreshingId === record.id"
-              @click="handleRefreshCover(record)"
-            >
-              {{
+              variant="primary"
+              :icon="ReloadOutlined"
+              :label="
                 refreshingId === record.id
                   ? t('attractions.refreshingCover')
                   : t('attractions.refreshCover')
-              }}
-            </a-button>
-          </a-space>
+              "
+              @click="handleRefreshCover(record)"
+            />
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -88,7 +89,10 @@ import {
 } from '@/api/attractions';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
+import { ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 

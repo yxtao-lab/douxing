@@ -57,6 +57,12 @@ import {
   getSiteStatusSummary,
   setSiteOnline,
 } from '../services/site-status.service.js';
+import {
+  listMembershipProducts,
+  listMembershipUsersForAdminPaginated,
+  listMembershipLogsForAdminPaginated,
+  updateMembershipByAdmin,
+} from '../services/membership.service.js';
 
 const router = Router();
 
@@ -795,6 +801,83 @@ router.delete('/monitor/cache/keys', async (req, res) => {
   } catch (err) {
     console.error('[system/monitor/cache/delete]', err);
     fail(res, '删除失败', 500, 500);
+  }
+});
+
+router.get('/membership/products', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    success(res, listMembershipProducts());
+  } catch (err) {
+    console.error('[system/membership/products]', err);
+    fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+router.get('/membership/users', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined;
+    const levelRaw = req.query.level != null ? Number(req.query.level) : undefined;
+    const level = levelRaw != null && Number.isFinite(levelRaw) ? Math.trunc(levelRaw) : undefined;
+    const result = await listMembershipUsersForAdminPaginated(page, pageSize, { keyword, level });
+    success(res, result);
+  } catch (err) {
+    console.error('[system/membership/users]', err);
+    fail(res, ApiMessageKey.MEMBERSHIP_USER_LIST_FAILED, 500, 500);
+  }
+});
+
+router.get('/membership/logs', async (req, res) => {
+  try {
+    if (!(await requireAdmin(req, res))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const keyword = typeof req.query.keyword === 'string' ? req.query.keyword.trim() : undefined;
+    const source = typeof req.query.source === 'string' ? req.query.source.trim() : undefined;
+    const userIdRaw = req.query.userId != null ? Number(req.query.userId) : undefined;
+    const userId =
+      userIdRaw != null && Number.isFinite(userIdRaw) ? Math.trunc(userIdRaw) : undefined;
+    const result = await listMembershipLogsForAdminPaginated(page, pageSize, {
+      keyword,
+      source,
+      userId,
+    });
+    success(res, result);
+  } catch (err) {
+    console.error('[system/membership/logs]', err);
+    fail(res, ApiMessageKey.MEMBERSHIP_LOG_LIST_FAILED, 500, 500);
+  }
+});
+
+router.patch('/membership/users/:id', async (req, res) => {
+  try {
+    const userId = parseInt(String(req.params.id), 10);
+    const parsed = z
+      .object({
+        memberLevel: z.number().int().min(0).max(3),
+        memberExpiresAt: z.string().nullable().optional(),
+        remark: z.string().max(500).optional(),
+      })
+      .safeParse(req.body);
+    if (Number.isNaN(userId) || !parsed.success) return fail(res, ApiMessageKey.PARAM_ERROR);
+    const result = await withAdminWrite(req, res, '调整会员等级', () =>
+      updateMembershipByAdmin({
+        userId,
+        memberLevel: parsed.data.memberLevel,
+        memberExpiresAt: parsed.data.memberExpiresAt,
+        remark: parsed.data.remark,
+        operatorId: req.auth!.userId,
+      }),
+    );
+    if (result === undefined) return;
+    if (result && typeof result === 'object' && 'error' in result) {
+      return fail(res, result.error as string);
+    }
+    success(res, result, ApiMessageKey.MEMBERSHIP_UPDATED);
+  } catch (err) {
+    console.error('[system/membership/users/patch]', err);
+    fail(res, ApiMessageKey.MEMBERSHIP_UPDATE_FAILED, 500, 500);
   }
 });
 

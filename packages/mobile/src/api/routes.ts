@@ -45,6 +45,7 @@ function buildRouteListQuery(query?: RouteListQuery): string {
     parts.push(`status=${query.status}`);
   }
   if (query?.sort) parts.push(`sort=${encodeURIComponent(query.sort)}`);
+  if (query?.keyword?.trim()) parts.push(`keyword=${encodeURIComponent(query.keyword.trim())}`);
   if (query?.page != null) parts.push(`page=${query.page}`);
   if (query?.pageSize != null) parts.push(`pageSize=${query.pageSize}`);
   else if (query?.limit !== undefined) parts.push(`pageSize=${query.limit}`);

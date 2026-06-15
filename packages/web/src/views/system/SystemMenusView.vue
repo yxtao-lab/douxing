@@ -63,10 +63,12 @@
         </template>
         <template v-else-if="column.key === 'action'">
           <TableActionBar :show-delete="!record.children?.length" @edit="openEdit(record)" @delete="handleDelete(record)">
-            <a class="action-btn edit-btn" @click="openCreate(record)">
-              <PlusOutlined />
-              <span>{{ t('system.addChildMenu') }}</span>
-            </a>
+            <TableActionButton
+              variant="edit"
+              :icon="PlusOutlined"
+              :label="t('system.addChildMenu')"
+              @click="openCreate(record)"
+            />
           </TableActionBar>
         </template>
       </template>
@@ -188,6 +190,7 @@ import {
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import MenuIconPicker from '@/components/admin/MenuIconPicker.vue';
 import { renderMenuIcon } from '@/composables/useAppMenu';

@@ -1,22 +1,26 @@
 <template>
   <div class="table-action-bar">
     <slot name="prefix" />
-    <a v-if="showEdit" class="action-btn edit-btn" @click="emit('edit')">
-      <EditOutlined />
-      <span>{{ editLabel }}</span>
-    </a>
-    <a v-if="showDelete" class="action-btn delete-btn" @click="emit('delete')">
-      <DeleteOutlined />
-      <span>{{ deleteLabel }}</span>
-    </a>
+    <TableActionButton
+      v-if="showEdit"
+      variant="edit"
+      :label="editLabel"
+      @click="emit('edit')"
+    />
+    <TableActionButton
+      v-if="showDelete"
+      variant="delete"
+      :label="deleteLabel"
+      @click="emit('delete')"
+    />
     <slot />
   </div>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { DeleteOutlined, EditOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
+import TableActionButton from './TableActionButton.vue';
 
 const props = withDefaults(
   defineProps<{

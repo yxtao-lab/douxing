@@ -76,6 +76,7 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     SiteStatusPanel: typeof import('./components/system/SiteStatusPanel.vue')['default']
     TableActionBar: typeof import('./components/admin/TableActionBar.vue')['default']
+    TableActionButton: typeof import('./components/admin/TableActionButton.vue')['default']
     WorkbenchChangelog: typeof import('./components/workbench/WorkbenchChangelog.vue')['default']
     WorkbenchPanel: typeof import('./components/workbench/WorkbenchPanel.vue')['default']
   }
@@ -147,6 +148,7 @@ declare global {
   const RouterView: typeof import('vue-router')['RouterView']
   const SiteStatusPanel: typeof import('./components/system/SiteStatusPanel.vue')['default']
   const TableActionBar: typeof import('./components/admin/TableActionBar.vue')['default']
+  const TableActionButton: typeof import('./components/admin/TableActionButton.vue')['default']
   const WorkbenchChangelog: typeof import('./components/workbench/WorkbenchChangelog.vue')['default']
   const WorkbenchPanel: typeof import('./components/workbench/WorkbenchPanel.vue')['default']
 }

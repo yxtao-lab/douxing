@@ -17,7 +17,7 @@
 </template>
 
 <script setup lang="ts">
-import { aiPlanLoadingState, cancelAiPlanLoading } from '@/utils/ai-plan-loading';
+import { aiPlanLoadingState, cancelAiPlanLoading, getAiPlanCancelledMessage } from '@/utils/ai-plan-loading';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 
@@ -26,6 +26,7 @@ const { themeClass } = useTheme();
 
 function handleCancel() {
   cancelAiPlanLoading();
+  uni.showToast({ title: getAiPlanCancelledMessage(), icon: 'none', duration: 2000 });
 }
 </script>
 

@@ -53,12 +53,17 @@
                 @change="(checked) => handleToggleStatus(record, checked === true)"
               />
             </template>
-            <a class="action-btn primary-btn" @click="openRolesModal(record)">
-              {{ t('system.assignRoles') }}
-            </a>
-            <a class="action-btn warning-btn" @click="openPasswordModal(record)">
-              {{ t('system.resetPassword') }}
-            </a>
+            <TableActionButton
+              variant="primary"
+              :icon="TeamOutlined"
+              :label="t('system.assignRoles')"
+              @click="openRolesModal(record)"
+            />
+            <TableActionButton
+              variant="warning"
+              :label="t('system.resetPassword')"
+              @click="openPasswordModal(record)"
+            />
           </TableActionBar>
         </template>
       </template>
@@ -87,7 +92,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, TeamOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
 import {
@@ -103,6 +108,7 @@ import { useServerTablePagination } from '@/composables/useServerTablePagination
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';

@@ -49,17 +49,14 @@
           </a-tag>
         </template>
         <template v-else-if="column.key === 'action'">
-          <a-space>
-            <a-button type="link" size="small" @click="openEdit(record)">
-              {{ t('common.edit') }}
-            </a-button>
+          <TableActionBar :show-delete="false" @edit="openEdit(record)">
             <a-popconfirm
               :title="t('playbooks.deleteConfirm', { id: record.id })"
               @confirm="handleDelete(record)"
             >
-              <a-button type="link" size="small" danger>{{ t('common.delete') }}</a-button>
+              <TableActionButton variant="delete" :label="t('common.delete')" />
             </a-popconfirm>
-          </a-space>
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -153,6 +150,8 @@ import {
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 

@@ -19,9 +19,9 @@ export function isOrderTerminalStatus(status: number): boolean {
   return status === OrderStatus.COMPLETED || status === OrderStatus.CANCELLED;
 }
 
-/** 数字类订单支付后可直接完结（路线解锁等） */
+/** 数字类订单支付后可直接完结（路线解锁、会员升级等） */
 export function shouldAutoCompleteAfterPay(orderType: string): boolean {
-  return orderType === OrderType.ROUTE;
+  return orderType === OrderType.ROUTE || orderType === OrderType.MEMBERSHIP;
 }
 
 const ORDER_STATUS_I18N_KEY: Record<number, string> = {

@@ -122,19 +122,70 @@ export function getAllMembershipTiers() {
   }));
 }
 
-export function buildMembershipInfo(level: number | null | undefined) {
+/** 可购买的会员套餐（MVP：按月订阅，价格可后续改为 DB 配置） */
+export interface MembershipProduct {
+  id: number;
+  targetLevel: number;
+  durationDays: number;
+  price: number;
+}
+
+export const MEMBERSHIP_PRODUCTS: MembershipProduct[] = [
+  { id: 101, targetLevel: MemberLevel.SILVER, durationDays: 30, price: 9.9 },
+  { id: 102, targetLevel: MemberLevel.GOLD, durationDays: 30, price: 19.9 },
+  { id: 103, targetLevel: MemberLevel.VIP, durationDays: 30, price: 39.9 },
+];
+
+export function getMembershipProductById(productId: number): MembershipProduct | undefined {
+  return MEMBERSHIP_PRODUCTS.find((item) => item.id === productId);
+}
+
+export function getMembershipProductByLevel(level: number): MembershipProduct | undefined {
   const normalized = normalizeMemberLevel(level);
-  const currentIndex = ORDERED_LEVELS.indexOf(normalized as (typeof ORDERED_LEVELS)[number]);
+  return MEMBERSHIP_PRODUCTS.find((item) => item.targetLevel === normalized);
+}
+
+export function getEffectiveMemberLevel(
+  level: number | null | undefined,
+  memberExpiresAt?: string | Date | null,
+): number {
+  const normalized = normalizeMemberLevel(level);
+  if (normalized <= MemberLevel.FREE) return MemberLevel.FREE;
+  if (!memberExpiresAt) return normalized;
+  const expiresMs = new Date(memberExpiresAt).getTime();
+  if (!Number.isFinite(expiresMs) || expiresMs <= Date.now()) return MemberLevel.FREE;
+  return normalized;
+}
+
+export function buildMembershipInfo(
+  level: number | null | undefined,
+  options?: { memberExpiresAt?: string | Date | null },
+) {
+  const storedLevel = normalizeMemberLevel(level);
+  const memberExpiresAt = options?.memberExpiresAt
+    ? new Date(options.memberExpiresAt).toISOString()
+    : null;
+  const isExpired =
+    storedLevel > MemberLevel.FREE &&
+    memberExpiresAt != null &&
+    new Date(memberExpiresAt).getTime() <= Date.now();
+  const effectiveLevel = getEffectiveMemberLevel(storedLevel, memberExpiresAt);
+  const currentIndex = ORDERED_LEVELS.indexOf(
+    effectiveLevel as (typeof ORDERED_LEVELS)[number],
+  );
   const nextLevel =
     currentIndex >= 0 && currentIndex < ORDERED_LEVELS.length - 1
       ? ORDERED_LEVELS[currentIndex + 1]
       : null;
 
   return {
-    level: normalized,
-    label: getMemberLevelLabel(normalized),
-    planCandidateCount: getPlanCandidateCountByMemberLevel(normalized),
-    canAppendPlan: canAppendPlanByMemberLevel(normalized),
+    level: effectiveLevel,
+    storedLevel,
+    label: getMemberLevelLabel(effectiveLevel),
+    planCandidateCount: getPlanCandidateCountByMemberLevel(effectiveLevel),
+    canAppendPlan: canAppendPlanByMemberLevel(effectiveLevel),
+    memberExpiresAt,
+    isExpired,
     nextLevel: nextLevel
       ? {
           level: nextLevel,

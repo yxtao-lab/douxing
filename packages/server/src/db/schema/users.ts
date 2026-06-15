@@ -16,6 +16,8 @@ export const users = mysqlTable('users', {
   interestTags: json('interest_tags').$type<string[]>(),
   /** 会员等级，见 @douxing/shared MemberLevel */
   memberLevel: tinyint('member_level').notNull().default(0),
+  /** 付费会员到期时间（免费会员为 null） */
+  memberExpiresAt: timestamp('member_expires_at'),
   status: tinyint('status').notNull().default(1),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

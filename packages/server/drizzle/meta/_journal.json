@@ -178,10 +178,10 @@
       "breakpoints": true
     },
     {
-      "idx": 25,
+      "idx": 26,
       "version": "5",
-      "when": 1749715200000,
-      "tag": "0025_travel_photo_shooting_params",
+      "when": 1749801600000,
+      "tag": "0026_membership_upgrade",
       "breakpoints": true
     }
   ]

@@ -49,6 +49,7 @@
             <text class="status" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</text>
           </view>
           <text class="meta">{{ orderNoText(item.orderNo) }}</text>
+          <text class="meta">{{ orderTypeText(item.orderType) }}</text>
           <text class="meta">{{ amountLineText(item) }}</text>
 
           <view v-if="item.status === OrderStatus.PENDING" class="actions">
@@ -67,6 +68,11 @@
               @click="handleCancel(item)"
             >
               {{ t('orders.cancelOrder') }}
+            </button>
+          </view>
+          <view v-else-if="item.orderType === OrderType.MEMBERSHIP && canViewRoute(item.status)" class="actions">
+            <button class="btn-outline" size="mini" @click="goMembership">
+              {{ t('orders.viewMembership') }}
             </button>
           </view>
           <view v-else-if="item.orderType === OrderType.ROUTE && canViewRoute(item.status)" class="actions">
@@ -141,6 +147,15 @@ function canViewRoute(status: number) {
 
 function orderNoText(orderNo: string) {
   return tf('orders.orderNo', { no: orderNo });
+}
+
+function orderTypeText(orderType: string) {
+  const key = orderType === OrderType.MEMBERSHIP ? 'orderType.membership' : 'orderType.route';
+  return t(key);
+}
+
+function goMembership() {
+  uni.navigateTo({ url: '/pages/profile/membership' });
 }
 
 function amountLineText(item: OrderInfo) {

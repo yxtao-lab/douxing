@@ -65,6 +65,15 @@ export const OrderStatus = {
 /** 订单类型 */
 export const OrderType = {
   ROUTE: 'route',
+  MEMBERSHIP: 'membership',
+} as const;
+
+/** 会员等级变更来源（membership_change_logs.source） */
+export const MembershipChangeSource = {
+  PURCHASE: 'purchase',
+  ADMIN: 'admin',
+  EXPIRE: 'expire',
+  SYSTEM: 'system',
 } as const;
 
 /** 支付渠道 */

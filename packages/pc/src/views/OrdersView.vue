@@ -27,6 +27,7 @@
           <span class="text-sm" :class="statusClass(item.status)">{{ statusLabel(item.status) }}</span>
         </div>
         <p class="mt-1 text-sm text-dx-muted">{{ t('orders.orderNo', { no: item.orderNo }) }}</p>
+        <p class="text-sm text-dx-muted">{{ orderTypeText(item.orderType) }}</p>
         <p class="text-sm text-dx-muted">
           {{ t('orders.amountLine', { amount: item.totalAmount, time: formatTime(item.createdAt) }) }}
         </p>
@@ -38,6 +39,13 @@
             {{ t('orders.cancelOrder') }}
           </button>
         </div>
+        <RouterLink
+          v-else-if="item.orderType === OrderType.MEMBERSHIP && canViewRoute(item.status)"
+          :to="{ name: 'membership' }"
+          class="mt-3 inline-block text-sm text-dx-primary hover:underline"
+        >
+          {{ t('orders.viewMembership') }}
+        </RouterLink>
         <RouterLink
           v-else-if="item.orderType === OrderType.ROUTE && canViewRoute(item.status)"
           :to="{ name: 'route-detail', params: { id: item.productId } }"
@@ -111,6 +119,11 @@ function formatTime(iso: string) {
 
 function canViewRoute(status: number) {
   return status === OrderStatus.PAID || status === OrderStatus.COMPLETED;
+}
+
+function orderTypeText(orderType: string) {
+  const key = orderType === OrderType.MEMBERSHIP ? 'orderType.membership' : 'orderType.route';
+  return t(key);
 }
 
 async function fetchPage(nextPage: number, append: boolean) {

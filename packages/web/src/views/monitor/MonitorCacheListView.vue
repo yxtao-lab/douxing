@@ -30,9 +30,11 @@
     >
       <template #bodyCell="{ column, record }">
         <template v-if="column.key === 'action'">
-          <a-popconfirm :title="t('system.confirmDelete')" @confirm="handleDelete(record.key)">
-            <a class="action-btn delete-btn">{{ t('system.deleteKey') }}</a>
-          </a-popconfirm>
+          <TableActionBar :show-edit="false" :show-delete="false">
+            <a-popconfirm :title="t('system.confirmDelete')" @confirm="handleDelete(record.key)">
+              <TableActionButton variant="delete" :label="t('system.deleteKey')" />
+            </a-popconfirm>
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -48,6 +50,8 @@ import type { TableColumnsType } from 'ant-design-vue';
 import { deleteCacheKey, fetchCacheKeys } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';

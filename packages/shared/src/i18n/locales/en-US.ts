@@ -53,6 +53,16 @@ export const sharedEnUS = {
     completed: 'Completed',
     cancelled: 'Cancelled',
   },
+  orderType: {
+    route: 'Route unlock',
+    membership: 'Membership upgrade',
+  },
+  membershipChangeSource: {
+    purchase: 'Purchase',
+    admin: 'Admin adjustment',
+    expire: 'Expired',
+    system: 'System',
+  },
   routeStatus: {
     draft: 'Draft',
     published: 'Published',
@@ -128,6 +138,9 @@ export const sharedEnUS = {
     monitorCacheList: 'Cache list',
     logOper: 'Operation logs',
     logLogin: 'Login logs',
+    membershipUsers: 'Membership',
+    membershipLogs: 'Membership logs',
+    membershipProducts: 'Membership plans',
     logout: 'Sign out',
     menu: {
       biz: 'Operations',
@@ -136,6 +149,7 @@ export const sharedEnUS = {
       system: 'System',
       monitor: 'Monitoring',
       log: 'Logs',
+      membership: 'Membership',
     },
     layout: {
       breadcrumbHome: 'Home',

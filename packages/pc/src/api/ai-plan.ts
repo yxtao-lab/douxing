@@ -17,9 +17,17 @@ export function cancelAiPlanRequest() {
   aiPlanLoading.value = false;
 }
 
+export function getAiPlanCancelledMessage(): string {
+  return String(i18n.global.t('plan.cancelled'));
+}
+
 export function isAiPlanCancelledError(err: unknown): boolean {
-  if (!axios.isCancel(err)) return false;
-  return true;
+  if (axios.isCancel(err)) return true;
+  if (!(err instanceof Error)) return false;
+  const msg = err.message.trim();
+  if (msg === getAiPlanCancelledMessage()) return true;
+  const lower = msg.toLowerCase();
+  return lower === 'canceled' || lower === 'cancelled' || lower.includes('abort');
 }
 
 interface RequestAiPlanOptions {
@@ -52,7 +60,7 @@ export async function requestAiPlan<T>(path: string, options: RequestAiPlanOptio
     return response.data.data;
   } catch (err) {
     if (axios.isCancel(err)) {
-      throw new Error(String(i18n.global.t('plan.cancelled')));
+      throw new Error(getAiPlanCancelledMessage());
     }
     throw err;
   } finally {

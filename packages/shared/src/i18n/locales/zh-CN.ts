@@ -53,6 +53,16 @@ export const sharedZhCN = {
     completed: '已完成',
     cancelled: '已取消',
   },
+  orderType: {
+    route: '路线解锁',
+    membership: '会员升级',
+  },
+  membershipChangeSource: {
+    purchase: '购买升级',
+    admin: '管理员调整',
+    expire: '到期降级',
+    system: '系统',
+  },
   routeStatus: {
     draft: '草稿',
     published: '已发布',
@@ -128,6 +138,9 @@ export const sharedZhCN = {
     monitorCacheList: '缓存列表',
     logOper: '操作日志',
     logLogin: '登录日志',
+    membershipUsers: '会员管理',
+    membershipLogs: '会员日志',
+    membershipProducts: '会员套餐',
     logout: '退出',
     menu: {
       biz: '业务管理',
@@ -136,6 +149,7 @@ export const sharedZhCN = {
       system: '系统管理',
       monitor: '系统监控',
       log: '日志管理',
+      membership: '会员',
     },
     layout: {
       breadcrumbHome: '首页',
