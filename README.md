@@ -35,6 +35,7 @@
 | 启动与部署流程 | [docs/启动与部署流程.md](docs/启动与部署流程.md) |
 | PC 双平台分工（用户端/管理端） | [docs/PC双平台分工.md](docs/PC双平台分工.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
+| Web 管理端表格规范 | [docs/Web管理端表格规范.md](docs/Web管理端表格规范.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
 | AI 规划与 Agent 演进（C7 线） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
@@ -297,7 +298,7 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
 | 旅程相册 | 按路线存旅行照 | `GET/POST /api/journey-albums`；EXIF 智能归类 · 相册分享 · 拍摄参数/同参数拼图；我的相册选路线上传；会员配额 `GET /api/users/me/storage`；打卡归并 · 手帐选图 |
 | 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航；路线详情相册 Tab |
-| 管理端 | 路线 / 订单 / 打卡 / **数据分析** / 系统管理 | 需 admin；Leaflet 打卡地图；见 [PC双平台分工.md](docs/PC双平台分工.md) |
+| 管理端 | 路线 / 订单 / 打卡 / **数据分析** / 系统管理 | 需 admin；Leaflet 打卡地图；列表筛选与 XLSX 导出见 [Web管理端表格规范.md](docs/Web管理端表格规范.md) · [PC双平台分工.md](docs/PC双平台分工.md) |
 | PC 用户端 | 规划 / 路线 / 个人中心 / 相册 / 打卡地图 | `http://localhost:5176`；与移动端能力对齐 |
 
 ### AI 模型接入（DeepSeek / LM Studio）

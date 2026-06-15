@@ -227,6 +227,8 @@ packages/web/src/
 
 **环境变量**：`VITE_API_BASE_URL`（打包时注入），须与 manifest `domains.*.apiBaseUrl` 一致。
 
+**表格列表**：数据页统一 `DouxingAdminTable` + 筛选 + XLSX 导出 + 空值 `-`；见 [Web管理端表格规范.md](./Web管理端表格规范.md)。
+
 ### 3.4 `@scope/mobile`
 
 **职责**：用户端 UniApp（H5 / 微信小程序 / App）。
