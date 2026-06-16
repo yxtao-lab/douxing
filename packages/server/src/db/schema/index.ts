@@ -15,6 +15,8 @@ export * from './achievement-definitions.js';
 export * from './badges.js';
 export * from './user-badges.js';
 export * from './plan-sessions.js';
+export * from './travel-pets.js';
+export * from './pet-memories.js';
 export * from './route-playbooks.js';
 export * from './journey-albums.js';
 export * from './analytics-events.js';

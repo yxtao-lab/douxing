@@ -1,3 +1,6 @@
 # Shell / 流水线配置在 Linux CI 上必须使用 LF
 *.sh text eol=lf
 .workflow/** text eol=lf
+
+*.py text eol=lf
+*.ts text eol=lf

@@ -25,6 +25,11 @@ class TravelIntentSnapshot(BaseModel):
     lodgingTier: str | None = None
     cities: list[str] = Field(default_factory=list)
     startDate: str | None = None
+    departureCity: str | None = None
+    excludeProvinceCodes: list[str] = Field(default_factory=list)
+    suggestedDestinations: list[str] = Field(default_factory=list)
+    constraintSummary: str | None = None
+    intentSource: Literal["rule", "llm", "hybrid"] | None = None
 
 
 class RagAttractionCandidate(BaseModel):
@@ -112,3 +117,23 @@ class ServiceStatusResponse(BaseModel):
     service: str
     version: str
     providers: list[ProviderStatus]
+
+
+class AgentPlanRequest(BaseModel):
+    prompt: str
+    userId: int
+    history: list[PlanChatMessage] = Field(default_factory=list)
+    days: int | None = None
+    budget: str | None = None
+    locale: str | None = "zh-CN"
+    provider: str | None = None
+    currentDraft: dict | None = None
+    intent: dict | None = None
+
+
+class AgentPlanResponse(BaseModel):
+    draft: dict | None = None
+    toolTrace: list[dict] = Field(default_factory=list)
+    routedIntent: str = "plan_new"
+    assistantHint: str | None = None
+    memories: list[dict] = Field(default_factory=list)

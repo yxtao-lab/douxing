@@ -3,9 +3,13 @@ import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { RouteStatus, ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
 import type { PaginatedResult, TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
-import { generateRoute, type GenerateRouteInput } from './route-generator.service.js';
+import { generateRoute, type GenerateRouteInput, type GeneratedRouteDraft } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
-import type { RouteDayPlan } from '@douxing/shared';
+import type { RouteDayPlan, TravelIntentSnapshot } from '@douxing/shared';
+import {
+  computeLodgingContentLibraryRatio,
+  recordPlanQualityMetrics,
+} from './route-quality-metrics.service.js';
 import {
   normalizeRouteDetailDays,
   cloneRouteDaysForSync,
@@ -22,7 +26,7 @@ import { enrichRouteDetailWithAttractionCovers } from './route-attraction-media.
 export { toRouteInfo };
 
 async function syncDraftToAttractionLibrary(
-  draft: Awaited<ReturnType<typeof generateRoute>>,
+  draft: GeneratedRouteDraft,
   options: { stripAttractionIds?: boolean } = {},
 ) {
   const { days } = normalizeRouteDetailDays(draft.routeDetail);
@@ -72,7 +76,7 @@ function mergeEnrichedDaysWithSyncedAttractions(
 }
 
 function buildRouteDetailFromDraft(
-  draft: Awaited<ReturnType<typeof generateRoute>>,
+  draft: GeneratedRouteDraft & { generationSource?: 'llm' | 'template'; llmProvider?: string },
   linkedDays: Awaited<ReturnType<typeof syncAttractionsFromRouteDetail>>,
   options: { sourcePrompt: string; provider?: GenerateRouteInput['provider'] },
 ) {
@@ -95,7 +99,7 @@ function buildRouteDetailFromDraft(
 }
 
 export async function createRouteFromPrompt(userId: number, input: GenerateRouteInput) {
-  const draft = await generateRoute(input);
+  const draft = await generateRoute({ ...input, userId });
   const db = getDb();
   const linkedDays = await syncDraftToAttractionLibrary(draft);
   const detail = buildRouteDetailFromDraft(draft, linkedDays, {
@@ -119,6 +123,19 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
   if (!route) {
     throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
   }
+
+  void recordPlanQualityMetrics({
+    userId,
+    routeId: id,
+    poiHitRate:
+      (draft.ragMatchedCount ?? 0) / Math.max(draft.ragCandidateCount ?? 1, 1),
+    ragMatchedCount: draft.ragMatchedCount ?? 0,
+    ragCandidateCount: draft.ragCandidateCount ?? 0,
+    generationSource: draft.generationSource,
+    matchedCity: draft.matchedCity,
+    lodgingContentLibraryRatio: computeLodgingContentLibraryRatio(draft),
+  });
+
   return {
     route,
     generationSource: draft.generationSource,
@@ -352,6 +369,7 @@ export async function regenerateRouteFromPrompt(
 
   const draft = await generateRoute({
     ...input,
+    userId,
     provider: input.provider ?? (existingDetail.llmProviderChoice as GenerateRouteInput['provider']),
     history: input.history,
   });
@@ -375,10 +393,81 @@ export async function regenerateRouteFromPrompt(
 
   const route = await getRouteById(routeId, userId);
   if (!route) return null;
+
+  void recordPlanQualityMetrics({
+    userId,
+    routeId,
+    poiHitRate: draft.ragMatchedCount && draft.ragCandidateCount
+      ? draft.ragMatchedCount / Math.max(draft.ragCandidateCount, 1)
+      : 0,
+    ragMatchedCount: draft.ragMatchedCount ?? 0,
+    ragCandidateCount: draft.ragCandidateCount ?? 0,
+    generationSource: draft.generationSource,
+    matchedCity: draft.matchedCity,
+    lodgingContentLibraryRatio: computeLodgingContentLibraryRatio(draft),
+  });
+
   return {
     route,
     generationSource: draft.generationSource,
     llmProvider: draft.llmProvider,
     intent: draft.intent,
+  };
+}
+
+/** C7-b：将 Agent 产出的 draft 写回已有草稿路线（局部修改场景） */
+export async function updateRouteFromAgentDraft(
+  routeId: number,
+  userId: number,
+  draft: GeneratedRouteDraft,
+  options: {
+    sourcePrompt: string;
+    provider?: GenerateRouteInput['provider'];
+    intent?: TravelIntentSnapshot;
+  },
+) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(travelRoutes)
+    .where(and(eq(travelRoutes.id, routeId), eq(travelRoutes.creatorId, userId)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return null;
+  if (row.status !== RouteStatus.DRAFT) {
+    throw new ApiError(ApiMessageKey.ROUTE_PUBLISHED_NO_REGENERATE);
+  }
+
+  const draftWithMeta: GeneratedRouteDraft & { generationSource: 'llm' } = {
+    ...draft,
+    generationSource: 'llm',
+    isAiGenerated: true,
+  };
+  const linkedDays = await syncDraftToAttractionLibrary(draftWithMeta, {
+    stripAttractionIds: true,
+  });
+  const detail = buildRouteDetailFromDraft(draftWithMeta, linkedDays, {
+    sourcePrompt: options.sourcePrompt,
+    provider: options.provider,
+  });
+
+  await db
+    .update(travelRoutes)
+    .set({
+      name: draft.name,
+      description: draft.description,
+      budgetRange: draft.budgetRange,
+      days: draft.days,
+      interestTags: draft.interestTags,
+      routeDetail: detail,
+    })
+    .where(eq(travelRoutes.id, routeId));
+
+  const route = await getRouteById(routeId, userId);
+  if (!route) return null;
+  return {
+    route,
+    generationSource: 'llm' as const,
+    intent: options.intent,
   };
 }

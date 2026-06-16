@@ -19,6 +19,10 @@ import {
 import { resolveCityCode } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 import type { TravelIntentSnapshot } from '@douxing/shared';
+import { resolvePlanningCity } from './travel-intent.service.js';
+import { isVectorRagEnabled, getVectorRagBoostWeight, getMmrLambda } from '../config/vector-rag.js';
+import { computeSemanticRelevance, computeCandidateSimilarity } from './attraction-embedding.service.js';
+import { mmrRerank, geoSimilarity, tagJaccardSimilarity } from '../utils/mmr-rank.util.js';
 
 const DEFAULT_SLOTS_PER_DAY = 3;
 const MAX_CANDIDATES = 30;
@@ -46,6 +50,11 @@ export interface RagRetrievalInput {
   prompt?: string;
   days?: number | null;
   limit?: number;
+  /** Phase 2/H4：排除已去或重复 POI */
+  excludeIds?: number[];
+  excludeNames?: string[];
+  /** Phase 4：优先推荐的 POI 名称 */
+  boostNames?: string[];
 }
 
 function normalizeName(name: string): string {
@@ -192,10 +201,20 @@ export async function retrieveAttractionsForPlanning(
       .from(attractions)
       .where(and(eq(attractions.status, AttractionStatus.ACTIVE), eq(attractions.city, city)));
     if (byCityName.length === 0) return [];
-    return rankCandidates(byCityName, themes, keywords, limit);
+    return rankCandidates(byCityName, themes, keywords, limit, {
+      query: input.prompt,
+      excludeIds: input.excludeIds,
+      excludeNames: input.excludeNames,
+      boostNames: input.boostNames,
+    });
   }
 
-  return rankCandidates(rows, themes, keywords, limit);
+  return rankCandidates(rows, themes, keywords, limit, {
+    query: input.prompt,
+    excludeIds: input.excludeIds,
+    excludeNames: input.excludeNames,
+    boostNames: input.boostNames,
+  });
 }
 
 function rankHotelCandidates(
@@ -259,11 +278,72 @@ function rankCandidates(
   themes: string[],
   keywords: string[],
   limit: number,
+  options?: {
+    query?: string;
+    excludeIds?: number[];
+    excludeNames?: string[];
+    boostNames?: string[];
+  },
 ): RagAttractionCandidate[] {
-  return rows
-    .map((row) => toCandidate(row, scoreRow(row, themes, keywords)))
-    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'zh-CN'))
-    .slice(0, limit);
+  const excludeIdSet = new Set(options?.excludeIds ?? []);
+  const excludeNameSet = new Set(
+    (options?.excludeNames ?? []).map((n) => normalizeName(n)),
+  );
+  const boostNameSet = new Set(
+    (options?.boostNames ?? []).map((n) => normalizeName(n)),
+  );
+
+  const scored = rows
+    .filter((row) => !excludeIdSet.has(row.id))
+    .filter((row) => !excludeNameSet.has(normalizeName(row.name)))
+    .map((row) => {
+      let score = scoreRow(row, themes, keywords);
+      if (boostNameSet.has(normalizeName(row.name))) score += 6;
+      for (const alias of row.aliases ?? []) {
+        if (boostNameSet.has(normalizeName(alias))) score += 4;
+      }
+      return toCandidate(row, score);
+    })
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name, 'zh-CN'));
+
+  const query = [options?.query ?? '', ...keywords, ...themes].filter(Boolean).join(' ');
+  const pool = scored.slice(0, Math.max(limit * 3, 30));
+
+  if (!isVectorRagEnabled() || pool.length <= limit) {
+    return pool.slice(0, limit);
+  }
+
+  const maxScore = pool[0]?.score ?? 1;
+  const mmrItems = pool.map((candidate) => ({
+    item: candidate,
+    relevance:
+      (candidate.score / Math.max(maxScore, 1)) * (1 - getVectorRagBoostWeight()) +
+      computeSemanticRelevance(query, candidate) * getVectorRagBoostWeight(),
+    maxSimilarityToSelected: (selected: RagAttractionCandidate[]) => {
+      if (selected.length === 0) return 0;
+      let maxSim = 0;
+      for (const s of selected) {
+        const textSim = computeCandidateSimilarity(candidate, s);
+        const tagSim = tagJaccardSimilarity(candidate.tags, s.tags);
+        let geoSim = 0;
+        if (
+          candidate.latitude != null &&
+          candidate.longitude != null &&
+          s.latitude != null &&
+          s.longitude != null
+        ) {
+          geoSim = geoSimilarity(
+            { latitude: candidate.latitude, longitude: candidate.longitude },
+            { latitude: s.latitude, longitude: s.longitude },
+          );
+        }
+        maxSim = Math.max(maxSim, textSim, tagSim, geoSim);
+      }
+      return maxSim;
+    },
+  }));
+
+  return mmrRerank(mmrItems, limit, getMmrLambda());
 }
 
 /** 格式化为 LLM 可读的候选 POI 块 */
@@ -284,6 +364,8 @@ export function formatRagContextForLlm(candidates: RagAttractionCandidate[]): st
   return [
     '【内容库候选 POI — poiType=attraction 时必须优先从中选用】',
     '- name 必须与下列 name 完全一致，禁止自造未在库中的景区名',
+    '- 优先使用 id 字段对应的景点；仅可从本列表中选择',
+    `- 允许使用的 attractionId 白名单：${compact.map((c) => c.id).join(', ')}`,
     '- cost 使用 ticketPrice；坐标使用 latitude/longitude',
     JSON.stringify(compact),
   ].join('\n');
@@ -370,7 +452,7 @@ export function buildRouteFromRagCatalog(
   locale: LocaleCode = 'zh-CN',
 ): GeneratedRouteDraft | null {
   const days = intent.days ?? 3;
-  const city = intent.city;
+  const city = resolvePlanningCity(intent);
   if (!city || candidates.length < days) return null;
 
   const sorted = [...candidates].sort((a, b) => b.score - a.score);

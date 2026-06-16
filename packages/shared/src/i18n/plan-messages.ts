@@ -47,8 +47,22 @@ export function formatPlanIntentSummary(
   intent: TravelIntentSnapshot,
   locale: LocaleCode = DEFAULT_LOCALE,
 ): string {
+  if (intent.constraintSummary?.trim()) {
+    return intent.constraintSummary.trim();
+  }
   const parts: string[] = [];
-  if (intent.city) parts.push(intent.city);
+  if (intent.departureCity) {
+    parts.push(
+      locale === 'en-US'
+        ? `From ${intent.departureCity}`
+        : `从${intent.departureCity}出发`,
+    );
+  }
+  const planningCity =
+    intent.city && intent.departureCity && intent.city === intent.departureCity
+      ? intent.suggestedDestinations?.find((item) => item !== intent.departureCity) ?? null
+      : intent.city ?? intent.suggestedDestinations?.[0] ?? null;
+  if (planningCity) parts.push(planningCity);
   if (intent.days != null) {
     parts.push(planMsg('plan.intent.days', locale, { days: intent.days }));
   }
@@ -59,6 +73,13 @@ export function formatPlanIntentSummary(
     const sep = locale === 'en-US' ? ', ' : '·';
     parts.push(
       intent.themes.map((theme) => formatInterestTagLabel(theme, locale)).join(sep),
+    );
+  }
+  if (intent.excludeProvinceCodes?.length) {
+    parts.push(
+      locale === 'en-US'
+        ? `Exclude ${intent.excludeProvinceCodes.join(', ')}`
+        : `不出${intent.excludeProvinceCodes.join('、')}`,
     );
   }
   return parts.length > 0 ? parts.join(' · ') : planMsg('plan.intent.default', locale);

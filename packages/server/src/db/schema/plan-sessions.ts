@@ -29,6 +29,8 @@ export const planSessions = mysqlTable('plan_sessions', {
   status: tinyint('status').notNull().default(PlanSessionStatus.ACTIVE),
   title: varchar('title', { length: 128 }),
   intentSnapshot: json('intent_snapshot').$type<Record<string, unknown>>(),
+  /** C7-b：Agent 编排状态 */
+  agentState: json('agent_state').$type<Record<string, unknown>>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });

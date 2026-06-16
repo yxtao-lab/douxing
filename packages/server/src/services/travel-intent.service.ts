@@ -4,6 +4,7 @@ import type {
   TransportPreference,
   TravelIntentSnapshot,
 } from '@douxing/shared';
+import { PROVINCE_CITY_REGIONS } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 
@@ -280,7 +281,35 @@ export function createEmptyIntent(): TravelIntentSnapshot {
     lodgingArea: null,
     lodgingTier: null,
     cities: [],
+    departureCity: null,
+    excludeProvinceCodes: [],
+    suggestedDestinations: [],
+    constraintSummary: null,
+    intentSource: 'rule',
   };
+}
+
+/** 用于 RAG / 玩法检索的实际游玩目的地 */
+export function resolvePlanningCity(intent: TravelIntentSnapshot): string | null {
+  if (intent.city && intent.departureCity && intent.city === intent.departureCity) {
+    const alt = intent.suggestedDestinations?.find((item) => item !== intent.departureCity);
+    if (alt) return alt;
+    return null;
+  }
+  if (intent.city) return intent.city;
+  if (intent.suggestedDestinations?.length) return intent.suggestedDestinations[0] ?? null;
+  if (intent.cities?.length) return intent.cities[0] ?? null;
+  return null;
+}
+
+function formatExcludeProvinces(intent: TravelIntentSnapshot): string {
+  const codes = intent.excludeProvinceCodes ?? [];
+  if (codes.length === 0) return '';
+  const names = codes.map((code) => {
+    const province = PROVINCE_CITY_REGIONS.find((item) => item.code === code);
+    return province?.nameZh ?? code;
+  });
+  return names.join('、');
 }
 
 function applyH9Fields(intent: TravelIntentSnapshot, text: string): void {
@@ -408,11 +437,16 @@ export function buildIntentFromHistory(
 }
 
 export function formatIntentSummary(intent: TravelIntentSnapshot): string {
+  if (intent.constraintSummary?.trim()) return intent.constraintSummary.trim();
   const parts: string[] = [];
-  if (intent.city) parts.push(intent.city);
+  if (intent.departureCity) parts.push(`从${intent.departureCity}出发`);
+  const planningCity = resolvePlanningCity(intent);
+  if (planningCity) parts.push(planningCity);
   if (intent.days != null) parts.push(`${intent.days}天`);
   if (intent.budget) parts.push(`预算${intent.budget}`);
   if (intent.themes.length > 0) parts.push(intent.themes.join('·'));
+  const excludeLabel = formatExcludeProvinces(intent);
+  if (excludeLabel) parts.push(`不出${excludeLabel}`);
   if (intent.transportPreference && intent.transportPreference !== 'any') {
     parts.push(`交通:${intent.transportPreference}`);
   }
@@ -422,17 +456,50 @@ export function formatIntentSummary(intent: TravelIntentSnapshot): string {
 
 export function formatIntentConstraintsForLlm(intent: TravelIntentSnapshot): string {
   const lines: string[] = ['【用户约束 — 必须严格遵守】'];
-  if (intent.city) lines.push(`- 目的地城市：${intent.city}`);
-  if (intent.days != null) lines.push(`- 行程天数：${intent.days} 天（routeDetail.days 长度必须等于 ${intent.days}）`);
+  if (intent.departureCity) {
+    lines.push(
+      `- 出发城市：${intent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）`,
+    );
+  }
+  const planningCity = resolvePlanningCity(intent);
+  if (planningCity) {
+    lines.push(`- 目的地城市：${planningCity}（matchedCity 须为此城市）`);
+  } else if (intent.suggestedDestinations?.length) {
+    lines.push(
+      `- 目的地：从下列候选中选择其一作为主目的地：${intent.suggestedDestinations.join('、')}`,
+    );
+  }
+  const excludeLabel = formatExcludeProvinces(intent);
+  if (excludeLabel) {
+    lines.push(`- 区域限制：所有游玩 POI 不得位于 ${excludeLabel} 境内`);
+  }
+  if (intent.days != null) {
+    lines.push(`- 行程天数：${intent.days} 天（routeDetail.days 长度必须等于 ${intent.days}）`);
+  }
   if (intent.budget) {
     if (intent.budgetMin != null && intent.budgetMax != null) {
-      lines.push(`- 预算范围：${intent.budgetMin}-${intent.budgetMax} 元，budgetRange 字段填 "${intent.budgetMin}-${intent.budgetMax}"`);
+      lines.push(
+        `- 预算范围：${intent.budgetMin}-${intent.budgetMax} 元，budgetRange 字段填 "${intent.budgetMin}-${intent.budgetMax}"`,
+      );
     } else {
       lines.push(`- 预算：${intent.budget}`);
     }
   }
   if (intent.themes.length > 0) {
     lines.push(`- 主题偏好：${intent.themes.join('、')}，interestTags 须包含这些标签`);
+  }
+  if (intent.transportPreference && intent.transportPreference !== 'any') {
+    const labelMap: Record<TransportPreference, string> = {
+      train: '火车',
+      flight: '飞机',
+      high_speed_rail: '高铁',
+      self_drive: '自驾',
+      any: '不限',
+    };
+    lines.push(`- 交通方式：${labelMap[intent.transportPreference]}`);
+  }
+  if (intent.constraintSummary?.trim()) {
+    lines.push(`- 需求摘要：${intent.constraintSummary.trim()}`);
   }
   lines.push('- 仅规划游玩 POI（attraction/restaurant/meal）；不要输出 hotel/transport 节点，交通与住宿由系统补全');
   if (lines.length === 1) return '';
@@ -492,11 +559,12 @@ export function enforceRouteConstraints(
   intent: TravelIntentSnapshot,
 ): GeneratedRouteDraft {
   const next = { ...draft, routeDetail: { days: [...draft.routeDetail.days] } };
+  const planningCity = resolvePlanningCity(intent);
 
-  if (intent.city && !next.matchedCity.includes(intent.city)) {
-    next.matchedCity = intent.city;
-    if (!next.name.includes(intent.city)) {
-      next.name = `${intent.city}${next.name}`;
+  if (planningCity && !next.matchedCity.includes(planningCity)) {
+    next.matchedCity = planningCity;
+    if (!next.name.includes(planningCity)) {
+      next.name = `${planningCity}${next.name}`;
     }
   }
 
@@ -511,7 +579,7 @@ export function enforceRouteConstraints(
         next.routeDetail.days.push({
           ...last,
           date: `第${idx}天`,
-          title: `${intent.city ?? '当地'}自由探索`,
+          title: `${planningCity ?? '当地'}自由探索`,
           attractions: last.attractions.map((a) => ({ ...a })),
         });
       }

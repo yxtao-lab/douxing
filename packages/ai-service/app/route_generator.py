@@ -24,10 +24,63 @@ from app.schemas import (
 )
 
 
+PROVINCE_NAME_BY_CODE = {
+    "beijing": "北京",
+    "shanghai": "上海",
+    "chongqing": "重庆",
+    "zhejiang": "浙江",
+    "sichuan": "四川",
+    "shaanxi": "陕西",
+    "guangdong": "广东",
+    "fujian": "福建",
+    "jiangsu": "江苏",
+    "hubei": "湖北",
+    "hunan": "湖南",
+    "shandong": "山东",
+    "liaoning": "辽宁",
+    "hainan": "海南",
+    "yunnan": "云南",
+    "guangxi": "广西",
+}
+
+
+def resolve_planning_city(intent: TravelIntentSnapshot) -> str | None:
+    if (
+        intent.city
+        and intent.departureCity
+        and intent.city == intent.departureCity
+    ):
+        for item in intent.suggestedDestinations or []:
+            if item != intent.departureCity:
+                return item
+        return None
+    if intent.city:
+        return intent.city
+    if intent.suggestedDestinations:
+        return intent.suggestedDestinations[0]
+    if intent.cities:
+        return intent.cities[0]
+    return None
+
+
 def format_intent_constraints_for_llm(intent: TravelIntentSnapshot) -> str:
     lines = ["【用户约束 — 必须严格遵守】"]
-    if intent.city:
-        lines.append(f"- 目的地城市：{intent.city}")
+    if intent.departureCity:
+        lines.append(
+            f"- 出发城市：{intent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）"
+        )
+    planning_city = resolve_planning_city(intent)
+    if planning_city:
+        lines.append(f"- 目的地城市：{planning_city}（matchedCity 须为此城市）")
+    elif intent.suggestedDestinations:
+        joined = "、".join(intent.suggestedDestinations)
+        lines.append(f"- 目的地：从下列候选中选择其一作为主目的地：{joined}")
+    if intent.excludeProvinceCodes:
+        names = [
+            PROVINCE_NAME_BY_CODE.get(code, code)
+            for code in intent.excludeProvinceCodes
+        ]
+        lines.append(f"- 区域限制：所有游玩 POI 不得位于 {'、'.join(names)} 境内")
     if intent.days is not None:
         lines.append(
             f"- 行程天数：{intent.days} 天（routeDetail.days 长度必须等于 {intent.days}）"
@@ -44,6 +97,12 @@ def format_intent_constraints_for_llm(intent: TravelIntentSnapshot) -> str:
         lines.append(
             f"- 主题偏好：{'、'.join(intent.themes)}，interestTags 须包含这些标签"
         )
+    if intent.constraintSummary:
+        lines.append(f"- 需求摘要：{intent.constraintSummary}")
+    lines.append(
+        "- 仅规划游玩 POI（attraction/restaurant/meal）；"
+        "不要输出 hotel/transport 节点，交通与住宿由系统补全"
+    )
     if len(lines) == 1:
         return ""
     return "\n".join(lines)

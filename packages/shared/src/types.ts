@@ -121,7 +121,11 @@ export interface RouteTransitSegment {
 
 /** H9：每日住宿（Enricher 产出） */
 /** H9-2：住宿数据来源 */
-export type RouteLodgingSource = 'content_library' | 'amap_geocode' | 'fallback';
+export type RouteLodgingSource =
+  | 'content_library'
+  | 'amap_poi'
+  | 'amap_geocode'
+  | 'fallback';
 
 export interface RouteDayLodging {
   name: string;
@@ -368,8 +372,12 @@ export type TransportPreference = 'train' | 'flight' | 'high_speed_rail' | 'self
 /** H9：住宿档次 */
 export type LodgingTier = 'budget' | 'comfort' | 'luxury' | 'any';
 
+/** 意图解析来源 */
+export type TravelIntentSource = 'rule' | 'llm' | 'hybrid';
+
 /** C2：从用户描述中解析的结构化旅行意图 */
 export interface TravelIntentSnapshot {
+  /** 游玩目的地城市（非出发地） */
   city: string | null;
   days: number | null;
   /** 预算描述，如 "5000" 或 "2000-4000" */
@@ -388,6 +396,16 @@ export interface TravelIntentSnapshot {
   cities?: string[];
   /** H9-3：出发日期 ISO（YYYY-MM-DD），用于跨城班次查询 */
   startDate?: string | null;
+  /** 出发/起点城市，仅作大交通起点，禁止安排游玩 POI */
+  departureCity?: string | null;
+  /** 排除的省份 code（与 city-regions 对齐，如 hubei） */
+  excludeProvinceCodes?: string[];
+  /** 用户未指定目的地时，AI 推荐的候选目的地 */
+  suggestedDestinations?: string[];
+  /** 结构化约束摘要（展示与 LLM 约束块） */
+  constraintSummary?: string | null;
+  /** 意图解析来源 */
+  intentSource?: TravelIntentSource;
 }
 
 /** 传给 LLM 的对话历史条目 */

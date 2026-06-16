@@ -21,7 +21,9 @@ import {
   buildIntentFromHistory,
   enforceRouteConstraints,
   parseTravelIntent,
+  resolvePlanningCity,
 } from './travel-intent.service.js';
+import { buildIntentFromHistoryAsync } from './llm-intent-parser.service.js';
 import {
   applyRagToRouteDraft,
   buildRouteFromRagCatalog,
@@ -32,6 +34,12 @@ import {
   retrievePlaybooksForPlanning,
   type MatchedRoutePlaybook,
 } from './playbook-rag.service.js';
+import { validateRouteDraft } from './validate-route.service.js';
+import {
+  resolvePoiHitRate,
+  shouldFallbackToRagCatalog,
+} from './route-quality-metrics.service.js';
+import { getPoiHitRateFallbackThreshold } from '../config/vector-rag.js';
 
 export interface GenerateRouteInput {
   prompt: string;
@@ -54,6 +62,12 @@ export interface GenerateRouteInput {
   ragVariantIndex?: number;
   /** 输出语言（路线标题、简介等） */
   locale?: LocaleCode;
+  /** Phase 4：用户 ID（注入兴趣与记忆） */
+  userId?: number;
+  /** Phase 2：排除 POI */
+  excludePoiIds?: number[];
+  excludePoiNames?: string[];
+  boostPoiNames?: string[];
 }
 
 export interface GeneratedRouteDraft {
@@ -75,9 +89,9 @@ function detectTags(prompt: string): string[] {
   return themes.length > 0 ? themes : ['休闲'];
 }
 
-function resolveIntent(input: GenerateRouteInput): TravelIntentSnapshot {
-  if (input.intent) return input.intent;
-  return buildIntentFromHistory(input.history, input.prompt, {
+function resolveIntent(input: GenerateRouteInput): Promise<TravelIntentSnapshot> {
+  if (input.intent) return Promise.resolve(input.intent);
+  return buildIntentFromHistoryAsync(input.history, input.prompt, {
     days: input.days,
     budget: input.budget,
   });
@@ -89,7 +103,7 @@ async function resolvePlaybookMatches(
 ): Promise<MatchedRoutePlaybook[]> {
   if (input.playbookMatches) return input.playbookMatches;
   return await retrievePlaybooksForPlanning({
-    city: intent.city,
+    city: resolvePlanningCity(intent),
     themes: intent.themes,
     prompt: input.prompt,
   });
@@ -101,10 +115,13 @@ async function resolveRagCandidates(
 ): Promise<RagAttractionCandidate[]> {
   if (input.ragCandidates) return input.ragCandidates;
   return retrieveAttractionsForPlanning({
-    city: intent.city,
+    city: resolvePlanningCity(intent),
     themes: intent.themes,
     prompt: input.prompt,
     days: intent.days,
+    excludeIds: input.excludePoiIds,
+    excludeNames: input.excludePoiNames,
+    boostNames: input.boostPoiNames,
   });
 }
 
@@ -138,7 +155,16 @@ async function finalizeRouteDraft(
     locale: input.locale,
     playbooks: playbookMatches,
   });
-  return withRagMeta(enriched, enriched.ragMatchedCount ?? linked.ragMatchedCount ?? 0, enriched.ragCandidateCount ?? linked.ragCandidateCount ?? ragCandidates.length);
+  const validated = validateRouteDraft(enriched, {
+    locale: input.locale,
+    ragCandidates,
+    autoFix: true,
+  });
+  return withRagMeta(
+    validated.draft,
+    validated.draft.ragMatchedCount ?? enriched.ragMatchedCount ?? linked.ragMatchedCount ?? 0,
+    enriched.ragCandidateCount ?? linked.ragCandidateCount ?? ragCandidates.length,
+  );
 }
 
 function scoreTemplate(template: RouteTemplate, city: string | null, days: number, tags: string[]): number {
@@ -160,7 +186,7 @@ export async function generateRoute(
 ): Promise<
   GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string; intent: TravelIntentSnapshot }
 > {
-  const intent = resolveIntent(input);
+  const intent = await resolveIntent(input);
   const ragCandidates = await resolveRagCandidates(input, intent);
   const playbookMatches = await resolvePlaybookMatches(input, intent);
   const enrichedInput = {
@@ -193,6 +219,38 @@ export async function generateRoute(
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
+      const hitRate = resolvePoiHitRate(draft, ragCandidates);
+      if (
+        shouldFallbackToRagCatalog(hitRate, getPoiHitRateFallbackThreshold()) &&
+        resolvePlanningCity(intent) &&
+        ragCandidates.length >= (intent.days ?? 3)
+      ) {
+        console.warn(
+          `[route-generator] POI 命中率 ${(hitRate * 100).toFixed(0)}% 低于阈值，降级 RAG 组装`,
+        );
+        const ragDraft = buildRouteFromRagCatalog(
+          intent,
+          ragCandidates,
+          input.prompt,
+          input.ragVariantIndex ?? 0,
+          input.variantKey,
+          input.locale,
+        );
+        if (ragDraft) {
+          const finalized = await finalizeRouteDraft(
+            ragDraft,
+            enrichedInput,
+            intent,
+            ragCandidates,
+            playbookMatches,
+          );
+          return {
+            ...finalized,
+            generationSource: 'template',
+            intent,
+          };
+        }
+      }
       const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates, playbookMatches);
       return {
         ...finalized,
@@ -223,7 +281,10 @@ export function generateRouteFromTemplate(
   intent?: TravelIntentSnapshot,
   ragCandidates: RagAttractionCandidate[] = input.ragCandidates ?? [],
 ): GeneratedRouteDraft {
-  const resolvedIntent = intent ?? resolveIntent(input);
+  const resolvedIntent = intent ?? buildIntentFromHistory(input.history, input.prompt, {
+    days: input.days,
+    budget: input.budget,
+  });
   const historyUserText = (input.history ?? [])
     .filter((m) => m.role === 'user')
     .map((m) => m.content.trim())
@@ -232,7 +293,8 @@ export function generateRouteFromTemplate(
   const prompt = [historyUserText, input.prompt.trim()].filter(Boolean).join('；');
 
   const locale = input.locale ?? 'zh-CN';
-  if (resolvedIntent.city && ragCandidates.length >= (resolvedIntent.days ?? 3)) {
+  const planningCity = resolvePlanningCity(resolvedIntent);
+  if (planningCity && ragCandidates.length >= (resolvedIntent.days ?? 3)) {
     const ragDraft = buildRouteFromRagCatalog(
       resolvedIntent,
       ragCandidates,
@@ -249,7 +311,7 @@ export function generateRouteFromTemplate(
     }
   }
 
-  const city = resolvedIntent.city;
+  const city = planningCity ?? resolvedIntent.city;
   const days = resolvedIntent.days ?? input.days ?? 3;
   const tags = resolvedIntent.themes.length > 0 ? resolvedIntent.themes : detectTags(prompt);
   const budget = resolvedIntent.budget ?? input.budget ?? '';

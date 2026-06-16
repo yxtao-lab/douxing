@@ -23,6 +23,12 @@ export function isLlmEnabled(): boolean {
   return process.env.LLM_ENABLED !== 'false';
 }
 
+/** 是否启用 LLM 解析旅行意图（默认随 LLM 总开关） */
+export function isLlmIntentParseEnabled(): boolean {
+  if (process.env.LLM_INTENT_PARSE_ENABLED === 'false') return false;
+  return isLlmEnabled();
+}
+
 export function hasDeepseekApiKey(): boolean {
   const key = process.env.DEEPSEEK_API_KEY?.trim();
   return Boolean(key && key.length > 0);

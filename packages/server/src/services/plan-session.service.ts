@@ -27,10 +27,18 @@ import {
 import {
   createRouteFromPrompt,
   regenerateRouteFromPrompt,
+  updateRouteFromAgentDraft,
   getRouteById,
 } from './route.service.js';
-import type { GenerateRouteInput } from './route-generator.service.js';
-import { buildIntentFromHistory } from './travel-intent.service.js';
+import type { GeneratedRouteDraft, GenerateRouteInput } from './route-generator.service.js';
+import { buildIntentFromHistoryAsync } from './llm-intent-parser.service.js';
+import {
+  loadPlanUserContext,
+  mergeIntentWithUserContext,
+} from './plan-user-context.service.js';
+import { runAgentPlan, isAgentPlanEnabled } from './agent-plan-client.service.js';
+import { writeTripMemory, PetMemoryType } from './pet-memory.service.js';
+import { routeAgentIntent } from './agent-intent-router.service.js';
 import {
   buildPlanRouteVariants,
 } from '../config/plan-route-variants.js';
@@ -148,6 +156,24 @@ function buildActionResult(
     memberLevelLabel: meta.memberLevelLabel,
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
+  };
+}
+
+function routeToDraft(route: NonNullable<Awaited<ReturnType<typeof getRouteById>>>): GeneratedRouteDraft {
+  const detail = (route.routeDetail ?? {}) as Record<string, unknown>;
+  const days = (detail.days ?? []) as GeneratedRouteDraft['routeDetail']['days'];
+  return {
+    name: route.name,
+    description: route.description ?? '',
+    budgetRange: route.budgetRange ?? '',
+    days: route.days,
+    interestTags: route.interestTags ?? [],
+    routeDetail: { days },
+    unlockPrice: typeof detail.unlockPrice === 'number' ? detail.unlockPrice : 9.9,
+    matchedCity: (detail.matchedCity as string) ?? '',
+    isAiGenerated: true,
+    ragMatchedCount: typeof detail.ragMatchedCount === 'number' ? detail.ragMatchedCount : undefined,
+    ragCandidateCount: typeof detail.ragCandidateCount === 'number' ? detail.ragCandidateCount : undefined,
   };
 }
 
@@ -345,28 +371,32 @@ export async function createPlanSession(
     throw new ApiError(ApiMessageKey.PLAN_PROMPT_REQUIRED);
   }
 
-  const intent = buildIntentFromHistory(undefined, prompt, {
+  const intent = await buildIntentFromHistoryAsync(undefined, prompt, {
     days: input.days,
     budget: input.budget,
   });
+  const userContext = await loadPlanUserContext(userId);
+  const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
 
   const generateInput: GenerateRouteInput = {
     prompt,
     days: input.days,
     budget: input.budget,
     provider: input.provider,
-    intent,
+    intent: resolvedIntent,
     locale,
+    userId,
+    excludePoiNames: userContext.excludePoiNames,
+    boostPoiNames: userContext.boostPoiNames,
   };
 
-  const generatedPack = await generateSessionCandidates(userId, generateInput, intent, locale);
+  const generatedPack = await generateSessionCandidates(userId, generateInput, resolvedIntent, locale);
   const generated = generatedPack.rows;
   if (generated.length === 0) {
     throw new ApiError(ApiMessageKey.PLAN_GENERATE_EMPTY);
   }
 
   const primary = generated[0]!;
-  const resolvedIntent = intent;
   const memberLevel = generatedPack.memberLevel;
   const memberPlanCandidateCount = generatedPack.candidateCount;
   const memberLevelLabel = getMemberLevelLabel(memberLevel);
@@ -405,6 +435,13 @@ export async function createPlanSession(
       routeSnapshot: snapshot,
     },
   ]);
+
+  void writeTripMemory({
+    userId,
+    memoryType: PetMemoryType.TRIP_SUMMARY,
+    content: `${resolvedIntent.city ?? primary.route.name} · ${primary.route.days}天 · ${resolvedIntent.themes.join('、')}`,
+    metadata: { routeId: primary.route.id, sessionId },
+  });
 
   const candidates =
     generated.length > 1 ? await loadSessionCandidates(sessionId, userId, locale) : undefined;
@@ -506,21 +543,74 @@ export async function appendPlanSessionMessage(
     .filter((m) => m.role === 'user')
     .map((m) => ({ role: 'user', content: m.content }));
 
-  const intent = buildIntentFromHistory(userHistory, text);
+  const intent = await buildIntentFromHistoryAsync(userHistory, text);
+  const userContext = await loadPlanUserContext(userId);
+  const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
 
-  const generateInput: GenerateRouteInput = {
-    prompt: text,
-    provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-    history,
-    intent,
-    locale,
-  };
+  const currentRoute = await getRouteById(session.routeId, userId);
+  if (!currentRoute) return null;
 
-  const result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+  let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
+  const routed = routeAgentIntent(text);
+
+  if (isAgentPlanEnabled()) {
+    const agentResult = await runAgentPlan({
+      prompt: text,
+      userId,
+      history,
+      provider: session.provider ?? 'auto',
+      locale,
+      currentDraft: routeToDraft(currentRoute),
+      intent: resolvedIntent,
+    });
+
+    if (agentResult?.draft) {
+      if (routed.route === 'tweak_day' || routed.route === 'tweak_poi') {
+        const updated = await updateRouteFromAgentDraft(session.routeId, userId, agentResult.draft, {
+          sourcePrompt: text,
+          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+          intent: agentResult.draft.intent ?? resolvedIntent,
+        });
+        if (updated) {
+          result = {
+            ...updated,
+            llmProvider: undefined,
+            intent: updated.intent ?? resolvedIntent,
+          };
+        }
+      } else {
+        const generateInput: GenerateRouteInput = {
+          prompt: text,
+          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+          history,
+          intent: resolvedIntent,
+          locale,
+          userId,
+          excludePoiNames: userContext.excludePoiNames,
+          boostPoiNames: userContext.boostPoiNames,
+        };
+        result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+      }
+    }
+  }
+
+  if (!result) {
+    const generateInput: GenerateRouteInput = {
+      prompt: text,
+      provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+      history,
+      intent: resolvedIntent,
+      locale,
+      userId,
+      excludePoiNames: userContext.excludePoiNames,
+      boostPoiNames: userContext.boostPoiNames,
+    };
+    result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+  }
   if (!result) return null;
 
-  const { route, generationSource, llmProvider, intent: resolvedIntent } = result;
-  const assistantMessage = buildPlanAssistantReply(route, resolvedIntent, locale);
+  const { route, generationSource, llmProvider, intent: resultIntent } = result;
+  const assistantMessage = buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
   const snapshot = snapshotFromRoute(route);
   const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
 
@@ -536,13 +626,20 @@ export async function appendPlanSessionMessage(
   ]);
   await db
     .update(planSessions)
-    .set({ updatedAt: new Date(), intentSnapshot: resolvedIntent as unknown as Record<string, unknown> })
+    .set({
+      updatedAt: new Date(),
+      intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+      agentState: {
+        lastRoutedIntent: routed.route,
+        toolTrace: isAgentPlanEnabled() ? routed.route : 'pipeline',
+      },
+    })
     .where(eq(planSessions.id, sessionId));
 
   return buildActionResult(sessionId, route, assistantMessage, {
     generationSource,
     llmProvider,
-    intentSnapshot: resolvedIntent,
+    intentSnapshot: resultIntent ?? resolvedIntent,
     ragMatchedCount: readRagMatchedCount(route),
     candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
   });

@@ -13,10 +13,26 @@ export interface GeocodeResult {
   amapPoiId?: string;
 }
 
+/** Phase 5：高德 POI 搜索结果 */
+export interface AmapPoiResult {
+  name: string;
+  latitude: number;
+  longitude: number;
+  address?: string;
+  type?: string;
+  amapPoiId?: string;
+}
+
 interface AmapPlaceResponse {
   status?: string;
   info?: string;
-  pois?: Array<{ location?: string; id?: string; name?: string }>;
+  pois?: Array<{
+    location?: string;
+    id?: string;
+    name?: string;
+    address?: string;
+    type?: string;
+  }>;
 }
 
 interface AmapGeoResponse {
@@ -126,6 +142,82 @@ export async function geocodeByAddress(
   if (!parsed) return null;
 
   return { ...parsed, method: 'geocode_geo' };
+}
+
+/**
+ * Phase 5：高德 POI 关键词搜索（多结果，用于酒店真实化与批量同步）
+ */
+export async function searchPoisByKeyword(
+  keywords: string,
+  city: string,
+  options?: { limit?: number; types?: string },
+): Promise<AmapPoiResult[]> {
+  const key = getAmapWebKey();
+  if (!key) return [];
+
+  const limit = Math.min(Math.max(options?.limit ?? 10, 1), 50);
+  const params = new URLSearchParams({
+    key,
+    keywords: keywords.trim(),
+    city: city.trim(),
+    citylimit: 'true',
+    offset: String(limit),
+    page: '1',
+    extensions: 'base',
+  });
+  if (options?.types?.trim()) {
+    params.set('types', options.types.trim());
+  }
+
+  const timeoutMs = getAmapGeocodeTimeoutMs();
+  try {
+    const res = await fetchWithTimeout(`${AMAP_PLACE_TEXT_URL}?${params}`, timeoutMs);
+    const data = (await res.json()) as AmapPlaceResponse;
+
+    if (data.status !== '1' || !data.pois?.length) {
+      return [];
+    }
+
+    const results: AmapPoiResult[] = [];
+    for (const poi of data.pois) {
+      if (!poi.location || !poi.name) continue;
+      const parsed = parseAmapLocation(poi.location);
+      if (!parsed) continue;
+      results.push({
+        name: poi.name.trim(),
+        latitude: parsed.latitude,
+        longitude: parsed.longitude,
+        address: poi.address,
+        type: poi.type,
+        amapPoiId: poi.id,
+      });
+    }
+    return results;
+  } catch (err) {
+    console.warn(
+      '[amap] searchPoisByKeyword 失败:',
+      keywords,
+      city,
+      err instanceof Error ? err.message : err,
+    );
+    return [];
+  }
+}
+
+/**
+ * Phase 5：按区域 + 档次搜索真实酒店 POI
+ */
+export async function searchHotelsByArea(
+  city: string,
+  options?: { area?: string; tierKeyword?: string; limit?: number },
+): Promise<AmapPoiResult[]> {
+  const area = options?.area?.trim();
+  const tierKeyword = options?.tierKeyword?.trim() ?? '酒店';
+  const query = area ? `${area}${tierKeyword}` : `${city}${tierKeyword}`;
+  return searchPoisByKeyword(query, city, {
+    limit: options?.limit ?? 8,
+    types: '100000',
+  });
 }
 
 /**

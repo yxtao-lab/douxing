@@ -19,6 +19,7 @@ import journeyAlbumsRouter from './journey-albums.js';
 import analyticsRouter from './analytics.js';
 import systemAdminRouter from './system-admin.js';
 import membershipRouter from './membership.js';
+import agentToolsRouter from './agent-tools.js';
 
 const router = Router();
 
@@ -39,6 +40,7 @@ router.use(`${API_PREFIX}/playbooks`, playbooksRouter);
 router.use(`${API_PREFIX}/journey-albums`, journeyAlbumsRouter);
 router.use(`${API_PREFIX}/analytics`, analyticsRouter);
 router.use(`${API_PREFIX}/membership`, membershipRouter);
+router.use(`${API_PREFIX}/agent/tools`, agentToolsRouter);
 router.use(`${API_PREFIX}/system`, systemAdminRouter);
 
 export default router;

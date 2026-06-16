@@ -6,7 +6,14 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.route_generator import check_provider_status, generate_route
-from app.schemas import GenerateRouteRequest, GenerateRouteResponse, ServiceStatusResponse
+from app.agent.graph import run_plan_agent
+from app.schemas import (
+    AgentPlanRequest,
+    AgentPlanResponse,
+    GenerateRouteRequest,
+    GenerateRouteResponse,
+    ServiceStatusResponse,
+)
 
 app = FastAPI(
     title="兜行 AI 服务",
@@ -49,3 +56,14 @@ async def route_generate(request: GenerateRouteRequest) -> GenerateRouteResponse
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"AI 服务内部错误: {exc}") from exc
+
+
+@app.post("/v1/agent/plan", response_model=AgentPlanResponse)
+async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
+    try:
+        result = await run_plan_agent(request.model_dump())
+        return AgentPlanResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Agent 规划失败: {exc}") from exc

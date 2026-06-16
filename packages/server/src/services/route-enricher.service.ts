@@ -18,7 +18,7 @@ import {
 } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
-import { geocodeByPlaceText, resolveCoordinatesFromAmap } from './amap-geocode.service.js';
+import { geocodeByPlaceText, resolveCoordinatesFromAmap, searchHotelsByArea } from './amap-geocode.service.js';
 import {
   DEFAULT_DAY_START_MINUTES,
   DEFAULT_VISIT_MINUTES,
@@ -120,6 +120,28 @@ async function searchHotelViaAmap(
   tier: Exclude<LodgingTier, 'any'>,
   area?: string | null,
 ): Promise<RouteDayLodging | null> {
+  const tierKeyword =
+    tier === 'budget' ? '经济型酒店' : tier === 'luxury' ? '豪华酒店' : '酒店';
+  const pois = await searchHotelsByArea(city, {
+    area: area ?? undefined,
+    tierKeyword,
+    limit: 6,
+  });
+
+  if (pois.length > 0) {
+    const best = pois[0]!;
+    return {
+      name: best.name,
+      area: area ?? undefined,
+      tier,
+      cost: LODGING_TIER_COST[tier],
+      latitude: best.latitude,
+      longitude: best.longitude,
+      description: best.address?.trim() || best.name,
+      source: 'amap_poi',
+    };
+  }
+
   const keywords = LODGING_SEARCH_KEYWORDS[tier];
   const areaPrefix = area?.trim() ? `${area.trim()}` : city;
 
@@ -135,6 +157,7 @@ async function searchHotelViaAmap(
         latitude: geo.latitude,
         longitude: geo.longitude,
         description: area ? `${area}附近${keyword}` : keyword,
+        source: 'amap_geocode',
       };
     }
   }
@@ -528,6 +551,7 @@ export async function enrichRouteDraft(
   const dayCities = resolveDayCities(normalizedDays, intent, matchedCity);
 
   const enrichedDays: RouteDayPlan[] = [];
+  const lodgingByCity = new Map<string, RouteDayLodging>();
 
   for (let dayIndex = 0; dayIndex < normalizedDays.length; dayIndex += 1) {
     const day = normalizedDays[dayIndex]!;
@@ -539,7 +563,16 @@ export async function enrichRouteDraft(
       .filter(hasCoords)
       .map((s) => ({ latitude: s.latitude!, longitude: s.longitude! }));
 
-    const lodging = await assignLodgingForDay(city, poiPointsForLodging, intent);
+    const prevCity = dayIndex > 0 ? dayCities[dayIndex - 1] : null;
+    const cityChanged = prevCity != null && prevCity !== city;
+    let lodging: RouteDayLodging;
+
+    if (!cityChanged && lodgingByCity.has(city)) {
+      lodging = { ...lodgingByCity.get(city)! };
+    } else {
+      lodging = await assignLodgingForDay(city, poiPointsForLodging, intent);
+      lodgingByCity.set(city, lodging);
+    }
 
     const openHoursMap = await getOpenHoursByAttractionIds(
       playPois

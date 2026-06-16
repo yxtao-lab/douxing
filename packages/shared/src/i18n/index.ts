@@ -53,6 +53,10 @@ export {
   type EnricherWarningKey,
   type IntercityDescriptionKey,
 } from './enricher-messages.js';
+export {
+  formatValidatorWarning,
+  type ValidatorWarningKey,
+} from './validator-messages.js';
 export type { PlaybookTransitReasonKey } from '../types.js';
 
 import { MemberLevel } from '../constants.js';

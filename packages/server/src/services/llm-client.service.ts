@@ -453,6 +453,105 @@ export async function chatCompletionForRoute(
   throw new Error(errors.join(' | '));
 }
 
+export interface JsonCompletionOptions {
+  provider?: LlmProviderChoice;
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/** 通用 JSON 结构化 LLM 调用（意图解析等） */
+export async function chatCompletionForJson<T>(
+  systemPrompt: string,
+  userContent: string,
+  schema: z.ZodType<T>,
+  options?: JsonCompletionOptions,
+): Promise<{ data: T; provider: LlmProviderId }> {
+  const chain = resolveProviderChain(options?.provider);
+  if (chain.length === 0) {
+    throw new ApiError(ApiMessageKey.LLM_NO_MODEL);
+  }
+
+  const errors: string[] = [];
+  for (const provider of chain) {
+    try {
+      const config = getProviderConfig(provider);
+      if (!config.configured) {
+        throw new Error(`${config.label} 未配置`);
+      }
+
+      const model = await resolveModelId(provider);
+      const messages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userContent },
+      ];
+      const baseBody = {
+        model,
+        messages,
+        temperature: options?.temperature ?? 0.2,
+        max_tokens: options?.maxTokens ?? 1024,
+        stream: false,
+      };
+      const useJsonMode = provider === 'deepseek';
+
+      let res = await fetchWithTimeout(
+        `${config.baseUrl}/chat/completions`,
+        {
+          method: 'POST',
+          headers: authHeaders(config.apiKey),
+          body: JSON.stringify(
+            useJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
+          ),
+        },
+        config.timeoutMs,
+      );
+
+      let data = (await res.json()) as ChatCompletionResponse;
+      if (!res.ok && useJsonMode) {
+        res = await fetchWithTimeout(
+          `${config.baseUrl}/chat/completions`,
+          {
+            method: 'POST',
+            headers: authHeaders(config.apiKey),
+            body: JSON.stringify(baseBody),
+          },
+          config.timeoutMs,
+        );
+        data = (await res.json()) as ChatCompletionResponse;
+      }
+
+      if (!res.ok) {
+        throw new Error(data.error?.message ?? `${config.label} 请求失败 HTTP ${res.status}`);
+      }
+
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        throw new Error(`${config.label} 返回内容为空`);
+      }
+
+      const jsonText = extractJsonObject(content);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(jsonText);
+      } catch {
+        throw new Error(`${config.label} 返回的不是有效 JSON`);
+      }
+
+      const result = schema.safeParse(parsed);
+      if (!result.success) {
+        throw new Error(`返回格式不符合要求: ${result.error.errors[0]?.message}`);
+      }
+
+      return { data: result.data, provider };
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      errors.push(`${getProviderConfig(provider).label}: ${msg}`);
+      console.warn(`[llm-json] ${provider} 失败:`, msg);
+    }
+  }
+
+  throw new Error(errors.join(' | '));
+}
+
 export function listProviderOptions(): Array<{
   id: LlmProviderChoice;
   label: string;
