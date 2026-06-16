@@ -111,7 +111,7 @@ pnpm build:web
 | `VECTOR_RAG_BOOST_WEIGHT` | 向量分与关键词分融合权重 | `0.35` |
 | `MMR_LAMBDA` | MMR 相关性与多样性平衡 | `0.7` |
 
-详见 [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
+详见 [AI路径规划路线图.md §7](./AI路径规划路线图.md#7-环境与验证) · [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
 
 ---
 

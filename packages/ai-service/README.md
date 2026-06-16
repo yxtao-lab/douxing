@@ -63,5 +63,8 @@ Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 `POST /api/
 
 ## 相关文档
 
-- [AI规划与Agent演进.md](../../docs/AI规划与Agent演进.md)
+## 相关文档
+
+- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · 当前 Step 1**
+- [AI规划与Agent演进.md](../../docs/AI规划与Agent演进.md) — 设计全稿
 - [开发记录 § C7](../../docs/开发记录-重难点与亮点.md#c7-ai-agent-代码落地2026-06-16)

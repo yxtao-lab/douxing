@@ -2,20 +2,25 @@
 
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
+> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 1**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：2.1  
+**文档版本**：2.2  
 **最后更新**：2026-06-16  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话」**；升级为 Agent 应 **Tool 化现有能力 + Supervisor 多 Agent + LangGraph 编排**，**不推倒** `generateRoute`。
 
+> **分工**：本文 = **为什么 / 怎么设计**；[AI路径规划路线图.md](./AI路径规划路线图.md) = **现在做什么 / 做到哪算完成**。
+
 ### 实现进度速览（2026-06-16）
 
-| 步 | 状态 | 已落地 | 待完成 |
-|----|------|--------|--------|
-| **C7-a** | ✅ 主体完成 | 9 个 Node Tool · `/api/agent/tools` · `graph.py` · `/v1/agent/plan` · `AGENT_PLAN_ENABLED` · `agent-plan-client` | Langfuse · 管道 vs Agent 等价率自动化报告 |
-| **C7-b** | 🔄 进行中 | `patch_route_day` · 意图路由（10 条用例）· `appendPlanSessionMessage` Agent 路径 · `agent_state` 列 | SSE 流式 · `agent.status.*` i18n · 追问验收联调 |
-| **C7-c** | 🔄 后端骨架 | `travel_pets` / `pet_memories` · `recall_user_memory` / `write_trip_memory` Tool · Agent 图内记忆召回 | memory_agent 独立节点 · H3 悬浮层 UI · 领养 API |
-| **C7-d** | 🔄 部分 | `validate_route` Tool（含 autoFix） | 生成后 warnings 回复 · I3 LoRA 接入 plan_agent |
+> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 1 统一意图路由**。
+
+| 步 | 状态 | 已落地 | 待完成（对应 Step） |
+|----|------|--------|---------------------|
+| **C7-a** | ✅ 主体完成 | 9 Tool · `/v1/agent/plan` · feature flag | a7/a8 → **Step 10～11** |
+| **C7-b** | 🔄 进行中 | patch · 意图 10 用例 · agent_state | **Step 1～9 → M1** |
+| **C7-c** | 🔄 后端骨架 | memory Tool · 表 | **Step 25～30 → M4** |
+| **C7-d** | 🔄 部分 | validate_route | d2/d3 → **Step 12、37** |
 
 > **默认行为不变**：`AGENT_PLAN_ENABLED=false` 时，100% 走现有 `generateRoute` 管道。
 
@@ -715,4 +720,5 @@ LANGFUSE_SECRET_KEY=
 |------|------|------|
 | 2026-06-11 | 1.0 | 初版：现状 + C7 路线 + Tool 映射 |
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
+| 2026-06-16 | 2.2 | 关联 **AI路径规划路线图 v2.0**；进度速览映射 Step/M 里程碑 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |

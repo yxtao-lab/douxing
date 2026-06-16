@@ -2,6 +2,7 @@
 
 > **版本**：与代码同步（含 C7 Agent Tool · H3 记忆表 · J1～J5+ 旅程相册）  
 > **更新日期**：2026-06-16  
+> **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（当前 Step 1）  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 

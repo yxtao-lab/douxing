@@ -2,8 +2,9 @@
 
 > **录入日期**：2026-06-10  
 > **定位**：用户 **专属 AI 旅行伙伴**——全系统可悬浮、可动、可交互；具备 **AI 分析** 与 **结构化记忆**；与 **路线规划（C 线）独立模块、同一主链路深度耦合**。  
-> **路线图编号**：**H3-a～H3-e**（原「AI 角色扮演」升级为本专题；见 [ROADMAP.md § H3](./ROADMAP.md#h3-ai-旅行宠物2026-06-10-录入)）  
-> **当前状态**：**H3-a 后端骨架已落地**（2026-06-16）：`travel_pets` / `pet_memories` 表 · `pet-memory.service.ts` · Agent `recall_user_memory` / `write_trip_memory` Tool。**领养 API、规划人格化 UI、全站悬浮未启动**。
+> **路线图编号**：**H3-a～H3-e**（见 [ROADMAP.md § H3](./ROADMAP.md#h3-ai-旅行宠物2026-06-10-录入)）  
+> **AI 规划路线图 Step**：**Step 25～30 → 里程碑 M4**（见 [AI路径规划路线图.md §1 Phase 4](./AI路径规划路线图.md#phase-4--c7-c--h3记忆与规划页宠物p1)）  
+> **当前状态**：**H3-a 后端骨架已落地**（2026-06-16）：`travel_pets` / `pet_memories` 表 · memory Tool。**Step 25 领养 API、Step 27～28 UI 未启动**（前置：M1/M2 建议完成）。
 
 ---
 
@@ -239,7 +240,7 @@ H7 错过景点 / H8 实时重规划
 | `importance` | tinyint | 1～10，默认 5 |
 | `created_at` / `updated_at` | timestamp | |
 
-**已实现服务**：`ensureTravelPet`（懒创建默认宠）、`recallUserMemory`、`writeTripMemory`；Agent Tool 见 [AI规划与Agent演进.md §9](./AI规划与Agent演进.md#9-tool-清单与代码映射)。
+**已实现服务**：`ensureTravelPet`、`recallUserMemory`、`writeTripMemory`；Agent Tool 见 [AI规划与Agent演进.md §9](./AI规划与Agent演进.md#9-tool-清单与代码映射)。**后续 Step 25～30** 见 [AI路径规划路线图.md](./AI路径规划路线图.md)。
 
 ### 6.3 `pet_trip_states`（可选 · 行中）
 
