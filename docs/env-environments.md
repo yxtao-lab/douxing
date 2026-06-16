@@ -100,10 +100,29 @@ pnpm build:web
 
 ---
 
-## 7. 相关文档
+## 7. Agent 与向量 RAG（C7 / C3 扩展）
+
+| 变量 | 说明 | 默认 |
+|------|------|------|
+| `AGENT_PLAN_ENABLED` | `true` 时规划追问可走 Agent（patch 等） | `false` |
+| `AGENT_TOOL_SECRET` | ai-service → Node Tool 内网鉴权 | 未配置时 dev 放行 |
+| `AGENT_PLAN_TIMEOUT_MS` | Node 调 `/v1/agent/plan` 超时（毫秒） | `180000` |
+| `VECTOR_RAG_ENABLED` | 启用景点 embedding + MMR 多样性检索 | `false` |
+| `VECTOR_RAG_BOOST_WEIGHT` | 向量分与关键词分融合权重 | `0.35` |
+| `MMR_LAMBDA` | MMR 相关性与多样性平衡 | `0.7` |
+
+详见 [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
+
+---
+
+## 8. 相关文档
 
 | 文档 | 内容 |
 |------|------|
 | [启动与部署流程.md](./启动与部署流程.md) | 开发 / 测试 / 生产启动与发版 |
 | [../scripts/README.md](../scripts/README.md) | scripts 目录各脚本说明 |
 | [../scripts/mp-weixin.md](../scripts/mp-weixin.md) | 微信小程序专项 |
+
+---
+
+*最后更新：2026-06-16*

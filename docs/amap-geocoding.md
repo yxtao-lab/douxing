@@ -138,7 +138,20 @@ curl "https://restapi.amap.com/v3/place/text?key=KEY&keywords=雷峰塔&city=杭
 
 控制台 Key 需有 **搜索服务** 配额；`place/detail` 与 `place/text` 共用。
 
-## 10. 相关文档
+## 11. 高德 POI 批量同步（景点库扩充）
+
+从高德 `place/text` 按城市/类别批量拉取 POI 入库，支撑 RAG 命中率与向量检索种子数据。
+
+| 命令 | 说明 |
+|------|------|
+| `pnpm --filter @douxing/server sync:amap-pois` | 全量同步（需 `AMAP_WEB_KEY`） |
+| `... sync:amap-pois -- --dry-run` | 仅统计不写库 |
+| `... sync:amap-pois -- --city=杭州` | 指定城市 |
+| `... sync:amap-pois -- --category=hotel` | `hotel` / `restaurant` / `attraction` |
+
+实现：`packages/server/src/services/amap-poi-sync.service.ts`、`scripts/sync-amap-pois.ts`。
+
+## 12. 相关文档
 
 - [搜索 POI](https://lbs.amap.com/api/webservice/guide/api/search)  
 - [地理/逆地理编码](https://lbs.amap.com/api/webservice/guide/api/georegeo)  

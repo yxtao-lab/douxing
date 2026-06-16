@@ -3,7 +3,7 @@
 > **录入日期**：2026-06-10  
 > **定位**：用户 **专属 AI 旅行伙伴**——全系统可悬浮、可动、可交互；具备 **AI 分析** 与 **结构化记忆**；与 **路线规划（C 线）独立模块、同一主链路深度耦合**。  
 > **路线图编号**：**H3-a～H3-e**（原「AI 角色扮演」升级为本专题；见 [ROADMAP.md § H3](./ROADMAP.md#h3-ai-旅行宠物2026-06-10-录入)）  
-> **当前状态**：**未开始**（产品方案已定稿，待排期开发）
+> **当前状态**：**H3-a 后端骨架已落地**（2026-06-16）：`travel_pets` / `pet_memories` 表 · `pet-memory.service.ts` · Agent `recall_user_memory` / `write_trip_memory` Tool。**领养 API、规划人格化 UI、全站悬浮未启动**。
 
 ---
 
@@ -209,35 +209,37 @@ H7 错过景点 / H8 实时重规划
 
 ## 6. 数据模型（草案）
 
+> **2026-06-16 已迁移**：`drizzle/0028_travel_pets.sql`；实现见 `packages/server/src/db/schema/travel-pets.ts`、`pet-memories.ts`、`pet-memory.service.ts`。
+
 ### 6.1 `travel_pets`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `id` | int PK | |
 | `user_id` | int FK UK | 1 用户 1 宠（MVP） |
-| `species_key` | varchar | 物种模板：如 `douxing-fox` |
-| `nickname` | varchar | 用户起名 |
-| `personality_json` | json | `{ tone, focusTags[], catchphrase }` |
-| `profile_json` | json | AI 归纳稳定画像：pace / budgetStyle / favoriteThemes |
-| `level` | int | 等级 |
+| `species` | varchar(32) | 物种模板，默认 `fox` |
+| `nickname` | varchar(64) | 用户起名，默认「小兜」 |
+| `personality` | varchar(32) | 人格，默认 `guide` |
+| `level` | int | 等级，默认 1 |
 | `exp` | int | 经验 |
-| `mood` | tinyint | 心情 0～100 |
-| `avatar_skin_key` | varchar | 皮肤 |
+| `mood` | varchar(16) | 心情，默认 `happy` |
 | `created_at` / `updated_at` | timestamp | |
+
+> 设计稿中的 `personality_json` / `profile_json` / `avatar_skin_key` 等字段 **二期** 再扩展；当前为扁平列 MVP。
 
 ### 6.2 `pet_memories`
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `id` | int PK | |
-| `pet_id` / `user_id` | int FK | |
-| `memory_type` | varchar(32) | 见 §4.2 |
-| `content_json` | json | 结构化事实 |
-| `source_type` | varchar(32) | `plan_session` / `route` / `checkin` / `analyze_job` |
-| `source_id` | int nullable | |
-| `importance` | tinyint | 1～5 |
-| `expires_at` | timestamp nullable | 临时记忆 |
+| `user_id` / `pet_id` | int FK | |
+| `memory_type` | varchar(32) | `preference` · `trip_summary` · `regret` · `visited` · `milestone` 等 |
+| `content` | text | 记忆正文（展示层 i18n 渲染） |
+| `metadata` | json nullable | 结构化扩展 |
+| `importance` | tinyint | 1～10，默认 5 |
 | `created_at` / `updated_at` | timestamp | |
+
+**已实现服务**：`ensureTravelPet`（懒创建默认宠）、`recallUserMemory`、`writeTripMemory`；Agent Tool 见 [AI规划与Agent演进.md §9](./AI规划与Agent演进.md#9-tool-清单与代码映射)。
 
 ### 6.3 `pet_trip_states`（可选 · 行中）
 
@@ -275,13 +277,13 @@ H7 错过景点 / H8 实时重规划
 
 ## 8. 分 Phase 实施（H3-a～H3-e）
 
-| 步 | 名称 | 记忆 | AI 分析 | UI | 依赖 |
-|----|------|------|---------|-----|------|
-| **H3-a** | 领养 + 规划人格化 | 初始 preference；规划结束写 `trip_summary` | 规划前 Top-5 记忆注入 prompt | 规划页宠物立绘 + 表情态 | C1 |
-| **H3-b** | 全站悬浮 L1/L2 | 对话抽 preference | — | `TravelPetFloatingLayer` 拖拽/Sheet | H3-a |
-| **H3-c** | 分析 API + 记忆墙 | 用户确认写入；可删 | `pre_plan` / `post_trip` | 档案记忆墙；气泡读 analyze 缓存 | H3-b |
-| **H3-d** | 成长 + 游戏化 | milestone；regret（H7） | `in_plan` / `in_trip` | 打卡庆祝；exp/升级 | H3-c、B 线、H7/H8 |
-| **H3-e** | 专属模型 + 向量记忆 | embedding 检索；合并去重 | 月度「旅行 DNA」 | Lottie；语音（可选） | I 线、H3-d |
+| 步 | 名称 | 记忆 | AI 分析 | UI | 依赖 | 状态 |
+|----|------|------|---------|-----|------|------|
+| **H3-a** | 领养 + 规划人格化 | 表 + memory Tool + 懒创建宠 | Agent 图内召回 | — | C1、C7-c | 🔄 后端 ✅ |
+| **H3-b** | 全站悬浮 L1/L2 | 对话抽 preference | — | `TravelPetFloatingLayer` | H3-a | ⏳ |
+| **H3-c** | 分析 API + 记忆墙 | 用户确认写入 | `pre_plan` / `post_trip` | 档案记忆墙 | H3-b | ⏳ |
+| **H3-d** | 成长 + 游戏化 | milestone；regret（H7） | `in_plan` / `in_trip` | 打卡庆祝 | H3-c、B、H7/H8 | ⏳ |
+| **H3-e** | 专属模型 + 向量记忆 | embedding 检索 | 月度「旅行 DNA」 | Lottie | I、H3-d | ⏳ |
 
 **推荐顺序**：`H3-a → H3-b → H3-c → H3-d → H3-e`。  
 **启动建议**：J 线、S1 或联调告一段落后启动 **H3-a**；与 **H4 旅行游戏化** 在 H3-d 汇合，可并行设计。

@@ -1,7 +1,7 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 J1～J5+ 旅程相册 · 删除相册 · 路线列表封面）  
-> **更新日期**：2026-06-11  
+> **版本**：与代码同步（含 C7 Agent Tool · H3 记忆表 · J1～J5+ 旅程相册）  
+> **更新日期**：2026-06-16  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -56,8 +56,9 @@
 17. [玩法动线 playbooks](#17-玩法动线-playbooks)
 18. [旅程相册 journey-albums](#18-旅程相册-journey-albums)
 19. [数据分析 analytics](#19-数据分析-analytics)
-20. [静态资源 uploads](#20-静态资源-uploads)
-21. [附录：常用枚举](#21-附录常用枚举)
+20. [Agent Tools（内网）](#20-agent-tools内网)
+21. [静态资源 uploads](#21-静态资源-uploads)
+22. [附录：常用枚举](#22-附录常用枚举)
 
 ---
 
@@ -948,7 +949,37 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ---
 
-## 20. 静态资源 uploads
+## 20. Agent Tools（内网）
+
+> **用途**：`packages/ai-service` 的 `node_client.py` 回调 Node 执行确定性 Tool；**不对公网 C 端暴露**。  
+> **鉴权**：请求头 `x-agent-tool-secret` 与 `.env` 中 `AGENT_TOOL_SECRET` 一致；开发环境未配置 secret 时 Node 放行。
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/agent/tools` | 列出可用 Tool 名称 |
+| POST | `/api/agent/tools/:name` | 执行指定 Tool |
+
+**Tool 名称（`:name`）**
+
+| name | 说明 |
+|------|------|
+| `parse_intent` | 结构化旅行意图 |
+| `retrieve_attractions` | 景点 RAG 检索 |
+| `retrieve_playbooks` | 玩法 Playbook 检索 |
+| `generate_route_draft` | LLM 生成路线 draft |
+| `enrich_route` | Enricher 增强住/行/班次 |
+| `validate_route` | Zod + 规则校验（可选 autoFix） |
+| `patch_route_day` | 局部修改某一天 POI |
+| `recall_user_memory` | 召回 H3 宠物记忆 |
+| `write_trip_memory` | 写入行程/偏好记忆 |
+
+**响应**：与其它 API 一致 `{ code, message, data }`；Tool 业务数据在 `data` 内。
+
+**关联**：Python `POST /v1/agent/plan`（见 `packages/ai-service/README.md`）；规划会话在 `AGENT_PLAN_ENABLED=true` 时间接使用 Agent 路径。
+
+---
+
+## 21. 静态资源 uploads
 
 非 JSON API，Express 静态目录：
 
@@ -963,7 +994,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ---
 
-## 21. 附录：常用枚举
+## 22. 附录：常用枚举
 
 定义于 `@douxing/shared` 的 `constants.ts`：
 

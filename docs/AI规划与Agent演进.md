@@ -4,9 +4,20 @@
 > **读者**：产品、架构、研发、AI 协作者。  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：2.0  
-**最后更新**：2026-06-11  
+**文档版本**：2.1  
+**最后更新**：2026-06-16  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话」**；升级为 Agent 应 **Tool 化现有能力 + Supervisor 多 Agent + LangGraph 编排**，**不推倒** `generateRoute`。
+
+### 实现进度速览（2026-06-16）
+
+| 步 | 状态 | 已落地 | 待完成 |
+|----|------|--------|--------|
+| **C7-a** | ✅ 主体完成 | 9 个 Node Tool · `/api/agent/tools` · `graph.py` · `/v1/agent/plan` · `AGENT_PLAN_ENABLED` · `agent-plan-client` | Langfuse · 管道 vs Agent 等价率自动化报告 |
+| **C7-b** | 🔄 进行中 | `patch_route_day` · 意图路由（10 条用例）· `appendPlanSessionMessage` Agent 路径 · `agent_state` 列 | SSE 流式 · `agent.status.*` i18n · 追问验收联调 |
+| **C7-c** | 🔄 后端骨架 | `travel_pets` / `pet_memories` · `recall_user_memory` / `write_trip_memory` Tool · Agent 图内记忆召回 | memory_agent 独立节点 · H3 悬浮层 UI · 领养 API |
+| **C7-d** | 🔄 部分 | `validate_route` Tool（含 autoFix） | 生成后 warnings 回复 · I3 LoRA 接入 plan_agent |
+
+> **默认行为不变**：`AGENT_PLAN_ENABLED=false` 时，100% 走现有 `generateRoute` 管道。
 
 ---
 
@@ -51,7 +62,7 @@ MVP 阶段（2026-05）团队选择 **先落地可验收的管道**，理由见 
 | 意图未驱动执行 | 「第三天轻松点」与「换城市」走同一路径 | 无 Tool 路由，无 `patch_day` |
 | 能力入口分散 | 规划 / 打卡 / 相册 / 攻略各自独立 | 无统一协调器 |
 | 难观测 | 不知道哪步慢、哪步失败 | 无 Tool trace / Langfuse |
-| 无长期记忆 | 每次重复说偏好 | H3 未建，`plan_sessions` 仅短期 history |
+| 无长期记忆 | 每次重复说偏好 | H3 表已建（`pet_memories`）；Agent 已接 `recall_user_memory`；**前端宠物 UI 未启动** |
 
 **升级 Agent 的目标**：在 **不破坏 C1～H9 已验收能力** 的前提下，让 AI **会判断、会选工具、会局部修改**。
 
@@ -126,9 +137,9 @@ MVP 阶段（2026-05）团队选择 **先落地可验收的管道**，理由见 
 | LLM 封装 | 统一调 DeepSeek / OpenAI 兼容 API | `ai-service` `ChatOpenAI` |
 | Prompt 模板 | system + 变量注入 | `prompts.py`、`llm-route-generator` |
 | Chain | 串行多步 | `generateRoute`（在 Node 实现，非 LangChain Chain） |
-| Tool | 函数绑定给 LLM | **C7-a 待建** |
-| Agent / ReAct | LLM 选 Tool 循环 | **C7-a 待建** |
-| **LangGraph** | 图状态机编排复杂 Agent | **C7 推荐** |
+| Tool | 函数绑定给 LLM | **C7-a 已建**（Node `agent/tools/*`） |
+| Agent / ReAct | LLM 选 Tool 循环 | **C7-a POC**（`graph.py` 规则路由 + Tool 链） |
+| **LangGraph** | 图状态机编排复杂 Agent | **C7-a 已接入**（`ai-service/app/agent/graph.py`） |
 | Memory | 会话状态 | `plan_sessions`；长期见 H3 |
 
 关系：
@@ -188,8 +199,12 @@ Enricher 确定性增强（H9）— 住 / 行 / 班次 / polyline / warnings
 
 | 层 | 模块 | 代码位置 |
 |----|------|----------|
-| 会话 | `plan_sessions` | `plan-session.service.ts`、`routes/plan-sessions.ts` |
-| 生成编排 | `generateRoute` | `route-generator.service.ts` |
+| 会话 | `plan_sessions` + `agent_state` | `plan-session.service.ts`、`routes/plan-sessions.ts` |
+| Agent 编排 | `run_plan_agent` | `ai-service/app/agent/graph.py` |
+| Agent 客户端 | `runAgentPlan` | `agent-plan-client.service.ts` |
+| 意图路由 | 追问分类 | `agent-intent-router.service.ts` |
+| Tool 执行 | 9 个 Tool | `server/src/agent/tools/*`、`routes/agent-tools.ts` |
+| 生成编排 | `generateRoute`（管道降级） | `route-generator.service.ts` |
 | 意图 | C2 | `travel-intent.service.ts` |
 | 检索 | C3 | `attraction-rag.service.ts` |
 | 玩法 | H9-4 | `playbook-rag.service.ts` |
@@ -410,64 +425,82 @@ flowchart TD
   doneCheck -->|是| END([END 回复用户])
 ```
 
-### 8.3 目录规划（代码落点）
+### 8.3 目录与代码落点（2026-06-16 已落地）
 
 ```text
 packages/ai-service/
   app/
     agent/
-      graph.py           # LangGraph 定义
-      supervisor.py      # 协调 Agent prompt + 路由
-      plan_agent.py      # 规划专家
-      memory_agent.py    # 记忆专家（C7-c）
-      state.py           # PlanAgentState
+      graph.py           # ✅ run_plan_agent：意图路由 + Tool 链（C7-a/b）
+      __init__.py
     tools/
-      node_client.py     # HTTP 调 Node Tool API
-    main.py              # + POST /v1/agent/plan
+      node_client.py     # ✅ HTTP 调 Node Tool API（x-agent-tool-secret）
+    main.py              # ✅ POST /v1/agent/plan
 
 packages/server/
   src/
     agent/
-      tools/             # Tool 权威实现
+      tools/             # ✅ Tool 权威实现（9 个）
         index.ts
         parse-intent.tool.ts
         retrieve-attractions.tool.ts
-        generate-route.tool.ts
+        retrieve-playbooks.tool.ts
+        generate-route-draft.tool.ts
         enrich-route.tool.ts
-        patch-day.tool.ts
+        patch-route-day.tool.ts
         validate-route.tool.ts
-      routes/
-        agent-tools.ts   # POST /api/agent/tools/:name（内网）
+        memory.tools.ts          # recall_user_memory · write_trip_memory
+        schemas.ts
+    config/
+      agent.ts           # ✅ AGENT_PLAN_ENABLED · AGENT_TOOL_SECRET
+      vector-rag.ts      # VECTOR_RAG_ENABLED（可选向量 RAG）
+    routes/
+      agent-tools.ts     # ✅ GET/POST /api/agent/tools/:name（内网鉴权）
     services/
-      agent-plan-client.service.ts  # Node 调 ai-service
+      agent-plan-client.service.ts   # ✅ Node 调 ai-service / 本地降级
+      agent-intent-router.service.ts # ✅ 追问意图路由（10 条用例）
+      patch-route-day.service.ts
+      validate-route.service.ts
+      pet-memory.service.ts          # H3 记忆读写
+      plan-user-context.service.ts   # 用户偏好注入规划
+    scripts/
+      agent-intent-cases.ts          # ✅ 意图路由断言脚本
+  drizzle/
+    0027_plan_agent_state.sql        # ✅ plan_sessions.agent_state
+    0028_travel_pets.sql             # ✅ travel_pets · pet_memories
 ```
 
-### 8.4 API 契约（规划）
+**远期拆分**（尚未独立文件）：`supervisor.py` · `plan_agent.py` · `memory_agent.py` — 当前逻辑集中在 `graph.py` + Node `agent-intent-router`。
 
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/v1/agent/plan` | ai-service：Agent 主入口 |
-| POST | `/api/agent/tools/:toolName` | Node：Tool 执行（内网 / 鉴权） |
-| POST | `/api/plan-sessions` | 现有；`AGENT_PLAN_ENABLED` 时内部调 agent |
-| GET | `/api/plan-sessions/:id/stream` | C7-b：SSE 流式 tool 状态（可选） |
+### 8.4 API 契约
+
+| 方法 | 路径 | 状态 | 说明 |
+|------|------|------|------|
+| POST | `/v1/agent/plan` | ✅ | ai-service：Agent 主入口；返回 `draft` · `toolTrace` · `routedIntent` |
+| GET | `/api/agent/tools` | ✅ | Node：列出可用 Tool 名（内网鉴权） |
+| POST | `/api/agent/tools/:toolName` | ✅ | Node：Tool 执行；Header `x-agent-tool-secret` |
+| POST | `/api/plan-sessions/:id/messages` | ✅ | 追问时 `AGENT_PLAN_ENABLED=true` 走 Agent；失败降级管道 |
+| GET | `/api/plan-sessions/:id/stream` | ⏳ | C7-b：SSE 流式 tool 状态（未实现） |
+
+**内网鉴权**：`AGENT_TOOL_SECRET` 与请求头 `x-agent-tool-secret` 一致；开发环境未配置 secret 时 Node 放行（`NODE_ENV=development`）。
 
 ---
 
 ## 9. Tool 清单与代码映射
 
-| Tool 名 | 输入 | 输出 | 现有实现 | 阶段 |
+| Tool 名（HTTP `:name`） | 输入 | 输出 | 封装文件 | 状态 |
 |---------|------|------|----------|------|
-| `parse_travel_intent` | text, history | `TravelIntentSnapshot` | `travel-intent.service.ts` | C7-a |
-| `retrieve_attractions` | city, themes, days | `RagAttractionCandidate[]` | `attraction-rag.service.ts` | C7-a |
-| `retrieve_playbooks` | city, themes | `MatchedRoutePlaybook[]` | `playbook-rag.service.ts` | C7-a |
-| `generate_route_draft` | intent, RAG, prompt | `GeneratedRouteDraft` | `route-generator.service.ts` | C7-a |
-| `enrich_route` | draft, intent | 增强后 draft | `route-enricher.service.ts` | C7-a |
-| `build_route_variants` | intent | 2～3 候选 | `plan-route-variants.ts` | C7-a |
-| `patch_route_day` | routeId, dayIndex, ops | 局部 draft | **新增** | C7-b |
-| `validate_route` | draft | warnings, score | Zod + 闭馆规则 **抽离** | C7-d |
-| `recall_user_memory` | userId | 偏好片段 | H3 `pet_memories` | C7-c |
-| `write_trip_memory` | userId, summary | ok | H3 | C7-c |
-| `replan_segment` | routeId, context | 局部路线 | H8 | H8 |
+| `parse_intent` | prompt, history, days, budget, userId | `intent` | `parse-intent.tool.ts` | ✅ C7-a |
+| `retrieve_attractions` | city, themes, prompt, days, excludeNames… | `candidates` | `retrieve-attractions.tool.ts` | ✅ C7-a |
+| `retrieve_playbooks` | city, themes | `playbooks` | `retrieve-playbooks.tool.ts` | ✅ C7-a |
+| `generate_route_draft` | prompt, intent, ragCandidates… | `draft` | `generate-route-draft.tool.ts` | ✅ C7-a |
+| `enrich_route` | draft, intent, locale | 增强后 draft | `enrich-route.tool.ts` | ✅ C7-a |
+| `patch_route_day` | draft, dayIndex, intent, relaxed… | 局部 draft | `patch-route-day.tool.ts` | ✅ C7-b |
+| `validate_route` | draft, ragCandidates, autoFix | draft + warnings | `validate-route.tool.ts` | ✅ C7-d |
+| `recall_user_memory` | userId, query, limit | `memories` | `memory.tools.ts` | ✅ C7-c |
+| `write_trip_memory` | userId, memoryType, content | ok | `memory.tools.ts` | ✅ C7-c |
+| `build_route_variants` | intent | 2～3 候选 | `plan-route-variants.ts` | ⏳ 仍由 plan_sessions 层处理 |
+| `replan_segment` | routeId, context | 局部路线 | — | ⏳ H8 |
 
 ---
 
@@ -531,52 +564,52 @@ packages/server/
 
 > ROADMAP 工单表见 [§ 阶段 C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入)；本节为 **执行级拆解**。
 
-### C7-a · Tool 化与协调器 POC（2～3 周）
+### C7-a · Tool 化与协调器 POC（2～3 周）— ✅ 主体完成（2026-06-16）
 
 **目标**：证明 Agent 路径可产出与管道等价的路线。
 
-| 顺序 | 任务 | 产出 | 负责人建议 |
-|------|------|------|------------|
-| a1 | Node `agent/tools/*` 封装 5 个核心 Tool | 单测对齐原 service | 后端 |
-| a2 | `POST /api/agent/tools/:name` 内网 API | 鉴权 + Zod 入参 | 后端 |
-| a3 | ai-service `tools/node_client.py` | Python 调 Node | AI 服务 |
-| a4 | LangGraph：Supervisor + plan_agent + 全量 Tool 链 | `graph.py` | AI 服务 |
-| a5 | `POST /v1/agent/plan` | OpenAPI + schema | AI 服务 |
-| a6 | `agent-plan-client.service.ts` + feature flag | `AGENT_PLAN_ENABLED` | 后端 |
-| a7 | Langfuse 接入（可选但推荐） | trace 可查 | AI 服务 |
-| a8 | 对比测试脚本 | 管道 vs Agent 等价率报告 | QA / 后端 |
+| 顺序 | 任务 | 产出 | 状态 |
+|------|------|------|------|
+| a1 | Node `agent/tools/*` 封装 9 个 Tool | 对齐原 service | ✅ |
+| a2 | `POST /api/agent/tools/:name` 内网 API | 鉴权 + Zod 入参 | ✅ |
+| a3 | ai-service `tools/node_client.py` | Python 调 Node | ✅ |
+| a4 | `graph.py`：意图路由 + Tool 链 | 首句全量 / 追问 patch | ✅ |
+| a5 | `POST /v1/agent/plan` | OpenAPI + schema | ✅ |
+| a6 | `agent-plan-client.service.ts` + feature flag | `AGENT_PLAN_ENABLED` | ✅ |
+| a7 | Langfuse 接入（可选但推荐） | trace 可查 | ⏳ |
+| a8 | 对比测试脚本 | 管道 vs Agent 等价率报告 | ⏳ |
 
-**验收**：`POST /v1/agent/plan` 与 `generateRoute` 等价率 ≥95%；flag 关闭时零影响。
+**验收**：`POST /v1/agent/plan` 与 `generateRoute` 等价率 ≥95%（待 a8 自动化）；flag 关闭时零影响（✅ 已验证逻辑）。
 
-### C7-b · 多轮 Agent 规划（2～3 周）
+### C7-b · 多轮 Agent 规划（2～3 周）— 🔄 进行中
 
-| 顺序 | 任务 | 产出 |
-|------|------|------|
-| b1 | 实现 `patch_route_day` Tool | 局部改 POI |
-| b2 | Supervisor 意图分类 prompt + 10 条用例集 | 路由准确率 |
-| b3 | `appendPlanSessionMessage` 接 Agent 路径 | plan_sessions |
-| b4 | `plan_sessions.agent_state` 迁移列 | 状态持久化 |
-| b5 | SSE：`thinking` / `tool_call` / `assistant` | 移动端/PC 规划页 |
-| b6 | i18n：`agent.status.*` shared keys | zh-CN / en-US |
+| 顺序 | 任务 | 产出 | 状态 |
+|------|------|------|------|
+| b1 | 实现 `patch_route_day` Tool | 局部改 POI | ✅ |
+| b2 | Supervisor 意图分类 prompt + 10 条用例集 | 路由准确率 | ✅（`agent-intent-cases.ts`） |
+| b3 | `appendPlanSessionMessage` 接 Agent 路径 | plan_sessions | ✅ |
+| b4 | `plan_sessions.agent_state` 迁移列 | 状态持久化 | ✅ |
+| b5 | SSE：`thinking` / `tool_call` / `assistant` | 移动端/PC 规划页 | ⏳ |
+| b6 | i18n：`agent.status.*` shared keys | zh-CN / en-US | ⏳ |
 
-**验收**：10 条典型追问用例通过；追问不再全量重生（可观测 toolTrace）。
+**验收**：10 条典型追问用例通过（路由层 ✅）；追问不再全量重生（patch 路径 ✅，端到端待联调）。
 
-### C7-c · 记忆与全站 Agent（与 H3 并行）
+### C7-c · 记忆与全站 Agent（与 H3 并行）— 🔄 后端骨架
 
-| 顺序 | 任务 | 依赖 |
-|------|------|------|
-| c1 | H3-a `pet_memories` 表 | H3 |
-| c2 | `recall_user_memory` / `write_trip_memory` Tool | c1 |
-| c3 | memory_agent 节点入图 | C7-b |
-| c4 | H3 悬浮层调同一 `/v1/agent/plan` | H3-b |
+| 顺序 | 任务 | 依赖 | 状态 |
+|------|------|------|------|
+| c1 | H3-a `pet_memories` 表 | H3 | ✅ |
+| c2 | `recall_user_memory` / `write_trip_memory` Tool | c1 | ✅ |
+| c3 | memory_agent 节点入图 | C7-b | 🔄（图内已召回记忆，无独立节点） |
+| c4 | H3 悬浮层调同一 `/v1/agent/plan` | H3-b | ⏳ |
 
-### C7-d · 评估与专属模型
+### C7-d · 评估与专属模型 — 🔄 部分
 
-| 顺序 | 任务 | 依赖 |
-|------|------|------|
-| d1 | `validate_route` Tool 抽离 | C7-a |
-| d2 | 生成后自动 warnings 回复 | C7-b |
-| d3 | I3 `douxing-lora` 作为 plan_agent 子模型 | I3 |
+| 顺序 | 任务 | 依赖 | 状态 |
+|------|------|------|------|
+| d1 | `validate_route` Tool 抽离 | C7-a | ✅ |
+| d2 | 生成后自动 warnings 回复 | C7-b | ⏳ |
+| d3 | I3 `douxing-lora` 作为 plan_agent 子模型 | I3 | ⏳ |
 
 ---
 
@@ -613,11 +646,19 @@ I2/I3     ────  专属模型接入 plan_agent
 | 前端 | `agentStatus` + SSE | 规划页展示 Tool 进度 |
 
 ```env
-# C7 规划环境变量（写入 .env.example，默认关闭）
+# C7 环境变量（写入 .env，默认关闭 Agent）
 AGENT_PLAN_ENABLED=false
-AGENT_MAX_TOOL_ROUNDS=8
-AGENT_DEFAULT_MODEL=deepseek-chat
-AGENT_NODE_TOOL_BASE_URL=http://127.0.0.1:3000/api/agent/tools
+AGENT_TOOL_SECRET=随机长字符串          # ai-service → Node Tool 鉴权
+AGENT_PLAN_TIMEOUT_MS=180000
+AI_SERVICE_ENABLED=true
+AI_SERVICE_URL=http://127.0.0.1:8100
+
+# 可选：向量 RAG 增强（C3 扩展）
+VECTOR_RAG_ENABLED=false
+VECTOR_RAG_BOOST_WEIGHT=0.35
+MMR_LAMBDA=0.7
+
+# 可选：观测（待接入）
 LANGFUSE_PUBLIC_KEY=
 LANGFUSE_SECRET_KEY=
 ```
@@ -645,13 +686,13 @@ LANGFUSE_SECRET_KEY=
 
 ## 15. 验收自检
 
-- [ ] `AGENT_PLAN_ENABLED=false` 时行为与现网完全一致
-- [ ] `AGENT_PLAN_ENABLED=true` 时首句规划与管道可对比（≥95%）
-- [ ] 追问「第三天轻松点」走 `patch_route_day`，toolTrace 可查证
-- [ ] Tool 失败自动降级 `generateRoute`
-- [ ] zh-CN / en-US Agent 文案与 API 错误走 i18n
+- [x] `AGENT_PLAN_ENABLED=false` 时行为与现网完全一致
+- [ ] `AGENT_PLAN_ENABLED=true` 时首句规划与管道可对比（≥95%，待 a8 脚本）
+- [x] 追问「第三天轻松点」可走 `patch_route_day`（Tool + 路由用例已通过）
+- [x] Tool / Agent 失败自动降级 `generateRoute`
+- [ ] zh-CN / en-US Agent 文案与 API 错误走 i18n（SSE 状态文案待 b6）
 - [ ] Langfuse 可查单次规划 Tool 链路与 token
-- [ ] `pnpm --filter @douxing/server exec tsc --noEmit` 通过
+- [x] `pnpm --filter @douxing/server exec tsc --noEmit` 通过
 
 ---
 
@@ -674,3 +715,4 @@ LANGFUSE_SECRET_KEY=
 |------|------|------|
 | 2026-06-11 | 1.0 | 初版：现状 + C7 路线 + Tool 映射 |
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
+| 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |

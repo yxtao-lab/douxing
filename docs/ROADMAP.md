@@ -33,7 +33,7 @@
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
 | **当前焦点** | **生产 OSS 照片** · 开发环境联调 · **H9-3 扫尾** · **S1 RBAC** | **P5 Webhook 发版** · **P6 体验基建** · **J1～J5 已完成**（2026-06-10）；G4/DT1、P0～P4+打卡地图已落地；见 [下一步工作.md](./下一步工作.md) |
-| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** | 联调 → H9-3 → **S1** → **C7-a Agent**（后置）→ DT3/DT2 → H8/H7 |
+| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** | 联调 → S1 → **C7-b 收尾**（SSE/i18n）→ DT3/DT2 → H3-b 悬浮层 |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -160,13 +160,15 @@ gantt
 | v0.9.12 | 2026-06-10 | **DT5 + 文档 v1.1** | 旅行运营大屏 · pc-only 3D · 三维建模三线 · 技术体系 · web `/screen/travel` | 方案定稿；代码未启动 |
 | v0.9.13 | 2026-06-10 | **S0 系统管理骨架** | `sys_menu` 等表 · `/api/system/*` CRUD · Web 系统/监控/日志页 · 菜单图标选择器 | 鉴权仍 `requireAdmin`；S1 `perms` 待做 |
 | v0.9.14 | 2026-06-10 | **J1～J4 旅程相册** | `journey_albums` / `travel_photos` · 配额 · mobile/pc 相册 UI · 打卡归并 · 手帐选图 | 见 [§ 阶段 J](#阶段-j旅程相册与照片存储2026-06-03-录入) · [旅行照片存储系统.md](./旅行照片存储系统.md) |
-| v0.9.15 | 2026-06-10 | **H3 · AI 旅行宠物方案** | [AI旅行宠物.md](./AI旅行宠物.md) · H3-a～e · 记忆/分析/全站悬浮 · 原 H3 角色扮演升级 | 产品方案定稿；代码未启动 |
+| v0.9.15 | 2026-06-10 | **H3 · AI 旅行宠物方案** | [AI旅行宠物.md](./AI旅行宠物.md) · H3-a～e · 记忆/分析/全站悬浮 · 原 H3 角色扮演升级 | 产品方案定稿 |
+| v0.9.15b | 2026-06-16 | **H3-a 后端骨架** | `travel_pets` / `pet_memories` 迁移 · `pet-memory.service.ts` · Agent memory Tool | 表与服务已落地；领养 API 与 UI 未启动 |
 | v0.9.16 | 2026-06-10 | **K 线 · 个人博客（后期待办）** | ROADMAP §9.6 · K0 方案 · K1 MVP | 录入待办；代码未启动 |
 | v0.9.17 | 2026-06-10 | **K-A · 旅行日记博客（方案定稿）** | [旅行日记博客.md](./旅行日记博客.md) · K-A0～K-A5 · 与 K-B 拆分 | K-A0 文档定稿；代码未启动 |
 | v0.9.18 | 2026-06-10 | **P6-0/1 PC 体验基建** | Tailwind 组件选型定稿 · `appMessage` 全局轻提示 · 相册/路线相册替换 `window.alert` | 见 [§ 阶段 P6](#阶段-p6pc-体验基建tailwind-组件与全局反馈2026-06-10-录入) |
 | v0.9.20 | 2026-06-10 | **P6-2/3 + P5 CI/CD 初版** | Headless UI 确认框 · 全局 appMessage 扫尾 · `deploy:release` · PC Nginx 模板 |
 | v0.9.21 | 2026-06-11 | **P5 Webhook 自动发版** | Gitee Push Hook → `gitee-webhook-server` · 增量 `detect-deploy-targets` · PC/Web 静态发版 · [发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) · [服务端命令手册.md](./服务端命令手册.md) |
-| v0.9.22 | 2026-06-11 | **C7 · AI Agent 演进设计** | [AI规划与Agent演进.md](./AI规划与Agent演进.md) 设计全稿 · ROADMAP §C7 执行流程 · §7.5 推荐顺序 | 文档定稿；C7-a 代码未启动 |
+| v0.9.22 | 2026-06-11 | **C7 · AI Agent 演进设计** | [AI规划与Agent演进.md](./AI规划与Agent演进.md) 设计全稿 · ROADMAP §C7 执行流程 · §7.5 推荐顺序 | 文档定稿 |
+| v0.9.23 | 2026-06-16 | **C7-a/b · Agent 代码落地** | 9 Node Tool · `/api/agent/tools` · `graph.py` · `/v1/agent/plan` · `patch_route_day` · `agent_state` · H3 记忆表与 Tool | C7-a 主体完成；C7-b 进行中；默认 `AGENT_PLAN_ENABLED=false` |
 | v0.9.23 | 2026-06-15 | **W2 Web 管理端表格规范** | 全列表 `AdminSearchBar` 筛选 · `AdminTableExportButton` XLSX 导出（表头/文件名 i18n + 时间戳）· 空值 `-` 占位 · [Web管理端表格规范.md](./Web管理端表格规范.md) · `.cursor/rules/web-admin-table-filter.mdc` | 业务/系统/监控/日志/会员/分析内嵌表均可导出；见 [§ W2](./开发记录-重难点与亮点.md#web-管理端表格筛选导出与空值占位2026-06-15) |
 
 ### 2.3 下一步时间节点（计划）
@@ -520,25 +522,25 @@ flowchart LR
 
 | 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|----------|------|------|----------|----------|
-| **C7-a** | [ ] | 待定 | Tool 化 + 协调器 POC | C5、H9 | Node `agent/tools/*`；`POST /api/agent/tools/:name`；ai-service LangGraph；`POST /v1/agent/plan`；`AGENT_PLAN_ENABLED` | 与 `generateRoute` 等价率 ≥95%；Langfuse trace；flag 关时零影响 |
-| **C7-b** | [ ] | 待定 | 多轮 Agent 规划 | C7-a、C1 | `patch_route_day`；Supervisor 意图路由；`plan_sessions` Agent 路径；`agent_state` 列；SSE | 10 条追问用例通过；toolTrace 可观测 |
-| **C7-c** | [ ] | 待定 | 记忆 + 全站 Agent | C7-b、H3-a～b | `recall_user_memory` / `write_trip_memory`；memory_agent；H3 悬浮层共用 orchestrator | 第二轮规划带偏好 |
-| **C7-d** | [ ] | 待定 | 评估 Tool + 专属模型 | C7-a、I3 | `validate_route`；`douxing-lora` 作 plan_agent 子模型 | warnings 自动提示；JSON 合法率不低于基线 |
+| **C7-a** | [x] | 2026-06-16 | Tool 化 + 协调器 POC | C5、H9 | Node `agent/tools/*`（9 个）；`POST /api/agent/tools/:name`；`graph.py`；`POST /v1/agent/plan`；`AGENT_PLAN_ENABLED` | flag 关时零影响；等价率脚本与 Langfuse 待补 |
+| **C7-b** | [~] | 进行中 | 多轮 Agent 规划 | C7-a、C1 | `patch_route_day`；意图路由（10 用例）；`plan_sessions` Agent 路径；`agent_state` 列 | SSE · i18n · 端到端追问验收待完成 |
+| **C7-c** | [~] | 进行中 | 记忆 + 全站 Agent | C7-b、H3-a | `recall_user_memory` / `write_trip_memory`；`pet_memories` 表；图内记忆召回 | memory_agent 节点 · H3 悬浮层 UI 待做 |
+| **C7-d** | [~] | 部分 | 评估 Tool + 专属模型 | C7-a、I3 | `validate_route`（含 autoFix） | warnings 回复 · I3 LoRA 待做 |
 
-**建议时机**：**S1** 或 **H9-3 扫尾** 后启动 **C7-a**（约 2～3 周）；**C7-c** 与 **H3-a～b** 并行；**C7-d** 在 **I3** 后。
+**建议时机**：**C7-a 已完成**；当前推进 **C7-b 收尾**（SSE/i18n/联调）；**C7-c** 与 **H3-b** 并行；**C7-d** 在 **I3** 后。
 
 #### C7-a 执行流程（Tool 化 + 协调器 POC）
 
 | 序 | 任务 | 预估 | 落点 | 说明 |
 |----|------|------|------|------|
-| a1 | 封装 5 核心 Tool | 2d | `server/src/agent/tools/` | parse_intent · retrieve_attractions · retrieve_playbooks · generate_route · enrich_route |
-| a2 | Node Tool HTTP API | 1d | `routes/agent-tools.ts` | 内网鉴权；Zod 入参/出参 |
-| a3 | Python 调 Node Tool | 1d | `ai-service/app/tools/node_client.py` | 统一超时与错误 |
-| a4 | LangGraph 图 + Supervisor | 2～3d | `ai-service/app/agent/graph.py` | 首句全量生成路径 |
-| a5 | `POST /v1/agent/plan` | 0.5d | `ai-service/app/main.py` | 对齐 `GenerateRouteRequest` 扩展 |
-| a6 | Node `agent-plan-client` + flag | 1d | `agent-plan-client.service.ts` | `AGENT_PLAN_ENABLED=false` 默认 |
-| a7 | 管道 vs Agent 对比脚本 | 1d | `server/scripts/` 或测试 | 等价率 ≥95% 报告 |
-| a8 | Langfuse（推荐） | 1d | ai-service | tool 名 · 耗时 · token |
+| a1 | 封装 9 个 Tool | 2d | `server/src/agent/tools/` | parse_intent · retrieve_* · generate_route_draft · enrich_route · validate · patch · memory |
+| a2 | Node Tool HTTP API | 1d | `routes/agent-tools.ts` | 内网鉴权 `x-agent-tool-secret`；Zod 入参/出参 | ✅ |
+| a3 | Python 调 Node Tool | 1d | `ai-service/app/tools/node_client.py` | 统一超时与错误 | ✅ |
+| a4 | `graph.py` 意图路由 + Tool 链 | 2～3d | `ai-service/app/agent/graph.py` | 首句全量生成 · 追问 patch | ✅ |
+| a5 | `POST /v1/agent/plan` | 0.5d | `ai-service/app/main.py` | 返回 draft + toolTrace | ✅ |
+| a6 | Node `agent-plan-client` + flag | 1d | `agent-plan-client.service.ts` | `AGENT_PLAN_ENABLED=false` 默认 | ✅ |
+| a7 | 管道 vs Agent 对比脚本 | 1d | `server/scripts/` 或测试 | 等价率 ≥95% 报告 | ⏳ |
+| a8 | Langfuse（推荐） | 1d | ai-service | tool 名 · 耗时 · token | ⏳ |
 
 ```text
 C7-a 数据流：
@@ -554,13 +556,13 @@ C7-a 数据流：
 
 | 序 | 任务 | 预估 | 说明 |
 |----|------|------|------|
-| b1 | `patch_route_day` Tool | 2d | 局部改 POI；避免整段重生 |
-| b2 | Supervisor 意图分类 | 1～2d | plan_new · tweak_day · qa · select_variant |
-| b3 | 10 条追问用例集 | 1d | 文档化 + 自动化断言 |
-| b4 | `appendPlanSessionMessage` 接 Agent | 1d | feature flag 切换 |
-| b5 | `plan_sessions.agent_state` 迁移 | 0.5d | JSON 存 PlanAgentState |
-| b6 | SSE 流式状态 | 1～2d | thinking · tool_call · assistant |
-| b7 | i18n `agent.status.*` | 0.5d | shared zh-CN / en-US |
+| b1 | `patch_route_day` Tool | 2d | 局部改 POI；避免整段重生 | ✅ |
+| b2 | Supervisor 意图分类 | 1～2d | plan_new · tweak_day · qa · select_variant 等 | ✅（`agent-intent-cases.ts`） |
+| b3 | 10 条追问用例集 | 1d | 文档化 + 自动化断言 | ✅ |
+| b4 | `appendPlanSessionMessage` 接 Agent | 1d | feature flag 切换 | ✅ |
+| b5 | `plan_sessions.agent_state` 迁移 | 0.5d | JSON 存 PlanAgentState | ✅ |
+| b6 | SSE 流式状态 | 1～2d | thinking · tool_call · assistant | ⏳ |
+| b7 | i18n `agent.status.*` | 0.5d | shared zh-CN / en-US | ⏳ |
 
 **C7-b 追问路由示意**：
 
@@ -870,7 +872,7 @@ Python ai-service → Node LLM → 模板/RAG
 
 | 步 | 状态 | 批次 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|------|------|------|----------|----------|
-| **H3-a** | [ ] | MVP | **领养 + 规划人格化** | C1 | `travel_pets` / `pet_memories` 表；领养 API；规划 prompt 注入 Top-K 记忆；规划结束写 `trip_summary` | 同用户有固定宠物；规划回复带宠物口吻；zh-CN/en-US |
+| **H3-a** | [~] | 进行中 | **领养 + 规划人格化** | C1 | `travel_pets` / `pet_memories` 表；`pet-memory.service.ts`；Agent `recall_user_memory` Tool | 表与服务 ✅；领养 API · 规划口吻 · 前端未启动 |
 | **H3-b** | [ ] | 悬浮 | **全站悬浮 L1/L2** | H3-a | `TravelPetFloatingLayer`；`usePetCompanion`；拖拽吸边；半屏 Sheet；简洁模式开关 | Tab 页常驻浮球；登录/海报页隐藏；不挡 TabBar |
 | **H3-c** | [ ] | 认知 | **分析 API + 记忆墙** | H3-b | `POST /pets/me/analyze`（`pre_plan` / `post_trip`）；记忆墙 CRUD；气泡读 analyze 缓存 | 规划前气泡引用历史记忆；用户可删记忆 |
 | **H3-d** | [ ] | 成长 | **打卡成长 + 行中分析** | H3-c、B、H7/H8 | exp/升级；`in_plan` / `in_trip`；打卡庆祝；`regret` 记忆 | 打卡后宠物升级反馈；行中可触发分析（接 H7/H8 后） |
@@ -1037,7 +1039,7 @@ Python ai-service → Node LLM → 模板/RAG
 |----------------|-------------|------------|----------|
 | Sprint 1–2 | MVP | **M0（已完成）** | 2026-05-19 ～ 2026-05-20（含 M0-7 验证码登录） |
 | Sprint 1–2 补全 | MVP 缺口 | **阶段 A** | 计划 2026-05-21 起 |
-| Sprint 5–6 | AI 增强 | **C + C7 + F** | C1～C6 已完成；**C7 Agent 未开始**（见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)） |
+| Sprint 5–6 | AI 增强 | **C + C7 + F** | C1～C6 已完成；**C7-a 已完成**，C7-b 进行中（见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)） |
 | Sprint 3–4 | 社交功能 | **B + D** | B 已完成（2026-05-22）；D 未开始 |
 | Sprint 7–8 | 商业闭环 | **E + M** | E 盲盒/CPS 等未开始；**M 发单接单**已规划（模块 B，见 [发单接单平台.md](./发单接单平台.md)） |
 | 平台治理 | 贯穿 | **S（系统管理）** | S0 已完成；S1 RBAC 待做 |
@@ -1053,7 +1055,7 @@ Python ai-service → Node LLM → 模板/RAG
 |------|-------------|
 | 产品尽快好用 | A1 → A2 → B2 → B4 |
 | AI 对齐设计文档 | C2 → C3 → C4 → C5（**已完成**） |
-| **AI 升级 Agent（C7）** | **[C7-a](#c7-a-执行流程tool-化--协调器-poc)** → **C7-b** → **C7-c**（∥ H3）→ **C7-d**（∥ I3） | 见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)；**S1 或 H9-3 后启动 C7-a** |
+| **AI 升级 Agent（C7）** | **C7-b 收尾** → **C7-c**（∥ H3-b）→ **C7-d**（∥ I3） | 见 [AI规划与Agent演进.md](./AI规划与Agent演进.md)；**C7-a 已落地** |
 | 商业化变现 | A4 → E1 → E2 → E3 |
 | 社交差异化 | **D1 → D6-a/b** → D2 → D3 → D4 → **H5**；D5 + **H2** 已完成部分 | 见 [用户粘性与旅友圈战略.md](./用户粘性与旅友圈战略.md) |
 | **用户粘性 / 增长激励** | 分享拉新（H2/D5）→ 积分消耗闭环 → D6 旅友圈 → K-A 叙事 → E 创作者抽成（远期） | 本文 §3～§4；不做传统签到 |
@@ -1116,7 +1118,7 @@ Python ai-service → Node LLM → 模板/RAG
 | **P0** | **发版验收** | H2-a+ / H2-b / A2+++ P2 实机 + 生产 OSS（若上生产） |
 | P0.5 | [I2、I3](#阶段-i专属模型2026-06-01-录入) | 专属模型 PAI 微调与百炼接入 |
 | P0.5 | [H9+-1、H9+-2](#h9-远期增强phase-4-之后) | Playbook 库扩充 + Web CRUD |
-| P1.5 | [C7-a、C7-b](#阶段-c7ai-agent-演进2026-06-11-录入) | Agent 升级；S1/H9-3 后启动；见 [AI规划与Agent演进.md](./AI规划与Agent演进.md) |
+| **P1.5** | [C7-b 收尾](#c7-b-执行流程多轮-agent)、[C7-c](#c7-c--c7-d-执行流程摘要) | Agent 追问 patch · 记忆 Tool；H3 悬浮层待做 |
 | P0 | H8、H7 | 宣传 Sprint 后推进行中智能 |
 | P2 | H2-c | 拖拽画布与「我的模板」；单独立项 |
 | P1 | `guide-map` / `path-scrapbook` 模板 | 在 H2-a 骨架稳定后追加第三、四套版式 |
@@ -1151,16 +1153,15 @@ Python ai-service → Node LLM → 模板/RAG
 
 ```text
 总顺序：
-  C7-a（Tool + Supervisor POC，2～3 周）
-    → C7-b（多轮追问 + patch_day + SSE，2～3 周）
+  C7-a（Tool + Supervisor POC）✅ 2026-06-16
+    → C7-b（多轮追问 + patch_day + SSE，进行中）
     → C7-c（∥ H3-a～b：记忆 Agent + 悬浮层）
     → C7-d（∥ I3：validate + LoRA）
 ```
 
 | 优先级 | 步骤 | 理由 |
 |--------|------|------|
-| **P1.5** | C7-a | 证明 Agent 不劣于管道；风险可控（feature flag） |
-| **P1.5** | C7-b | 解决「追问整段重生」核心痛点 |
+| **P1.5** | C7-b | 追问 patch 已通；收尾 SSE/i18n/联调 |
 | P2 | C7-c | 依赖 H3 表结构；与宠物线并行 |
 | P2 | C7-d | 依赖 I3 模型；可后置 |
 

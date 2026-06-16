@@ -4,7 +4,7 @@
 |------|------|
 | [项目概述.md](./项目概述.md) | **工作区说明**：Monorepo 结构、模块 A/B 主链、当前阶段 |
 | [API接口文档.md](./API接口文档.md) | **REST API 全量接口说明**（人类可读；Apifox 请导入 [openapi.yaml](./openapi.yaml)） |
-| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（83 个 REST 接口；Apifox / Postman 直接导入） |
+| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（REST 接口；Apifox / Postman 直接导入；内网 Agent Tools 见 [API接口文档 §20](./API接口文档.md#20-agent-tools内网)） |
 | [下一步工作.md](./下一步工作.md) | **当前建议先做什么**（精简排期，不重复 ROADMAP 全文） |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划（含 **S/M/F/K-A/P6** 等专题线） |
 | [详细设计文档.md](./详细设计文档.md) | 平台详细设计 V2.0 + §17 实施补充 |
@@ -61,4 +61,4 @@
 
 日常开发脚本说明见 [../scripts/README.md](../scripts/README.md)。详细设计以 **Markdown 版** [详细设计文档.md](./详细设计文档.md) 为准（含 **§17 实施补充**）。
 
-**最后更新**：2026-06-12（用户粘性与旅友圈战略 · ROADMAP D6）
+**最后更新**：2026-06-16（C7 Agent 落地 · H3 记忆表 · Agent Tools API 文档）
