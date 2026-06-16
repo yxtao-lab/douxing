@@ -4,19 +4,22 @@
  * 用法（在仓库根目录）：
  *   pnpm --filter @douxing/server enricher:demo
  *   pnpm --filter @douxing/server enricher:demo -- --offline
- *   pnpm --filter @douxing/server enricher:demo -- --playbook
+ *   pnpm --filter @douxing/server enricher:demo -- --intercity
+ *   pnpm --filter @douxing/server enricher:demo -- --open-hours
  *   pnpm --filter @douxing/server enricher:demo -- --locale en-US
  *
  * 模式：
  *   默认（full）  — 读取 .env：MySQL 查酒店、高德 distance/geocode、Redis 缓存（若配置）
  *   --offline     — 关闭高德（Haversine 估时），酒店走 fallback，不依赖 AMAP_WEB_KEY
- *
- * 前置：full 模式建议 docker compose up -d（MySQL）；offline 可无数据库（酒店库失败会自动降级）
+ *   --intercity   — 杭沪二日 + Catalog 班次（需 MySQL 查酒店时建议 --offline）
+ *   --open-hours  — 北京故宫闭馆日 warning（需 MySQL + sync:open-hours）
+ *   --playbook    — 西湖玩法 RAG 段间交通
  */
 
 const args = process.argv.slice(2);
 const offline = args.includes('--offline');
 const intercityDemo = args.includes('--intercity');
+const openHoursDemo = args.includes('--open-hours');
 const playbookDemo = args.includes('--playbook');
 
 await import('../config/env.js');
@@ -46,6 +49,19 @@ const intent: TravelIntentSnapshot = playbookDemo
       lodgingTier: 'comfort',
       cities: ['杭州'],
     }
+  : openHoursDemo
+    ? {
+        city: '北京',
+        days: 1,
+        budget: null,
+        budgetMin: null,
+        budgetMax: null,
+        themes: ['文化', '历史'],
+        confidence: 'high',
+        lodgingTier: 'comfort',
+        cities: ['北京'],
+        startDate: '2026-06-15',
+      }
   : intercityDemo
   ? {
       city: '杭州',
@@ -131,6 +147,46 @@ const draft = playbookDemo
         ],
       },
     }
+  : openHoursDemo
+    ? {
+        name: 'Enricher Demo · 故宫闭馆',
+        description: '开放时长与闭馆 conflict warning 演示',
+        budgetRange: '1500-3000',
+        days: 1,
+        interestTags: ['文化', '历史'],
+        matchedCity: '北京',
+        unlockPrice: 9.9,
+        isAiGenerated: true,
+        routeDetail: {
+          days: [
+            {
+              date: '第1天',
+              calendarDate: '2026-06-15',
+              title: '故宫文化',
+              attractions: [
+                {
+                  name: '故宫博物院',
+                  time: '',
+                  cost: 60,
+                  description: '紫禁城',
+                  poiType: 'attraction',
+                  latitude: 39.916,
+                  longitude: 116.397,
+                },
+                {
+                  name: '景山公园',
+                  time: '',
+                  cost: 2,
+                  description: '俯瞰故宫',
+                  poiType: 'attraction',
+                  latitude: 39.925,
+                  longitude: 116.397,
+                },
+              ],
+            },
+          ],
+        },
+      }
   : intercityDemo
   ? {
       name: 'Enricher Demo · 杭沪二日',
@@ -144,7 +200,8 @@ const draft = playbookDemo
       routeDetail: {
         days: [
           {
-            date: '2026-06-15',
+            date: '第1天',
+            calendarDate: '2026-06-15',
             title: '杭州西湖',
             attractions: [
               {
@@ -168,7 +225,8 @@ const draft = playbookDemo
             ],
           },
           {
-            date: '2026-06-16',
+            date: '第2天',
+            calendarDate: '2026-06-16',
             title: '上海外滩',
             attractions: [
               {
@@ -233,6 +291,17 @@ const draft = playbookDemo
       },
     };
 
+console.log(
+  `[enricher-demo] 场景: ${
+    playbookDemo
+      ? 'playbook'
+      : openHoursDemo
+        ? 'open-hours'
+        : intercityDemo
+          ? 'intercity'
+          : 'default'
+  }`,
+);
 console.log(`[enricher-demo] 模式: ${offline ? 'offline（无高德）' : 'full（.env 高德+MySQL）'}`);
 console.log(`[enricher-demo] locale: ${locale}`);
 
@@ -243,7 +312,7 @@ const playbooks = playbookDemo
       prompt: '杭州西湖经典一日游',
       dayTitle: '西湖经典',
     })
-  : intercityDemo
+  : intercityDemo || openHoursDemo
     ? []
     : [];
 

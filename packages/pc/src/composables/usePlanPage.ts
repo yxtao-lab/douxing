@@ -30,7 +30,9 @@ import {
   getMemberLevelI18nKey,
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
+  formatPlanRecentPromptLabel,
 } from '@douxing/shared';
+import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
 
 export interface ChatMessage {
   id: number | string;
@@ -59,6 +61,7 @@ export function usePlanPage() {
   const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
   const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
   const scrollAnchor = ref('');
+  const recentPrompts = ref<string[]>([]);
 
   const showModelPicker = import.meta.env.DEV;
   const aiPlanning = aiPlanLoading;
@@ -314,6 +317,18 @@ export function usePlanPage() {
     inputText.value = text;
   }
 
+  function refreshRecentPrompts() {
+    recentPrompts.value = loadPlanRecentPrompts(userStore.user?.id);
+  }
+
+  function recordRecentPrompt(content: string) {
+    recentPrompts.value = savePlanRecentPrompt(content, userStore.user?.id);
+  }
+
+  function recentPromptLabel(prompt: string): string {
+    return formatPlanRecentPromptLabel(prompt);
+  }
+
   async function handleSend() {
     if (aiPlanning.value) return;
     if (!userStore.token) {
@@ -353,6 +368,7 @@ export function usePlanPage() {
         candidates.value = loaded.candidates ?? result.candidates ?? [];
         syncCurrentRoute(result.id, loaded.route ?? result);
         scrollToBottom();
+        recordRecentPrompt(content);
         appMessage.success(t('plan.plansGenerated'));
         return;
       }
@@ -367,6 +383,7 @@ export function usePlanPage() {
       candidates.value = loaded.candidates ?? result.candidates ?? [];
       syncCurrentRoute(result.id, result);
       scrollToBottom();
+      recordRecentPrompt(content);
       appMessage.success(t('plan.planUpdated'));
     } catch (err) {
       messages.value = messages.value.filter((m) => m.id !== pendingId);
@@ -410,6 +427,7 @@ export function usePlanPage() {
   }
 
   onMounted(async () => {
+    refreshRecentPrompts();
     await initLlmStatus();
     await refreshMembership();
 
@@ -435,6 +453,7 @@ export function usePlanPage() {
     () => userStore.user,
     () => {
       refreshMembership();
+      refreshRecentPrompts();
     },
   );
 
@@ -460,6 +479,7 @@ export function usePlanPage() {
     providerPickerLabels,
     currentProviderLabel,
     quickPrompts,
+    recentPrompts,
     composerLocked,
     composerPlaceholder,
     previewDays,
@@ -473,6 +493,7 @@ export function usePlanPage() {
     handleSend,
     onProviderChange,
     applyQuickPrompt,
+    recentPromptLabel,
     goMembership,
     openRouteDetail,
     cancelAiPlan,

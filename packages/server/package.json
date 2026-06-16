@@ -12,6 +12,7 @@
     "db:reset": "tsx src/db/reset-database.ts && tsx src/db/migrate.ts && tsx src/db/seed.ts",
     "db:seed": "tsx src/db/seed.ts",
     "enricher:demo": "tsx src/scripts/enricher-demo.ts",
+    "sync:open-hours": "tsx src/scripts/sync-open-hours.ts",
     "enrich:attraction-images": "tsx src/scripts/enrich-attraction-images.ts",
     "cleanup:orphan-covers": "tsx src/scripts/cleanup-orphan-attraction-covers.ts",
     "migrate:covers-to-oss": "tsx src/scripts/migrate-attraction-covers-to-oss.ts",

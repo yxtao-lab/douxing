@@ -261,6 +261,52 @@ export async function seedAttractions() {
   console.log(`[seed] Created ${ATTRACTION_SEEDS.length} attractions`);
 }
 
+/** H9-3 扫尾：将 seed 中的 openHours 回填到已有景点（仅补空字段） */
+export async function syncOpenHoursFromSeeds(options?: { dryRun?: boolean }) {
+  const db = getDb();
+  const seedsWithHours = ATTRACTION_SEEDS.filter(
+    (seed) =>
+      (seed.openHours?.windows?.length ?? 0) > 0 ||
+      (seed.openHours?.closedWeekdays?.length ?? 0) > 0,
+  );
+
+  let updated = 0;
+  let skipped = 0;
+  let missing = 0;
+
+  for (const seed of seedsWithHours) {
+    const rows = await db
+      .select({ id: attractions.id, openHours: attractions.openHours })
+      .from(attractions)
+      .where(and(eq(attractions.name, seed.name), eq(attractions.city, seed.city)))
+      .limit(1);
+
+    const row = rows[0];
+    if (!row) {
+      missing += 1;
+      continue;
+    }
+
+    const hasExisting =
+      (row.openHours?.windows?.length ?? 0) > 0 ||
+      (row.openHours?.closedWeekdays?.length ?? 0) > 0;
+    if (hasExisting) {
+      skipped += 1;
+      continue;
+    }
+
+    if (!options?.dryRun) {
+      await db
+        .update(attractions)
+        .set({ openHours: seed.openHours ?? null })
+        .where(eq(attractions.id, row.id));
+    }
+    updated += 1;
+  }
+
+  return { updated, skipped, missing, total: seedsWithHours.length };
+}
+
 export interface AdminPendingAttractionListFilter {
   keyword?: string;
   city?: string;

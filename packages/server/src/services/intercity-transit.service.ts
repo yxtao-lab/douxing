@@ -1,5 +1,7 @@
 import {
   formatIntercitySegmentDescription,
+  extractIsoCalendarDate,
+  resolveCalendarDateFromStart,
   type LocaleCode,
   type RouteTransitMode,
   type RouteTransitSegment,
@@ -37,31 +39,15 @@ function pad2(value: number): string {
   return String(value).padStart(2, '0');
 }
 
-/** 解析为 ISO 出行日期 */
+/** 解析为 ISO 出行日期（dayDate 优先传 calendarDate） */
 export function resolveTravelDateIso(
   dayIndex: number,
   dayDate?: string | null,
   startDate?: string | null,
 ): string {
-  const fromDay = dayDate?.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (fromDay) {
-    return `${fromDay[1]}-${fromDay[2]}-${fromDay[3]}`;
-  }
-
-  if (startDate?.trim()) {
-    const iso = startDate.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-    if (iso) {
-      const base = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00`);
-      if (!Number.isNaN(base.getTime())) {
-        base.setDate(base.getDate() + dayIndex);
-        return `${base.getFullYear()}-${pad2(base.getMonth() + 1)}-${pad2(base.getDate())}`;
-      }
-    }
-  }
-
-  const fallback = new Date();
-  fallback.setDate(fallback.getDate() + dayIndex + 1);
-  return `${fallback.getFullYear()}-${pad2(fallback.getMonth() + 1)}-${pad2(fallback.getDate())}`;
+  const fromDay = extractIsoCalendarDate(dayDate);
+  if (fromDay) return fromDay;
+  return resolveCalendarDateFromStart(dayIndex, startDate);
 }
 
 function pickIntercityMode(

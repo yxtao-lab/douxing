@@ -10,6 +10,7 @@ import {
   formatTemplateRouteDescription,
   formatTemplateRouteName,
   formatRagRouteMetaSuffix,
+  normalizeRouteDayPlans,
 } from '@douxing/shared';
 import { canUseLlm, generateRouteFromLlm } from './llm-route-generator.service.js';
 import {
@@ -123,7 +124,15 @@ async function finalizeRouteDraft(
   playbookMatches: MatchedRoutePlaybook[],
 ): Promise<GeneratedRouteDraft> {
   const constrained = enforceRouteConstraints(draft, intent);
-  const linked = applyRagToRouteDraft(constrained, ragCandidates);
+  const normalizedDays = normalizeRouteDayPlans(constrained.routeDetail.days, {
+    startDate: intent.startDate,
+    locale: input.locale,
+  });
+  const withCalendarDates = {
+    ...constrained,
+    routeDetail: { days: normalizedDays },
+  };
+  const linked = applyRagToRouteDraft(withCalendarDates, ragCandidates);
   const enriched = await enrichRouteDraft(linked, {
     intent,
     locale: input.locale,

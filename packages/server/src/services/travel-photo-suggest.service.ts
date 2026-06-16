@@ -3,6 +3,7 @@ import {
   haversineDistanceMeters,
   PHOTO_EXIF_GPS_HIGH_M,
   PHOTO_EXIF_GPS_MEDIUM_M,
+  extractIsoCalendarDate,
   type RouteDayAttraction,
   type RouteDayPlan,
   type RouteDetailPayload,
@@ -26,19 +27,16 @@ function normalizeRouteDetail(
   return detail?.days ?? [];
 }
 
-function parseDayDate(value: string | undefined): string | null {
-  if (!value?.trim()) return null;
-  const trimmed = value.trim();
-  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
-    return trimmed.slice(0, 10);
-  }
-  return null;
+function parseDayDate(day: RouteDayPlan | undefined): string | null {
+  const fromCalendar = extractIsoCalendarDate(day?.calendarDate);
+  if (fromCalendar) return fromCalendar;
+  return extractIsoCalendarDate(day?.date);
 }
 
 function suggestDayIndexFromTakenAt(days: RouteDayPlan[], takenAt: Date): number | null {
   const takenDate = takenAt.toISOString().slice(0, 10);
   for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
-    const dayDate = parseDayDate(days[dayIndex]?.date);
+    const dayDate = parseDayDate(days[dayIndex]);
     if (dayDate && dayDate === takenDate) {
       return dayIndex;
     }

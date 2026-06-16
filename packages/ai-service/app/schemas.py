@@ -24,6 +24,7 @@ class TravelIntentSnapshot(BaseModel):
     lodgingArea: str | None = None
     lodgingTier: str | None = None
     cities: list[str] = Field(default_factory=list)
+    startDate: str | None = None
 
 
 class RagAttractionCandidate(BaseModel):
@@ -51,6 +52,7 @@ class RouteSpot(BaseModel):
 
 class RouteDay(BaseModel):
     date: str
+    calendarDate: str | None = None
     title: str
     attractions: list[RouteSpot]
 

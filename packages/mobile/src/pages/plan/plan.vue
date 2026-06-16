@@ -57,13 +57,16 @@
             </view>
           </picker>
         </template>
-        <view class="chips">
-          <text
-            v-for="item in quickPrompts"
-            :key="item"
-            class="chip"
-            @click="inputText = item"
-          >{{ item }}</text>
+        <view class="prompt-group">
+          <text class="prompt-group-label">{{ t('plan.quickPromptsTitle') }}</text>
+          <view class="chips">
+            <text
+              v-for="item in quickPrompts"
+              :key="item"
+              class="chip"
+              @click="inputText = item"
+            >{{ item }}</text>
+          </view>
         </view>
       </view>
     </view>
@@ -174,6 +177,18 @@
         </view>
       </scroll-view>
 
+      <view v-if="recentPrompts.length" class="recent-dock">
+        <text class="recent-dock-label">{{ t('plan.recentPromptsTitle') }}</text>
+        <scroll-view class="recent-dock-scroll" scroll-x enable-flex :show-scrollbar="false">
+          <text
+            v-for="item in recentPrompts"
+            :key="`dock-${item}`"
+            class="chip chip-recent chip-dock"
+            @click="applyRecentPrompt(item)"
+          >{{ recentPromptLabel(item) }}</text>
+        </scroll-view>
+      </view>
+
       <VoiceTextComposer
         ref="composerRef"
         v-model="inputText"
@@ -222,7 +237,9 @@ import {
   getMemberLevelI18nKey,
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
+  formatPlanRecentPromptLabel,
 } from '@douxing/shared';
+import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
@@ -259,6 +276,7 @@ const llmAvailable = ref<boolean | null>(null);
 const llmIssueMessage = ref('');
 const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
 const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
+const recentPrompts = ref<string[]>([]);
 /** 模型选择仅开发环境展示，生产包使用服务端默认策略 */
 const showModelPicker = import.meta.env.DEV;
 
@@ -307,6 +325,22 @@ const quickPrompts = computed(() => [
   t('plan.quickPrompt2'),
   t('plan.quickPrompt3'),
 ]);
+
+function refreshRecentPrompts() {
+  recentPrompts.value = loadPlanRecentPrompts(user.value?.id);
+}
+
+function recordRecentPrompt(content: string) {
+  recentPrompts.value = savePlanRecentPrompt(content, user.value?.id);
+}
+
+function recentPromptLabel(prompt: string): string {
+  return formatPlanRecentPromptLabel(prompt);
+}
+
+function applyRecentPrompt(text: string) {
+  inputText.value = text;
+}
 
 function formatRouteDays(days: number | undefined | null): string {
   if (days == null) return '—';
@@ -559,6 +593,7 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
 }
 
 onMounted(async () => {
+  refreshRecentPrompts();
   try {
     const [{ options }, status] = await Promise.all([fetchLlmProviders(), fetchLlmStatus()]);
     providerOptions.value = options;
@@ -582,6 +617,7 @@ onMounted(async () => {
 onShow(() => {
   hideNativeTabBar();
   user.value = authStorage.getStoredUser();
+  refreshRecentPrompts();
   if (user.value) {
     memberPlanCount.value = getPlanCandidateCountByMemberLevel(user.value.memberLevel);
     canAppendPlan.value = canAppendPlanByMemberLevel(user.value.memberLevel);
@@ -665,6 +701,7 @@ async function handleSend(text: string) {
       candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
       syncCurrentRoutePreview(planActionResult.id, loadedSession.route ?? planActionResult);
       scrollToBottom();
+      recordRecentPrompt(content);
       uni.showToast({ title: t('plan.plansGenerated'), icon: 'success' });
       return;
     }
@@ -680,6 +717,7 @@ async function handleSend(text: string) {
     candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
     syncCurrentRoutePreview(planActionResult.id, planActionResult);
     scrollToBottom();
+    recordRecentPrompt(content);
     uni.showToast({ title: t('plan.planUpdated'), icon: 'success' });
   } catch (e) {
     messages.value = messages.value.filter((m) => m.id !== pendingId);
@@ -908,12 +946,48 @@ async function handleSend(text: string) {
   flex-wrap: wrap;
   gap: 16rpx;
 }
+.prompt-group + .prompt-group {
+  margin-top: 20rpx;
+}
+.prompt-group-label {
+  display: block;
+  margin-bottom: 12rpx;
+  font-size: 22rpx;
+  color: var(--dx-text-muted);
+}
 .chip {
   background: var(--dx-primary-light);
   color: var(--dx-primary);
   padding: 12rpx 20rpx;
   border-radius: 999rpx;
   font-size: 24rpx;
+}
+.chip-recent {
+  background: #fff;
+  border: 1rpx solid var(--dx-border);
+  color: var(--dx-text);
+  max-width: 520rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-dock {
+  margin-bottom: 16rpx;
+}
+.recent-dock-label {
+  display: block;
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  color: var(--dx-text-muted);
+}
+.recent-dock-scroll {
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+}
+.chip-dock {
+  flex-shrink: 0;
+  margin-right: 12rpx;
 }
 .intent-label {
   font-size: 22rpx;

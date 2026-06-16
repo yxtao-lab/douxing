@@ -14,6 +14,7 @@ import {
   formatRagRouteName,
   formatRouteDayDate,
   formatRouteDayTitle,
+  resolveCalendarDateFromStart,
 } from '@douxing/shared';
 import { resolveCityCode } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
@@ -402,6 +403,7 @@ export function buildRouteFromRagCatalog(
     if (spots.length === 0) return null;
     dayPlans.push({
       date: formatRouteDayDate(d, locale),
+      calendarDate: resolveCalendarDateFromStart(d, intent.startDate),
       title: formatRouteDayTitle({ city, variantKey, dayIndex: d, locale }),
       attractions: spots,
     });

@@ -1,4 +1,5 @@
 import {
+  ATTRACTION_MATCH_MERGE_THRESHOLD,
   PoiCategory,
   type AttractionOpenHours,
   type LocaleCode,
@@ -11,7 +12,9 @@ import {
   checkVisitOpenHours,
   formatEnricherWarning,
   formatPlaybookTransitDescription,
-  parseWeekdayFromRouteDate,
+  normalizeRouteDayPlans,
+  parseWeekdayFromCalendarDate,
+  resolveRouteDayCalendarDate,
 } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
@@ -29,6 +32,7 @@ import {
 import { formatIntentConstraintsForEnricher } from './travel-intent.service.js';
 import { retrieveHotelsForLodging } from './attraction-rag.service.js';
 import { getOpenHoursByAttractionIds } from './attraction.service.js';
+import { resolveAttractionMatch } from './attraction-sync.service.js';
 import { resolveIntercityTransitSegment } from './intercity-transit.service.js';
 import {
   findPlaybookSegmentHint,
@@ -305,6 +309,43 @@ function cursorEndFromSpots(spots: RouteDayAttraction[]): number {
   return parseTimeRangeEnd(lastTime) ?? DEFAULT_DAY_START_MINUTES + 12 * 60;
 }
 
+/** H9-3：排程前按名称关联内容库，以便读取 openHours */
+async function linkPlayPoisToLibrary(
+  city: string,
+  spots: RouteDayAttraction[],
+): Promise<RouteDayAttraction[]> {
+  const linked: RouteDayAttraction[] = [];
+
+  for (const spot of spots) {
+    if (spot.attractionId != null && spot.attractionId > 0) {
+      linked.push(spot);
+      continue;
+    }
+    if (!isPlayPoi(spot)) {
+      linked.push(spot);
+      continue;
+    }
+
+    try {
+      const match = await resolveAttractionMatch(spot.name, city);
+      if (match && match.confidence >= ATTRACTION_MATCH_MERGE_THRESHOLD) {
+        linked.push({ ...spot, attractionId: match.row.id });
+        continue;
+      }
+    } catch (err) {
+      console.warn(
+        '[route-enricher] 景点匹配失败:',
+        spot.name,
+        err instanceof Error ? err.message : err,
+      );
+    }
+
+    linked.push(spot);
+  }
+
+  return linked;
+}
+
 function appendOpenHoursWarning(
   warnings: string[],
   spot: RouteDayAttraction,
@@ -339,14 +380,15 @@ async function scheduleDayPois(
   lodging: RouteDayLodging,
   locale: LocaleCode,
   options: {
-    dayDate?: string;
+    dayIndex: number;
+    calendarDate: string;
     dayTitle?: string;
     openHoursMap: Map<number, AttractionOpenHours>;
     playbooks?: MatchedRoutePlaybook[];
   },
 ): Promise<{ attractions: RouteDayAttraction[]; transit: RouteTransitSegment[]; warnings: string[] }> {
   const warnings: string[] = [];
-  const weekday = parseWeekdayFromRouteDate(options.dayDate);
+  const weekday = parseWeekdayFromCalendarDate(options.calendarDate);
   const openHoursMap = options.openHoursMap;
   const playbooks = options.playbooks ?? [];
   const geocoded = await geocodePlayPois(city, spots);
@@ -479,14 +521,19 @@ export async function enrichRouteDraft(
 ): Promise<GeneratedRouteDraft> {
   const { intent, locale = 'zh-CN', playbooks = [] } = options;
   const matchedCity = draft.matchedCity || intent.city || '当地';
-  const dayCities = resolveDayCities(draft.routeDetail.days, intent, matchedCity);
+  const normalizedDays = normalizeRouteDayPlans(draft.routeDetail.days, {
+    startDate: intent.startDate,
+    locale,
+  });
+  const dayCities = resolveDayCities(normalizedDays, intent, matchedCity);
 
   const enrichedDays: RouteDayPlan[] = [];
 
-  for (let dayIndex = 0; dayIndex < draft.routeDetail.days.length; dayIndex += 1) {
-    const day = draft.routeDetail.days[dayIndex]!;
+  for (let dayIndex = 0; dayIndex < normalizedDays.length; dayIndex += 1) {
+    const day = normalizedDays[dayIndex]!;
+    const calendarDate = resolveRouteDayCalendarDate(day, dayIndex, intent.startDate);
     const city = dayCities[dayIndex] ?? matchedCity;
-    const playPois = day.attractions.filter(isPlayPoi);
+    const playPois = await linkPlayPoisToLibrary(city, day.attractions.filter(isPlayPoi));
     const geocodedPois = await geocodePlayPois(city, playPois);
     const poiPointsForLodging: LatLngPoint[] = geocodedPois
       .filter(hasCoords)
@@ -502,7 +549,8 @@ export async function enrichRouteDraft(
 
     const { attractions: scheduledPois, transit: localTransit, warnings } =
       await scheduleDayPois(city, playPois, lodging, locale, {
-        dayDate: day.date,
+        dayIndex,
+        calendarDate,
         dayTitle: day.title,
         openHoursMap,
         playbooks,
@@ -519,7 +567,7 @@ export async function enrichRouteDraft(
       if (prevCity !== city) {
         const intercity = await resolveIntercityTransitSegment(prevCity, city, {
           dayIndex,
-          dayDate: day.date,
+          dayDate: calendarDate,
           startDate: intent.startDate,
           transportPreference: intent.transportPreference,
           locale,
@@ -532,6 +580,7 @@ export async function enrichRouteDraft(
 
     enrichedDays.push({
       date: day.date,
+      calendarDate,
       title: day.title,
       attractions: scheduledPois,
       lodging,

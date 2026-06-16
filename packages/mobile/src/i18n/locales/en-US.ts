@@ -217,6 +217,8 @@ export const mobileEnUS = {
     quickPrompt1: '3-day family trip in Hangzhou, budget 5000',
     quickPrompt2: 'Weekend couple trip in Shanghai',
     quickPrompt3: '2-day food tour in Chengdu',
+    recentPromptsTitle: 'Recent',
+    quickPromptsTitle: 'Examples',
     restoreSessionFailed: 'Failed to restore chat',
     candidateSwitched: 'Plan switched',
     candidateSwitchFailed: 'Failed to switch plan',

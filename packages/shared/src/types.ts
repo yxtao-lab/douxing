@@ -140,7 +140,10 @@ export interface RouteDayLodging {
 }
 
 export interface RouteDayPlan {
+  /** UI 展示：第 N 天 / Day N */
   date: string;
+  /** 系统用 ISO 日历日 YYYY-MM-DD（班次、开放时长、闭馆日） */
+  calendarDate?: string;
   title: string;
   /** 游玩 POI（不含 Enricher 负责的 hotel/transport） */
   attractions: RouteDayAttraction[];

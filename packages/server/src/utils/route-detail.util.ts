@@ -29,6 +29,7 @@ export function cloneRouteDaysForSync(
 ): RouteDayPlan[] {
   return days.map((day) => ({
     date: day.date,
+    calendarDate: day.calendarDate,
     title: day.title,
     lodging: day.lodging ? { ...day.lodging } : undefined,
     transit: day.transit?.map((seg) => ({ ...seg })),

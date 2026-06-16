@@ -1,4 +1,6 @@
 /** H9-3：景点开放时长窗口（单段） */
+import { parseWeekdayFromCalendarDate } from './route-day-dates.js';
+
 export interface AttractionOpenHoursWindow {
   /** 如 08:30 */
   open: string;
@@ -35,14 +37,9 @@ export function parseTimeToMinutes(time: string): number | null {
   return hours * 60 + minutes;
 }
 
-/** 从路线 date 字段解析星期（仅 ISO 日期有效） */
+/** 从路线 date / calendarDate 字段解析星期（优先 ISO） */
 export function parseWeekdayFromRouteDate(date: string | undefined | null): number | null {
-  if (!date?.trim()) return null;
-  const iso = date.trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!iso) return null;
-  const parsed = new Date(`${iso[1]}-${iso[2]}-${iso[3]}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.getDay();
+  return parseWeekdayFromCalendarDate(date);
 }
 
 function windowApplies(window: AttractionOpenHoursWindow, weekday: number | null): boolean {

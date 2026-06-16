@@ -77,6 +77,7 @@
               </option>
             </select>
           </label>
+          <p class="mb-2 text-xs font-medium text-dx-muted">{{ t('plan.quickPromptsTitle') }}</p>
           <div class="flex flex-wrap gap-2">
             <button
               v-for="item in quickPrompts"
@@ -124,11 +125,20 @@
         </div>
 
         <div class="shrink-0 border-t border-dx-border p-4">
-          <div v-if="aiPlanning" class="mb-3 flex items-center justify-between rounded-xl bg-dx-bg px-3 py-2 text-sm">
-            <span class="text-dx-muted">{{ aiPlanMessage }}</span>
-            <button type="button" class="text-dx-primary hover:underline" @click="cancelAiPlan">
-              {{ t('plan.aiPlanningCancel') }}
-            </button>
+          <div v-if="recentPrompts.length" class="mb-3">
+            <p class="mb-2 text-xs font-medium text-dx-muted">{{ t('plan.recentPromptsTitle') }}</p>
+            <div class="flex gap-2 overflow-x-auto pb-1">
+              <button
+                v-for="item in recentPrompts"
+                :key="`recent-dock-${item}`"
+                type="button"
+                class="shrink-0 rounded-full border border-dx-border bg-white px-3 py-1 text-xs text-dx-text transition hover:border-dx-primary hover:text-dx-primary"
+                :title="item"
+                @click="applyQuickPrompt(item)"
+              >
+                {{ recentPromptLabel(item) }}
+              </button>
+            </div>
           </div>
           <form class="flex gap-2" @submit.prevent="handleSend">
             <textarea
@@ -243,11 +253,14 @@
         </div>
       </section>
     </div>
+
+    <AiPlanBlockingOverlay />
   </div>
 </template>
 
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue';
+import AiPlanBlockingOverlay from '@/components/AiPlanBlockingOverlay.vue';
 import { usePlanPage } from '@/composables/usePlanPage';
 import { useLocale } from '@/i18n/useLocale';
 import type { LlmProviderOption } from '@douxing/shared';
@@ -272,11 +285,11 @@ const {
   llmIssueMessage,
   scrollAnchor,
   aiPlanning,
-  aiPlanMessage,
   showModelPicker,
   provider,
   providerOptions,
   quickPrompts,
+  recentPrompts,
   composerLocked,
   composerPlaceholder,
   previewDays,
@@ -290,9 +303,9 @@ const {
   handleSend,
   onProviderChange,
   applyQuickPrompt,
+  recentPromptLabel,
   goMembership,
   openRouteDetail,
-  cancelAiPlan,
 } = plan;
 
 function resolveProviderLabel(opt: LlmProviderOption): string {

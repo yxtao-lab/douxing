@@ -217,6 +217,8 @@ export const mobileZhCN = {
     quickPrompt1: '杭州3天亲子游，预算5000',
     quickPrompt2: '上海周末情侣游',
     quickPrompt3: '成都美食两日游',
+    recentPromptsTitle: '最近发送',
+    quickPromptsTitle: '示例',
     restoreSessionFailed: '恢复对话失败',
     candidateSwitched: '已切换方案',
     candidateSwitchFailed: '切换失败',

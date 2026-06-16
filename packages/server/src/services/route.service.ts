@@ -61,6 +61,7 @@ function mergeEnrichedDaysWithSyncedAttractions(
 
     return {
       date: day.date,
+      calendarDate: day.calendarDate ?? syncedDay.calendarDate,
       title: day.title,
       attractions,
       lodging: day.lodging,
