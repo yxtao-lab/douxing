@@ -37,16 +37,24 @@ import {
   loadPlanUserContext,
   mergeIntentWithUserContext,
 } from './plan-user-context.service.js';
-import { runAgentPlan, isAgentPlanEnabled, type AgentPlanResult } from './agent-plan-client.service.js';
+import { runAgentPlan, isAgentPlanEnabled, type AgentPlanResult, type AgentPlanStreamHooks } from './agent-plan-client.service.js';
 import { answerFoodQa } from './answer-food-qa.service.js';
 import { resolvePlanVariantSelection } from './select-plan-variant.service.js';
 import { writeTripMemory, PetMemoryType } from './pet-memory.service.js';
 import { routeAgentIntent } from './agent-intent-router.service.js';
 import {
+  beginPlanSessionGeneration,
+  completePlanSessionStream,
+  emitPlanSessionAssistantFinal,
+  emitPlanSessionToolCall,
+  failPlanSessionStream,
+  runPlanSessionTrackedTool,
+} from './plan-session-stream.service.js';
+import {
   buildPlanRouteVariants,
 } from '../config/plan-route-variants.js';
 import { getPlanCandidateCountForUser, getUserMemberLevel } from './membership.service.js';
-import { ApiError, ApiMessageKey, canAppendPlanByMemberLevel, getMemberLevelLabel } from '@douxing/shared';
+import { ApiError, ApiMessageKey, canAppendPlanByMemberLevel, getMemberLevelLabel, isApiError } from '@douxing/shared';
 import type { PlanRouteCandidate } from '@douxing/shared';
 
 const SESSION_TITLE_MAX = 40;
@@ -605,114 +613,65 @@ export async function appendPlanSessionMessage(
     throw new ApiError(ApiMessageKey.PLAN_SESSION_NO_ROUTE);
   }
 
+  const routeId = session.routeId;
+
+  const currentRoute = await getRouteById(routeId, userId);
+  if (!currentRoute) return null;
+
   const previousMessages = await loadSessionMessages(sessionId);
   const history = buildHistoryForLlm(previousMessages);
   const userHistory: PlanChatMessage[] = previousMessages
     .filter((m) => m.role === 'user')
     .map((m) => ({ role: 'user', content: m.content }));
 
-  const intent = await buildIntentFromHistoryAsync(userHistory, text);
-  const userContext = await loadPlanUserContext(userId);
-  const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
+  beginPlanSessionGeneration(sessionId);
+  const agentStreamHooks: AgentPlanStreamHooks = {
+    onToolStart: (tool) => emitPlanSessionToolCall(sessionId, { tool, status: 'running' }),
+    onToolEnd: (tool, ok, ms) =>
+      emitPlanSessionToolCall(sessionId, { tool, status: ok ? 'done' : 'failed', ms }),
+  };
 
-  const currentRoute = await getRouteById(session.routeId, userId);
-  if (!currentRoute) return null;
+  try {
+    emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'running' });
 
-  let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
-  const routed = routeAgentIntent(text);
-  let agentResult: AgentPlanResult | null = null;
-  let assistantMessageOverride: string | undefined;
+    const intent = await runPlanSessionTrackedTool(sessionId, 'parse_intent', () =>
+      buildIntentFromHistoryAsync(userHistory, text),
+    );
+    emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'done', ms: 0 });
 
-  const agentDraftUpdateRoutes = new Set([
-    'tweak_day',
-    'tweak_poi',
-    'budget_tune',
-    'lodging_tune',
-  ]);
+    const userContext = await loadPlanUserContext(userId);
+    const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
 
-  if (isAgentPlanEnabled()) {
-    agentResult = await runAgentPlan({
-      prompt: text,
-      userId,
-      sessionId,
-      history,
-      provider: session.provider ?? 'auto',
-      locale,
-      currentDraft: routeToDraft(currentRoute),
-      intent: resolvedIntent,
-    });
+    let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
+    const routed = routeAgentIntent(text);
+    let agentResult: AgentPlanResult | null = null;
+    let assistantMessageOverride: string | undefined;
 
-    if (agentResult?.selectedRouteId != null) {
-      await applyPlanVariantToSession(sessionId, userId, agentResult.selectedRouteId);
-      const switchedRoute = await getRouteById(agentResult.selectedRouteId, userId);
-      if (switchedRoute) {
-        result = {
-          route: switchedRoute,
-          generationSource: 'llm',
-          llmProvider: undefined,
+    const agentDraftUpdateRoutes = new Set([
+      'tweak_day',
+      'tweak_poi',
+      'budget_tune',
+      'lodging_tune',
+    ]);
+
+    if (isAgentPlanEnabled()) {
+      agentResult = await runAgentPlan(
+        {
+          prompt: text,
+          userId,
+          sessionId,
+          history,
+          provider: session.provider ?? 'auto',
+          locale,
+          currentDraft: routeToDraft(currentRoute),
           intent: resolvedIntent,
-        };
-        assistantMessageOverride = agentResult.assistantMessage;
-      }
-    } else if (agentResult?.assistantMessage && !agentResult.draft) {
-      result = {
-        route: currentRoute,
-        generationSource: 'llm',
-        llmProvider: undefined,
-        intent: resolvedIntent,
-      };
-      assistantMessageOverride = agentResult.assistantMessage;
-    } else if (agentResult?.draft && agentDraftUpdateRoutes.has(routed.route)) {
-      const updated = await updateRouteFromAgentDraft(session.routeId, userId, agentResult.draft, {
-        sourcePrompt: text,
-        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-        intent: agentResult.draft.intent ?? resolvedIntent,
-      });
-      if (updated) {
-        result = {
-          ...updated,
-          llmProvider: undefined,
-          intent: updated.intent ?? resolvedIntent,
-        };
-      }
-    } else if (
-      agentResult?.draft
-      && routed.route !== 'qa_food'
-      && routed.route !== 'select_variant'
-    ) {
-      const generateInput: GenerateRouteInput = {
-        prompt: text,
-        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-        history,
-        intent: resolvedIntent,
-        locale,
-        userId,
-        excludePoiNames: userContext.excludePoiNames,
-        boostPoiNames: userContext.boostPoiNames,
-      };
-      result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
-    }
-  }
+        },
+        agentStreamHooks,
+      );
 
-  if (!result) {
-    if (routed.route === 'qa_food') {
-      assistantMessageOverride = await answerFoodQa({
-        intent: resolvedIntent,
-        prompt: text,
-        locale,
-        userId,
-      });
-      result = {
-        route: currentRoute,
-        generationSource: 'llm',
-        llmProvider: undefined,
-        intent: resolvedIntent,
-      };
-    } else if (routed.route === 'select_variant') {
-      const selected = await resolvePlanVariantSelection(sessionId, userId, text, locale);
-      if (selected) {
-        await applyPlanVariantToSession(sessionId, userId, selected.routeId);
-        const switchedRoute = await getRouteById(selected.routeId, userId);
+      if (agentResult?.selectedRouteId != null) {
+        await applyPlanVariantToSession(sessionId, userId, agentResult.selectedRouteId);
+        const switchedRoute = await getRouteById(agentResult.selectedRouteId, userId);
         if (switchedRoute) {
           result = {
             route: switchedRoute,
@@ -720,59 +679,156 @@ export async function appendPlanSessionMessage(
             llmProvider: undefined,
             intent: resolvedIntent,
           };
-          assistantMessageOverride = selected.assistantMessage;
+          assistantMessageOverride = agentResult.assistantMessage;
         }
+      } else if (agentResult?.assistantMessage && !agentResult.draft) {
+        result = {
+          route: currentRoute,
+          generationSource: 'llm',
+          llmProvider: undefined,
+          intent: resolvedIntent,
+        };
+        assistantMessageOverride = agentResult.assistantMessage;
+      } else if (agentResult?.draft && agentDraftUpdateRoutes.has(routed.route)) {
+        const updated = await updateRouteFromAgentDraft(routeId, userId, agentResult.draft, {
+          sourcePrompt: text,
+          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+          intent: agentResult.draft.intent ?? resolvedIntent,
+        });
+        if (updated) {
+          result = {
+            ...updated,
+            llmProvider: undefined,
+            intent: updated.intent ?? resolvedIntent,
+          };
+        }
+      } else if (
+        agentResult?.draft
+        && routed.route !== 'qa_food'
+        && routed.route !== 'select_variant'
+      ) {
+        const generateInput: GenerateRouteInput = {
+          prompt: text,
+          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+          history,
+          intent: resolvedIntent,
+          locale,
+          userId,
+          excludePoiNames: userContext.excludePoiNames,
+          boostPoiNames: userContext.boostPoiNames,
+        };
+        result = await runPlanSessionTrackedTool(sessionId, 'generate_route_draft', () =>
+          regenerateRouteFromPrompt(routeId, userId, generateInput),
+        );
       }
-    } else {
-      const generateInput: GenerateRouteInput = {
-        prompt: text,
-        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-        history,
-        intent: resolvedIntent,
-        locale,
-        userId,
-        excludePoiNames: userContext.excludePoiNames,
-        boostPoiNames: userContext.boostPoiNames,
-      };
-      result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
     }
-  }
-  if (!result) return null;
 
-  const { route, generationSource, llmProvider, intent: resultIntent } = result;
-  const assistantMessage =
-    assistantMessageOverride
-    ?? buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
-  const snapshot =
-    routed.route === 'qa_food' ? null : snapshotFromRoute(route);
-  const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
-  const persistedAgentState = buildPersistedAgentState(routed.route, agentResult);
+    if (!result) {
+      if (routed.route === 'qa_food') {
+        assistantMessageOverride = await runPlanSessionTrackedTool(sessionId, 'answer_food_qa', () =>
+          answerFoodQa({
+            intent: resolvedIntent,
+            prompt: text,
+            locale,
+            userId,
+          }),
+        );
+        result = {
+          route: currentRoute,
+          generationSource: 'llm',
+          llmProvider: undefined,
+          intent: resolvedIntent,
+        };
+      } else if (routed.route === 'select_variant') {
+        const selected = await runPlanSessionTrackedTool(sessionId, 'select_plan_variant', () =>
+          resolvePlanVariantSelection(sessionId, userId, text, locale),
+        );
+        if (selected) {
+          await applyPlanVariantToSession(sessionId, userId, selected.routeId);
+          const switchedRoute = await getRouteById(selected.routeId, userId);
+          if (switchedRoute) {
+            result = {
+              route: switchedRoute,
+              generationSource: 'llm',
+              llmProvider: undefined,
+              intent: resolvedIntent,
+            };
+            assistantMessageOverride = selected.assistantMessage;
+          }
+        }
+      } else {
+        const generateInput: GenerateRouteInput = {
+          prompt: text,
+          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+          history,
+          intent: resolvedIntent,
+          locale,
+          userId,
+          excludePoiNames: userContext.excludePoiNames,
+          boostPoiNames: userContext.boostPoiNames,
+        };
+        result = await runPlanSessionTrackedTool(sessionId, 'generate_route_draft', () =>
+          regenerateRouteFromPrompt(routeId, userId, generateInput),
+        );
+      }
+    }
+    if (!result) {
+      failPlanSessionStream(sessionId, ApiMessageKey.PLAN_SESSION_UPDATE_FAILED);
+      return null;
+    }
 
-  const db = getDb();
-  await db.insert(planSessionMessages).values([
-    { sessionId, role: 'user', content: text },
-    {
-      sessionId,
-      role: 'assistant',
-      content: assistantMessage,
-      routeSnapshot: snapshot,
-    },
-  ]);
-  await db
-    .update(planSessions)
-    .set({
-      updatedAt: new Date(),
-      intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+    const { route, generationSource, llmProvider, intent: resultIntent } = result;
+    const assistantMessage =
+      assistantMessageOverride
+      ?? buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
+    const snapshot =
+      routed.route === 'qa_food' ? null : snapshotFromRoute(route);
+    const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
+    const persistedAgentState = buildPersistedAgentState(routed.route, agentResult);
+
+    const db = getDb();
+    await db.insert(planSessionMessages).values([
+      { sessionId, role: 'user', content: text },
+      {
+        sessionId,
+        role: 'assistant',
+        content: assistantMessage,
+        routeSnapshot: snapshot,
+      },
+    ]);
+    await db
+      .update(planSessions)
+      .set({
+        updatedAt: new Date(),
+        intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+        agentState: persistedAgentState,
+      })
+      .where(eq(planSessions.id, sessionId));
+
+    const actionResult = buildActionResult(sessionId, route, assistantMessage, {
+      generationSource,
+      llmProvider,
+      intentSnapshot: resultIntent ?? resolvedIntent,
+      ragMatchedCount: readRagMatchedCount(route),
+      candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
       agentState: persistedAgentState,
-    })
-    .where(eq(planSessions.id, sessionId));
+    });
 
-  return buildActionResult(sessionId, route, assistantMessage, {
-    generationSource,
-    llmProvider,
-    intentSnapshot: resultIntent ?? resolvedIntent,
-    ragMatchedCount: readRagMatchedCount(route),
-    candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
-    agentState: persistedAgentState,
-  });
+    emitPlanSessionAssistantFinal(sessionId, assistantMessage);
+    completePlanSessionStream(
+      sessionId,
+      actionResult as unknown as Record<string, unknown>,
+    );
+    return actionResult;
+  } catch (err) {
+    const messageKey = isApiError(err)
+      ? err.messageKey
+      : ApiMessageKey.PLAN_SESSION_UPDATE_FAILED;
+    failPlanSessionStream(
+      sessionId,
+      messageKey,
+      isApiError(err) ? err.params : undefined,
+    );
+    throw err;
+  }
 }

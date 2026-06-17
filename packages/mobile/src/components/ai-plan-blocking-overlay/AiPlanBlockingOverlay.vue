@@ -9,6 +9,7 @@
     <view class="ai-plan-panel" @click.stop>
       <view class="ai-plan-spinner" />
       <text class="ai-plan-title">{{ aiPlanLoadingState.message }}</text>
+      <AgentToolStatusList :steps="aiPlanLoadingState.toolSteps" />
       <text class="ai-plan-hint">{{ t('plan.aiPlanningHint') }}</text>
       <text class="ai-plan-tip">{{ t('plan.aiPlanningTip') }}</text>
       <button class="ai-plan-cancel" @click="handleCancel">{{ t('plan.aiPlanningCancel') }}</button>
@@ -18,6 +19,7 @@
 
 <script setup lang="ts">
 import { aiPlanLoadingState, cancelAiPlanLoading, getAiPlanCancelledMessage } from '@/utils/ai-plan-loading';
+import AgentToolStatusList from '@/components/agent-tool-status-list/AgentToolStatusList.vue';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 

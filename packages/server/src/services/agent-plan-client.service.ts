@@ -86,6 +86,14 @@ export interface AgentPlanRequest {
 
 
 
+/** Step 7：规划 SSE 回调（Tool 开始/结束） */
+export interface AgentPlanStreamHooks {
+  onToolStart?: (tool: string) => void;
+  onToolEnd?: (tool: string, ok: boolean, ms: number) => void;
+}
+
+
+
 export interface AgentPlanResult {
 
   draft?: GeneratedRouteDraft & { generationSource?: string; intent?: TravelIntentSnapshot };
@@ -124,9 +132,13 @@ async function finalizeDraftWithEnrich(
 
   trace: AgentToolTraceEntry[],
 
+  hooks?: AgentPlanStreamHooks,
+
 ): Promise<GeneratedRouteDraft> {
 
   const t0 = Date.now();
+
+  hooks?.onToolStart?.('enrich_route');
 
   const playbooks = await retrievePlaybooksForPlanning({
 
@@ -140,13 +152,19 @@ async function finalizeDraftWithEnrich(
 
   trace.push({ tool: 'enrich_route', ok: true, ms: Date.now() - t0 });
 
+  hooks?.onToolEnd?.('enrich_route', true, Date.now() - t0);
+
 
 
   const t1 = Date.now();
 
+  hooks?.onToolStart?.('validate_route');
+
   const validated = validateRouteDraft(enriched, { locale, autoFix: true });
 
   trace.push({ tool: 'validate_route', ok: true, ms: Date.now() - t1 });
+
+  hooks?.onToolEnd?.('validate_route', true, Date.now() - t1);
 
   return validated.draft;
 
@@ -211,7 +229,25 @@ function resolvePatchDayIndex(
   return undefined;
 }
 
-async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanResult> {
+function replayAgentToolTrace(
+  trace: AgentToolTraceEntry[],
+  hooks?: AgentPlanStreamHooks,
+  skipTools: ReadonlySet<string> = new Set(['parse_intent']),
+): void {
+  if (!hooks || trace.length === 0) return;
+  for (const entry of trace) {
+    if (skipTools.has(entry.tool)) continue;
+    hooks.onToolStart?.(entry.tool);
+    hooks.onToolEnd?.(entry.tool, entry.ok, entry.ms);
+  }
+}
+
+
+
+async function runLocalAgentPlan(
+  request: AgentPlanRequest,
+  hooks?: AgentPlanStreamHooks,
+): Promise<AgentPlanResult> {
 
   const trace: AgentPlanResult['toolTrace'] = [];
 
@@ -229,6 +265,8 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
     const t0 = Date.now();
 
+    hooks?.onToolStart?.('select_plan_variant');
+
     const selected = await resolvePlanVariantSelection(
 
       request.sessionId,
@@ -241,7 +279,11 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
     );
 
-    trace.push({ tool: 'select_plan_variant', ok: !!selected, ms: Date.now() - t0 });
+    const ms = Date.now() - t0;
+
+    trace.push({ tool: 'select_plan_variant', ok: !!selected, ms });
+
+    hooks?.onToolEnd?.('select_plan_variant', !!selected, ms);
 
     if (selected) {
 
@@ -267,6 +309,8 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
     const t0 = Date.now();
 
+    hooks?.onToolStart?.('answer_food_qa');
+
     const assistantMessage = await answerFoodQa({
 
       intent,
@@ -279,7 +323,11 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
     });
 
-    trace.push({ tool: 'answer_food_qa', ok: true, ms: Date.now() - t0 });
+    const ms = Date.now() - t0;
+
+    trace.push({ tool: 'answer_food_qa', ok: true, ms });
+
+    hooks?.onToolEnd?.('answer_food_qa', true, ms);
 
     return {
 
@@ -309,6 +357,8 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
       const t0 = Date.now();
 
+      hooks?.onToolStart?.('patch_route_day');
+
       const patched = await patchRouteDay({
 
         draft,
@@ -329,9 +379,13 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
       });
 
-      trace.push({ tool: 'patch_route_day', ok: true, ms: Date.now() - t0 });
+      const patchMs = Date.now() - t0;
 
-      const finalized = await finalizeDraftWithEnrich(patched, intent, locale, trace);
+      trace.push({ tool: 'patch_route_day', ok: true, ms: patchMs });
+
+      hooks?.onToolEnd?.('patch_route_day', true, patchMs);
+
+      const finalized = await finalizeDraftWithEnrich(patched, intent, locale, trace, hooks);
 
       return {
 
@@ -353,11 +407,17 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
       const t0 = Date.now();
 
+      hooks?.onToolStart?.('tune_route_budget');
+
       const tuned = tuneRouteBudget({ draft, intent, locale });
 
-      trace.push({ tool: 'tune_route_budget', ok: true, ms: Date.now() - t0 });
+      const tuneMs = Date.now() - t0;
 
-      const finalized = await finalizeDraftWithEnrich(tuned, intent, locale, trace);
+      trace.push({ tool: 'tune_route_budget', ok: true, ms: tuneMs });
+
+      hooks?.onToolEnd?.('tune_route_budget', true, tuneMs);
+
+      const finalized = await finalizeDraftWithEnrich(tuned, intent, locale, trace, hooks);
 
       return {
 
@@ -377,9 +437,13 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
     if (routed.route === 'lodging_tune') {
 
+      hooks?.onToolStart?.('lodging_tune');
+
       trace.push({ tool: 'lodging_tune', ok: true, ms: 0 });
 
-      const finalized = await finalizeDraftWithEnrich(draft, intent, locale, trace);
+      hooks?.onToolEnd?.('lodging_tune', true, 0);
+
+      const finalized = await finalizeDraftWithEnrich(draft, intent, locale, trace, hooks);
 
       return {
 
@@ -402,6 +466,8 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
   const context = await loadPlanUserContext(request.userId);
 
   const genStart = Date.now();
+
+  hooks?.onToolStart?.('generate_route_draft');
 
   const result = await generateRoute({
 
@@ -427,7 +493,11 @@ async function runLocalAgentPlan(request: AgentPlanRequest): Promise<AgentPlanRe
 
   });
 
-  trace.push({ tool: 'generate_route_draft', ok: true, ms: Date.now() - genStart });
+  const genMs = Date.now() - genStart;
+
+  trace.push({ tool: 'generate_route_draft', ok: true, ms: genMs });
+
+  hooks?.onToolEnd?.('generate_route_draft', true, genMs);
 
 
 
@@ -449,6 +519,8 @@ export async function runAgentPlan(
 
   request: AgentPlanRequest,
 
+  hooks?: AgentPlanStreamHooks,
+
 ): Promise<AgentPlanResult | null> {
 
   if (!isAgentPlanEnabled()) return null;
@@ -457,11 +529,17 @@ export async function runAgentPlan(
 
   const remote = await callRemoteAgentPlan(request);
 
-  if (isAgentPlanResultUsable(remote)) return remote;
+  if (isAgentPlanResultUsable(remote)) {
+
+    replayAgentToolTrace(remote.toolTrace ?? [], hooks);
+
+    return remote;
+
+  }
 
 
 
-  const local = await runLocalAgentPlan(request);
+  const local = await runLocalAgentPlan(request, hooks);
 
   if (isAgentPlanResultUsable(local)) return local;
 

@@ -60,6 +60,17 @@ export {
   formatValidatorWarning,
   type ValidatorWarningKey,
 } from './validator-messages.js';
+export {
+  AGENT_TOOL_STATUS_KEYS,
+  buildAgentStatusLocaleBlock,
+  formatAgentStatusLabel,
+  isKnownAgentToolStatusKey,
+  mapAgentToolTraceToSteps,
+  resolveAgentStatusI18nKey,
+  type AgentToolStatusKey,
+  type AgentToolStepStatus,
+  type AgentToolStepView,
+} from './agent-status-messages.js';
 export type { PlaybookTransitReasonKey } from '../types.js';
 
 import { MemberLevel } from '../constants.js';

@@ -29,6 +29,7 @@ export function appendPlanMessage(sessionId: number, data: AppendPlanMessageRequ
     method: 'POST',
     data,
     loadingMessageKey: 'plan.aiPlanningAdjust',
+    sessionId,
   });
 }
 

@@ -29,6 +29,7 @@ export async function appendPlanMessage(sessionId: number, body: AppendPlanMessa
     method: 'POST',
     data: body,
     loadingMessageKey: 'plan.aiPlanningAdjust',
+    sessionId,
   });
 }
 

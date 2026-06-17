@@ -12,15 +12,15 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 6 — i18n `agent.status.*`**
+> **下一项工作：Step 9 — C7-b 阶段验收**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | `@douxing/shared` 增加 Tool 进度文案；PC/mobile 规划页可展示 |
-| **改哪些文件** | `packages/shared/src/i18n/` · 双端规划页 |
-| **完成标准** | zh-CN/en-US Tool 进度文案齐全；无用户可见硬编码 |
-| **预估** | 1 天 |
-| **完成后** | 进入 **Step 7**（SSE 流式状态后端） |
+| **做什么** | 勾选 Step 1～8 · §8.2 Agent 清单 · 手测追问用例 |
+| **改哪些文件** | 文档 · 可选 `agent:e2e-cases` 回归 |
+| **完成标准** | Step 1～8 全勾 · **M1 达成** |
+| **预估** | 0.5～1 天 |
+| **完成后** | 进入 **Phase 2（Step 10）** |
 
 **本地前置**：`.env` 配好 `AI_SERVICE_ENABLED=true`、`AGENT_PLAN_ENABLED=true`、`AGENT_TOOL_SECRET`。
 
@@ -62,9 +62,9 @@
 | **3** | [x] | **修正 agent_state.toolTrace** | `plan-session.service.ts` | [x] 存真实 toolTrace 数组 [x] 非 routed.route 字符串 |
 | **4** | [x] | **budget/lodging/qa/select 分支** | graph + Tool/服务 | [x] 预算/住宿/美食问答/选方案 4 类端到端 [x] qa 不触发生成 |
 | **5** | [x] | **追问端到端联调** | DB + mobile + PC | [x] 「第三天轻松点」day1～2 不变 [x] 「别去 XX」仅换 POI [x] 失败降级管道 |
-| **6** | [ ] | **i18n `agent.status.*`** | `@douxing/shared` + build | [ ] zh-CN/en-US Tool 进度文案齐全 [ ] 无用户可见硬编码 |
-| **7** | [ ] | **SSE 流式状态（后端）** | `GET /api/plan-sessions/:id/stream` | [ ] 推送 tool_call/assistant/done [ ] 超时与错误可感知 |
-| **8** | [ ] | **前端 SSE + 进度 UI** | PC `usePlanPage` + mobile overlay | [ ] 遮罩展示 Tool 列表 [ ] locale 切换正确 [ ] SSE 失败降级 spinner |
+| **6** | [x] | **i18n `agent.status.*`** | `@douxing/shared` + build | [x] zh-CN/en-US Tool 进度文案齐全 [x] 无用户可见硬编码 |
+| **7** | [x] | **SSE 流式状态（后端）** | `GET /api/plan-sessions/:id/stream` | [x] 推送 tool_call/assistant/done [x] 超时与错误可感知 |
+| **8** | [x] | **前端 SSE + 进度 UI** | PC `usePlanPage` + mobile overlay | [x] 遮罩展示 Tool 列表 [x] locale 切换正确 [x] SSE 失败降级 spinner |
 | **9** | [ ] | **C7-b 阶段验收** | 文档 + 手测清单 | [ ] Step 1～8 全勾 [ ] §8.2 Agent 清单全勾 [ ] **M1 达成** |
 
 **Phase 1 完成后**：开发环境默认 `AGENT_PLAN_ENABLED=true`；生产仍 false，待 M2。
@@ -434,7 +434,7 @@ pnpm dev
 - [x] toolTrace 持久化（Step 3）
 - [x] 四类分支（Step 4）
 - [x] 追问 day 保留（Step 5）
-- [ ] SSE + i18n
+- [x] SSE + i18n（Step 6～8 已落地）
 
 ### 8.3 M2 Agent 上 staging（Step 10～15）
 

@@ -430,6 +430,33 @@ export interface AgentToolTraceEntry {
   ms: number;
 }
 
+/** C7-b Step 7：规划会话 SSE 事件类型 */
+export type PlanSessionStreamEventName = 'tool_call' | 'assistant' | 'done' | 'error';
+
+/** SSE `tool_call` 事件 payload */
+export interface PlanSessionStreamToolCallPayload {
+  tool: string;
+  status: 'running' | 'done' | 'failed';
+  ms?: number;
+}
+
+/** SSE `assistant` 事件 payload */
+export interface PlanSessionStreamAssistantPayload {
+  delta?: string;
+  final?: string;
+}
+
+/** SSE `error` 事件 payload */
+export interface PlanSessionStreamErrorPayload {
+  messageKey: string;
+  params?: Record<string, string | number>;
+}
+
+/** SSE `done` 事件 payload */
+export interface PlanSessionStreamDonePayload {
+  result: PlanSessionActionResult;
+}
+
 /** C7-b：规划会话 Agent 编排状态（JSON 列） */
 export interface PlanSessionAgentState {
   lastRoutedIntent: string;

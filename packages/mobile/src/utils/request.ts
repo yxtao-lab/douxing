@@ -10,6 +10,8 @@ import {
   registerAiPlanRequestTask,
   isRequestAbortedError,
   getAiPlanCancelledMessage,
+  applyAiPlanResponseTrace,
+  beginPlanSessionStream,
 } from './ai-plan-loading';
 
 /** 封装请求选项（url 由 path 拼接，无需传入） */
@@ -101,6 +103,8 @@ export interface RequestAiPlanOptions extends AppRequestOptions {
   loadingMessage?: string;
   /** i18n 键，如 plan.aiPlanningMulti */
   loadingMessageKey?: string;
+  /** 追问时传入，用于订阅 SSE Tool 进度 */
+  sessionId?: number;
 }
 
 function resolveAiPlanLoadingMessage(options: RequestAiPlanOptions): string | undefined {
@@ -119,10 +123,24 @@ export function requestAiPlan<T>(path: string, options: RequestAiPlanOptions = {
     beginAiPlanLoading();
   }
 
-  const { loadingMessage: _msg, loadingMessageKey: _key, ...requestOptions } = options;
+  if (options.sessionId) {
+    beginPlanSessionStream(options.sessionId);
+  }
+
+  const {
+    loadingMessage: _msg,
+    loadingMessageKey: _key,
+    sessionId: _sessionId,
+    ...requestOptions
+  } = options;
   const url = buildRequestUrl(path);
 
-  return runRequest<T>(url, requestOptions, true).finally(() => {
-    endAiPlanLoading();
-  });
+  return runRequest<T>(url, requestOptions, true)
+    .then((data) => {
+      applyAiPlanResponseTrace(data);
+      return data;
+    })
+    .finally(() => {
+      endAiPlanLoading();
+    });
 }

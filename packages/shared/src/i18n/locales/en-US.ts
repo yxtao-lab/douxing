@@ -1,4 +1,6 @@
 /** 跨端共享英文文案 */
+import { buildAgentStatusLocaleBlock } from '../agent-status-messages.js';
+
 export const sharedEnUS = {
   app: {
     name: 'Douxing',
@@ -166,5 +168,8 @@ export const sharedEnUS = {
       closeOthers: 'Close others',
       closeAll: 'Close all',
     },
+  },
+  agent: {
+    status: buildAgentStatusLocaleBlock('en-US'),
   },
 } as const;

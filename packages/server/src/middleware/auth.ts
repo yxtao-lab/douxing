@@ -19,6 +19,15 @@ declare global {
   }
 }
 
+/** SSE 鉴权：支持 `Authorization: Bearer` 或 query `?token=`（EventSource 无法自定义 Header） */
+export function sseAuthMiddleware(req: Request, res: Response, next: NextFunction) {
+  const queryToken = typeof req.query.token === 'string' ? req.query.token.trim() : '';
+  if (queryToken && !req.headers.authorization?.startsWith('Bearer ')) {
+    req.headers.authorization = `Bearer ${queryToken}`;
+  }
+  return authMiddleware(req, res, next);
+}
+
 export function authMiddleware(req: Request, res: Response, next: NextFunction) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) {

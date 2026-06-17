@@ -2,7 +2,7 @@
 
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
-> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 6**  
+> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 7**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：2.2  
@@ -13,7 +13,7 @@
 
 ### 实现进度速览（2026-06-16）
 
-> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 6 i18n agent.status**。
+> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 7 SSE 流式状态**。
 
 | 步 | 状态 | 已落地 | 待完成（对应 Step） |
 |----|------|--------|---------------------|
@@ -589,8 +589,8 @@ packages/server/
 | b2 | Supervisor 意图分类 prompt + 10 条用例集 | 路由准确率 | ✅（`agent-intent-cases.ts`） |
 | b3 | `appendPlanSessionMessage` 接 Agent 路径 | plan_sessions | ✅ |
 | b4 | `plan_sessions.agent_state` 迁移列 | 状态持久化 | ✅ |
-| b5 | SSE：`thinking` / `tool_call` / `assistant` | 移动端/PC 规划页 | ⏳ |
-| b6 | i18n：`agent.status.*` shared keys | zh-CN / en-US | ⏳ |
+| b5 | SSE：`thinking` / `tool_call` / `assistant` | 移动端/PC 规划页 | ✅ |
+| b6 | i18n：`agent.status.*` shared keys | zh-CN / en-US | ✅ |
 
 **验收**：10 条典型追问用例通过（路由层 ✅）；追问不再全量重生（patch 路径 ✅，端到端待联调）。
 
@@ -690,7 +690,7 @@ LANGFUSE_SECRET_KEY=
 - [ ] `AGENT_PLAN_ENABLED=true` 时首句规划与管道可对比（≥95%，待 a8 脚本）
 - [x] 追问「第三天轻松点」可走 `patch_route_day`（Tool + 路由用例已通过）
 - [x] Tool / Agent 失败自动降级 `generateRoute`
-- [ ] zh-CN / en-US Agent 文案与 API 错误走 i18n（SSE 状态文案待 b6）
+- [x] zh-CN / en-US Agent 文案与 API 错误走 i18n（`agent.status.*` 已落地；SSE 流式推送待 Step 7）
 - [ ] Langfuse 可查单次规划 Tool 链路与 token
 - [x] `pnpm --filter @douxing/server exec tsc --noEmit` 通过
 

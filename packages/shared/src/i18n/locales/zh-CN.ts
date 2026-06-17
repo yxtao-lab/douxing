@@ -1,4 +1,6 @@
 /** 跨端共享中文文案 */
+import { buildAgentStatusLocaleBlock } from '../agent-status-messages.js';
+
 export const sharedZhCN = {
   app: {
     name: '兜行',
@@ -166,5 +168,8 @@ export const sharedZhCN = {
       closeOthers: '关闭其他',
       closeAll: '关闭全部',
     },
+  },
+  agent: {
+    status: buildAgentStatusLocaleBlock('zh-CN'),
   },
 } as const;

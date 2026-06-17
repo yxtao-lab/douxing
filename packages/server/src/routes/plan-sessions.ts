@@ -2,7 +2,7 @@ import { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { LocaleCode } from '@douxing/shared';
 import { ApiMessageKey } from '@douxing/shared';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, sseAuthMiddleware } from '../middleware/auth.js';
 import { success, fail, failFromError } from '../utils/response.js';
 import {
   appendPlanSessionMessage,
@@ -11,6 +11,12 @@ import {
   listPlanSessions,
   selectPlanSessionCandidate,
 } from '../services/plan-session.service.js';
+import {
+  getPlanSessionStreamBuffer,
+  subscribePlanSessionStream,
+} from '../services/plan-session-stream.service.js';
+import { getAgentPlanTimeoutMs } from '../config/agent.js';
+import { initSseResponse, writeSseComment, writeSseEvent } from '../utils/sse-response.util.js';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 
 const router = Router();
@@ -70,6 +76,71 @@ router.post('/', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[plan-sessions/create]', err);
     return fail(res, '创建规划会话失败', 500, 500);
+  }
+});
+
+router.get('/:sessionId/stream', sseAuthMiddleware, async (req, res) => {
+  try {
+    const sessionId = parseInt(String(req.params.sessionId), 10);
+    if (Number.isNaN(sessionId)) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR);
+    }
+
+    const session = await getPlanSessionDetail(
+      sessionId,
+      req.auth!.userId,
+      getRequestLocale(res),
+    );
+    if (!session) {
+      return fail(res, ApiMessageKey.PLAN_SESSION_NOT_FOUND, 404, 404);
+    }
+
+    initSseResponse(res);
+
+    for (const buffered of getPlanSessionStreamBuffer(sessionId)) {
+      writeSseEvent(res, buffered.event, buffered.data);
+      if (buffered.event === 'done' || buffered.event === 'error') {
+        res.end();
+        return;
+      }
+    }
+
+    const maxConnMs = getAgentPlanTimeoutMs() + 30_000;
+    const connTimer = setTimeout(() => {
+      writeSseEvent(res, 'error', { messageKey: ApiMessageKey.REQUEST_TIMEOUT });
+      res.end();
+    }, maxConnMs);
+
+    const heartbeat = setInterval(() => {
+      writeSseComment(res);
+    }, 15_000);
+
+    const unsubscribe = subscribePlanSessionStream(sessionId, (envelope) => {
+      writeSseEvent(res, envelope.event, envelope.data);
+      if (envelope.event === 'done' || envelope.event === 'error') {
+        clearTimeout(connTimer);
+        clearInterval(heartbeat);
+        unsubscribe();
+        res.end();
+      }
+    });
+
+    req.on('close', () => {
+      clearTimeout(connTimer);
+      clearInterval(heartbeat);
+      unsubscribe();
+    });
+  } catch (err) {
+    console.error('[plan-sessions/stream]', err);
+    if (!res.headersSent) {
+      return fail(res, ApiMessageKey.PLAN_SESSION_DETAIL_FAILED, 500, 500);
+    }
+    try {
+      writeSseEvent(res, 'error', { messageKey: ApiMessageKey.PLAN_SESSION_DETAIL_FAILED });
+      res.end();
+    } catch {
+      /* 连接可能已断开 */
+    }
   }
 });
 

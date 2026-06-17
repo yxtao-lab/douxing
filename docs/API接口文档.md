@@ -178,6 +178,7 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 39 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
 | 40 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
 | 41 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
+| 42 | GET | `/api/routes/plan-sessions/:sessionId/stream` | 登录 | 规划 SSE（C7-b Step 7） |
 | 42 | POST | `/api/checkins/photos` | 登录 | 打卡 |
 | 43 | POST | `/api/checkins` | 登录 | 打卡 |
 | 44 | GET | `/api/checkins` | 登录 | 打卡 |
@@ -558,6 +559,25 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 **Body**：`{ content: string }` — 1～500 字
 
 **响应 `data`**：`PlanSessionActionResult`
+
+### GET `/:sessionId/stream`
+
+规划追问 **SSE 流式进度**（C7-b Step 7）。客户端在 `POST .../messages` 前后订阅均可；连接期间重放当前缓冲事件。
+
+**鉴权**：`Authorization: Bearer` 或 query `?token=<JWT>`（`EventSource` 无法自定义 Header 时使用后者）
+
+**响应**：`Content-Type: text/event-stream`
+
+| 事件 | payload | 说明 |
+|------|---------|------|
+| `tool_call` | `{ tool, status: 'running'\|'done'\|'failed', ms? }` | Tool 进度；`tool` 对应 shared `agent.status.*` |
+| `assistant` | `{ delta?, final? }` | 助手回复片段或最终文案 |
+| `done` | `{ result: PlanSessionActionResult }` | 规划完成 |
+| `error` | `{ messageKey, params? }` | 失败（ApiMessageKey） |
+
+**超时**：连接最长约 `AGENT_PLAN_TIMEOUT_MS + 30s`；空闲心跳 `: heartbeat` 每 15s
+
+**说明**：当前首条 `POST /` 创建会话不走 SSE；追问 `POST .../messages` 会推送 Tool 链。PC / mobile H5 通过 `fetch` 订阅 SSE；小程序等环境自动降级为 POST 响应 `toolTrace`。
 
 ### POST `/:sessionId/select-candidate`
 

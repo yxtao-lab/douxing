@@ -19,6 +19,7 @@
         <p class="mt-6 text-center text-base font-semibold text-dx-text">
           {{ aiPlanMessage || t('plan.aiPlanning') }}
         </p>
+        <AgentToolStatusList :steps="aiPlanToolSteps" />
         <p class="mt-2 text-center text-sm text-dx-muted">{{ t('plan.aiPlanningHint') }}</p>
         <p class="mt-1 text-center text-xs text-dx-muted">{{ t('plan.aiPlanningTip') }}</p>
         <button
@@ -36,7 +37,8 @@
 <script setup lang="ts">
 import { onBeforeUnmount, watch } from 'vue';
 import { onBeforeRouteLeave } from 'vue-router';
-import { aiPlanLoading, aiPlanMessage, cancelAiPlanRequest } from '@/api/ai-plan';
+import { aiPlanLoading, aiPlanMessage, aiPlanToolSteps, cancelAiPlanRequest } from '@/api/ai-plan';
+import AgentToolStatusList from '@/components/AgentToolStatusList.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { appMessage } from '@/composables/useAppMessage';
 
