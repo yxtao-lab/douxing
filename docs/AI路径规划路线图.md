@@ -29,10 +29,10 @@
 ### 0.2 整体进度
 
 ```text
-[██████████████░░░░░░] 约 60%  —  M0 + M1 已达成；Step 10 等价率脚本已验收
+[███████████████░░░░░] 约 65%  —  M0 + M1 已达成；Step 10～11 已验收
 
 当前阶段：Phase 2 · C7 质量闸门 + 首句 Agent
-下一里程碑：M2 — Agent 可上 staging（Step 10～15）
+下一里程碑：M2 — Agent 可上 staging（Step 12～15）
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -226,7 +226,7 @@ Agent 已上 staging → 从 Step 16（H9+-1）开始
 |------|------|------|-----------|
 | **C** | 规划管道 MVP | ✅ 已验收 | M0 |
 | **H9** | 住行增强 | ✅ 已验收 | M0 |
-| **C7** | AI Agent 演进 | 🔄 M1 ✅ · M2 进行中 | Step 10～15 |
+| **C7** | AI Agent 演进 | 🔄 M1 ✅ · M2 进行中 | Step 10～11 ✅ · **Step 12～15** |
 | **H9+** | 规划数据质量 | ⏳ | Step 16～24 |
 | **H3** | AI 旅行宠物 | 🔄 后端骨架 | Step 25～30 |
 | **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
@@ -356,8 +356,13 @@ pnpm --filter @douxing/server agent:branch-cases
 
 ### 6.2 Step 10～15 实现要点（Phase 2）
 
-- **等价率脚本**：`agent-equivalence.service.ts` + `agent-equivalence-cases.ts`；对比城市、天数、按天 POI 集合（允许文案差异）；种子 `prompts-seed.jsonl`（20 条）。
+- **等价率脚本（Step 10 ✅）**：`agent-equivalence.service.ts` + `agent-equivalence-cases.ts`；对比城市、天数、按天 POI 集合（允许文案差异）；种子 `prompts-seed.jsonl`（20 条）。
 - **运行模式**：默认 `deterministic`（关 LLM/ai-service）；`--fast` 跳过 Enricher；`--live` 走 LLM；`--report` 输出 JSON。
+- **Langfuse 观测（Step 11 ✅）**：
+  - Python：`app/observability/langfuse_client.py` — Agent Tool trace · route-generate trace · LangChain CallbackHandler
+  - Node：`observability/langfuse-client.service.ts` — LLM generation 层级
+  - 环境变量：`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（未配 KEY 时 no-op）
+  - 验证：`pnpm --filter @douxing/server langfuse:smoke`；`GET /v1/status` 返回 `observability.langfuse`
 - **首句 Agent 开启条件**：等价率 ≥95% + Langfuse 可观测 + staging 手测。
 - **生产策略**：M2 后 staging true；生产 false → 灰度 → 全量。
 

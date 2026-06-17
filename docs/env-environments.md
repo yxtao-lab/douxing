@@ -116,6 +116,8 @@ pnpm build:web
 | `LANGFUSE_BASE_URL` | 同 `LANGFUSE_HOST`（官方 skill 别名） | 同上 |
 | `LANGFUSE_TRACING_ENVIRONMENT` | trace 环境标签（须与 Langfuse UI 筛选一致） | `default` |
 
+验证：`pnpm --filter @douxing/server langfuse:smoke`（需配置 KEY）；`GET /v1/status` 返回 `observability.langfuse`。
+
 详见 [AI路径规划路线图.md §7](./AI路径规划路线图.md#7-环境与验证) · [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
 
 ---

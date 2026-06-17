@@ -5,7 +5,7 @@
 > **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 12**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：2.3  
+**文档版本**：2.4  
 **最后更新**：2026-06-17  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话」**；升级为 Agent 应 **Tool 化现有能力 + Supervisor 多 Agent + LangGraph 编排**，**不推倒** `generateRoute`。
 
@@ -13,11 +13,11 @@
 
 ### 实现进度速览（2026-06-17）
 
-> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 10 等价率脚本**。
+> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 12 warnings 进对话**。
 
 | 步 | 状态 | 已落地 | 待完成（对应 Step） |
 |----|------|--------|---------------------|
-| **C7-a** | ✅ 主体完成 | 9 Tool · `/v1/agent/plan` · feature flag | a7/a8 → **Step 10～11** |
+| **C7-a** | ✅ 完成 | 9 Tool · `/v1/agent/plan` · feature flag · 等价率 · Langfuse | — |
 | **C7-b** | ✅ M1 达成 | patch · SSE · i18n · agent_state · 10 用例 | — |
 | **C7-c** | 🔄 后端骨架 | memory Tool · 表 | **Step 25～30 → M4** |
 | **C7-d** | 🔄 部分 | validate_route | d2/d3 → **Step 12、37** |
@@ -576,10 +576,10 @@ packages/server/
 | a4 | `graph.py`：意图路由 + Tool 链 | 首句全量 / 追问 patch | ✅ |
 | a5 | `POST /v1/agent/plan` | OpenAPI + schema | ✅ |
 | a6 | `agent-plan-client.service.ts` + feature flag | `AGENT_PLAN_ENABLED` | ✅ |
-| a7 | Langfuse 接入（可选但推荐） | trace 可查 | ✅ Step 11 |
-| a8 | 对比测试脚本 | 管道 vs Agent 等价率报告 | ⏳ |
+| a7 | 对比测试脚本 | 管道 vs Agent 等价率报告 | ✅ Step 10 · 20/20 |
+| a8 | Langfuse 接入（可选但推荐） | trace 可查 | ✅ Step 11 · `langfuse:smoke` |
 
-**验收**：`POST /v1/agent/plan` 与 `generateRoute` 等价率 ≥95%（待 a8 自动化）；flag 关闭时零影响（✅ 已验证逻辑）。
+**验收**：`POST /v1/agent/plan` 与 `generateRoute` 等价率 ≥95%（**Step 10 已自动化 · 100%**）；flag 关闭时零影响（✅ 已验证逻辑）。
 
 ### C7-b · 多轮 Agent 规划（2～3 周）— ✅ M1 达成（2026-06-17）
 
@@ -687,7 +687,7 @@ LANGFUSE_SECRET_KEY=
 ## 15. 验收自检
 
 - [x] `AGENT_PLAN_ENABLED=false` 时行为与现网完全一致
-- [ ] `AGENT_PLAN_ENABLED=true` 时首句规划与管道可对比（≥95%，**Step 10 脚本已落地** · 2026-06-17 · 20/20）
+- [x] `AGENT_PLAN_ENABLED=true` 时首句规划与管道可对比（≥95%，**Step 10 已验收** · 2026-06-17 · 20/20）
 - [x] 追问「第三天轻松点」可走 `patch_route_day`（Tool + 路由用例已通过）
 - [x] Tool / Agent 失败自动降级 `generateRoute`
 - [x] zh-CN / en-US Agent 文案与 API 错误走 i18n（`agent.status.*` + SSE 流式推送）
@@ -715,5 +715,6 @@ LANGFUSE_SECRET_KEY=
 |------|------|------|
 | 2026-06-11 | 1.0 | 初版：现状 + C7 路线 + Tool 映射 |
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
+| 2026-06-17 | 2.4 | **Step 10～11 验收**：等价率 20/20 · Langfuse 双路径 · 指针 → Step 12 |
 | 2026-06-17 | 2.3 | **M1 达成**：C7-b Step 1～9 验收 · SSE API ✅ · 指针 → Step 10 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |
