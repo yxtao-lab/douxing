@@ -133,12 +133,11 @@ function withRagMeta<T extends GeneratedRouteDraft>(
   return { ...draft, ragMatchedCount, ragCandidateCount };
 }
 
-async function finalizeRouteDraft(
+async function prepareRouteDraftBeforeEnrich(
   draft: GeneratedRouteDraft,
   input: GenerateRouteInput,
   intent: TravelIntentSnapshot,
   ragCandidates: RagAttractionCandidate[],
-  playbookMatches: MatchedRoutePlaybook[],
 ): Promise<GeneratedRouteDraft> {
   const constrained = enforceRouteConstraints(draft, intent);
   const normalizedDays = normalizeRouteDayPlans(constrained.routeDetail.days, {
@@ -149,7 +148,17 @@ async function finalizeRouteDraft(
     ...constrained,
     routeDetail: { days: normalizedDays },
   };
-  const linked = applyRagToRouteDraft(withCalendarDates, ragCandidates);
+  return applyRagToRouteDraft(withCalendarDates, ragCandidates);
+}
+
+async function finalizeRouteDraft(
+  draft: GeneratedRouteDraft,
+  input: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+  ragCandidates: RagAttractionCandidate[],
+  playbookMatches: MatchedRoutePlaybook[],
+): Promise<GeneratedRouteDraft> {
+  const linked = await prepareRouteDraftBeforeEnrich(draft, input, intent, ragCandidates);
   const enriched = await enrichRouteDraft(linked, {
     intent,
     locale: input.locale,
@@ -180,9 +189,15 @@ function scoreTemplate(template: RouteTemplate, city: string | null, days: numbe
 
 export type GenerationSource = 'llm' | 'template';
 
+export interface GenerateRouteOptions {
+  /** Agent Tool 链：仅返回 LLM/RAG 对齐后的 draft，不跑 Enricher/校验 */
+  draftOnly?: boolean;
+}
+
 /** 优先 LLM（可选 DeepSeek / LM Studio），失败则回退模板 */
 export async function generateRoute(
   input: GenerateRouteInput,
+  options?: GenerateRouteOptions,
 ): Promise<
   GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string; intent: TravelIntentSnapshot }
 > {
@@ -198,16 +213,44 @@ export async function generateRoute(
     playbookMatches,
   };
 
+  const completeDraft = async (
+    draft: GeneratedRouteDraft,
+    generationSource: GenerationSource,
+    llmProvider?: string,
+  ) => {
+    if (options?.draftOnly) {
+      const prepared = await prepareRouteDraftBeforeEnrich(
+        draft,
+        enrichedInput,
+        intent,
+        ragCandidates,
+      );
+      return {
+        ...prepared,
+        generationSource,
+        llmProvider,
+        intent,
+      };
+    }
+    const finalized = await finalizeRouteDraft(
+      draft,
+      enrichedInput,
+      intent,
+      ragCandidates,
+      playbookMatches,
+    );
+    return {
+      ...finalized,
+      generationSource,
+      llmProvider,
+      intent,
+    };
+  };
+
   if (canUseAiServiceForRoute()) {
     try {
       const draft = await generateRouteFromAiService(enrichedInput);
-      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates, playbookMatches);
-      return {
-        ...finalized,
-        generationSource: 'llm',
-        llmProvider: draft.llmProvider,
-        intent,
-      };
+      return await completeDraft(draft, 'llm', draft.llmProvider);
     } catch (err) {
       console.warn(
         '[route-generator] Python AI 微服务失败，回退 Node LLM:',
@@ -237,27 +280,10 @@ export async function generateRoute(
           input.locale,
         );
         if (ragDraft) {
-          const finalized = await finalizeRouteDraft(
-            ragDraft,
-            enrichedInput,
-            intent,
-            ragCandidates,
-            playbookMatches,
-          );
-          return {
-            ...finalized,
-            generationSource: 'template',
-            intent,
-          };
+          return await completeDraft(ragDraft, 'template');
         }
       }
-      const finalized = await finalizeRouteDraft(draft, enrichedInput, intent, ragCandidates, playbookMatches);
-      return {
-        ...finalized,
-        generationSource: 'llm',
-        llmProvider: draft.llmProvider,
-        intent,
-      };
+      return await completeDraft(draft, 'llm', draft.llmProvider);
     } catch (err) {
       console.warn(
         '[route-generator] LLM 生成失败，回退模板:',
@@ -267,12 +293,7 @@ export async function generateRoute(
   }
 
   const templateDraft = generateRouteFromTemplate(enrichedInput, intent, ragCandidates);
-  const finalized = await finalizeRouteDraft(templateDraft, enrichedInput, intent, ragCandidates, playbookMatches);
-  return {
-    ...finalized,
-    generationSource: 'template',
-    intent,
-  };
+  return await completeDraft(templateDraft, 'template');
 }
 
 /** 基于模板匹配（LLM 不可用时的降级方案） */

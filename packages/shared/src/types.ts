@@ -423,6 +423,22 @@ export interface PlanSessionMessageInfo {
   createdAt: string;
 }
 
+/** C7-b：Agent Tool 调用轨迹（写入 plan_sessions.agent_state） */
+export interface AgentToolTraceEntry {
+  tool: string;
+  ok: boolean;
+  ms: number;
+}
+
+/** C7-b：规划会话 Agent 编排状态（JSON 列） */
+export interface PlanSessionAgentState {
+  lastRoutedIntent: string;
+  /** agent = 走 runAgentPlan；pipeline = 降级或未开 flag */
+  generationPath: 'agent' | 'pipeline';
+  toolTrace: AgentToolTraceEntry[];
+  assistantHint?: string;
+}
+
 /** 规划会话摘要（列表） */
 export interface PlanSessionSummary {
   id: number;
@@ -432,6 +448,8 @@ export interface PlanSessionSummary {
   title: string | null;
   messageCount: number;
   intentSnapshot?: TravelIntentSnapshot | null;
+  /** C7-b：最近一次 Agent 编排状态（追问 append 后更新） */
+  agentState?: PlanSessionAgentState | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -487,6 +505,8 @@ export interface PlanSessionActionResult extends TravelRouteInfo {
   memberLevelLabel?: string;
   generationSource?: 'llm' | 'template';
   llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
+  /** C7-b：本次操作 Agent 状态（与 DB agent_state 一致） */
+  agentState?: PlanSessionAgentState | null;
 }
 
 export interface OrderInfo {

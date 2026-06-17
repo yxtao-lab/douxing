@@ -534,13 +534,22 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 **Body**：同 `POST /api/routes/generate`
 
-**响应 `data`**：`PlanSessionActionResult`（含 `sessionId`、`candidates` 等）
+**响应 `data`**：`PlanSessionActionResult`（含 `sessionId`、`candidates`、`agentState` 等）
+
+`agentState`（C7-b，追问且 Agent 开启时更新）：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `lastRoutedIntent` | string | 最近一次意图路由，如 `tweak_day` |
+| `generationPath` | `'agent'` \| `'pipeline'` | Agent 成功 / 管道降级 |
+| `toolTrace` | `{ tool, ok, ms }[]` | Tool 调用链（非字符串） |
+| `assistantHint` | string? | Agent 侧提示（可选） |
 
 ### GET `/:sessionId`
 
 会话详情（消息、路线、候选）。
 
-**响应 `data`**：`PlanSessionInfo`
+**响应 `data`**：`PlanSessionInfo`（含 `agentState`，结构同上）
 
 ### POST `/:sessionId/messages`
 
@@ -957,6 +966,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
+| POST | `/api/agent/route-intent` | 追问意图路由（body: `{ message }` → `RoutedAgentIntent`） |
 | GET | `/api/agent/tools` | 列出可用 Tool 名称 |
 | POST | `/api/agent/tools/:name` | 执行指定 Tool |
 
@@ -971,6 +981,9 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 | `enrich_route` | Enricher 增强住/行/班次 |
 | `validate_route` | Zod + 规则校验（可选 autoFix） |
 | `patch_route_day` | 局部修改某一天 POI |
+| `tune_route_budget` | 按新预算校正 draft（Step 4） |
+| `answer_food_qa` | 美食问答文案（不生成路线） |
+| `select_plan_variant` | 解析方案字母并返回 routeId |
 | `recall_user_memory` | 召回 H3 宠物记忆 |
 | `write_trip_memory` | 写入行程/偏好记忆 |
 

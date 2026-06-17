@@ -2,7 +2,7 @@
 
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
-> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 1**  
+> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 6**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：2.2  
@@ -13,7 +13,7 @@
 
 ### 实现进度速览（2026-06-16）
 
-> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 1 统一意图路由**。
+> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 6 i18n agent.status**。
 
 | 步 | 状态 | 已落地 | 待完成（对应 Step） |
 |----|------|--------|---------------------|
@@ -298,17 +298,12 @@ Node LLM (DeepSeek / LM Studio / auto)
 ### 5.3 Agent 状态（PlanAgentState）
 
 ```typescript
-// 概念模型（C7-b 起写入 plan_sessions.agent_state JSON）
-interface PlanAgentState {
-  sessionId: number;
-  userId: number;
-  messages: PlanChatMessage[];
-  intent: TravelIntentSnapshot;
-  currentRoute: PlanRouteSnapshot | null;
-  selectedVariantKey: string | null;
-  lastAction: 'full_generate' | 'patch_day' | 'budget_tune' | 'select_variant' | 'qa' | null;
-  toolTrace: Array<{ tool: string; input: unknown; outputSummary: string; ms: number }>;
-  locale: LocaleCode;
+// 持久化模型（C7-b Step 3，写入 plan_sessions.agent_state JSON）
+interface PlanSessionAgentState {
+  lastRoutedIntent: string;
+  generationPath: 'agent' | 'pipeline';
+  toolTrace: Array<{ tool: string; ok: boolean; ms: number }>;
+  assistantHint?: string;
 }
 ```
 
@@ -436,7 +431,7 @@ flowchart TD
 packages/ai-service/
   app/
     agent/
-      graph.py           # ✅ run_plan_agent：意图路由 + Tool 链（C7-a/b）
+      graph.py           # ✅ run_plan_agent：Node 意图路由 + enrich/validate 全量链（C7-b Step 1～2）
       __init__.py
     tools/
       node_client.py     # ✅ HTTP 调 Node Tool API（x-agent-tool-secret）

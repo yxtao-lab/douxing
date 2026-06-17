@@ -12,22 +12,22 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 1 — 统一 Python / Node 意图路由**
+> **下一项工作：Step 6 — i18n `agent.status.*`**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | ai-service `graph.py` 不再自写简化规则；改为调用 Node `routeAgentIntent`（新增 `POST /api/agent/route-intent` 或等价方案） |
-| **改哪些文件** | `packages/ai-service/app/agent/graph.py` · `packages/server/src/services/agent-intent-router.service.ts` · `packages/server/src/routes/agent-tools.ts`（或新 route） |
-| **完成标准** | `agent:intent-cases` 仍全绿；graph 使用 `dayIndex` / `excludePoiNames` / `relaxed`，删除「第三天」硬编码 |
+| **做什么** | `@douxing/shared` 增加 Tool 进度文案；PC/mobile 规划页可展示 |
+| **改哪些文件** | `packages/shared/src/i18n/` · 双端规划页 |
+| **完成标准** | zh-CN/en-US Tool 进度文案齐全；无用户可见硬编码 |
 | **预估** | 1 天 |
-| **完成后** | 进入 **Step 2**（补全 Agent 全量链 `enrich_route`） |
+| **完成后** | 进入 **Step 7**（SSE 流式状态后端） |
 
 **本地前置**：`.env` 配好 `AI_SERVICE_ENABLED=true`、`AGENT_PLAN_ENABLED=true`、`AGENT_TOOL_SECRET`。
 
 ### 0.2 整体进度
 
 ```text
-[████████░░░░░░░░░░░░] 约 35%  —  C/H9 管道已验收；C7-a 已落地；C7-b 约半
+[████████████░░░░░░░░] 约 55%  —  C/H9 管道已验收；C7-b Step 1～5 已落地
 
 当前阶段：Phase 1 · C7-b Agent 追问闭环
 下一里程碑：M1 — C7-b 验收（Step 1～9）
@@ -57,11 +57,11 @@
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准（勾选即完成） |
 |------|------|------|-------------|------------------------|
-| **1** | [ ] | **统一意图路由** | graph.py → Node `routeAgentIntent` | [ ] 无双套规则 [ ] dayIndex 动态 [ ] 10 用例仍绿 |
-| **2** | [ ] | **补 enrich_route 全量链** | graph.py 全量分支 | [ ] 全量 Agent 输出含住/行/polyline [ ] 字段与管道对齐 |
-| **3** | [ ] | **修正 agent_state.toolTrace** | `plan-session.service.ts` | [ ] 存真实 toolTrace 数组 [ ] 非 routed.route 字符串 |
-| **4** | [ ] | **budget/lodging/qa/select 分支** | graph + Tool/服务 | [ ] 预算/住宿/美食问答/选方案 4 类端到端 [ ] qa 不触发生成 |
-| **5** | [ ] | **追问端到端联调** | DB + mobile + PC | [ ] 「第三天轻松点」day1～2 不变 [ ] 「别去 XX」仅换 POI [ ] 失败降级管道 |
+| **1** | [x] | **统一意图路由** | graph.py → Node `routeAgentIntent` | [x] 无双套规则 [x] dayIndex 动态 [x] 10 用例仍绿 |
+| **2** | [x] | **补 enrich_route 全量链** | graph.py 全量分支 | [x] 全量 Agent 输出含住/行/polyline [x] 字段与管道对齐 |
+| **3** | [x] | **修正 agent_state.toolTrace** | `plan-session.service.ts` | [x] 存真实 toolTrace 数组 [x] 非 routed.route 字符串 |
+| **4** | [x] | **budget/lodging/qa/select 分支** | graph + Tool/服务 | [x] 预算/住宿/美食问答/选方案 4 类端到端 [x] qa 不触发生成 |
+| **5** | [x] | **追问端到端联调** | DB + mobile + PC | [x] 「第三天轻松点」day1～2 不变 [x] 「别去 XX」仅换 POI [x] 失败降级管道 |
 | **6** | [ ] | **i18n `agent.status.*`** | `@douxing/shared` + build | [ ] zh-CN/en-US Tool 进度文案齐全 [ ] 无用户可见硬编码 |
 | **7** | [ ] | **SSE 流式状态（后端）** | `GET /api/plan-sessions/:id/stream` | [ ] 推送 tool_call/assistant/done [ ] 超时与错误可感知 |
 | **8** | [ ] | **前端 SSE + 进度 UI** | PC `usePlanPage` + mobile overlay | [ ] 遮罩展示 Tool 列表 [ ] locale 切换正确 [ ] SSE 失败降级 spinner |
@@ -304,18 +304,44 @@ graph.py 首步 HTTP 调用，删除 _route_intent 本地函数
 **Step 2 · enrich 链**
 
 ```text
-plan_new 分支在 generate_route_draft 后必须 enrich_route → validate_route
-tweak 分支 patch 后 enrich_route(dayIndex) → validate_route
+generate_route_draft（draftOnly，不含 Enricher）→ enrich_route → validate_route
+patch_route_day（skipFinalize）→ enrich_route → validate_route
+generate-route-draft.tool / patch-route-day.tool 默认走 Agent 链；管道 generateRoute 仍走完整 finalize
 ```
+
+**Step 3 · agent_state.toolTrace**
+
+```text
+appendPlanSessionMessage → runAgentPlan → agentState.toolTrace = agentResult.toolTrace（数组）
+generationPath: agent | pipeline；GET 会话详情与 append 响应均返回 agentState
+```
+
+**Step 3 验收**：追问后 DB `plan_sessions.agent_state.toolTrace` 为 `[{ tool, ok, ms }, …]`；管道降级时 `generationPath=pipeline` 且 `toolTrace=[]`。
 
 **Step 4 · 四类分支**
 
-| 意图 | 行为 |
-|------|------|
-| budget_tune | 重算预算约束 / patch 降档 POI |
-| lodging_tune | Enricher 住宿偏好重跑 |
-| qa_food | retrieve_attractions(美食) → 仅文案 |
-| select_variant | selectPlanSessionCandidate，无 LLM |
+| 意图 | graph / Tool | 行为 |
+|------|--------------|------|
+| budget_tune | `tune_route_budget` → enrich → validate | 更新 budgetRange，重跑 Enricher |
+| lodging_tune | enrich → validate | 按新住宿偏好重分配住店 |
+| qa_food | `answer_food_qa` | 仅返回美食文案，**不** generate |
+| select_variant | `select_plan_variant` | 解析方案字母，切换候选，无 LLM |
+
+**Step 5 · 追问 E2E**
+
+```bash
+pnpm --filter @douxing/server agent:e2e-cases   # 局部修改：day1～2 不变 / 排除 POI
+pnpm --filter @douxing/server agent:intent-cases
+pnpm --filter @douxing/server agent:branch-cases
+```
+
+**Step 5 手测清单**（`AGENT_PLAN_ENABLED=true`，Node + ai-service）：
+
+1. 创建 3 日游会话 → 追问「第三天轻松一点」→ 第 1～2 天景点名不变
+2. 追问「别去河坊街」→ 仅含河坊街的那天移除/替换，其它天不变
+3. 停 ai-service → 追问仍返回新方案（管道降级，`generationPath=pipeline`）
+
+**Step 5 代码要点**：`patch_route_day` 支持无 `dayIndex` 时按 POI 名定位天数；排除模式只换被删 POI 槽位，不重写整天。
 
 **Step 7～8 · SSE 契约**
 
@@ -377,6 +403,11 @@ pnpm --filter @douxing/server exec tsc --noEmit
 pnpm dev
 ```
 
+```bash
+# Step 2 手测：POST /v1/agent/plan 返回 toolTrace 含 enrich_route → validate_route
+# draft.routeDetail.days[*] 含 lodging / transit / polyline（与管道 Enricher 一致）
+```
+
 详见 [env-environments.md §7](./env-environments.md#7-agent-与向量-ragc7--c3-扩展)。
 
 ---
@@ -398,8 +429,12 @@ pnpm dev
 - [x] flag 关 = 现网
 - [x] Tool 失败降级
 - [x] 意图 10 用例脚本
-- [ ] 统一路由 + enrich 链 + 四类分支
-- [ ] 追问 day 保留 + SSE + i18n
+- [x] 统一路由
+- [x] enrich 链（Step 2）
+- [x] toolTrace 持久化（Step 3）
+- [x] 四类分支（Step 4）
+- [x] 追问 day 保留（Step 5）
+- [ ] SSE + i18n
 
 ### 8.3 M2 Agent 上 staging（Step 10～15）
 
@@ -467,4 +502,4 @@ pnpm dev
 | 日期 | 版本 | 说明 |
 |------|------|------|
 | 2026-06-16 | 1.0 | 初版 |
-| 2026-06-16 | 2.0 | **重构**：§0 当前指针 · Step 1～42 主执行路径 · M0～M6 里程碑 · 全部验收定义 |
+| 2026-06-16 | 2.4 | Step 5 追问 E2E：patch 排除 POI + agent:e2e-cases |

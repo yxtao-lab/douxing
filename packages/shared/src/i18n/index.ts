@@ -31,6 +31,9 @@ export {
   buildMultiCandidateAssistantReply,
   buildPlanAssistantReply,
   buildPlanCandidateSwitchedReply,
+  buildFoodQaAssistantReply,
+  buildBudgetTunedAssistantHint,
+  buildLodgingTunedAssistantHint,
 } from './plan-messages.js';
 export {
   formatPlanVariantLabel,

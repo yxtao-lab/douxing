@@ -15,6 +15,8 @@
     "sync:open-hours": "tsx src/scripts/sync-open-hours.ts",
     "sync:amap-pois": "tsx src/scripts/sync-amap-pois.ts",
     "agent:intent-cases": "tsx src/scripts/agent-intent-cases.ts",
+    "agent:branch-cases": "tsx src/scripts/agent-branch-cases.ts",
+    "agent:e2e-cases": "tsx src/scripts/agent-e2e-cases.ts",
     "enrich:attraction-images": "tsx src/scripts/enrich-attraction-images.ts",
     "cleanup:orphan-covers": "tsx src/scripts/cleanup-orphan-attraction-covers.ts",
     "migrate:covers-to-oss": "tsx src/scripts/migrate-attraction-covers-to-oss.ts",

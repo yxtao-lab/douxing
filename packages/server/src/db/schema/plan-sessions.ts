@@ -7,6 +7,7 @@ import {
   timestamp,
   json,
 } from 'drizzle-orm/mysql-core';
+import type { PlanSessionAgentState } from '@douxing/shared';
 import { users } from './users.js';
 import { travelRoutes } from './travel-routes.js';
 
@@ -30,7 +31,7 @@ export const planSessions = mysqlTable('plan_sessions', {
   title: varchar('title', { length: 128 }),
   intentSnapshot: json('intent_snapshot').$type<Record<string, unknown>>(),
   /** C7-b：Agent 编排状态 */
-  agentState: json('agent_state').$type<Record<string, unknown>>(),
+  agentState: json('agent_state').$type<PlanSessionAgentState | null>(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });

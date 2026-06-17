@@ -19,6 +19,12 @@ const PLAN_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'plan.assistant.budgetSuffix': '，预算 {budget}',
     'plan.assistant.ragHint': '\n已引用内容库景点 {count} 处',
     'plan.assistant.switched': '已切换为「{label}」：{name}',
+    'plan.assistant.foodQa.intro': '{city}以下美食值得一试：',
+    'plan.assistant.foodQa.item': '· {name}{priceSuffix}',
+    'plan.assistant.foodQa.priceSuffix': '（约 {price} 元）',
+    'plan.assistant.foodQa.empty': '暂未找到相关美食推荐，您可以告诉我更具体的城市或口味偏好。',
+    'plan.assistant.budgetTuned': '已按新预算调整方案。',
+    'plan.assistant.lodgingTuned': '已按住宿偏好更新住店安排。',
   },
   'en-US': {
     'plan.intent.days': '{days} days',
@@ -33,6 +39,13 @@ const PLAN_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'plan.assistant.budgetSuffix': ', budget {budget}',
     'plan.assistant.ragHint': '\nMatched {count} POIs from library',
     'plan.assistant.switched': 'Switched to 「{label}」: {name}',
+    'plan.assistant.foodQa.intro': 'Food picks in {city}:',
+    'plan.assistant.foodQa.item': '· {name}{priceSuffix}',
+    'plan.assistant.foodQa.priceSuffix': ' (~{price})',
+    'plan.assistant.foodQa.empty':
+      'No food picks found yet. Try a specific city or cuisine preference.',
+    'plan.assistant.budgetTuned': 'Plan updated to match your new budget.',
+    'plan.assistant.lodgingTuned': 'Lodging updated to match your preferences.',
   },
 };
 
@@ -143,4 +156,40 @@ export function buildPlanCandidateSwitchedReply(
 ): string {
   const label = formatPlanVariantLabel(variantKey, locale);
   return planMsg('plan.assistant.switched', locale, { label, name: routeName });
+}
+
+export interface FoodQaItem {
+  name: string;
+  description?: string;
+  ticketPrice?: number | null;
+}
+
+/** 美食问答助手回复（不修改路线） */
+export function buildFoodQaAssistantReply(params: {
+  city: string;
+  items: FoodQaItem[];
+  locale?: LocaleCode;
+}): string {
+  const locale = params.locale ?? DEFAULT_LOCALE;
+  if (params.items.length === 0) {
+    return planMsg('plan.assistant.foodQa.empty', locale);
+  }
+  const cityLabel = params.city || (locale === 'en-US' ? 'this area' : '当地');
+  const lines = [planMsg('plan.assistant.foodQa.intro', locale, { city: cityLabel })];
+  for (const item of params.items) {
+    const priceSuffix =
+      item.ticketPrice != null && item.ticketPrice > 0
+        ? planMsg('plan.assistant.foodQa.priceSuffix', locale, { price: item.ticketPrice })
+        : '';
+    lines.push(planMsg('plan.assistant.foodQa.item', locale, { name: item.name, priceSuffix }));
+  }
+  return lines.join('\n');
+}
+
+export function buildBudgetTunedAssistantHint(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return planMsg('plan.assistant.budgetTuned', locale);
+}
+
+export function buildLodgingTunedAssistantHint(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return planMsg('plan.assistant.lodgingTuned', locale);
 }

@@ -2,6 +2,7 @@ import { eq, desc, and, sql } from 'drizzle-orm';
 import type {
   PlanChatMessage,
   PlanSessionActionResult,
+  PlanSessionAgentState,
   PlanSessionInfo,
   PlanSessionMessageInfo,
   PlanSessionSummary,
@@ -36,7 +37,9 @@ import {
   loadPlanUserContext,
   mergeIntentWithUserContext,
 } from './plan-user-context.service.js';
-import { runAgentPlan, isAgentPlanEnabled } from './agent-plan-client.service.js';
+import { runAgentPlan, isAgentPlanEnabled, type AgentPlanResult } from './agent-plan-client.service.js';
+import { answerFoodQa } from './answer-food-qa.service.js';
+import { resolvePlanVariantSelection } from './select-plan-variant.service.js';
 import { writeTripMemory, PetMemoryType } from './pet-memory.service.js';
 import { routeAgentIntent } from './agent-intent-router.service.js';
 import {
@@ -47,6 +50,85 @@ import { ApiError, ApiMessageKey, canAppendPlanByMemberLevel, getMemberLevelLabe
 import type { PlanRouteCandidate } from '@douxing/shared';
 
 const SESSION_TITLE_MAX = 40;
+
+function parsePlanSessionAgentState(raw: unknown): PlanSessionAgentState | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const record = raw as Record<string, unknown>;
+  const toolTrace = record.toolTrace;
+  if (!Array.isArray(toolTrace)) return null;
+  const normalizedTrace = toolTrace
+    .filter(
+      (entry): entry is PlanSessionAgentState['toolTrace'][number] =>
+        !!entry
+        && typeof entry === 'object'
+        && typeof (entry as { tool?: unknown }).tool === 'string'
+        && typeof (entry as { ok?: unknown }).ok === 'boolean'
+        && typeof (entry as { ms?: unknown }).ms === 'number',
+    )
+    .map((entry) => ({
+      tool: entry.tool,
+      ok: entry.ok,
+      ms: entry.ms,
+    }));
+  const generationPath = record.generationPath === 'agent' ? 'agent' : 'pipeline';
+  const lastRoutedIntent =
+    typeof record.lastRoutedIntent === 'string' ? record.lastRoutedIntent : 'unknown';
+  const assistantHint =
+    typeof record.assistantHint === 'string' ? record.assistantHint : undefined;
+  return {
+    lastRoutedIntent,
+    generationPath,
+    toolTrace: normalizedTrace,
+    assistantHint,
+  };
+}
+
+function buildPersistedAgentState(
+  routedRoute: string,
+  agentResult: AgentPlanResult | null | undefined,
+): PlanSessionAgentState {
+  if (
+    agentResult
+    && (agentResult.draft || agentResult.assistantMessage || agentResult.selectedRouteId != null)
+  ) {
+    return {
+      lastRoutedIntent: agentResult.routedIntent || routedRoute,
+      generationPath: 'agent',
+      toolTrace: agentResult.toolTrace ?? [],
+      assistantHint: agentResult.assistantHint,
+    };
+  }
+  return {
+    lastRoutedIntent: routedRoute,
+    generationPath: 'pipeline',
+    toolTrace: [],
+  };
+}
+
+async function applyPlanVariantToSession(
+  sessionId: number,
+  userId: number,
+  routeId: number,
+): Promise<void> {
+  const db = getDb();
+  await db
+    .update(planSessionCandidates)
+    .set({ isSelected: 0 })
+    .where(eq(planSessionCandidates.sessionId, sessionId));
+  await db
+    .update(planSessionCandidates)
+    .set({ isSelected: 1 })
+    .where(
+      and(
+        eq(planSessionCandidates.sessionId, sessionId),
+        eq(planSessionCandidates.routeId, routeId),
+      ),
+    );
+  await db
+    .update(planSessions)
+    .set({ routeId, updatedAt: new Date() })
+    .where(eq(planSessions.id, sessionId));
+}
 
 function truncateTitle(text: string): string {
   const trimmed = text.trim();
@@ -142,6 +224,7 @@ function buildActionResult(
     memberPlanCandidateCount?: number;
     memberLevel?: number;
     memberLevelLabel?: string;
+    agentState?: PlanSessionAgentState | null;
   },
 ): PlanSessionActionResult {
   return {
@@ -156,6 +239,7 @@ function buildActionResult(
     memberLevelLabel: meta.memberLevelLabel,
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
+    agentState: meta.agentState ?? null,
   };
 }
 
@@ -353,6 +437,7 @@ export async function getPlanSessionDetail(
     title: session.title,
     messageCount: messages.length,
     intentSnapshot: (session.intentSnapshot as TravelIntentSnapshot | null) ?? null,
+    agentState: parsePlanSessionAgentState(session.agentState),
     createdAt: toIso(session.createdAt),
     updatedAt: toIso(session.updatedAt),
     messages,
@@ -476,24 +561,7 @@ export async function selectPlanSessionCandidate(
     throw new ApiError(ApiMessageKey.PLAN_INVALID_CANDIDATE);
   }
 
-  const db = getDb();
-  await db
-    .update(planSessionCandidates)
-    .set({ isSelected: 0 })
-    .where(eq(planSessionCandidates.sessionId, sessionId));
-  await db
-    .update(planSessionCandidates)
-    .set({ isSelected: 1 })
-    .where(
-      and(
-        eq(planSessionCandidates.sessionId, sessionId),
-        eq(planSessionCandidates.routeId, routeId),
-      ),
-    );
-  await db
-    .update(planSessions)
-    .set({ routeId, updatedAt: new Date() })
-    .where(eq(planSessions.id, sessionId));
+  await applyPlanVariantToSession(sessionId, userId, routeId);
 
   const route = await getRouteById(routeId, userId);
   if (!route) return null;
@@ -552,11 +620,21 @@ export async function appendPlanSessionMessage(
 
   let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
   const routed = routeAgentIntent(text);
+  let agentResult: AgentPlanResult | null = null;
+  let assistantMessageOverride: string | undefined;
+
+  const agentDraftUpdateRoutes = new Set([
+    'tweak_day',
+    'tweak_poi',
+    'budget_tune',
+    'lodging_tune',
+  ]);
 
   if (isAgentPlanEnabled()) {
-    const agentResult = await runAgentPlan({
+    agentResult = await runAgentPlan({
       prompt: text,
       userId,
+      sessionId,
       history,
       provider: session.provider ?? 'auto',
       locale,
@@ -564,55 +642,111 @@ export async function appendPlanSessionMessage(
       intent: resolvedIntent,
     });
 
-    if (agentResult?.draft) {
-      if (routed.route === 'tweak_day' || routed.route === 'tweak_poi') {
-        const updated = await updateRouteFromAgentDraft(session.routeId, userId, agentResult.draft, {
-          sourcePrompt: text,
-          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-          intent: agentResult.draft.intent ?? resolvedIntent,
-        });
-        if (updated) {
-          result = {
-            ...updated,
-            llmProvider: undefined,
-            intent: updated.intent ?? resolvedIntent,
-          };
-        }
-      } else {
-        const generateInput: GenerateRouteInput = {
-          prompt: text,
-          provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-          history,
+    if (agentResult?.selectedRouteId != null) {
+      await applyPlanVariantToSession(sessionId, userId, agentResult.selectedRouteId);
+      const switchedRoute = await getRouteById(agentResult.selectedRouteId, userId);
+      if (switchedRoute) {
+        result = {
+          route: switchedRoute,
+          generationSource: 'llm',
+          llmProvider: undefined,
           intent: resolvedIntent,
-          locale,
-          userId,
-          excludePoiNames: userContext.excludePoiNames,
-          boostPoiNames: userContext.boostPoiNames,
         };
-        result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+        assistantMessageOverride = agentResult.assistantMessage;
       }
+    } else if (agentResult?.assistantMessage && !agentResult.draft) {
+      result = {
+        route: currentRoute,
+        generationSource: 'llm',
+        llmProvider: undefined,
+        intent: resolvedIntent,
+      };
+      assistantMessageOverride = agentResult.assistantMessage;
+    } else if (agentResult?.draft && agentDraftUpdateRoutes.has(routed.route)) {
+      const updated = await updateRouteFromAgentDraft(session.routeId, userId, agentResult.draft, {
+        sourcePrompt: text,
+        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+        intent: agentResult.draft.intent ?? resolvedIntent,
+      });
+      if (updated) {
+        result = {
+          ...updated,
+          llmProvider: undefined,
+          intent: updated.intent ?? resolvedIntent,
+        };
+      }
+    } else if (
+      agentResult?.draft
+      && routed.route !== 'qa_food'
+      && routed.route !== 'select_variant'
+    ) {
+      const generateInput: GenerateRouteInput = {
+        prompt: text,
+        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+        history,
+        intent: resolvedIntent,
+        locale,
+        userId,
+        excludePoiNames: userContext.excludePoiNames,
+        boostPoiNames: userContext.boostPoiNames,
+      };
+      result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
     }
   }
 
   if (!result) {
-    const generateInput: GenerateRouteInput = {
-      prompt: text,
-      provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
-      history,
-      intent: resolvedIntent,
-      locale,
-      userId,
-      excludePoiNames: userContext.excludePoiNames,
-      boostPoiNames: userContext.boostPoiNames,
-    };
-    result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+    if (routed.route === 'qa_food') {
+      assistantMessageOverride = await answerFoodQa({
+        intent: resolvedIntent,
+        prompt: text,
+        locale,
+        userId,
+      });
+      result = {
+        route: currentRoute,
+        generationSource: 'llm',
+        llmProvider: undefined,
+        intent: resolvedIntent,
+      };
+    } else if (routed.route === 'select_variant') {
+      const selected = await resolvePlanVariantSelection(sessionId, userId, text, locale);
+      if (selected) {
+        await applyPlanVariantToSession(sessionId, userId, selected.routeId);
+        const switchedRoute = await getRouteById(selected.routeId, userId);
+        if (switchedRoute) {
+          result = {
+            route: switchedRoute,
+            generationSource: 'llm',
+            llmProvider: undefined,
+            intent: resolvedIntent,
+          };
+          assistantMessageOverride = selected.assistantMessage;
+        }
+      }
+    } else {
+      const generateInput: GenerateRouteInput = {
+        prompt: text,
+        provider: (session.provider as GenerateRouteInput['provider']) ?? 'auto',
+        history,
+        intent: resolvedIntent,
+        locale,
+        userId,
+        excludePoiNames: userContext.excludePoiNames,
+        boostPoiNames: userContext.boostPoiNames,
+      };
+      result = await regenerateRouteFromPrompt(session.routeId, userId, generateInput);
+    }
   }
   if (!result) return null;
 
   const { route, generationSource, llmProvider, intent: resultIntent } = result;
-  const assistantMessage = buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
-  const snapshot = snapshotFromRoute(route);
+  const assistantMessage =
+    assistantMessageOverride
+    ?? buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
+  const snapshot =
+    routed.route === 'qa_food' ? null : snapshotFromRoute(route);
   const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
+  const persistedAgentState = buildPersistedAgentState(routed.route, agentResult);
 
   const db = getDb();
   await db.insert(planSessionMessages).values([
@@ -629,10 +763,7 @@ export async function appendPlanSessionMessage(
     .set({
       updatedAt: new Date(),
       intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
-      agentState: {
-        lastRoutedIntent: routed.route,
-        toolTrace: isAgentPlanEnabled() ? routed.route : 'pipeline',
-      },
+      agentState: persistedAgentState,
     })
     .where(eq(planSessions.id, sessionId));
 
@@ -642,5 +773,6 @@ export async function appendPlanSessionMessage(
     intentSnapshot: resultIntent ?? resolvedIntent,
     ragMatchedCount: readRagMatchedCount(route),
     candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
+    agentState: persistedAgentState,
   });
 }

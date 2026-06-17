@@ -60,12 +60,33 @@ export const validateRouteInputSchema = z.object({
 
 export const patchRouteDayInputSchema = z.object({
   draft: z.record(z.unknown()),
-  dayIndex: z.number().int().min(0),
+  dayIndex: z.number().int().min(0).optional(),
   intent: z.record(z.unknown()),
   locale: z.enum(['zh-CN', 'en-US']).optional(),
   relaxed: z.boolean().optional(),
   excludeNames: z.array(z.string()).optional(),
   prompt: z.string().optional(),
+  skipFinalize: z.boolean().optional(),
+});
+
+export const tuneRouteBudgetInputSchema = z.object({
+  draft: z.record(z.unknown()),
+  intent: z.record(z.unknown()),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+});
+
+export const answerFoodQaInputSchema = z.object({
+  intent: z.record(z.unknown()),
+  prompt: z.string().min(1),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+  userId: z.number().int().positive().optional(),
+});
+
+export const selectPlanVariantInputSchema = z.object({
+  sessionId: z.number().int().positive(),
+  userId: z.number().int().positive(),
+  prompt: z.string().min(1),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
 });
 
 export const recallMemoryInputSchema = z.object({
@@ -90,5 +111,8 @@ export type ToolName =
   | 'enrich_route'
   | 'validate_route'
   | 'patch_route_day'
+  | 'tune_route_budget'
+  | 'answer_food_qa'
+  | 'select_plan_variant'
   | 'recall_user_memory'
   | 'write_trip_memory';

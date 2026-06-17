@@ -17,6 +17,7 @@ export async function runPatchRouteDayTool(raw: unknown) {
     relaxed: parsed.data.relaxed,
     excludeNames: parsed.data.excludeNames,
     prompt: parsed.data.prompt,
+    skipFinalize: parsed.data.skipFinalize ?? true,
   });
 
   return toolSuccess({ draft });

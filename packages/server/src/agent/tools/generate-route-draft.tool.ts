@@ -26,20 +26,23 @@ export async function runGenerateRouteDraftTool(raw: unknown) {
     boostPoiNames = context.boostPoiNames;
   }
 
-  const result = await generateRoute({
-    prompt: input.prompt,
-    days: input.days,
-    budget: input.budget,
-    provider: input.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
-    locale: input.locale as LocaleCode | undefined,
-    intent,
-    ragCandidates: input.ragCandidates as RagAttractionCandidate[] | undefined,
-    variantHint: input.variantHint,
-    variantKey: input.variantKey,
-    userId: input.userId,
-    excludePoiNames,
-    boostPoiNames,
-  });
+  const result = await generateRoute(
+    {
+      prompt: input.prompt,
+      days: input.days,
+      budget: input.budget,
+      provider: input.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
+      locale: input.locale as LocaleCode | undefined,
+      intent,
+      ragCandidates: input.ragCandidates as RagAttractionCandidate[] | undefined,
+      variantHint: input.variantHint,
+      variantKey: input.variantKey,
+      userId: input.userId,
+      excludePoiNames,
+      boostPoiNames,
+    },
+    { draftOnly: true },
+  );
 
   return toolSuccess({
     draft: result,
