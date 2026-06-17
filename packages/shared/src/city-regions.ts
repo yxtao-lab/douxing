@@ -1,4 +1,9 @@
 import type { LocaleCode } from './i18n/types.js';
+import {
+  buildNationalProvinceCityRegions,
+  findNationalProvinceSlugByCityName,
+  getNationalCityNamesByProvinceSlug,
+} from './china-admin-divisions.js';
 
 export interface CityRegionMeta {
   code: string;
@@ -23,114 +28,8 @@ const OTHER_PROVINCE_CODE = 'other';
 
 export { OTHER_PROVINCE_CODE };
 
-/** 省 / 市两级数据（与 city_code 预设对齐，可动态补充「其他」） */
-export const PROVINCE_CITY_REGIONS: ProvinceRegionMeta[] = [
-  {
-    code: 'beijing',
-    nameZh: '北京',
-    nameEn: 'Beijing',
-    cities: [{ code: 'beijing', nameZh: '北京', nameEn: 'Beijing' }],
-  },
-  {
-    code: 'shanghai',
-    nameZh: '上海',
-    nameEn: 'Shanghai',
-    cities: [{ code: 'shanghai', nameZh: '上海', nameEn: 'Shanghai' }],
-  },
-  {
-    code: 'chongqing',
-    nameZh: '重庆',
-    nameEn: 'Chongqing',
-    cities: [{ code: 'chongqing', nameZh: '重庆', nameEn: 'Chongqing' }],
-  },
-  {
-    code: 'zhejiang',
-    nameZh: '浙江',
-    nameEn: 'Zhejiang',
-    cities: [{ code: 'hangzhou', nameZh: '杭州', nameEn: 'Hangzhou' }],
-  },
-  {
-    code: 'sichuan',
-    nameZh: '四川',
-    nameEn: 'Sichuan',
-    cities: [{ code: 'chengdu', nameZh: '成都', nameEn: 'Chengdu' }],
-  },
-  {
-    code: 'shaanxi',
-    nameZh: '陕西',
-    nameEn: 'Shaanxi',
-    cities: [{ code: 'xian', nameZh: '西安', nameEn: "Xi'an" }],
-  },
-  {
-    code: 'guangdong',
-    nameZh: '广东',
-    nameEn: 'Guangdong',
-    cities: [
-      { code: 'guangzhou', nameZh: '广州', nameEn: 'Guangzhou' },
-      { code: 'shenzhen', nameZh: '深圳', nameEn: 'Shenzhen' },
-    ],
-  },
-  {
-    code: 'fujian',
-    nameZh: '福建',
-    nameEn: 'Fujian',
-    cities: [{ code: 'xiamen', nameZh: '厦门', nameEn: 'Xiamen' }],
-  },
-  {
-    code: 'jiangsu',
-    nameZh: '江苏',
-    nameEn: 'Jiangsu',
-    cities: [
-      { code: 'nanjing', nameZh: '南京', nameEn: 'Nanjing' },
-      { code: 'suzhou', nameZh: '苏州', nameEn: 'Suzhou' },
-    ],
-  },
-  {
-    code: 'hubei',
-    nameZh: '湖北',
-    nameEn: 'Hubei',
-    cities: [{ code: 'wuhan', nameZh: '武汉', nameEn: 'Wuhan' }],
-  },
-  {
-    code: 'hunan',
-    nameZh: '湖南',
-    nameEn: 'Hunan',
-    cities: [{ code: 'changsha', nameZh: '长沙', nameEn: 'Changsha' }],
-  },
-  {
-    code: 'shandong',
-    nameZh: '山东',
-    nameEn: 'Shandong',
-    cities: [{ code: 'qingdao', nameZh: '青岛', nameEn: 'Qingdao' }],
-  },
-  {
-    code: 'liaoning',
-    nameZh: '辽宁',
-    nameEn: 'Liaoning',
-    cities: [{ code: 'dalian', nameZh: '大连', nameEn: 'Dalian' }],
-  },
-  {
-    code: 'hainan',
-    nameZh: '海南',
-    nameEn: 'Hainan',
-    cities: [{ code: 'sanya', nameZh: '三亚', nameEn: 'Sanya' }],
-  },
-  {
-    code: 'yunnan',
-    nameZh: '云南',
-    nameEn: 'Yunnan',
-    cities: [
-      { code: 'lijiang', nameZh: '丽江', nameEn: 'Lijiang' },
-      { code: 'kunming', nameZh: '昆明', nameEn: 'Kunming' },
-    ],
-  },
-  {
-    code: 'guangxi',
-    nameZh: '广西',
-    nameEn: 'Guangxi',
-    cities: [{ code: 'guilin', nameZh: '桂林', nameEn: 'Guilin' }],
-  },
-];
+/** 省 / 市两级（全国地级，基于 cn-division） */
+export const PROVINCE_CITY_REGIONS: ProvinceRegionMeta[] = buildNationalProvinceCityRegions();
 
 const KNOWN_CITY_CODES = new Set(
   PROVINCE_CITY_REGIONS.flatMap((province) => province.cities.map((city) => city.code)),
@@ -148,6 +47,16 @@ export function findCityRegionByCode(cityCode: string): (CityRegionMeta & { prov
     }
   }
   return undefined;
+}
+
+/** 根据城市中文名（可带「市」后缀）查找所属省份 code — 全国地级 */
+export function findProvinceCodeByCityName(cityName: string): string | undefined {
+  return findNationalProvinceSlugByCityName(cityName);
+}
+
+/** 列出某省已知城市中文名（全国地级，用于 LLM 约束提示） */
+export function getCityNamesByProvinceCode(provinceCode: string): string[] {
+  return getNationalCityNamesByProvinceSlug(provinceCode);
 }
 
 export function getCityCodesInProvince(provinceCode: string): string[] {

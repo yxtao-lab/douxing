@@ -33,6 +33,7 @@ import {
 } from './route.service.js';
 import type { GeneratedRouteDraft, GenerateRouteInput } from './route-generator.service.js';
 import { buildIntentFromHistoryAsync } from './llm-intent-parser.service.js';
+import { finalizePlanningIntent } from './travel-intent.service.js';
 import {
   loadPlanUserContext,
   mergeIntentWithUserContext,
@@ -469,7 +470,9 @@ export async function createPlanSession(
     budget: input.budget,
   });
   const userContext = await loadPlanUserContext(userId);
-  const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
+  const resolvedIntent = finalizePlanningIntent(
+    mergeIntentWithUserContext(intent, userContext),
+  );
 
   const generateInput: GenerateRouteInput = {
     prompt,
@@ -634,13 +637,17 @@ export async function appendPlanSessionMessage(
   try {
     emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'running' });
 
+    const sessionIntent = (session.intentSnapshot as TravelIntentSnapshot | null) ?? null;
+
     const intent = await runPlanSessionTrackedTool(sessionId, 'parse_intent', () =>
-      buildIntentFromHistoryAsync(userHistory, text),
+      buildIntentFromHistoryAsync(userHistory, text, undefined, sessionIntent),
     );
     emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'done', ms: 0 });
 
     const userContext = await loadPlanUserContext(userId);
-    const resolvedIntent = mergeIntentWithUserContext(intent, userContext);
+    const resolvedIntent = finalizePlanningIntent(
+      mergeIntentWithUserContext(intent, userContext),
+    );
 
     let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
     const routed = routeAgentIntent(text);
@@ -714,6 +721,7 @@ export async function appendPlanSessionMessage(
           intent: resolvedIntent,
           locale,
           userId,
+          sessionId,
           excludePoiNames: userContext.excludePoiNames,
           boostPoiNames: userContext.boostPoiNames,
         };
@@ -764,6 +772,7 @@ export async function appendPlanSessionMessage(
           intent: resolvedIntent,
           locale,
           userId,
+          sessionId,
           excludePoiNames: userContext.excludePoiNames,
           boostPoiNames: userContext.boostPoiNames,
         };

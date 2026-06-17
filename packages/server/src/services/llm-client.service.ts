@@ -20,6 +20,7 @@ import {
 import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
 import { formatRagContextForLlm } from './attraction-rag.service.js';
 import { formatPlaybookContextForLlm, type MatchedRoutePlaybook } from './playbook-rag.service.js';
+import { traceNodeRouteGeneration } from '../observability/langfuse-client.service.js';
 
 const poiTypeEnum = z.enum([
   PoiCategory.ATTRACTION,
@@ -86,6 +87,11 @@ interface ChatCompletionResponse {
   choices?: Array<{
     message?: { content?: string };
   }>;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
   error?: { message?: string };
 }
 
@@ -137,7 +143,8 @@ JSON 结构：
 5. poiType=restaurant 时 name 必须是具体店名；鼓励填写 latitude、longitude。
 6. time 字段可留空字符串，不要编造交通或酒店时刻。
 7. 若用户消息中提供了「内容库候选 POI」JSON，poiType=attraction 的节点必须优先从中选用，name 与库内完全一致，cost 与坐标使用库内数据；不得编造库中不存在的景区名。
-8. 若提供了「玩法动线参考」，attractions 的排列顺序应尽量贴近其中的经典顺序；仍禁止输出 transit/lodging。`;
+8. 若提供了「玩法动线参考」，attractions 的排列顺序应尽量贴近其中的经典顺序；仍禁止输出 transit/lodging。
+9. 若用户约束中指定了区域排除，matchedCity 及所有游玩 POI 不得位于被排除省份境内。`;
 
 const MULTI_TURN_HINT = `
 8. 若对话历史中已有路线方案，用户可能在追问或要求修改（如增减天数、替换景点、调整预算），请结合上下文理解意图，输出完整更新后的 JSON（不要只输出 diff）。`;
@@ -292,6 +299,8 @@ export interface RoutePlannerMessageOptions {
   playbookMatches?: MatchedRoutePlaybook[];
   variantHint?: string;
   locale?: LocaleCode;
+  userId?: number;
+  sessionId?: number;
 }
 
 /** 与线上 LLM 调用一致的 messages（用于 SFT 数据集构造） */
@@ -345,6 +354,7 @@ async function chatCompletionWithProvider(
 
   const model = await resolveModelId(provider);
   const messages = buildRoutePlannerMessages(userPrompt, options);
+  const startedAt = Date.now();
 
   const baseBody = {
     model,
@@ -415,6 +425,27 @@ async function chatCompletionWithProvider(
     ),
   }));
 
+  try {
+    await traceNodeRouteGeneration({
+      prompt: userPrompt,
+      provider,
+      model,
+      outputPreview: content,
+      usage: data.usage
+        ? {
+            input: data.usage.prompt_tokens ?? 0,
+            output: data.usage.completion_tokens ?? 0,
+          }
+        : undefined,
+      durationMs: Date.now() - startedAt,
+      userId: options?.userId,
+      sessionId: options?.sessionId,
+      locale: options?.locale,
+    });
+  } catch (err) {
+    console.warn('[llm] Langfuse trace 失败:', err instanceof Error ? err.message : err);
+  }
+
   return result.data;
 }
 
@@ -431,6 +462,8 @@ export async function chatCompletionForRoute(
     playbookMatches?: MatchedRoutePlaybook[];
     variantHint?: string;
     locale?: LocaleCode;
+    userId?: number;
+    sessionId?: number;
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);

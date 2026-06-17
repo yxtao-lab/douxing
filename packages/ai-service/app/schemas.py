@@ -97,6 +97,8 @@ class GenerateRouteRequest(BaseModel):
     playbookMatches: list[PlaybookMatch] = Field(default_factory=list)
     variantHint: str | None = None
     locale: str | None = "zh-CN"
+    userId: int | None = None
+    sessionId: int | None = None
 
 
 class GenerateRouteResponse(BaseModel):
@@ -113,10 +115,16 @@ class ProviderStatus(BaseModel):
     error: str | None = None
 
 
+class ObservabilityStatus(BaseModel):
+    langfuse: bool = False
+    langfuseHost: str | None = None
+
+
 class ServiceStatusResponse(BaseModel):
     service: str
     version: str
     providers: list[ProviderStatus]
+    observability: ObservabilityStatus | None = None
 
 
 class AgentPlanRequest(BaseModel):

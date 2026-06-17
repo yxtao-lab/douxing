@@ -12,6 +12,11 @@ from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 
 from app.config import ProviderConfig, get_provider_config, resolve_provider_chain
+from app.observability.langfuse_client import (
+    get_langchain_callbacks,
+    record_route_generate_trace,
+    route_generate_trace,
+)
 from app.prompts import build_system_prompt
 from app.schemas import (
     GenerateRouteRequest,
@@ -24,24 +29,73 @@ from app.schemas import (
 )
 
 
-PROVINCE_NAME_BY_CODE = {
-    "beijing": "北京",
-    "shanghai": "上海",
-    "chongqing": "重庆",
-    "zhejiang": "浙江",
-    "sichuan": "四川",
-    "shaanxi": "陕西",
-    "guangdong": "广东",
-    "fujian": "福建",
-    "jiangsu": "江苏",
-    "hubei": "湖北",
-    "hunan": "湖南",
-    "shandong": "山东",
-    "liaoning": "辽宁",
-    "hainan": "海南",
-    "yunnan": "云南",
-    "guangxi": "广西",
-}
+from app.admin_divisions import (
+    PROVINCE_NAME_BY_SLUG,
+    forbidden_city_examples,
+    resolve_province_slug_for_city,
+)
+
+
+def _resolve_province_code_for_city(city_name: str | None) -> str | None:
+    return resolve_province_slug_for_city(city_name)
+
+
+def _forbidden_city_examples(exclude_codes: list[str]) -> str:
+    return forbidden_city_examples(exclude_codes)
+
+
+def _assert_matched_city_allowed(intent: TravelIntentSnapshot | None, matched_city: str) -> None:
+    if not intent or not matched_city.strip():
+        return
+    safe_intent = resolve_intent_constraint_conflicts(intent)
+    exclude = list(safe_intent.excludeProvinceCodes or [])
+    if not exclude:
+        return
+    province = _resolve_province_code_for_city(matched_city)
+    if province and province in exclude:
+        exclude_label = "、".join(PROVINCE_NAME_BY_SLUG.get(code, code) for code in exclude)
+        examples = _forbidden_city_examples(exclude)
+        hint = f"（含 {examples} 等，禁止推荐）" if examples else ""
+        raise ValueError(
+            f"生成路线 matchedCity={matched_city} 位于用户排除的{exclude_label}境内{hint}"
+        )
+
+
+def resolve_intent_constraint_conflicts(intent: TravelIntentSnapshot) -> TravelIntentSnapshot:
+    """剔除落在 excludeProvinceCodes 内的目的地；区域排除优先于误推荐城市。"""
+    exclude = list(intent.excludeProvinceCodes or [])
+    if not exclude:
+        return intent
+
+    city = intent.city
+    if city and _resolve_province_code_for_city(city) in exclude:
+        city = None
+
+    suggested = [
+        item
+        for item in (intent.suggestedDestinations or [])
+        if _resolve_province_code_for_city(item) not in exclude
+    ]
+    cities = [
+        item
+        for item in (intent.cities or [])
+        if _resolve_province_code_for_city(item) not in exclude
+    ]
+
+    if (
+        city == intent.city
+        and len(suggested) == len(intent.suggestedDestinations or [])
+        and len(cities) == len(intent.cities or [])
+    ):
+        return intent
+
+    return intent.model_copy(
+        update={
+            "city": city,
+            "suggestedDestinations": suggested,
+            "cities": cities,
+        }
+    )
 
 
 def resolve_planning_city(intent: TravelIntentSnapshot) -> str | None:
@@ -64,23 +118,32 @@ def resolve_planning_city(intent: TravelIntentSnapshot) -> str | None:
 
 
 def format_intent_constraints_for_llm(intent: TravelIntentSnapshot) -> str:
+    safe_intent = resolve_intent_constraint_conflicts(intent)
     lines = ["【用户约束 — 必须严格遵守】"]
-    if intent.departureCity:
+    if safe_intent.departureCity:
         lines.append(
-            f"- 出发城市：{intent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）"
+            f"- 出发城市：{safe_intent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）"
         )
-    planning_city = resolve_planning_city(intent)
+    planning_city = resolve_planning_city(safe_intent)
     if planning_city:
         lines.append(f"- 目的地城市：{planning_city}（matchedCity 须为此城市）")
-    elif intent.suggestedDestinations:
-        joined = "、".join(intent.suggestedDestinations)
+    elif safe_intent.suggestedDestinations:
+        joined = "、".join(safe_intent.suggestedDestinations)
         lines.append(f"- 目的地：从下列候选中选择其一作为主目的地：{joined}")
-    if intent.excludeProvinceCodes:
+    if safe_intent.excludeProvinceCodes:
         names = [
-            PROVINCE_NAME_BY_CODE.get(code, code)
-            for code in intent.excludeProvinceCodes
+            PROVINCE_NAME_BY_SLUG.get(code, code)
+            for code in safe_intent.excludeProvinceCodes
         ]
-        lines.append(f"- 区域限制：所有游玩 POI 不得位于 {'、'.join(names)} 境内")
+        exclude_label = "、".join(names)
+        lines.append(f"- 区域限制：所有游玩 POI 不得位于 {exclude_label} 境内")
+        examples = _forbidden_city_examples(list(safe_intent.excludeProvinceCodes or []))
+        if examples:
+            lines.append(f"- matchedCity 禁止为 {exclude_label} 境内城市（含 {examples} 等）")
+        if not planning_city and not safe_intent.suggestedDestinations:
+            lines.append(
+                f"- 目的地：须在 {exclude_label} 以外选择，并结合主题偏好规划（禁止推荐该省境内城市）"
+            )
     if intent.days is not None:
         lines.append(
             f"- 行程天数：{intent.days} 天（routeDetail.days 长度必须等于 {intent.days}）"
@@ -289,8 +352,12 @@ async def _generate_with_provider(
     )
 
     messages = _build_messages(request)
+    invoke_config: dict[str, Any] = {}
+    callbacks = get_langchain_callbacks()
+    if callbacks:
+        invoke_config["callbacks"] = callbacks
     try:
-        response = await llm.ainvoke(messages)
+        response = await llm.ainvoke(messages, config=invoke_config or None)
     except Exception as exc:
         if provider_id != "deepseek":
             raise ValueError(f"{config.label} 请求失败: {exc}") from exc
@@ -302,7 +369,7 @@ async def _generate_with_provider(
             max_tokens=2048,
             timeout=config.timeout_ms / 1000,
         )
-        response = await llm.ainvoke(messages)
+        response = await llm.ainvoke(messages, config=invoke_config or None)
 
     content = response.content
     if isinstance(content, list):
@@ -314,6 +381,7 @@ async def _generate_with_provider(
         raise ValueError(f"{config.label} 返回内容为空")
 
     payload = _parse_route_payload(str(content), config.label)
+    _assert_matched_city_allowed(request.intent, payload.matchedCity)
     return GenerateRouteResponse(payload=payload, provider=provider_id)  # type: ignore[arg-type]
 
 
@@ -322,15 +390,28 @@ async def generate_route(request: GenerateRouteRequest) -> GenerateRouteResponse
     if not chain:
         raise ValueError("未配置任何可用模型（请设置 DEEPSEEK_API_KEY 或启动 LM Studio）")
 
-    errors: list[str] = []
-    for provider_id in chain:
-        try:
-            return await _generate_with_provider(provider_id, request)
-        except Exception as exc:
-            config = get_provider_config(provider_id)
-            message = str(exc)
-            errors.append(f"{config.label}: {message}")
-    raise ValueError(" | ".join(errors))
+    with route_generate_trace(
+        prompt=request.prompt,
+        provider=request.provider,
+        user_id=request.userId,
+        session_id=request.sessionId,
+        locale=request.locale,
+    ):
+        errors: list[str] = []
+        for provider_id in chain:
+            try:
+                result = await _generate_with_provider(provider_id, request)
+                record_route_generate_trace(
+                    provider=result.provider or provider_id,
+                    city=result.payload.matchedCity,
+                    days=result.payload.days,
+                )
+                return result
+            except Exception as exc:
+                config = get_provider_config(provider_id)
+                message = str(exc)
+                errors.append(f"{config.label}: {message}")
+        raise ValueError(" | ".join(errors))
 
 
 async def check_provider_status(provider_id: str) -> ProviderStatus:

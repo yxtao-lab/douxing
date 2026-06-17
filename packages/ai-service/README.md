@@ -31,7 +31,14 @@ AI_SERVICE_URL=http://127.0.0.1:8100
 # Agent 规划（默认关闭；开启后 plan_sessions 追问可走 patch）
 AGENT_PLAN_ENABLED=false
 AGENT_TOOL_SECRET=与 Node 一致的随机密钥
+
+# Langfuse 观测（Step 11，可选）
+# LANGFUSE_PUBLIC_KEY=
+# LANGFUSE_SECRET_KEY=
+# LANGFUSE_HOST=https://cloud.langfuse.com
 ```
+
+`GET /v1/status` 返回 `observability.langfuse` 表示是否已配置 Langfuse。
 
 Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 Node 内网 API：
 
@@ -45,7 +52,7 @@ Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 Node 内网
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/health` | 健康检查 |
-| GET | `/v1/status` | LLM 提供商状态 |
+| GET | `/v1/status` | LLM 提供商状态 + Langfuse 是否启用 |
 | POST | `/v1/route/generate` | 生成路线 JSON（C5 管道） |
 | POST | `/v1/agent/plan` | **Agent 规划**（C7）：意图路由 + Tool 链；返回 `draft`、`toolTrace`、`routedIntent` |
 
@@ -110,6 +117,6 @@ Tool 权威实现：`packages/server/src/agent/tools/`。
 
 ## 相关文档
 
-- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · 当前 Step 9**
+- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · M1 ✅ · Step 10～11 ✅ · 当前 Step 12**
 - [AI规划与Agent演进.md](../../docs/AI规划与Agent演进.md) — 设计全稿
 - [开发记录 § C7](../../docs/开发记录-重难点与亮点.md#c7-ai-agent-代码落地2026-06-16)

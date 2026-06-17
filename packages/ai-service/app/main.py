@@ -7,11 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.route_generator import check_provider_status, generate_route
 from app.agent.graph import run_plan_agent
+from app.observability.langfuse_client import flush_langfuse, is_langfuse_enabled, get_langfuse_host
 from app.schemas import (
     AgentPlanRequest,
     AgentPlanResponse,
     GenerateRouteRequest,
     GenerateRouteResponse,
+    ObservabilityStatus,
     ServiceStatusResponse,
 )
 
@@ -45,6 +47,10 @@ async def service_status() -> ServiceStatusResponse:
         service="douxing-ai-service",
         version="1.0.0",
         providers=providers,
+        observability=ObservabilityStatus(
+            langfuse=is_langfuse_enabled(),
+            langfuseHost=get_langfuse_host() if is_langfuse_enabled() else None,
+        ),
     )
 
 
@@ -56,6 +62,8 @@ async def route_generate(request: GenerateRouteRequest) -> GenerateRouteResponse
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"AI 服务内部错误: {exc}") from exc
+    finally:
+        flush_langfuse()
 
 
 @app.post("/v1/agent/plan", response_model=AgentPlanResponse)
@@ -67,3 +75,5 @@ async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent 规划失败: {exc}") from exc
+    finally:
+        flush_langfuse()

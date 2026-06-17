@@ -55,6 +55,8 @@ function buildGenerateBody(input: GenerateRouteInput) {
     })),
     variantHint: input.variantHint ?? null,
     locale,
+    userId: input.userId ?? null,
+    sessionId: input.sessionId ?? null,
   };
 }
 

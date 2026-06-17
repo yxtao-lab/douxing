@@ -57,6 +57,7 @@ packages/server/uploads/
 
 # --- 测试与覆盖率 ---
 coverage/
+reports/
 
 # --- IDE / 系统 ---
 .DS_Store

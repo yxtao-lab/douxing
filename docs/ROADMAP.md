@@ -33,7 +33,7 @@
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
 | **当前焦点** | **生产 OSS 照片** · 开发环境联调 · **H9-3 扫尾** · **S1 RBAC** | **P5 Webhook 发版** · **P6 体验基建** · **J1～J5 已完成**（2026-06-10）；G4/DT1、P0～P4+打卡地图已落地；见 [下一步工作.md](./下一步工作.md) |
-| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI路径规划路线图 §0](./AI路径规划路线图.md#0-当前指针必读)** | 全站：S1 RBAC；**AI 规划：Step 1 统一意图路由 → M1～M6** |
+| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI路径规划路线图 §0](./AI路径规划路线图.md#0-当前指针必读)** | 全站：S1 RBAC；**AI 规划：Step 10 等价率 → M2～M6** |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -486,7 +486,7 @@ POST /api/analytics/events
 ### 阶段 C7：AI Agent 演进（§3.3，2026-06-11 录入）
 
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md)  
-> **专项路线图（执行顺序 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 1～9 → M1**  
+> **专项路线图（执行顺序 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **M1 ✅ · 当前 Step 10～15 → M2**  
 > **原则**：复用 C1～H9 管道为 **Tool**；**Supervisor + 3 专家 Agent**；`AGENT_PLAN_ENABLED=false` 默认关；**不推倒** `generateRoute`；Tool 执行以 **Node 为权威**，Python `ai-service` 负责 LangGraph 编排。
 
 #### C7 架构总览
@@ -524,11 +524,11 @@ flowchart LR
 | 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|----------|------|------|----------|----------|
 | **C7-a** | [x] | 2026-06-16 | Tool 化 + 协调器 POC | C5、H9 | Node `agent/tools/*`（9 个）；`POST /api/agent/tools/:name`；`graph.py`；`POST /v1/agent/plan`；`AGENT_PLAN_ENABLED` | flag 关时零影响；等价率脚本与 Langfuse 待补 |
-| **C7-b** | [~] | 进行中 | 多轮 Agent 规划 | C7-a、C1 | `patch_route_day`；意图路由（10 用例）；`plan_sessions` Agent 路径；`agent_state` 列 | SSE · i18n · 端到端追问验收待完成 |
+| **C7-b** | [x] | 2026-06-17 | 多轮 Agent 规划 | C7-a、C1 | `patch_route_day`；意图路由（10 用例）；`plan_sessions` Agent 路径；`agent_state` 列；SSE/i18n | M1 达成 |
 | **C7-c** | [~] | 进行中 | 记忆 + 全站 Agent | C7-b、H3-a | `recall_user_memory` / `write_trip_memory`；`pet_memories` 表；图内记忆召回 | memory_agent 节点 · H3 悬浮层 UI 待做 |
 | **C7-d** | [~] | 部分 | 评估 Tool + 专属模型 | C7-a、I3 | `validate_route`（含 autoFix） | warnings 回复 · I3 LoRA 待做 |
 
-**建议时机**：执行顺序以 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)** 为准。**当前**：Step 1（统一意图路由）→ Step 9（M1）；其后 M2～M6 按 Phase 2～7 推进。
+**建议时机**：执行顺序以 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)** 为准。**当前**：Step 10（等价率脚本）→ Step 15（M2）；其后 M3～M6 按 Phase 3～7 推进。
 
 #### C7-a 执行流程（Tool 化 + 协调器 POC）
 
@@ -1040,7 +1040,7 @@ Python ai-service → Node LLM → 模板/RAG
 |----------------|-------------|------------|----------|
 | Sprint 1–2 | MVP | **M0（已完成）** | 2026-05-19 ～ 2026-05-20（含 M0-7 验证码登录） |
 | Sprint 1–2 补全 | MVP 缺口 | **阶段 A** | 计划 2026-05-21 起 |
-| Sprint 5–6 | AI 增强 | **C + C7 + F** | C1～C6 已完成；C7-a 已完成；**M1 Step 1～9 进行中**（见 [AI路径规划路线图.md](./AI路径规划路线图.md)） |
+| Sprint 5–6 | AI 增强 | **C + C7 + F** | C1～C6 已完成；C7-a/b 已完成（**M1**）；**M2 Step 10～15 进行中**（见 [AI路径规划路线图.md](./AI路径规划路线图.md)） |
 | Sprint 3–4 | 社交功能 | **B + D** | B 已完成（2026-05-22）；D 未开始 |
 | Sprint 7–8 | 商业闭环 | **E + M** | E 盲盒/CPS 等未开始；**M 发单接单**已规划（模块 B，见 [发单接单平台.md](./发单接单平台.md)） |
 | 平台治理 | 贯穿 | **S（系统管理）** | S0 已完成；S1 RBAC 待做 |
@@ -1156,7 +1156,7 @@ Python ai-service → Node LLM → 模板/RAG
 ```text
 M0 ✅  C1～C6 + H9 + C7-a
 
-M1 [ ]  Step 1～9   C7-b：追问 patch + SSE + i18n
+M1 [x]  Step 1～9   C7-b：追问 patch + SSE + i18n
 M2 [ ]  Step 10～15 等价率 + Langfuse + 首句 Agent
 M3 [ ]  Step 16～21 H9+ 数据质量
 M4 [ ]  Step 25～30 H3 + C7-c 记忆宠物
@@ -1166,8 +1166,8 @@ M6 [ ]  Step 35～40 I 线 + H10 可信度（+ 41～42 远期可选）
 
 | 里程碑 | Step | 与 ROADMAP 编号 | 理由 |
 |--------|------|-----------------|------|
-| **M1** | 1～9 | C7-b | **当前阶段**；Agent 追问闭环 |
-| M2 | 10～15 | C7-a 扫尾 + C7-d 部分 | staging 可开 Agent |
+| **M1** | 1～9 | C7-b | ✅ Agent 追问闭环（2026-06-17） |
+| **M2** | 10～15 | C7-a 扫尾 + C7-d 部分 | **当前阶段**；staging 可开 Agent |
 | M3 | 16～21 | H9+-1～5 | 路线更准更可执行 |
 | M4 | 25～30 | C7-c + H3-a～c | 记忆与宠物 UI |
 | M5 | 31～34 | H8 + H7 | 行中重规划与补救 |
@@ -1176,7 +1176,7 @@ M6 [ ]  Step 35～40 I 线 + H10 可信度（+ 41～42 远期可选）
 **与周边线关系**：
 
 ```text
-S1 RBAC ──∥── Step 1～9（M1 Agent 追问）
+S1 RBAC ──∥── Step 10～15（M2 Agent 上 staging）
     ↓
 Step 10～15（M2 staging Agent）
     ↓

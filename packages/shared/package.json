@@ -13,10 +13,14 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "sync:admin-divisions": "node scripts/sync-admin-divisions.mjs",
+    "build": "node scripts/sync-admin-divisions.mjs && tsc",
     "lint": "tsc --noEmit"
   },
   "devDependencies": {
     "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "cn-division": "^2026.0.0"
   }
 }

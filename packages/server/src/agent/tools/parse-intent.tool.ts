@@ -12,11 +12,12 @@ export async function runParseIntentTool(raw: unknown) {
     return toolFail(parsed.error.message, 'INVALID_INPUT');
   }
 
-  const { prompt, history, days, budget, userId } = parsed.data;
+  const { prompt, history, days, budget, userId, sessionIntent } = parsed.data;
   let intent: TravelIntentSnapshot = await buildIntentFromHistoryAsync(
     history as PlanChatMessage[] | undefined,
     prompt,
     { days, budget },
+    sessionIntent as TravelIntentSnapshot | undefined,
   );
 
   if (userId) {

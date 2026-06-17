@@ -4,7 +4,7 @@ import type {
   TransportPreference,
   TravelIntentSnapshot,
 } from '@douxing/shared';
-import { PROVINCE_CITY_REGIONS } from '@douxing/shared';
+import { PROVINCE_CITY_REGIONS, findCityRegionByCode, findProvinceCodeByCityName, getCityNamesByProvinceCode } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
 
@@ -111,6 +111,7 @@ const THEME_KEYWORDS: Record<string, string> = {
   放松: '休闲',
   冒险: '户外',
   自然: '自然',
+  山水: '自然',
   购物: '购物',
   夜景: '夜景',
   独自: '独自',
@@ -144,6 +145,25 @@ function detectCity(text: string): string | null {
     if (KNOWN_CITIES.includes(name)) return name;
   }
   return null;
+}
+
+/** 当前句是否明确指定了游玩目的地（非主题/偏好补充） */
+export function hasExplicitDestinationInPrompt(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (detectCity(trimmed)) return true;
+  const goMatch = trimmed.match(/想?去([\u4e00-\u9fa5]{2,4})(?:玩|游|看看|打卡|逛|待)/);
+  if (goMatch?.[1] && detectCity(goMatch[1])) return true;
+  if (/目的地|游玩城市|目的地是/.test(trimmed)) return true;
+  return false;
+}
+
+function hasDepartureInPrompt(text: string): boolean {
+  return detectDepartureCity(text) != null;
+}
+
+function hasExcludeProvinceInPrompt(text: string): boolean {
+  return detectExcludeProvinceCodes(text).length > 0;
 }
 
 function parseDaysFromText(text: string): number | null {
@@ -302,6 +322,186 @@ export function resolvePlanningCity(intent: TravelIntentSnapshot): string | null
   return null;
 }
 
+function resolveProvinceCodeForCityName(cityName: string): string | undefined {
+  const normalized = cityName.trim().replace(/市$/, '').replace(/土家族苗族自治州$/, '');
+  if (!normalized) return undefined;
+  const fromRegions = findProvinceCodeByCityName(normalized);
+  if (fromRegions) return fromRegions;
+  const cityCode = CITY_CODE_MAP[normalized];
+  if (cityCode) {
+    return findCityRegionByCode(cityCode)?.provinceCode;
+  }
+  return undefined;
+}
+
+function formatExcludedProvinceCityHints(excludeProvinceCodes: string[]): string {
+  const names = excludeProvinceCodes.flatMap((code) => getCityNamesByProvinceCode(code));
+  if (names.length === 0) return '';
+  return names.join('、');
+}
+
+/** 校验 LLM 返回的 matchedCity 是否违反区域排除 */
+export function assertMatchedCityAllowed(intent: TravelIntentSnapshot, matchedCity: string): void {
+  const safeIntent = sanitizeTravelIntentDestinations(intent);
+  const exclude = safeIntent.excludeProvinceCodes ?? [];
+  if (exclude.length === 0 || !matchedCity.trim()) return;
+  if (isCityInExcludedProvinces(matchedCity, exclude)) {
+    const excludeLabel = formatExcludeProvinces(safeIntent);
+    const examples = formatExcludedProvinceCityHints(exclude);
+    throw new Error(
+      `生成路线 matchedCity=${matchedCity} 位于用户排除的${excludeLabel}境内`
+        + (examples ? `（含 ${examples} 等，禁止推荐）` : ''),
+    );
+  }
+}
+
+function detectExcludeProvinceCodes(text: string): string[] {
+  const codes: string[] = [];
+  for (const province of PROVINCE_CITY_REGIONS) {
+    const name = province.nameZh;
+    if (
+      new RegExp(`不在${name}(?:省|境内|玩|游)?`).test(text)
+      || new RegExp(`不出${name}(?:省|境内)?`).test(text)
+      || new RegExp(`别在${name}(?:省|境内)?`).test(text)
+      || new RegExp(`不去${name}(?:省|境内)?`).test(text)
+      || new RegExp(`排除${name}(?:省)?`).test(text)
+    ) {
+      codes.push(province.code);
+    }
+  }
+  return codes;
+}
+
+function detectDepartureCity(text: string): string | null {
+  const patterns = [
+    /从([\u4e00-\u9fa5]{2,6})出发/,
+    /([\u4e00-\u9fa5]{2,6})出发/,
+    /在([\u4e00-\u9fa5]{2,6})(?:上车|启程)/,
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match?.[1]) {
+      const city = detectCity(match[1]) ?? detectCity(`${match[1]}市`);
+      if (city) return city;
+    }
+  }
+  return null;
+}
+
+export function isCityInExcludedProvinces(cityName: string, excludeProvinceCodes: string[]): boolean {
+  if (!cityName.trim() || excludeProvinceCodes.length === 0) return false;
+  const provinceCode = resolveProvinceCodeForCityName(cityName);
+  return provinceCode != null && excludeProvinceCodes.includes(provinceCode);
+}
+
+/**
+ * 剔除落在 excludeProvinceCodes 内的目的地；区域排除优先于 LLM 误推荐的目的地。
+ */
+export function sanitizeTravelIntentDestinations(intent: TravelIntentSnapshot): TravelIntentSnapshot {
+  const exclude = intent.excludeProvinceCodes ?? [];
+  if (exclude.length === 0) return intent;
+
+  let city = intent.city;
+  if (city && isCityInExcludedProvinces(city, exclude)) {
+    city = null;
+  }
+
+  const suggestedDestinations = (intent.suggestedDestinations ?? []).filter(
+    (item) => !isCityInExcludedProvinces(item, exclude),
+  );
+  const cities = (intent.cities ?? []).filter((item) => !isCityInExcludedProvinces(item, exclude));
+
+  if (
+    city === intent.city
+    && suggestedDestinations.length === (intent.suggestedDestinations?.length ?? 0)
+    && cities.length === (intent.cities?.length ?? 0)
+  ) {
+    return intent;
+  }
+
+  return { ...intent, city, suggestedDestinations, cities };
+}
+
+/**
+ * 追问时合并会话 intentSnapshot：硬约束以 session 为权威，剔除 LLM 臆造且与排除冲突的目的地。
+ */
+export function mergeSessionIntentSnapshot(
+  sessionIntent: TravelIntentSnapshot | null | undefined,
+  parsedIntent: TravelIntentSnapshot,
+  currentPrompt?: string,
+): TravelIntentSnapshot {
+  if (!sessionIntent) {
+    return sanitizeTravelIntentDestinations(parsedIntent);
+  }
+
+  const trimmedPrompt = currentPrompt?.trim() ?? '';
+  const explicitDestInPrompt = trimmedPrompt ? hasExplicitDestinationInPrompt(trimmedPrompt) : false;
+
+  const excludeProvinceCodes = [
+    ...new Set([
+      ...(sessionIntent.excludeProvinceCodes ?? []),
+      ...(parsedIntent.excludeProvinceCodes ?? []),
+    ]),
+  ];
+
+  const validSessionCity =
+    sessionIntent.city && !isCityInExcludedProvinces(sessionIntent.city, excludeProvinceCodes)
+      ? sessionIntent.city
+      : null;
+
+  let city = parsedIntent.city;
+  if (city && isCityInExcludedProvinces(city, excludeProvinceCodes)) {
+    city = validSessionCity;
+  } else if (trimmedPrompt && !explicitDestInPrompt && city) {
+    // 追问仅补充主题/偏好时，不采纳 LLM 在本轮臆造的目的地
+    city = validSessionCity;
+  } else if (!city) {
+    city = validSessionCity;
+  }
+
+  const departureCity = trimmedPrompt && hasDepartureInPrompt(trimmedPrompt)
+    ? (parsedIntent.departureCity ?? sessionIntent.departureCity)
+    : (sessionIntent.departureCity ?? parsedIntent.departureCity);
+
+  const merged: TravelIntentSnapshot = {
+    ...parsedIntent,
+    city,
+    excludeProvinceCodes,
+    departureCity,
+    days: parsedIntent.days ?? sessionIntent.days,
+    budget: parsedIntent.budget ?? sessionIntent.budget,
+    budgetMin: parsedIntent.budgetMin ?? sessionIntent.budgetMin,
+    budgetMax: parsedIntent.budgetMax ?? sessionIntent.budgetMax,
+    transportPreference: parsedIntent.transportPreference ?? sessionIntent.transportPreference,
+    lodgingArea: parsedIntent.lodgingArea ?? sessionIntent.lodgingArea,
+    lodgingTier: parsedIntent.lodgingTier ?? sessionIntent.lodgingTier,
+    themes: uniqueThemes([...(sessionIntent.themes ?? []), ...(parsedIntent.themes ?? [])]),
+    cities:
+      explicitDestInPrompt && parsedIntent.cities && parsedIntent.cities.length > 0
+        ? parsedIntent.cities
+        : sessionIntent.cities,
+    suggestedDestinations: [
+      ...new Set([
+        ...(sessionIntent.suggestedDestinations ?? []),
+        ...(parsedIntent.suggestedDestinations ?? []),
+      ]),
+    ],
+    constraintSummary:
+      trimmedPrompt && (explicitDestInPrompt || hasExcludeProvinceInPrompt(trimmedPrompt))
+        ? (parsedIntent.constraintSummary ?? sessionIntent.constraintSummary)
+        : (sessionIntent.constraintSummary ?? parsedIntent.constraintSummary),
+    confidence: parsedIntent.confidence ?? sessionIntent.confidence,
+    intentSource: parsedIntent.intentSource ?? sessionIntent.intentSource,
+  };
+
+  return sanitizeTravelIntentDestinations(merged);
+}
+
+/** 生成/落库前统一清洗意图，确保区域排除等硬约束生效 */
+export function finalizePlanningIntent(intent: TravelIntentSnapshot): TravelIntentSnapshot {
+  return sanitizeTravelIntentDestinations(intent);
+}
+
 function formatExcludeProvinces(intent: TravelIntentSnapshot): string {
   const codes = intent.excludeProvinceCodes ?? [];
   if (codes.length === 0) return '';
@@ -407,6 +607,14 @@ export function buildIntentFromConversation(
       if (parsed.cities && parsed.cities.length >= 2) {
         intent.cities = parsed.cities;
       }
+      const excludeCodes = detectExcludeProvinceCodes(trimmed);
+      if (excludeCodes.length > 0) {
+        intent.excludeProvinceCodes = [
+          ...new Set([...(intent.excludeProvinceCodes ?? []), ...excludeCodes]),
+        ];
+      }
+      const departure = detectDepartureCity(trimmed);
+      if (departure) intent.departureCity = departure;
     }
   }
 
@@ -421,7 +629,7 @@ export function buildIntentFromConversation(
   intent.confidence = computeConfidence(intent);
   const fullText = messages.join('；');
   applyH9Fields(intent, fullText);
-  return intent;
+  return sanitizeTravelIntentDestinations(intent);
 }
 
 export function buildIntentFromHistory(
@@ -455,23 +663,31 @@ export function formatIntentSummary(intent: TravelIntentSnapshot): string {
 }
 
 export function formatIntentConstraintsForLlm(intent: TravelIntentSnapshot): string {
+  const safeIntent = sanitizeTravelIntentDestinations(intent);
   const lines: string[] = ['【用户约束 — 必须严格遵守】'];
-  if (intent.departureCity) {
+  if (safeIntent.departureCity) {
     lines.push(
-      `- 出发城市：${intent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）`,
+      `- 出发城市：${safeIntent.departureCity}（仅作大交通起点，禁止在此安排游玩 POI）`,
     );
   }
-  const planningCity = resolvePlanningCity(intent);
+  const planningCity = resolvePlanningCity(safeIntent);
   if (planningCity) {
     lines.push(`- 目的地城市：${planningCity}（matchedCity 须为此城市）`);
-  } else if (intent.suggestedDestinations?.length) {
+  } else if (safeIntent.suggestedDestinations?.length) {
     lines.push(
-      `- 目的地：从下列候选中选择其一作为主目的地：${intent.suggestedDestinations.join('、')}`,
+      `- 目的地：从下列候选中选择其一作为主目的地：${safeIntent.suggestedDestinations.join('、')}`,
     );
   }
-  const excludeLabel = formatExcludeProvinces(intent);
+  const excludeLabel = formatExcludeProvinces(safeIntent);
   if (excludeLabel) {
     lines.push(`- 区域限制：所有游玩 POI 不得位于 ${excludeLabel} 境内`);
+    const forbiddenCities = formatExcludedProvinceCityHints(safeIntent.excludeProvinceCodes ?? []);
+    if (forbiddenCities) {
+      lines.push(`- matchedCity 禁止为 ${excludeLabel} 境内城市（含 ${forbiddenCities} 等）`);
+    }
+  }
+  if (!planningCity && !(safeIntent.suggestedDestinations?.length) && excludeLabel) {
+    lines.push(`- 目的地：须在 ${excludeLabel} 以外选择，并结合主题偏好规划（禁止推荐该省境内城市）`);
   }
   if (intent.days != null) {
     lines.push(`- 行程天数：${intent.days} 天（routeDetail.days 长度必须等于 ${intent.days}）`);
@@ -559,7 +775,10 @@ export function enforceRouteConstraints(
   intent: TravelIntentSnapshot,
 ): GeneratedRouteDraft {
   const next = { ...draft, routeDetail: { days: [...draft.routeDetail.days] } };
-  const planningCity = resolvePlanningCity(intent);
+  const safeIntent = sanitizeTravelIntentDestinations(intent);
+  const planningCity = resolvePlanningCity(safeIntent);
+
+  assertMatchedCityAllowed(safeIntent, next.matchedCity);
 
   if (planningCity && !next.matchedCity.includes(planningCity)) {
     next.matchedCity = planningCity;
@@ -591,11 +810,11 @@ export function enforceRouteConstraints(
   }
 
   if (intent.budget || intent.budgetMin != null) {
-    next.budgetRange = normalizeBudgetRange(intent, next.budgetRange);
+    next.budgetRange = normalizeBudgetRange(safeIntent, next.budgetRange);
   }
 
-  if (intent.themes.length > 0) {
-    next.interestTags = uniqueThemes([...intent.themes, ...next.interestTags]);
+  if (safeIntent.themes.length > 0) {
+    next.interestTags = uniqueThemes([...safeIntent.themes, ...next.interestTags]);
   }
 
   return next;

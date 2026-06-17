@@ -222,7 +222,37 @@ async def _run_plan_new_branch(state: PlanAgentState) -> None:
 
 
 async def run_plan_agent(request: dict[str, Any]) -> dict[str, Any]:
+    from app.observability.langfuse_client import NOOP, agent_plan_trace
+
     prompt = request.get("prompt", "")
+    user_id = int(request["userId"])
+    session_id = request.get("sessionId")
+    locale = request.get("locale") or "zh-CN"
+
+    with agent_plan_trace(
+        user_id=user_id,
+        session_id=session_id,
+        prompt=prompt,
+        locale=locale,
+    ) as trace:
+        result = await _run_plan_agent_core(request, prompt)
+        if trace is not NOOP:
+            tool_trace = result.get("toolTrace") or []
+            trace.update(
+                output={
+                    "routedIntent": result.get("routedIntent"),
+                    "hasDraft": result.get("draft") is not None,
+                    "toolCount": len(tool_trace),
+                },
+                metadata={
+                    "tools": [entry.get("tool") for entry in tool_trace],
+                    "totalMs": sum(int(entry.get("ms") or 0) for entry in tool_trace),
+                },
+            )
+        return result
+
+
+async def _run_plan_agent_core(request: dict[str, Any], prompt: str) -> dict[str, Any]:
     routed = await call_route_intent(prompt)
     route = routed.get("route", "unknown")
 
@@ -251,22 +281,29 @@ async def run_plan_agent(request: dict[str, Any]) -> dict[str, Any]:
         {"tool": "recall_user_memory", "ok": True, "ms": int((time.time() - t0) * 1000)}
     )
 
-    # 2. 意图解析
-    t1 = time.time()
-    intent_data = await call_node_tool(
-        "parse_intent",
-        {
-            "prompt": state["prompt"],
-            "history": state["history"],
-            "days": state["days"],
-            "budget": state["budget"],
-            "userId": state["user_id"],
-        },
-    )
-    state["intent"] = intent_data.get("intent")
-    state["tool_trace"].append(
-        {"tool": "parse_intent", "ok": True, "ms": int((time.time() - t1) * 1000)}
-    )
+    # 2. 意图解析 — Node 已传入合并后的 intent 时直接沿用，避免追问丢失 exclude 等约束
+    pre_intent = request.get("intent")
+    if pre_intent:
+        state["intent"] = pre_intent
+        state["tool_trace"].append(
+            {"tool": "parse_intent", "ok": True, "ms": 0, "source": "session"}
+        )
+    else:
+        t1 = time.time()
+        intent_data = await call_node_tool(
+            "parse_intent",
+            {
+                "prompt": state["prompt"],
+                "history": state["history"],
+                "days": state["days"],
+                "budget": state["budget"],
+                "userId": state["user_id"],
+            },
+        )
+        state["intent"] = intent_data.get("intent")
+        state["tool_trace"].append(
+            {"tool": "parse_intent", "ok": True, "ms": int((time.time() - t1) * 1000)}
+        )
 
     routed = state["routed"]
     route = state["routed_intent"]

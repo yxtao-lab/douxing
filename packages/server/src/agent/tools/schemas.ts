@@ -19,6 +19,7 @@ export const parseIntentInputSchema = z.object({
   days: z.number().int().positive().optional(),
   budget: z.string().optional(),
   userId: z.number().int().positive().optional(),
+  sessionIntent: z.record(z.unknown()).optional(),
 });
 
 export const retrieveAttractionsInputSchema = z.object({

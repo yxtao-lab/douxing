@@ -8,7 +8,7 @@ import { PROVINCE_CITY_REGIONS } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import { isLlmIntentParseEnabled } from '../config/llm.js';
 import { chatCompletionForJson } from './llm-client.service.js';
-import { buildIntentFromHistory } from './travel-intent.service.js';
+import { buildIntentFromHistory, finalizePlanningIntent, mergeSessionIntentSnapshot, sanitizeTravelIntentDestinations } from './travel-intent.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 const KNOWN_PROVINCE_CODES = PROVINCE_CITY_REGIONS.map((p) => p.code);
@@ -83,11 +83,14 @@ JSON 字段说明：
 
 关键规则：
 1. 「XX出发/从XX出发/在XX上车」→ departureCity=XX，不要把出发地当 destinationCity。
-2. 「去XX/目的地XX/玩XX」→ destinationCity=XX。
-3. 「不在XX省/不出XX/别在XX境内」→ excludeProvinceCodes 填入对应省份 code（湖北=hubei）。
-4. 若只有出发地、无目的地，destinationCity=null，在 suggestedDestinations 推荐符合天数/预算/交通/排除约束的目的地。
-5. 不要臆造用户未提及的信息；不确定的字段填 null 或 []。
-6. 城市名使用中文简称（武汉、杭州，不带「市」）。`;
+2. 「去XX/目的地XX/玩XX」→ destinationCity=XX（须不在 excludeProvinceCodes 对应省份内）。
+3. 「不在XX省/不出XX省/别在XX省内」→ excludeProvinceCodes 填入对应省份 code（湖北=hubei）；追问时必须继承历史中已明确的 excludeProvinceCodes，不得丢失。
+4. 「不在XX玩/别在XX安排景点」若 XX 是城市名 → 不要写入 excludeProvinceCodes；出发地禁游由 departureCity 表达。
+5. 仅补充主题/偏好（如「去看山水」「想滑雪」「加点美食」）→ 更新 themes，不要擅自把 destinationCity 设为与 excludeProvinceCodes 冲突的城市（如排除湖北时禁止推荐宜昌/武汉）。
+6. destinationCity 与 suggestedDestinations 中每个城市，其所在省份均不得出现在 excludeProvinceCodes。
+7. 若只有出发地、无目的地，destinationCity=null，在 suggestedDestinations 推荐符合天数/预算/交通/排除约束的目的地。
+8. 不要臆造用户未提及的信息；不确定的字段填 null 或 []。
+9. 城市名使用中文简称（武汉、杭州、宜昌，不带「市」）。`;
 
 function normalizeCityName(raw: string | null | undefined): string | null {
   if (!raw?.trim()) return null;
@@ -126,10 +129,6 @@ function toTravelIntentSnapshot(raw: z.infer<typeof llmIntentRawSchema>): Travel
     .filter((item): item is string => Boolean(item))
     .slice(0, 5);
 
-  if (!city && suggestedDestinations.length > 0) {
-    city = suggestedDestinations[0] ?? null;
-  }
-
   if (city && departureCity && city === departureCity) {
     city = suggestedDestinations.find((item) => item !== departureCity) ?? null;
   }
@@ -143,7 +142,7 @@ function toTravelIntentSnapshot(raw: z.infer<typeof llmIntentRawSchema>): Travel
   const budgetMin = raw.budgetMin ?? null;
   const budgetMax = raw.budgetMax ?? null;
 
-  return {
+  let snapshot: TravelIntentSnapshot = {
     city,
     days: raw.days ?? null,
     budget: buildBudgetLabel(budgetMin, budgetMax, raw.budget ?? null),
@@ -164,6 +163,12 @@ function toTravelIntentSnapshot(raw: z.infer<typeof llmIntentRawSchema>): Travel
     constraintSummary: raw.constraintSummary?.trim() || null,
     intentSource: 'llm',
   };
+
+  snapshot = sanitizeTravelIntentDestinations(snapshot);
+  if (!snapshot.city && (snapshot.suggestedDestinations?.length ?? 0) > 0) {
+    snapshot = { ...snapshot, city: snapshot.suggestedDestinations![0] ?? null };
+  }
+  return snapshot;
 }
 
 function buildUserContent(
@@ -171,8 +176,22 @@ function buildUserContent(
   currentPrompt: string,
   explicit?: { days?: number; budget?: string },
   ruleHint?: TravelIntentSnapshot,
+  sessionIntent?: TravelIntentSnapshot | null,
 ): string {
   const lines: string[] = [];
+  if (sessionIntent) {
+    lines.push('【会话已确认约束 — 追问时必须完整继承，不得丢失或覆盖】');
+    lines.push(JSON.stringify({
+      departureCity: sessionIntent.departureCity,
+      excludeProvinceCodes: sessionIntent.excludeProvinceCodes,
+      days: sessionIntent.days,
+      budget: sessionIntent.budget,
+      themes: sessionIntent.themes,
+      city: sessionIntent.city,
+      constraintSummary: sessionIntent.constraintSummary,
+    }));
+    lines.push('');
+  }
   if (history.length > 0) {
     lines.push('【对话历史】');
     for (const item of history) {
@@ -193,6 +212,7 @@ function buildUserContent(
     lines.push(JSON.stringify({
       city: ruleHint.city,
       departureCity: ruleHint.departureCity,
+      excludeProvinceCodes: ruleHint.excludeProvinceCodes,
       days: ruleHint.days,
       budget: ruleHint.budget,
       themes: ruleHint.themes,
@@ -208,12 +228,26 @@ function mergeIntentSources(
   explicit?: { days?: number; budget?: string },
 ): TravelIntentSnapshot {
   const themes = [...new Set([...llmIntent.themes, ...ruleIntent.themes])];
+  const excludeProvinceCodes = [
+    ...new Set([
+      ...(llmIntent.excludeProvinceCodes ?? []),
+      ...(ruleIntent.excludeProvinceCodes ?? []),
+    ]),
+  ];
   const merged: TravelIntentSnapshot = {
     ...llmIntent,
     themes,
+    excludeProvinceCodes,
     intentSource: 'hybrid',
     confidence: llmIntent.confidence ?? ruleIntent.confidence,
   };
+
+  if (!merged.departureCity && ruleIntent.departureCity) {
+    merged.departureCity = ruleIntent.departureCity;
+  }
+  if (!merged.city && ruleIntent.city) {
+    merged.city = ruleIntent.city;
+  }
 
   if (explicit?.days != null) merged.days = explicit.days;
   else if (merged.days == null && ruleIntent.days != null) merged.days = ruleIntent.days;
@@ -238,7 +272,7 @@ function mergeIntentSources(
     merged.lodgingTier = ruleIntent.lodgingTier;
   }
 
-  return merged;
+  return sanitizeTravelIntentDestinations(merged);
 }
 
 /** 调用 LLM 解析旅行意图 */
@@ -247,9 +281,10 @@ export async function parseTravelIntentWithLlm(
   currentPrompt: string,
   explicit?: { days?: number; budget?: string },
   ruleHint?: TravelIntentSnapshot,
+  sessionIntent?: TravelIntentSnapshot | null,
 ): Promise<TravelIntentSnapshot> {
   const safeHistory = history ?? [];
-  const userContent = buildUserContent(safeHistory, currentPrompt, explicit, ruleHint);
+  const userContent = buildUserContent(safeHistory, currentPrompt, explicit, ruleHint, sessionIntent);
   const { data } = await chatCompletionForJson(
     INTENT_PARSE_SYSTEM_PROMPT,
     userContent,
@@ -264,21 +299,33 @@ export async function buildIntentFromHistoryAsync(
   history: PlanChatMessage[] | undefined,
   currentPrompt: string,
   explicit?: { days?: number; budget?: string },
+  sessionIntent?: TravelIntentSnapshot | null,
 ): Promise<TravelIntentSnapshot> {
   const ruleIntent = buildIntentFromHistory(history, currentPrompt, explicit);
 
+  let parsed: TravelIntentSnapshot;
   if (!isLlmIntentParseEnabled()) {
-    return { ...ruleIntent, intentSource: 'rule' };
+    parsed = { ...ruleIntent, intentSource: 'rule' };
+  } else {
+    try {
+      const llmIntent = await parseTravelIntentWithLlm(
+        history,
+        currentPrompt,
+        explicit,
+        ruleIntent,
+        sessionIntent,
+      );
+      parsed = mergeIntentSources(ruleIntent, llmIntent, explicit);
+    } catch (err) {
+      console.warn(
+        '[intent] LLM 解析失败，回退规则引擎:',
+        err instanceof Error ? err.message : err,
+      );
+      parsed = { ...ruleIntent, intentSource: 'rule' };
+    }
   }
 
-  try {
-    const llmIntent = await parseTravelIntentWithLlm(history, currentPrompt, explicit, ruleIntent);
-    return mergeIntentSources(ruleIntent, llmIntent, explicit);
-  } catch (err) {
-    console.warn(
-      '[intent] LLM 解析失败，回退规则引擎:',
-      err instanceof Error ? err.message : err,
-    );
-    return { ...ruleIntent, intentSource: 'rule' };
-  }
+  return finalizePlanningIntent(
+    mergeSessionIntentSnapshot(sessionIntent, parsed, currentPrompt),
+  );
 }

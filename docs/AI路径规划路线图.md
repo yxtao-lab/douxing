@@ -3,8 +3,8 @@
 > **定位**：模块 A「AI 智能规划」的 **专项路线图** —— 只回答「**现在做什么 → 下一步做什么 → 全部验收完成**」。  
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
-**文档版本**：2.0  
-**最后更新**：2026-06-16
+**文档版本**：2.8  
+**最后更新**：2026-06-17
 
 ---
 
@@ -12,25 +12,27 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 9 — C7-b 阶段验收**
+> **下一项工作：Step 12 — warnings 写入 assistant 回复**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | 勾选 Step 1～8 · §8.2 Agent 清单 · 手测追问用例 |
-| **改哪些文件** | 文档 · 可选 `agent:e2e-cases` 回归 |
-| **完成标准** | Step 1～8 全勾 · **M1 达成** |
-| **预估** | 0.5～1 天 |
-| **完成后** | 进入 **Phase 2（Step 10）** |
+| **做什么** | `validate_route` 产出的 warnings（闭馆/超预算等）写入规划会话 assistant 消息 · i18n |
+| **功能作用** | 让用户在对话里直接看到行程风险与修正说明，而非只在路线详情里找 warnings |
+| **预期效果** | 追问或首句生成后，assistant 气泡含可读的校验提示；zh-CN/en-US 随 locale 切换 |
+| **改哪些文件** | `plan-session.service.ts` · `@douxing/shared` i18n · 可选 PC/mobile 展示 |
+| **完成标准** | 闭馆/超预算等出现在对话 · i18n 无硬编码 |
+| **预估** | 1 天 |
+| **完成后** | 继续 **Step 13（build_route_variants Tool 化）** |
 
 **本地前置**：`.env` 配好 `AI_SERVICE_ENABLED=true`、`AGENT_PLAN_ENABLED=true`、`AGENT_TOOL_SECRET`。
 
 ### 0.2 整体进度
 
 ```text
-[████████████░░░░░░░░] 约 55%  —  C/H9 管道已验收；C7-b Step 1～5 已落地
+[██████████████░░░░░░] 约 60%  —  M0 + M1 已达成；Step 10 等价率脚本已验收
 
-当前阶段：Phase 1 · C7-b Agent 追问闭环
-下一里程碑：M1 — C7-b 验收（Step 1～9）
+当前阶段：Phase 2 · C7 质量闸门 + 首句 Agent
+下一里程碑：M2 — Agent 可上 staging（Step 10～15）
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -50,7 +52,7 @@
 
 ---
 
-### Phase 1 · C7-b：Agent 追问可信 + 可感知（P0 · 当前）
+### Phase 1 · C7-b：Agent 追问可信 + 可感知（P0 · 已完成）
 
 > **阶段目标**：追问局部修改生效；双端看见 Tool 进度；10 类意图端到端通过。  
 > **里程碑 M1**：Step 1～9 全部 `[x]`。
@@ -65,21 +67,21 @@
 | **6** | [x] | **i18n `agent.status.*`** | `@douxing/shared` + build | [x] zh-CN/en-US Tool 进度文案齐全 [x] 无用户可见硬编码 |
 | **7** | [x] | **SSE 流式状态（后端）** | `GET /api/plan-sessions/:id/stream` | [x] 推送 tool_call/assistant/done [x] 超时与错误可感知 |
 | **8** | [x] | **前端 SSE + 进度 UI** | PC `usePlanPage` + mobile overlay | [x] 遮罩展示 Tool 列表 [x] locale 切换正确 [x] SSE 失败降级 spinner |
-| **9** | [ ] | **C7-b 阶段验收** | 文档 + 手测清单 | [ ] Step 1～8 全勾 [ ] §8.2 Agent 清单全勾 [ ] **M1 达成** |
+| **9** | [x] | **C7-b 阶段验收** | 文档 + 手测清单 | [x] Step 1～8 全勾 [x] §8.2 Agent 清单全勾 [x] **M1 达成** |
 
 **Phase 1 完成后**：开发环境默认 `AGENT_PLAN_ENABLED=true`；生产仍 false，待 M2。
 
 ---
 
-### Phase 2 · C7 质量闸门 + 首句 Agent（P0.5）
+### Phase 2 · C7 质量闸门 + 首句 Agent（P0.5 · 当前）
 
 > **阶段目标**：Agent 与管道等价可量化；可观测；首句可走 Agent；warnings 对用户可见。  
 > **里程碑 M2**：Step 10～15 全部 `[x]`。
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **10** | [ ] | **管道 vs Agent 等价率脚本** | `agent-equivalence-cases.ts` | [ ] ≥20 条 seed prompt [ ] 报告 JSON 等价率 **≥95%** |
-| **11** | [ ] | **Langfuse 接入** | ai-service + 可选 Node | [ ] 单次规划可查 Tool 链 [ ] token/耗时可见 |
+| **10** | [x] | **管道 vs Agent 等价率脚本** | `agent-equivalence-cases.ts` | [x] ≥20 条 seed prompt [x] 报告 JSON 等价率 **≥95%**（20/20 · 100%） |
+| **11** | [x] | **Langfuse 接入** | ai-service + Node | [x] 单次规划可查 Tool 链 [x] token/耗时可见（未配 KEY 时 no-op） |
 | **12** | [ ] | **warnings 写入 assistant 回复** | validate_route → 会话消息 | [ ] 闭馆/超预算等出现在对话 [ ] i18n |
 | **13** | [ ] | **`build_route_variants` Tool 化** | agent Tool 或 graph 封装 | [ ] Agent 首句可产出 2～3 候选 |
 | **14** | [ ] | **首句接 Agent** | `createPlanSession` | [ ] flag 开时首句走 Agent [ ] 等价率仍 ≥95% [ ] 失败降级 |
@@ -175,7 +177,7 @@
 | 里程碑 | 包含 Step | 含义 | 状态 |
 |--------|-----------|------|------|
 | **M0** | （已完成） | C1～C6 + H9-1～4 + C7-a 管道与 Tool 基础 | ✅ |
-| **M1** | 1～9 | **Agent 追问闭环** — 局部 patch + SSE + i18n | [ ] |
+| **M1** | 1～9 | **Agent 追问闭环** — 局部 patch + SSE + i18n | ✅ |
 | **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | [ ] |
 | **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | [ ] |
 | **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | [ ] |
@@ -224,7 +226,7 @@ Agent 已上 staging → 从 Step 16（H9+-1）开始
 |------|------|------|-----------|
 | **C** | 规划管道 MVP | ✅ 已验收 | M0 |
 | **H9** | 住行增强 | ✅ 已验收 | M0 |
-| **C7** | AI Agent 演进 | 🔄 进行中 | Step 1～15 |
+| **C7** | AI Agent 演进 | 🔄 M1 ✅ · M2 进行中 | Step 10～15 |
 | **H9+** | 规划数据质量 | ⏳ | Step 16～24 |
 | **H3** | AI 旅行宠物 | 🔄 后端骨架 | Step 25～30 |
 | **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
@@ -354,7 +356,8 @@ pnpm --filter @douxing/server agent:branch-cases
 
 ### 6.2 Step 10～15 实现要点（Phase 2）
 
-- **等价率脚本**：对比城市、天数、POI 集合（允许文案差异）。
+- **等价率脚本**：`agent-equivalence.service.ts` + `agent-equivalence-cases.ts`；对比城市、天数、按天 POI 集合（允许文案差异）；种子 `prompts-seed.jsonl`（20 条）。
+- **运行模式**：默认 `deterministic`（关 LLM/ai-service）；`--fast` 跳过 Enricher；`--live` 走 LLM；`--report` 输出 JSON。
 - **首句 Agent 开启条件**：等价率 ≥95% + Langfuse 可观测 + staging 手测。
 - **生产策略**：M2 后 staging true；生产 false → 灰度 → 全量。
 
@@ -397,7 +400,9 @@ AI_SERVICE_URL=http://127.0.0.1:8100
 pnpm --filter @douxing/server agent:intent-cases
 
 # Step 10 完成后必跑
-pnpm --filter @douxing/server agent:equivalence-cases   # 待新增
+pnpm --filter @douxing/server agent:equivalence-cases          # 全链（含 Enricher，需 DB）
+pnpm --filter @douxing/server agent:equivalence-cases -- --fast   # CI 快速：仅 generate 阶段
+pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
 pnpm dev
@@ -435,11 +440,12 @@ pnpm dev
 - [x] 四类分支（Step 4）
 - [x] 追问 day 保留（Step 5）
 - [x] SSE + i18n（Step 6～8 已落地）
+- [x] Step 9 阶段验收（`agent:intent-cases` · `agent:branch-cases` · `agent:e2e-cases` 全绿 · 2026-06-17）
 
 ### 8.3 M2 Agent 上 staging（Step 10～15）
 
-- [ ] 等价率 ≥95%
-- [ ] Langfuse
+- [x] 等价率 ≥95%（`agent:equivalence-cases` · 2026-06-17 · 20/20）
+- [x] Langfuse（`app/observability/langfuse_client.py` · Node `langfuse-client.service.ts` · 2026-06-17）
 - [ ] warnings 进对话
 - [ ] 首句 Agent + 多方案
 
@@ -491,7 +497,7 @@ pnpm dev
 ## 11. 维护约定
 
 1. **完成某 Step 后**：将 §1 对应行状态改为 `[x]`，勾选 §8 验收项，更新 §0.2 进度条。
-2. **当前指针**：始终维护 §0.1「下一项工作」= 第一个 `[ ]` 的 Step。
+2. **当前指针**：始终维护 §0.1「下一项工作」= 第一个 `[ ]` 的 Step；同步更新 **功能作用**、**预期效果**（说明「为何做」与「做完用户/系统会怎样」）。
 3. **设计变更**：写入 [AI规划与Agent演进.md](./AI规划与Agent演进.md)；本文只改 Step/验收。
 4. **API 变更**：同步 openapi.yaml 与 API 文档。
 
@@ -503,3 +509,7 @@ pnpm dev
 |------|------|------|
 | 2026-06-16 | 1.0 | 初版 |
 | 2026-06-16 | 2.4 | Step 5 追问 E2E：patch 排除 POI + agent:e2e-cases |
+| 2026-06-17 | 2.5 | **Step 9 / M1 验收**：三类 Agent 脚本全绿 · 指针 → Step 10 |
+| 2026-06-17 | 2.6 | §0.1 增加 **功能作用**、**预期效果** 字段 |
+| 2026-06-17 | 2.7 | **Step 10 验收**：`agent:equivalence-cases` · 20/20 · 100% |
+| 2026-06-17 | 2.8 | **Step 11 Langfuse**：ai-service Tool trace + Node LLM generation |

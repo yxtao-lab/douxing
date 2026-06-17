@@ -20,6 +20,7 @@ import {
 import {
   buildIntentFromHistory,
   enforceRouteConstraints,
+  finalizePlanningIntent,
   parseTravelIntent,
   resolvePlanningCity,
 } from './travel-intent.service.js';
@@ -64,6 +65,8 @@ export interface GenerateRouteInput {
   locale?: LocaleCode;
   /** Phase 4：用户 ID（注入兴趣与记忆） */
   userId?: number;
+  /** 规划会话 ID（Langfuse session 归因） */
+  sessionId?: number;
   /** Phase 2：排除 POI */
   excludePoiIds?: number[];
   excludePoiNames?: string[];
@@ -90,7 +93,7 @@ function detectTags(prompt: string): string[] {
 }
 
 function resolveIntent(input: GenerateRouteInput): Promise<TravelIntentSnapshot> {
-  if (input.intent) return Promise.resolve(input.intent);
+  if (input.intent) return Promise.resolve(finalizePlanningIntent(input.intent));
   return buildIntentFromHistoryAsync(input.history, input.prompt, {
     days: input.days,
     budget: input.budget,

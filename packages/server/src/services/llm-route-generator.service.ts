@@ -22,6 +22,8 @@ export async function generateRouteFromLlm(
     playbookMatches: input.playbookMatches,
     variantHint: input.variantHint,
     locale: input.locale,
+    userId: input.userId,
+    sessionId: input.sessionId,
   });
 
   const draft: GeneratedRouteDraft = {

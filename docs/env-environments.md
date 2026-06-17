@@ -110,6 +110,11 @@ pnpm build:web
 | `VECTOR_RAG_ENABLED` | 启用景点 embedding + MMR 多样性检索 | `false` |
 | `VECTOR_RAG_BOOST_WEIGHT` | 向量分与关键词分融合权重 | `0.35` |
 | `MMR_LAMBDA` | MMR 相关性与多样性平衡 | `0.7` |
+| `LANGFUSE_PUBLIC_KEY` | Langfuse 公钥（Step 11 观测） | 未配置则 no-op |
+| `LANGFUSE_SECRET_KEY` | Langfuse 私钥 | 未配置则 no-op |
+| `LANGFUSE_HOST` | Langfuse 服务地址 | `https://cloud.langfuse.com` |
+| `LANGFUSE_BASE_URL` | 同 `LANGFUSE_HOST`（官方 skill 别名） | 同上 |
+| `LANGFUSE_TRACING_ENVIRONMENT` | trace 环境标签（须与 Langfuse UI 筛选一致） | `default` |
 
 详见 [AI路径规划路线图.md §7](./AI路径规划路线图.md#7-环境与验证) · [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
 
@@ -125,4 +130,4 @@ pnpm build:web
 
 ---
 
-*最后更新：2026-06-16*
+*最后更新：2026-06-17*
