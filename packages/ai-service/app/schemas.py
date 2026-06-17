@@ -122,6 +122,7 @@ class ServiceStatusResponse(BaseModel):
 class AgentPlanRequest(BaseModel):
     prompt: str
     userId: int
+    sessionId: int | None = None
     history: list[PlanChatMessage] = Field(default_factory=list)
     days: int | None = None
     budget: str | None = None
@@ -136,4 +137,6 @@ class AgentPlanResponse(BaseModel):
     toolTrace: list[dict] = Field(default_factory=list)
     routedIntent: str = "plan_new"
     assistantHint: str | None = None
+    assistantMessage: str | None = None
+    selectedRouteId: int | None = None
     memories: list[dict] = Field(default_factory=list)

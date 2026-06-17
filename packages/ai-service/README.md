@@ -33,7 +33,12 @@ AGENT_PLAN_ENABLED=false
 AGENT_TOOL_SECRET=与 Node 一致的随机密钥
 ```
 
-Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 `POST /api/agent/tools/:name`，请求头需带 `x-agent-tool-secret`。
+Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 Node 内网 API：
+
+- `POST /api/agent/route-intent` — 追问意图路由（Step 1）
+- `POST /api/agent/tools/:name` — 确定性 Tool 执行
+
+请求头需带 `x-agent-tool-secret`。
 
 ## API
 
@@ -55,7 +60,49 @@ Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 `POST /api/
 | `locale` | `zh-CN` \| `en-US` | 语言 |
 | `currentDraft` | object | 追问改天时传入当前路线 draft |
 
-编排逻辑见 `app/agent/graph.py`；Tool 执行在 Node `packages/server/src/agent/tools/`。
+### Agent Tool 链（`app/agent/graph.py`）
+
+**追问改天（tweak_day / tweak_poi + dayIndex）**
+
+```text
+route-intent → recall_user_memory → parse_intent
+  → patch_route_day → enrich_route → validate_route
+```
+
+**预算 / 住宿（budget_tune / lodging_tune）**
+
+```text
+… → parse_intent → tune_route_budget（仅 budget）→ enrich_route → validate_route
+… → parse_intent → enrich_route → validate_route（lodging）
+```
+
+**美食问答（qa_food）**
+
+```text
+… → parse_intent → answer_food_qa（无 generate_route_draft）
+```
+
+**选方案（select_variant）**
+
+```text
+… → select_plan_variant（需 sessionId，无 LLM）
+```
+
+**全量（plan_new 等）**
+
+```text
+route-intent → recall_user_memory → parse_intent → retrieve_attractions
+  → generate_route_draft → enrich_route → validate_route
+```
+
+**追问改天（tweak_day / tweak_poi + dayIndex）**
+
+```text
+route-intent → recall_user_memory → parse_intent
+  → patch_route_day → enrich_route → validate_route
+```
+
+Tool 权威实现：`packages/server/src/agent/tools/`。
 
 ## 降级链
 
@@ -63,8 +110,6 @@ Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 `POST /api/
 
 ## 相关文档
 
-## 相关文档
-
-- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · 当前 Step 1**
+- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · 当前 Step 6**
 - [AI规划与Agent演进.md](../../docs/AI规划与Agent演进.md) — 设计全稿
 - [开发记录 § C7](../../docs/开发记录-重难点与亮点.md#c7-ai-agent-代码落地2026-06-16)
