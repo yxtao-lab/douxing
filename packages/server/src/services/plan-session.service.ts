@@ -8,6 +8,8 @@ import type {
   PlanSessionSummary,
   CreatePlanSessionRequest,
   TravelIntentSnapshot,
+  PlanPetMeta,
+  MemoryRecallExplainItem,
 } from '@douxing/shared';
 import {
   PlanSessionStatus,
@@ -44,6 +46,11 @@ import { runAgentPlan, isAgentPlanEnabled, type AgentPlanResult, type AgentPlanS
 import { answerFoodQa } from './answer-food-qa.service.js';
 import { resolvePlanVariantSelection } from './select-plan-variant.service.js';
 import { writeTripMemory, PetMemoryType } from './pet-memory.service.js';
+import {
+  finalizePlanAssistantMessage,
+  mergePetMetaIntoAgentState,
+  buildPlanPetMeta,
+} from './plan-pet-meta.service.js';
 import { routeAgentIntent } from './agent-intent-router.service.js';
 import {
   beginPlanSessionGeneration,
@@ -86,17 +93,33 @@ function parsePlanSessionAgentState(raw: unknown): PlanSessionAgentState | null 
     typeof record.lastRoutedIntent === 'string' ? record.lastRoutedIntent : 'unknown';
   const assistantHint =
     typeof record.assistantHint === 'string' ? record.assistantHint : undefined;
+  const rawPetMeta = record.petMeta;
+  let petMeta: PlanSessionAgentState['petMeta'] = null;
+  if (rawPetMeta && typeof rawPetMeta === 'object') {
+    const pm = rawPetMeta as Record<string, unknown>;
+    petMeta = {
+      nickname: typeof pm.nickname === 'string' ? pm.nickname : '小兜',
+      species: typeof pm.species === 'string' ? pm.species : 'fox',
+      personality: typeof pm.personality === 'string' ? pm.personality : 'guide',
+      memorySummary: typeof pm.memorySummary === 'string' ? pm.memorySummary : '',
+      recallExplain: Array.isArray(pm.recallExplain)
+        ? (pm.recallExplain as MemoryRecallExplainItem[])
+        : [],
+    };
+  }
   return {
     lastRoutedIntent,
     generationPath,
     toolTrace: normalizedTrace,
     assistantHint,
+    petMeta,
   };
 }
 
 function buildPersistedAgentState(
   routedRoute: string,
   agentResult: AgentPlanResult | null | undefined,
+  petMeta?: PlanPetMeta | null,
 ): PlanSessionAgentState {
   if (
     agentResult
@@ -107,12 +130,14 @@ function buildPersistedAgentState(
       generationPath: 'agent',
       toolTrace: agentResult.toolTrace ?? [],
       assistantHint: agentResult.assistantHint,
+      petMeta: petMeta ?? null,
     };
   }
   return {
     lastRoutedIntent: routedRoute,
     generationPath: 'pipeline',
     toolTrace: [],
+    petMeta: petMeta ?? null,
   };
 }
 
@@ -236,6 +261,7 @@ function buildActionResult(
     memberLevel?: number;
     memberLevelLabel?: string;
     agentState?: PlanSessionAgentState | null;
+    petMeta?: PlanPetMeta | null;
   },
 ): PlanSessionActionResult {
   return {
@@ -251,6 +277,7 @@ function buildActionResult(
     generationSource: meta.generationSource,
     llmProvider: meta.llmProvider as PlanSessionActionResult['llmProvider'],
     agentState: meta.agentState ?? null,
+    petMeta: meta.petMeta ?? meta.agentState?.petMeta ?? null,
   };
 }
 
@@ -436,6 +463,7 @@ async function tryGenerateSessionCandidatesViaAgent(
 ): Promise<{
   pack: { rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number };
   agentState: PlanSessionAgentState;
+  agentResult: AgentPlanResult;
 } | null> {
   if (!isAgentPlanEnabled()) return null;
 
@@ -459,9 +487,11 @@ async function tryGenerateSessionCandidatesViaAgent(
     );
     if (!pack) return null;
 
+    const petMeta = await buildPlanPetMeta(userId, locale, agentResult);
     return {
       pack,
-      agentState: buildPersistedAgentState(agentResult.routedIntent || 'plan_new', agentResult),
+      agentState: buildPersistedAgentState(agentResult.routedIntent || 'plan_new', agentResult, petMeta),
+      agentResult,
     };
   } catch (err) {
     console.warn(
@@ -597,7 +627,6 @@ export async function createPlanSession(
   );
   const generatedPack = agentGenerated?.pack
     ?? await generateSessionCandidates(userId, generateInput, resolvedIntent, locale);
-  const persistedAgentState = agentGenerated?.agentState ?? null;
   const generated = generatedPack.rows;
   if (generated.length === 0) {
     throw new ApiError(ApiMessageKey.PLAN_GENERATE_EMPTY);
@@ -607,7 +636,7 @@ export async function createPlanSession(
   const memberLevel = generatedPack.memberLevel;
   const memberPlanCandidateCount = generatedPack.candidateCount;
   const memberLevelLabel = getMemberLevelLabel(memberLevel);
-  const assistantMessage = appendPlanAssistantWarnings(
+  const baseReply = appendPlanAssistantWarnings(
     generated.length > 1
       ? buildMultiCandidateAssistantReply(
           generated.length,
@@ -619,6 +648,15 @@ export async function createPlanSession(
     primary.route,
     locale,
   );
+  const { message: assistantMessage, petMeta } = await finalizePlanAssistantMessage(
+    baseReply,
+    userId,
+    locale,
+    agentGenerated?.agentResult ?? null,
+  );
+  const persistedAgentState = agentGenerated?.agentState
+    ? mergePetMetaIntoAgentState(agentGenerated.agentState, petMeta)
+    : buildPersistedAgentState('plan_new', null, petMeta);
   const snapshot = snapshotFromRoute(primary.route);
 
   const db = getDb();
@@ -667,6 +705,7 @@ export async function createPlanSession(
     memberLevel,
     memberLevelLabel,
     agentState: persistedAgentState,
+    petMeta,
   });
 }
 
@@ -694,16 +733,23 @@ export async function selectPlanSessionCandidate(
   if (!route) return null;
 
   const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
-  const assistantMessage = appendPlanAssistantWarnings(
+  const baseSwitchReply = appendPlanAssistantWarnings(
     buildPlanCandidateSwitchedReply(picked.variantKey, route.name, locale),
     route,
     locale,
+  );
+  const { message: assistantMessage, petMeta } = await finalizePlanAssistantMessage(
+    baseSwitchReply,
+    userId,
+    locale,
+    null,
   );
 
   return buildActionResult(sessionId, route, assistantMessage, {
     intentSnapshot: (session.intentSnapshot as TravelIntentSnapshot | null) ?? null,
     ragMatchedCount: readRagMatchedCount(route),
     candidates: refreshedCandidates,
+    petMeta,
   });
 }
 
@@ -909,16 +955,25 @@ export async function appendPlanSessionMessage(
     }
 
     const { route, generationSource, llmProvider, intent: resultIntent } = result;
-    let assistantMessage =
+    let baseAssistant =
       assistantMessageOverride
       ?? buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
     if (routeContentUpdated) {
-      assistantMessage = appendPlanAssistantWarnings(assistantMessage, route, locale);
+      baseAssistant = appendPlanAssistantWarnings(baseAssistant, route, locale);
     }
+    const { message: assistantMessage, petMeta } = await finalizePlanAssistantMessage(
+      baseAssistant,
+      userId,
+      locale,
+      agentResult,
+    );
     const snapshot =
       routed.route === 'qa_food' ? null : snapshotFromRoute(route);
     const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
-    const persistedAgentState = buildPersistedAgentState(routed.route, agentResult);
+    const persistedAgentState = mergePetMetaIntoAgentState(
+      buildPersistedAgentState(routed.route, agentResult),
+      petMeta,
+    );
 
     const db = getDb();
     await db.insert(planSessionMessages).values([
@@ -946,6 +1001,7 @@ export async function appendPlanSessionMessage(
       ragMatchedCount: readRagMatchedCount(route),
       candidates: refreshedCandidates.length > 1 ? refreshedCandidates : undefined,
       agentState: persistedAgentState,
+      petMeta,
     });
 
     emitPlanSessionAssistantFinal(sessionId, assistantMessage);

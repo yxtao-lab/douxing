@@ -11,6 +11,7 @@ import { success, fail, failFromError } from '../utils/response.js';
 import {
   adoptTravelPet,
   getTravelPetByUserId,
+  getTravelPetFloatingContext,
   updateTravelPetProfile,
 } from '../services/travel-pet.service.js';
 
@@ -59,6 +60,21 @@ router.get('/me', authMiddleware, async (req, res) => {
     success(res, pet, ApiMessageKey.OK);
   } catch (err) {
     console.error('[pets/me GET]', err);
+    return fail(res, ApiMessageKey.PET_FETCH_FAILED, 500, 500);
+  }
+});
+
+/** H3-b：悬浮层上下文（与规划 orchestrator 共用 buildPlanPetMeta） */
+router.get('/me/floating-context', authMiddleware, async (req, res) => {
+  try {
+    const locale = res.locals.locale ?? 'zh-CN';
+    const context = await getTravelPetFloatingContext(req.auth!.userId, locale);
+    if (!context) {
+      return fail(res, ApiMessageKey.PET_NOT_FOUND, 404, 404);
+    }
+    success(res, context, ApiMessageKey.OK);
+  } catch (err) {
+    console.error('[pets/me/floating-context]', err);
     return fail(res, ApiMessageKey.PET_FETCH_FAILED, 500, 500);
   }
 });

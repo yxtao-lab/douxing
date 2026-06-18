@@ -12,16 +12,18 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 26 — memory_agent 独立图节点**
+> **下一项工作：Step 29 — H3-c 记忆墙 / analyze**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | ai-service graph 增加 memory_agent 节点 · 偏好召回注入 plan context |
-| **功能作用** | 让 Agent 规划时能解释「记得你上次…」 |
-| **完成标准** | 见 Phase 4 Step 26 |
-| **完成后** | Step 27 规划页 Focus 宠物 UI |
+| **做什么** | `POST /pets/me/analyze` · 记忆墙 UI |
+| **功能作用** | 用户可查看历史记忆与分析 |
+| **完成标准** | 见 Phase 4 Step 29 |
+| **完成后** | Step 30 C7-c + H3 阶段验收 |
 
-**M3 已达成（2026-06-18）**：`h9:m3-accept` 全绿 · Step 16～20 自动化验收通过。
+**Step 28 已达成（2026-06-18）**：`TravelPetFloatingLayer` · `GET /pets/me/floating-context` · `travel-pet-floating:cases` 全绿。
+
+**Step 27 已达成（2026-06-18）**：mobile + PC `PlanPetFocusCard` · `plan-pet-focus:cases` 全绿。
 
 ### 0.2 整体进度
 
@@ -115,9 +117,9 @@
 | Step | 状态 | 任务 | 交付 | 验收标准 |
 |------|------|------|------|----------|
 | **25** | [x] | **H3-a 领养 API** | `POST /pets/adopt` 等 | [x] 用户可领养 [x] i18n 错误 |
-| **26** | [ ] | **memory_agent 独立图节点** | graph.py | [ ] 偏好召回可解释 [ ] 注入 plan context |
-| **27** | [ ] | **规划页 Focus 宠物 UI** | mobile + PC plan 页 | [ ] 口吻化 assistant [ ] 记忆摘要可见 |
-| **28** | [ ] | **H3-b 全站悬浮层** | `TravelPetFloatingLayer` | [ ] Tab 页浮球 [ ] 调同一 orchestrator |
+| **26** | [x] | **memory_agent 独立图节点** | `memory_agent.py` + Tool | [x] 偏好召回可解释 [x] 注入 plan context |
+| **27** | [x] | **规划页 Focus 宠物 UI** | mobile + PC plan 页 | [x] 口吻化 assistant [x] 记忆摘要可见 |
+| **28** | [x] | **H3-b 全站悬浮层** | `TravelPetFloatingLayer` | [x] Tab 页浮球 [x] 调同一 orchestrator |
 | **29** | [ ] | **H3-c 记忆墙 / analyze** | `POST /pets/me/analyze` | [ ] 可查看历史记忆与分析 |
 | **30** | [ ] | **C7-c + H3 阶段验收** | 手测 | [ ] 第二轮规划体现「上次遗憾」 [ ] **M4 达成** |
 
@@ -204,7 +206,7 @@
 ```text
 刚接手项目        → 读 §0.1，从 Step 1 开始
 C7-b 后端已联调   → 从 Step 6（i18n）或 Step 7（SSE）开始
-Agent 已上 staging → 从 Step 26（memory_agent 节点）开始
+Agent 已上 staging → 从 Step 27（规划页宠物 UI）开始
 要做行中能力      → 确认 M1+M2+M3 已达成，从 Step 31 开始
 要做专属模型      → 确认 M1 已达成，从 Step 35 开始（可与 Phase 3 并行）
 ```
@@ -419,6 +421,8 @@ pnpm --filter @douxing/server playbook-order:cases             # M3 Step 20 POI 
 pnpm --filter @douxing/server h9:m3-accept                       # M3 一键验收（Step 21）
 pnpm --filter @douxing/server h9:m3-accept -- --skip-db          # 无 MySQL 时跳过 CRUD
 pnpm --filter @douxing/server pet:adopt-cases                    # M4 Step 25 领养 API
+pnpm --filter @douxing/server memory-agent:cases                 # M4 Step 26 memory_agent
+pnpm --filter @douxing/server plan-pet-focus:cases               # M4 Step 27 Focus UI
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -479,7 +483,9 @@ pnpm dev
 ### 8.5 M4 记忆宠物（Step 25～30）
 
 - [x] 领养 API（`pet:adopt-cases` · `POST /api/pets/adopt` · 2026-06-18）
-- [ ] 记忆召回 + 规划页宠物 + 悬浮层
+- [x] memory_agent 节点（`memory-agent:cases` · graph + apply_memory_context · 2026-06-18）
+- [x] 规划页 Focus UI（`plan-pet-focus:cases` · mobile + PC · 2026-06-18）
+- [ ] 全站悬浮层 + 记忆墙
 
 ### 8.6 M5 行中（Step 31～34）
 
@@ -543,3 +549,5 @@ pnpm dev
 | 2026-06-18 | 3.4 | **Step 20 / H9+-3**：`softAlignDayPoisToPlaybook` · classicOrder 重排 + i18n warning |
 | 2026-06-18 | 3.5 | **Step 21 / M3 达成**：`h9:m3-accept` 全绿 · 修复 CRUD 脚本 DB 连接未退出 · 指针 → Step 25 |
 | 2026-06-18 | 3.6 | **Step 25 / H3-a**：`POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey |
+| 2026-06-18 | 3.7 | **Step 26 / C7-c**：`memory_agent.py` · `apply_memory_context` Tool · `memory-agent:cases` |
+| 2026-06-18 | 3.8 | **Step 27 / H3-a UI**：`PlanPetFocusCard` · petMeta · 助手口吻 · `plan-pet-focus:cases` |

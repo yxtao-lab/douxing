@@ -39,6 +39,20 @@ export {
   appendPlanAssistantWarnings,
 } from './plan-messages.js';
 export {
+  wrapPlanAssistantWithPetTone,
+  formatPetPersonalityLabel,
+  formatPlanPetFocusTitle,
+  formatPlanPetMemoryTitle,
+  formatPlanPetEmptyMemory,
+  buildPlanPetFocusRecallItems,
+  formatPetFloatingSheetTitle,
+  formatPetFloatingGoPlan,
+  formatPetFloatingLevelLabel,
+  formatPetFloatingMoodLabel,
+  formatPetFloatingAmbientNoMemory,
+  formatPetFloatingAmbientWithMemory,
+} from './pet-messages.js';
+export {
   formatPlanVariantLabel,
   formatPlanVariantHint,
   formatPlanVariantSuffix,

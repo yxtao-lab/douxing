@@ -34,6 +34,13 @@ export interface UpdateTravelPetRequest {
   personality?: TravelPetPersonality;
 }
 
+/** H3-b：全站悬浮层上下文（与规划 orchestrator 共用 memory 召回） */
+export interface TravelPetFloatingContext {
+  pet: TravelPetInfo;
+  /** 与 buildPlanPetMeta / plan agent 同源 */
+  petMeta: import('./types.js').PlanPetMeta;
+}
+
 export function isTravelPetSpecies(value: string): value is TravelPetSpecies {
   return (TRAVEL_PET_SPECIES as readonly string[]).includes(value);
 }

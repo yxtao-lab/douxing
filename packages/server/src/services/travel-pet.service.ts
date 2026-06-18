@@ -9,6 +9,8 @@ import {
   isTravelPetPersonality,
   isTravelPetSpecies,
   type AdoptTravelPetRequest,
+  type LocaleCode,
+  type TravelPetFloatingContext,
   type TravelPetInfo,
   type TravelPetMood,
   type TravelPetPersonality,
@@ -17,6 +19,8 @@ import {
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { travelPets, type TravelPet } from '../db/schema/travel-pets.js';
+import { ensureTravelPet } from './pet-memory.service.js';
+import { buildPlanPetMeta } from './plan-pet-meta.service.js';
 
 function rowToInfo(row: TravelPet): TravelPetInfo {
   return {
@@ -65,6 +69,18 @@ export async function getTravelPetByUserId(userId: number): Promise<TravelPetInf
     .where(eq(travelPets.userId, userId))
     .limit(1);
   return rows[0] ? rowToInfo(rows[0]) : null;
+}
+
+/** H3-b：悬浮层与规划页共用 memory 召回（buildPlanPetMeta） */
+export async function getTravelPetFloatingContext(
+  userId: number,
+  locale: LocaleCode,
+): Promise<TravelPetFloatingContext | null> {
+  await ensureTravelPet(userId);
+  const pet = await getTravelPetByUserId(userId);
+  if (!pet) return null;
+  const petMeta = await buildPlanPetMeta(userId, locale, null);
+  return { pet, petMeta };
 }
 
 export async function adoptTravelPet(

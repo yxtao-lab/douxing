@@ -149,3 +149,5 @@ class AgentPlanResponse(BaseModel):
     assistantMessage: str | None = None
     selectedRouteId: int | None = None
     memories: list[dict] = Field(default_factory=list)
+    memorySummary: str | None = None
+    recallExplain: list[dict] = Field(default_factory=list)

@@ -1,5 +1,6 @@
 <template>
   <AiPlanBlockingOverlay />
+  <TravelPetFloatingLayer />
   <view class="tab-bar">
     <view class="tab-bar-border" />
     <view
@@ -21,6 +22,7 @@
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
+import TravelPetFloatingLayer from '@/components/travel-pet-floating-layer/TravelPetFloatingLayer.vue';
 import { isAiPlanLoading } from '@/utils/ai-plan-loading';
 
 interface TabItem {

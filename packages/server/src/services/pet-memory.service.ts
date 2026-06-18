@@ -3,6 +3,7 @@
  */
 import { desc, eq, and } from 'drizzle-orm';
 import { TRAVEL_PET_DEFAULT_NICKNAME } from '@douxing/shared';
+import type { LocaleCode, MemoryRecallExplainItem, MemoryRecallPackage } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { petMemories, travelPets } from '../db/schema/index.js';
 
@@ -153,4 +154,69 @@ export function extractBoostPoiNames(memories: RecalledMemory[]): string[] {
     }
   }
   return [...new Set(names)].slice(0, 10);
+}
+
+const MEMORY_RECALL_REASON: Record<LocaleCode, Record<string, string>> = {
+  'zh-CN': {
+    preference: '稳定偏好标签',
+    regret: '上次遗憾·建议优先补偿',
+    visited: '已到访·避免重复安排',
+    trip_summary: '历史行程摘要',
+    milestone: '旅行里程碑',
+  },
+  'en-US': {
+    preference: 'Stable preference',
+    regret: 'Past regret · prioritize makeup',
+    visited: 'Already visited · avoid repeats',
+    trip_summary: 'Past trip summary',
+    milestone: 'Travel milestone',
+  },
+};
+
+function resolveMemoryRecallReason(memoryType: string, locale: LocaleCode): string {
+  const table = MEMORY_RECALL_REASON[locale] ?? MEMORY_RECALL_REASON['zh-CN'];
+  return table[memoryType] ?? (locale === 'en-US' ? 'Recalled memory' : '相关记忆');
+}
+
+export function buildMemoryRecallExplain(
+  memories: RecalledMemory[],
+  locale: LocaleCode = 'zh-CN',
+): { memorySummary: string; recallExplain: MemoryRecallExplainItem[] } {
+  const recallExplain: MemoryRecallExplainItem[] = memories.map((m) => ({
+    memoryType: m.memoryType,
+    content: m.content,
+    reason: resolveMemoryRecallReason(m.memoryType, locale),
+  }));
+
+  if (recallExplain.length === 0) {
+    return {
+      memorySummary: locale === 'en-US' ? 'No past trip memories yet' : '暂无历史旅行记忆',
+      recallExplain,
+    };
+  }
+
+  const bullets = recallExplain.slice(0, 5).map((item) => `· ${item.content}`);
+  const memorySummary =
+    locale === 'en-US'
+      ? `Recalled ${recallExplain.length} memory item(s): ${bullets.join(' ')}`
+      : `召回 ${recallExplain.length} 条记忆：${bullets.join(' ')}`;
+
+  return { memorySummary, recallExplain };
+}
+
+export function buildMemoryRecallPackage(
+  memories: RecalledMemory[],
+  locale: LocaleCode = 'zh-CN',
+): MemoryRecallPackage {
+  const { memorySummary, recallExplain } = buildMemoryRecallExplain(memories, locale);
+  return {
+    memories,
+    memorySummary,
+    recallExplain,
+    context: {
+      memoryThemes: extractMemoryThemes(memories),
+      excludePoiNames: extractVisitedPoiNames(memories),
+      boostPoiNames: extractBoostPoiNames(memories),
+    },
+  };
 }

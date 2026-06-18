@@ -14,6 +14,8 @@ import type {
 
   AgentToolTraceEntry,
 
+  MemoryRecallExplainItem,
+
 } from '@douxing/shared';
 
 import {
@@ -59,6 +61,8 @@ import { loadPlanUserContext } from './plan-user-context.service.js';
 import { resolvePlanningCity } from './travel-intent.service.js';
 
 import { runBuildRouteVariantsTool } from '../agent/tools/build-route-variants.tool.js';
+import { runRecallUserMemoryTool } from '../agent/tools/memory.tools.js';
+import { runApplyMemoryContextTool } from '../agent/tools/apply-memory-context.tool.js';
 
 
 
@@ -121,6 +125,17 @@ export interface AgentPlanResult {
   assistantMessage?: string;
 
   selectedRouteId?: number;
+
+  memories?: Array<{
+    id: number;
+    memoryType: string;
+    content: string;
+    importance: number;
+  }>;
+
+  memorySummary?: string;
+
+  recallExplain?: MemoryRecallExplainItem[];
 
 }
 
@@ -341,6 +356,138 @@ function replayAgentToolTrace(
 
 
 
+interface MemoryAgentStepResult {
+
+  intent?: TravelIntentSnapshot;
+
+  memorySummary?: string;
+
+  recallExplain?: MemoryRecallExplainItem[];
+
+  memories?: AgentPlanResult['memories'];
+
+}
+
+
+
+async function runMemoryAgentStep(
+
+  request: AgentPlanRequest,
+
+  trace: AgentPlanResult['toolTrace'],
+
+  hooks?: AgentPlanStreamHooks,
+
+): Promise<MemoryAgentStepResult> {
+
+  const locale = request.locale ?? 'zh-CN';
+
+  const memStart = Date.now();
+
+  hooks?.onToolStart?.('memory_agent');
+
+  const recall = await runRecallUserMemoryTool({
+
+    userId: request.userId,
+
+    limit: 8,
+
+    query: request.prompt.slice(0, 120),
+
+    locale,
+
+  });
+
+  const memMs = Date.now() - memStart;
+
+  trace.push({ tool: 'memory_agent', ok: recall.ok, ms: memMs });
+
+  hooks?.onToolEnd?.('memory_agent', recall.ok, memMs);
+
+
+
+  if (!recall.ok) {
+
+    return { intent: request.intent };
+
+  }
+
+
+
+  const memorySummary = recall.data.memorySummary as string | undefined;
+
+  const recallExplain = recall.data.recallExplain as MemoryRecallExplainItem[] | undefined;
+
+  const memories = recall.data.memories as AgentPlanResult['memories'];
+
+  const context = recall.data.context as
+
+    | {
+
+        memoryThemes?: string[];
+
+        excludePoiNames?: string[];
+
+        boostPoiNames?: string[];
+
+      }
+
+    | undefined;
+
+
+
+  if (!request.intent) {
+
+    return { intent: request.intent, memorySummary, recallExplain, memories };
+
+  }
+
+
+
+  const applyStart = Date.now();
+
+  hooks?.onToolStart?.('apply_memory_context');
+
+  const applied = await runApplyMemoryContextTool({
+
+    intent: request.intent,
+
+    userId: request.userId,
+
+    memorySummary,
+
+    context,
+
+  });
+
+  const applyMs = Date.now() - applyStart;
+
+  trace.push({ tool: 'apply_memory_context', ok: applied.ok, ms: applyMs });
+
+  hooks?.onToolEnd?.('apply_memory_context', applied.ok, applyMs);
+
+
+
+  return {
+
+    intent: applied.ok
+
+      ? (applied.data.intent as TravelIntentSnapshot)
+
+      : request.intent,
+
+    memorySummary,
+
+    recallExplain,
+
+    memories,
+
+  };
+
+}
+
+
+
 async function runLocalAgentPlan(
   request: AgentPlanRequest,
   hooks?: AgentPlanStreamHooks,
@@ -350,11 +497,23 @@ async function runLocalAgentPlan(
 
   const routed = routeAgentIntent(request.prompt);
 
-  const intent = request.intent;
+  const memoryStep = await runMemoryAgentStep(request, trace, hooks);
+
+  const intent = memoryStep.intent;
 
   const locale = request.locale;
 
   const draft = request.currentDraft;
+
+  const memoryMeta = {
+
+    memories: memoryStep.memories,
+
+    memorySummary: memoryStep.memorySummary,
+
+    recallExplain: memoryStep.recallExplain,
+
+  };
 
 
 
@@ -393,6 +552,8 @@ async function runLocalAgentPlan(
         selectedRouteId: selected.routeId,
 
         assistantMessage: selected.assistantMessage,
+
+        ...memoryMeta,
 
       };
 
@@ -433,6 +594,8 @@ async function runLocalAgentPlan(
       routedIntent: routed.route,
 
       assistantMessage,
+
+      ...memoryMeta,
 
     };
 
@@ -494,6 +657,8 @@ async function runLocalAgentPlan(
 
         assistantHint: '已局部调整指定天行程',
 
+        ...memoryMeta,
+
       };
 
     }
@@ -526,6 +691,8 @@ async function runLocalAgentPlan(
 
         assistantHint: buildBudgetTunedAssistantHint(locale ?? 'zh-CN'),
 
+        ...memoryMeta,
+
       };
 
     }
@@ -552,6 +719,8 @@ async function runLocalAgentPlan(
 
         assistantHint: buildLodgingTunedAssistantHint(locale ?? 'zh-CN'),
 
+        ...memoryMeta,
+
       };
 
     }
@@ -563,7 +732,8 @@ async function runLocalAgentPlan(
   const context = await loadPlanUserContext(request.userId);
 
   if (!draft && intent) {
-    return generatePlanNewCandidates(request, intent, routed.route, trace, hooks);
+    const result = await generatePlanNewCandidates(request, intent, routed.route, trace, hooks);
+    return { ...result, ...memoryMeta };
   }
 
   const genStart = Date.now();
@@ -609,6 +779,8 @@ async function runLocalAgentPlan(
     toolTrace: trace,
 
     routedIntent: routed.route,
+
+    ...memoryMeta,
 
   };
 

@@ -30,6 +30,7 @@
         <text class="intent-label">{{ t('plan.intentLabel') }}</text>
         <text class="intent-value">{{ intentSummary }}{{ intentBarExtra }}</text>
       </view>
+      <PlanPetFocusCard v-if="petFocus" :view-model="petFocus" />
       <view v-if="membershipHint" class="membership-bar">
         <text class="membership-label">{{ membershipHint }}</text>
       </view>
@@ -221,9 +222,12 @@ import { getAppErrorMessage } from '@/utils/request';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
+import PlanPetFocusCard from '@/components/plan/PlanPetFocusCard.vue';
 import type {
   LlmProviderChoice,
   LlmProviderOption,
+  PlanPetMeta,
+  PlanSessionAgentState,
   PlanSessionMessageInfo,
   TravelIntentSnapshot,
   UserInfo,
@@ -238,6 +242,7 @@ import {
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
   formatPlanRecentPromptLabel,
+  resolvePlanPetFocusViewModel,
 } from '@douxing/shared';
 import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
 import { useTheme } from '@/i18n/useTheme';
@@ -428,6 +433,18 @@ function candidateLabel(item: PlanRouteCandidate): string {
 }
 
 const ragMatchedCount = ref(0);
+const petMeta = ref<PlanPetMeta | null>(null);
+
+const petFocus = computed(() => {
+  if (!sessionId.value) return null;
+  return resolvePlanPetFocusViewModel(petMeta.value, currentLocale.value);
+});
+
+function syncPetMeta(
+  source?: { petMeta?: PlanPetMeta | null; agentState?: PlanSessionAgentState | null } | null,
+) {
+  petMeta.value = source?.petMeta ?? source?.agentState?.petMeta ?? null;
+}
 
 const intentBarExtra = computed(() => {
   if (ragMatchedCount.value <= 0) return '';
@@ -520,6 +537,7 @@ function clearSessionView() {
   ragMatchedCount.value = 0;
   candidates.value = [];
   messages.value = [];
+  petMeta.value = null;
   resetComposerInput();
   clearLlmIssue();
   refreshStatusForProvider();
@@ -568,6 +586,7 @@ async function loadSession(id: number) {
       ? ((session.route?.routeDetail as Record<string, unknown>).ragMatchedCount as number)
       : 0;
   messages.value = mapMessages(session.messages);
+  syncPetMeta(session);
   if (session.provider) {
     provider.value = session.provider;
     refreshStatusForProvider();
@@ -583,6 +602,7 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
     syncCurrentRoutePreview(result.id, result);
     candidates.value = result.candidates ?? [];
     ragMatchedCount.value = result.ragMatchedCount ?? 0;
+    syncPetMeta(result);
     uni.showToast({ title: t('plan.candidateSwitched'), icon: 'success' });
   } catch (e) {
     uni.showToast({
@@ -696,8 +716,10 @@ async function handleSend(text: string) {
         memberPlanCount.value = planActionResult.memberPlanCandidateCount;
       }
       handleGenerationResult(planActionResult);
+      syncPetMeta(planActionResult);
       const loadedSession = await fetchPlanSession(planActionResult.sessionId);
       messages.value = mapMessages(loadedSession.messages);
+      syncPetMeta(loadedSession);
       candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
       syncCurrentRoutePreview(planActionResult.id, loadedSession.route ?? planActionResult);
       scrollToBottom();
@@ -712,8 +734,10 @@ async function handleSend(text: string) {
     intentSnapshot.value = planActionResult.intentSnapshot ?? null;
     ragMatchedCount.value = planActionResult.ragMatchedCount ?? 0;
     handleGenerationResult(planActionResult);
+    syncPetMeta(planActionResult);
     const loadedSession = await fetchPlanSession(sessionId.value);
     messages.value = mapMessages(loadedSession.messages);
+    syncPetMeta(loadedSession);
     candidates.value = loadedSession.candidates ?? planActionResult.candidates ?? [];
     syncCurrentRoutePreview(planActionResult.id, planActionResult);
     scrollToBottom();

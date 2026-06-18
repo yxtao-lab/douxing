@@ -6,6 +6,7 @@ import time
 from typing import Any, TypedDict
 
 from app.tools.node_client import call_node_tool, call_route_intent
+from app.agent.memory_agent import apply_memory_context_to_intent, run_memory_agent
 
 
 class PlanAgentState(TypedDict, total=False):
@@ -27,6 +28,10 @@ class PlanAgentState(TypedDict, total=False):
     assistant_hint: str | None
     assistant_message: str | None
     selected_route_id: int | None
+    memories: list[dict[str, Any]]
+    memory_summary: str | None
+    memory_context: dict[str, Any] | None
+    recall_explain: list[dict[str, Any]]
 
 
 def _resolve_planning_city(intent: dict) -> str | None:
@@ -336,15 +341,8 @@ async def _run_plan_agent_core(request: dict[str, Any], prompt: str) -> dict[str
         "routed_intent": route,
     }
 
-    # 1. 记忆召回（qa / select 可跳过全量生成，但仍保留记忆上下文）
-    t0 = time.time()
-    memory_data = await call_node_tool(
-        "recall_user_memory",
-        {"userId": state["user_id"], "limit": 8},
-    )
-    state["tool_trace"].append(
-        {"tool": "recall_user_memory", "ok": True, "ms": int((time.time() - t0) * 1000)}
-    )
+    # 1. memory_agent：可解释召回 + context
+    await run_memory_agent(state)
 
     # 2. 意图解析 — Node 已传入合并后的 intent 时直接沿用，避免追问丢失 exclude 等约束
     pre_intent = request.get("intent")
@@ -370,6 +368,9 @@ async def _run_plan_agent_core(request: dict[str, Any], prompt: str) -> dict[str
             {"tool": "parse_intent", "ok": True, "ms": int((time.time() - t1) * 1000)}
         )
 
+    # 3. 注入 memory context 到 intent（含 session 预填 intent）
+    await apply_memory_context_to_intent(state)
+
     routed = state["routed"]
     route = state["routed_intent"]
 
@@ -394,5 +395,7 @@ async def _run_plan_agent_core(request: dict[str, Any], prompt: str) -> dict[str
         "assistantHint": state.get("assistant_hint"),
         "assistantMessage": state.get("assistant_message"),
         "selectedRouteId": state.get("selected_route_id"),
-        "memories": memory_data.get("memories"),
+        "memories": state.get("memories") or [],
+        "memorySummary": state.get("memory_summary"),
+        "recallExplain": state.get("recall_explain") or [],
     }

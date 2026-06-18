@@ -1,5 +1,6 @@
 <template>
   <AiPlanBlockingOverlay />
+  <TravelPetFloatingLayer />
   <view class="page" :class="themeClass" v-if="route">
     <view class="hero">
       <view class="hero-bg" />
@@ -229,6 +230,7 @@ import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
 import { RouteStatus } from '@douxing/shared';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
+import TravelPetFloatingLayer from '@/components/travel-pet-floating-layer/TravelPetFloatingLayer.vue';
 import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
 import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';

@@ -33,6 +33,8 @@
       <span class="text-dx-text">{{ intentSummary }}{{ intentBarExtra }}</span>
     </div>
 
+    <PlanPetFocusCard v-if="petFocus" :view-model="petFocus" />
+
     <div v-if="membershipHint" class="mb-3 shrink-0 text-xs text-dx-muted">{{ membershipHint }}</div>
 
     <div
@@ -261,6 +263,7 @@
 <script setup lang="ts">
 import { nextTick, ref, watch } from 'vue';
 import AiPlanBlockingOverlay from '@/components/AiPlanBlockingOverlay.vue';
+import PlanPetFocusCard from '@/components/plan/PlanPetFocusCard.vue';
 import { usePlanPage } from '@/composables/usePlanPage';
 import { useLocale } from '@/i18n/useLocale';
 import type { LlmProviderOption } from '@douxing/shared';
@@ -280,6 +283,7 @@ const {
   candidates,
   intentSummary,
   intentBarExtra,
+  petFocus,
   membershipHint,
   appendLockedHint,
   llmIssueMessage,

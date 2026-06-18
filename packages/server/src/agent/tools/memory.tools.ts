@@ -1,4 +1,5 @@
 import {
+  buildMemoryRecallPackage,
   recallUserMemory,
   writeTripMemory,
   PetMemoryType,
@@ -16,11 +17,13 @@ export async function runRecallUserMemoryTool(raw: unknown) {
     return toolFail(parsed.error.message, 'INVALID_INPUT');
   }
 
+  const locale = parsed.data.locale ?? 'zh-CN';
   const memories = await recallUserMemory(parsed.data.userId, {
     query: parsed.data.query,
     limit: parsed.data.limit,
   });
-  return toolSuccess({ memories });
+  const pack = buildMemoryRecallPackage(memories, locale);
+  return toolSuccess(pack);
 }
 
 export async function runWriteTripMemoryTool(raw: unknown) {

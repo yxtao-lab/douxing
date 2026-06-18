@@ -95,6 +95,20 @@ export const recallMemoryInputSchema = z.object({
   userId: z.number().int().positive(),
   query: z.string().optional(),
   limit: z.number().int().positive().optional(),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+});
+
+export const applyMemoryContextInputSchema = z.object({
+  intent: z.record(z.unknown()),
+  userId: z.number().int().positive(),
+  memorySummary: z.string().optional(),
+  context: z
+    .object({
+      memoryThemes: z.array(z.string()).optional(),
+      excludePoiNames: z.array(z.string()).optional(),
+      boostPoiNames: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
 export const writeMemoryInputSchema = z.object({
@@ -125,4 +139,5 @@ export type ToolName =
   | 'answer_food_qa'
   | 'select_plan_variant'
   | 'recall_user_memory'
+  | 'apply_memory_context'
   | 'write_trip_memory';

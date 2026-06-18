@@ -72,7 +72,7 @@ Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 Node 内网
 **追问改天（tweak_day / tweak_poi + dayIndex）**
 
 ```text
-route-intent → recall_user_memory → parse_intent
+route-intent → memory_agent → parse_intent → apply_memory_context
   → patch_route_day → enrich_route → validate_route
 ```
 
@@ -98,14 +98,14 @@ route-intent → recall_user_memory → parse_intent
 **全量（plan_new 等）**
 
 ```text
-route-intent → recall_user_memory → parse_intent → retrieve_attractions
+route-intent → memory_agent → parse_intent → apply_memory_context → retrieve_attractions
   → generate_route_draft → enrich_route → validate_route
 ```
 
 **追问改天（tweak_day / tweak_poi + dayIndex）**
 
 ```text
-route-intent → recall_user_memory → parse_intent
+route-intent → memory_agent → parse_intent → apply_memory_context
   → patch_route_day → enrich_route → validate_route
 ```
 

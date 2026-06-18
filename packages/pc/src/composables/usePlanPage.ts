@@ -17,6 +17,8 @@ import type {
   LlmProviderChoice,
   LlmProviderOption,
   PlanRouteCandidate,
+  PlanPetMeta,
+  PlanSessionAgentState,
   PlanSessionMessageInfo,
   TravelIntentSnapshot,
   TravelRouteInfo,
@@ -31,6 +33,7 @@ import {
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
   formatPlanRecentPromptLabel,
+  resolvePlanPetFocusViewModel,
 } from '@douxing/shared';
 import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
 
@@ -62,6 +65,18 @@ export function usePlanPage() {
   const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
   const scrollAnchor = ref('');
   const recentPrompts = ref<string[]>([]);
+  const petMeta = ref<PlanPetMeta | null>(null);
+
+  const petFocus = computed(() => {
+    if (!sessionId.value) return null;
+    return resolvePlanPetFocusViewModel(petMeta.value, currentLocale.value);
+  });
+
+  function syncPetMeta(
+    source?: { petMeta?: PlanPetMeta | null; agentState?: PlanSessionAgentState | null } | null,
+  ) {
+    petMeta.value = source?.petMeta ?? source?.agentState?.petMeta ?? null;
+  }
 
   const showModelPicker = import.meta.env.DEV;
   const aiPlanning = aiPlanLoading;
@@ -213,6 +228,7 @@ export function usePlanPage() {
     ragMatchedCount.value = 0;
     candidates.value = [];
     messages.value = [];
+    petMeta.value = null;
     inputText.value = '';
     clearLlmIssue();
     refreshStatusForProvider();
@@ -278,6 +294,7 @@ export function usePlanPage() {
         ? ((session.route?.routeDetail as Record<string, unknown>).ragMatchedCount as number)
         : 0;
     messages.value = mapMessages(session.messages);
+    syncPetMeta(session);
     if (session.provider) {
       provider.value = session.provider;
       refreshStatusForProvider();
@@ -292,6 +309,7 @@ export function usePlanPage() {
       syncCurrentRoute(result.id, result);
       candidates.value = result.candidates ?? [];
       ragMatchedCount.value = result.ragMatchedCount ?? 0;
+      syncPetMeta(result);
       appMessage.success(t('plan.candidateSwitched'));
     } catch (err) {
       appMessage.error(getAppErrorMessage(err, t('plan.candidateSwitchFailed')));
@@ -363,8 +381,10 @@ export function usePlanPage() {
           memberPlanCount.value = result.memberPlanCandidateCount;
         }
         handleGenerationResult(result);
+        syncPetMeta(result);
         const loaded = await fetchPlanSession(result.sessionId);
         messages.value = mapMessages(loaded.messages);
+        syncPetMeta(loaded);
         candidates.value = loaded.candidates ?? result.candidates ?? [];
         syncCurrentRoute(result.id, loaded.route ?? result);
         scrollToBottom();
@@ -378,8 +398,10 @@ export function usePlanPage() {
       intentSnapshot.value = result.intentSnapshot ?? null;
       ragMatchedCount.value = result.ragMatchedCount ?? 0;
       handleGenerationResult(result);
+      syncPetMeta(result);
       const loaded = await fetchPlanSession(sessionId.value);
       messages.value = mapMessages(loaded.messages);
+      syncPetMeta(loaded);
       candidates.value = loaded.candidates ?? result.candidates ?? [];
       syncCurrentRoute(result.id, result);
       scrollToBottom();
@@ -467,6 +489,7 @@ export function usePlanPage() {
     candidates,
     intentSummary,
     intentBarExtra,
+    petFocus,
     membershipHint,
     appendLockedHint,
     llmIssueMessage,

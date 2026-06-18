@@ -57,3 +57,21 @@ export function mergeIntentWithUserContext(
     themes,
   };
 }
+
+/** C7-c：将 memory_agent 召回摘要写入 intent.constraintSummary */
+export function applyMemoryContextToIntent(
+  intent: TravelIntentSnapshot,
+  context: PlanUserContext,
+  memorySummary?: string,
+): TravelIntentSnapshot {
+  let merged = mergeIntentWithUserContext(intent, context);
+  const summary = memorySummary?.trim();
+  if (summary) {
+    const existing = merged.constraintSummary?.trim();
+    merged = {
+      ...merged,
+      constraintSummary: existing ? `${existing}；${summary}` : summary,
+    };
+  }
+  return merged;
+}

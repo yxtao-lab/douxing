@@ -22,7 +22,9 @@ export const AGENT_TOOL_STATUS_KEYS = [
   'lodging_tune',
   'answer_food_qa',
   'select_plan_variant',
+  'memory_agent',
   'recall_user_memory',
+  'apply_memory_context',
   'write_trip_memory',
 ] as const;
 
@@ -48,7 +50,9 @@ const AGENT_STATUS_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'agent.status.lodging_tune': '更新住宿安排',
     'agent.status.answer_food_qa': '查询美食推荐',
     'agent.status.select_plan_variant': '切换候选方案',
+    'agent.status.memory_agent': '回忆旅行记忆',
     'agent.status.recall_user_memory': '回忆旅行偏好',
+    'agent.status.apply_memory_context': '注入记忆到规划',
     'agent.status.write_trip_memory': '记录旅行记忆',
   },
   'en-US': {
@@ -70,7 +74,9 @@ const AGENT_STATUS_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'agent.status.lodging_tune': 'Updating lodging',
     'agent.status.answer_food_qa': 'Looking up food picks',
     'agent.status.select_plan_variant': 'Switching plan variant',
+    'agent.status.memory_agent': 'Recalling trip memories',
     'agent.status.recall_user_memory': 'Recalling preferences',
+    'agent.status.apply_memory_context': 'Applying memories to plan',
     'agent.status.write_trip_memory': 'Saving trip memory',
   },
 };

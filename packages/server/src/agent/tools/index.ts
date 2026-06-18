@@ -14,6 +14,7 @@ import {
   runRecallUserMemoryTool,
   runWriteTripMemoryTool,
 } from './memory.tools.js';
+import { runApplyMemoryContextTool } from './apply-memory-context.tool.js';
 
 export type { ToolName } from './schemas.js';
 
@@ -30,6 +31,7 @@ export const AGENT_TOOL_NAMES: ToolName[] = [
   'answer_food_qa',
   'select_plan_variant',
   'recall_user_memory',
+  'apply_memory_context',
   'write_trip_memory',
 ];
 
@@ -59,6 +61,8 @@ export async function executeAgentTool(name: ToolName, input: unknown) {
       return runSelectPlanVariantTool(input);
     case 'recall_user_memory':
       return runRecallUserMemoryTool(input);
+    case 'apply_memory_context':
+      return runApplyMemoryContextTool(input);
     case 'write_trip_memory':
       return runWriteTripMemoryTool(input);
     default:

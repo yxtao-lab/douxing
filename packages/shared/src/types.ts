@@ -464,6 +464,17 @@ export interface PlanSessionAgentState {
   generationPath: 'agent' | 'pipeline';
   toolTrace: AgentToolTraceEntry[];
   assistantHint?: string;
+  /** C7-c / H3-a：规划页 Focus 宠物与记忆摘要 */
+  petMeta?: PlanPetMeta | null;
+}
+
+/** H3-a：规划页宠物 Focus 态展示数据 */
+export interface PlanPetMeta {
+  nickname: string;
+  species: string;
+  personality: string;
+  memorySummary: string;
+  recallExplain: MemoryRecallExplainItem[];
 }
 
 /** 规划会话摘要（列表） */
@@ -534,6 +545,8 @@ export interface PlanSessionActionResult extends TravelRouteInfo {
   llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
   /** C7-b：本次操作 Agent 状态（与 DB agent_state 一致） */
   agentState?: PlanSessionAgentState | null;
+  /** H3-a：规划页 Focus 宠物（与 agentState.petMeta 同步） */
+  petMeta?: PlanPetMeta | null;
 }
 
 export interface OrderInfo {
@@ -933,4 +946,29 @@ export interface TrackAnalyticsEventInput {
   properties?: Record<string, unknown>;
   source?: string;
   occurredAt?: Date;
+}
+
+/** C7-c：单条记忆召回解释 */
+export interface MemoryRecallExplainItem {
+  memoryType: string;
+  content: string;
+  reason: string;
+}
+
+/** C7-c：memory_agent 召回包（Tool / Agent 响应） */
+export interface MemoryRecallPackage {
+  memories: Array<{
+    id: number;
+    memoryType: string;
+    content: string;
+    importance: number;
+    metadata?: Record<string, unknown> | null;
+  }>;
+  memorySummary: string;
+  recallExplain: MemoryRecallExplainItem[];
+  context: {
+    memoryThemes: string[];
+    excludePoiNames: string[];
+    boostPoiNames: string[];
+  };
 }
