@@ -53,6 +53,8 @@ tags:
     description: J1 照片存储
   - name: 数据分析
     description: 管理端指标与埋点（DT1）
+  - name: 旅行宠物
+    description: H3-a 领养与资料
 
 security:
   - bearerAuth: []
@@ -318,6 +320,82 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/UserInfo'
+
+  /api/pets/adopt:
+    post:
+      tags: [旅行宠物]
+      summary: 领养旅行伙伴
+      operationId: petsAdopt
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdoptTravelPetRequest'
+      responses:
+        '200':
+          description: 领养成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TravelPetInfo'
+        '409':
+          description: 已领养
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/pets/me:
+    get:
+      tags: [旅行宠物]
+      summary: 获取当前旅行伙伴
+      operationId: petsMeGet
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TravelPetInfo'
+        '404':
+          description: 尚未领养
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    patch:
+      tags: [旅行宠物]
+      summary: 更新旅行伙伴资料
+      operationId: petsMePatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTravelPetRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TravelPetInfo'
 
   /api/attractions:
     get:
@@ -2032,6 +2110,33 @@ components:
         interestTags:
           type: array
           items: { type: string }
+
+    TravelPetInfo:
+      type: object
+      properties:
+        id: { type: integer }
+        species: { type: string, enum: [fox, cat, panda] }
+        nickname: { type: string }
+        personality: { type: string, enum: [guide, foodie, photo, family] }
+        level: { type: integer }
+        exp: { type: integer }
+        mood: { type: string, enum: [happy, calm, excited, sleepy] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    AdoptTravelPetRequest:
+      type: object
+      required: [species, nickname, personality]
+      properties:
+        species: { type: string, enum: [fox, cat, panda] }
+        nickname: { type: string, minLength: 1, maxLength: 64 }
+        personality: { type: string, enum: [guide, foodie, photo, family] }
+
+    UpdateTravelPetRequest:
+      type: object
+      properties:
+        nickname: { type: string, minLength: 1, maxLength: 64 }
+        personality: { type: string, enum: [guide, foodie, photo, family] }
 
     GenerateRouteRequest:
       type: object

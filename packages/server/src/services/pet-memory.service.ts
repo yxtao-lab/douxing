@@ -2,6 +2,7 @@
  * Phase 4：H3 宠物记忆读写
  */
 import { desc, eq, and } from 'drizzle-orm';
+import { TRAVEL_PET_DEFAULT_NICKNAME } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { petMemories, travelPets } from '../db/schema/index.js';
 
@@ -34,7 +35,7 @@ export async function ensureTravelPet(userId: number) {
 
   const [result] = await db.insert(travelPets).values({
     userId,
-    nickname: '小兜',
+    nickname: TRAVEL_PET_DEFAULT_NICKNAME,
     species: 'fox',
     personality: 'guide',
   });

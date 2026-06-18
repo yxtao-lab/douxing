@@ -26,6 +26,7 @@
     "open-hours:cases": "tsx src/scripts/open-hours-cases.ts",
     "playbook-order:cases": "tsx src/scripts/playbook-order-cases.ts",
     "h9:m3-accept": "tsx src/scripts/h9-m3-accept.ts",
+    "pet:adopt-cases": "tsx src/scripts/pet-adopt-cases.ts",
     "langfuse:smoke": "tsx src/scripts/langfuse-smoke.ts",
     "enrich:attraction-images": "tsx src/scripts/enrich-attraction-images.ts",
     "cleanup:orphan-covers": "tsx src/scripts/cleanup-orphan-attraction-covers.ts",

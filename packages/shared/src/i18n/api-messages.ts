@@ -213,6 +213,16 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MEMBERSHIP_ORDER_CREATED]: '会员订单创建成功',
   [ApiMessageKey.MEMBERSHIP_UPDATED]: '会员信息已更新',
   [ApiMessageKey.MEMBERSHIP_UPGRADE_SUCCESS]: '会员升级成功',
+
+  [ApiMessageKey.PET_ADOPT_SUCCESS]: '旅行伙伴领养成功',
+  [ApiMessageKey.PET_ADOPT_FAILED]: '领养旅行伙伴失败',
+  [ApiMessageKey.PET_ALREADY_ADOPTED]: '你已拥有旅行伙伴',
+  [ApiMessageKey.PET_NOT_FOUND]: '尚未领养旅行伙伴',
+  [ApiMessageKey.PET_FETCH_FAILED]: '获取旅行伙伴失败',
+  [ApiMessageKey.PET_UPDATE_SUCCESS]: '旅行伙伴资料已更新',
+  [ApiMessageKey.PET_UPDATE_FAILED]: '更新旅行伙伴失败',
+  [ApiMessageKey.PET_INVALID_SPECIES]: '无效的伙伴物种',
+  [ApiMessageKey.PET_INVALID_PERSONALITY]: '无效的伙伴人格',
 };
 
 const enUS: Record<string, string> = {
@@ -433,6 +443,16 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MEMBERSHIP_ORDER_CREATED]: 'Membership order created',
   [ApiMessageKey.MEMBERSHIP_UPDATED]: 'Membership updated',
   [ApiMessageKey.MEMBERSHIP_UPGRADE_SUCCESS]: 'Membership upgraded successfully',
+
+  [ApiMessageKey.PET_ADOPT_SUCCESS]: 'Travel companion adopted',
+  [ApiMessageKey.PET_ADOPT_FAILED]: 'Failed to adopt travel companion',
+  [ApiMessageKey.PET_ALREADY_ADOPTED]: 'You already have a travel companion',
+  [ApiMessageKey.PET_NOT_FOUND]: 'No travel companion adopted yet',
+  [ApiMessageKey.PET_FETCH_FAILED]: 'Failed to load travel companion',
+  [ApiMessageKey.PET_UPDATE_SUCCESS]: 'Travel companion updated',
+  [ApiMessageKey.PET_UPDATE_FAILED]: 'Failed to update travel companion',
+  [ApiMessageKey.PET_INVALID_SPECIES]: 'Invalid companion species',
+  [ApiMessageKey.PET_INVALID_PERSONALITY]: 'Invalid companion personality',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

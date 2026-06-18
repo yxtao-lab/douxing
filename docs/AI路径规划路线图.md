@@ -12,24 +12,24 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 25 — H3-a 领养 API**（Step 22 VECTOR_RAG 为可选并行项）
+> **下一项工作：Step 26 — memory_agent 独立图节点**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | Phase 4 记忆与宠物 · 用户领养旅行宠物 API |
-| **功能作用** | 为 C7-c / H3 记忆召回与规划页宠物 UI 打基础 |
-| **完成标准** | 见 Phase 4 Step 25 |
-| **完成后** | Step 26 memory_agent 独立图节点 |
+| **做什么** | ai-service graph 增加 memory_agent 节点 · 偏好召回注入 plan context |
+| **功能作用** | 让 Agent 规划时能解释「记得你上次…」 |
+| **完成标准** | 见 Phase 4 Step 26 |
+| **完成后** | Step 27 规划页 Focus 宠物 UI |
 
 **M3 已达成（2026-06-18）**：`h9:m3-accept` 全绿 · Step 16～20 自动化验收通过。
 
 ### 0.2 整体进度
 
 ```text
-[████████████████████] 约 85%  —  M0 + M1 + M2 + M3 已达成；Phase 4 待启动
+[████████████████████░] 约 87%  —  M0 + M1 + M2 + M3 已达成；Phase 4 Step 25 完成
 
 当前阶段：Phase 4 · C7-c + H3 记忆与宠物
-下一里程碑：M4 — Step 25～30
+下一里程碑：M4 — Step 26～30
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -114,7 +114,7 @@
 
 | Step | 状态 | 任务 | 交付 | 验收标准 |
 |------|------|------|------|----------|
-| **25** | [ ] | **H3-a 领养 API** | `POST /pets/adopt` 等 | [ ] 用户可领养 [ ] i18n 错误 |
+| **25** | [x] | **H3-a 领养 API** | `POST /pets/adopt` 等 | [x] 用户可领养 [x] i18n 错误 |
 | **26** | [ ] | **memory_agent 独立图节点** | graph.py | [ ] 偏好召回可解释 [ ] 注入 plan context |
 | **27** | [ ] | **规划页 Focus 宠物 UI** | mobile + PC plan 页 | [ ] 口吻化 assistant [ ] 记忆摘要可见 |
 | **28** | [ ] | **H3-b 全站悬浮层** | `TravelPetFloatingLayer` | [ ] Tab 页浮球 [ ] 调同一 orchestrator |
@@ -204,7 +204,7 @@
 ```text
 刚接手项目        → 读 §0.1，从 Step 1 开始
 C7-b 后端已联调   → 从 Step 6（i18n）或 Step 7（SSE）开始
-Agent 已上 staging → 从 Step 25（H3-a 领养 API）开始
+Agent 已上 staging → 从 Step 26（memory_agent 节点）开始
 要做行中能力      → 确认 M1+M2+M3 已达成，从 Step 31 开始
 要做专属模型      → 确认 M1 已达成，从 Step 35 开始（可与 Phase 3 并行）
 ```
@@ -225,7 +225,7 @@ Agent 已上 staging → 从 Step 25（H3-a 领养 API）开始
 | **H9** | 住行增强 | ✅ 已验收 | M0 |
 | **C7** | AI Agent 演进 | ✅ M1 + M2 已达成 | Step 1～15 ✅ |
 | **H9+** | 规划数据质量 | ✅ M3 已达成 | Step 16～21 ✅ · Step 22～24 按需 |
-| **H3** | AI 旅行宠物 | 🔄 后端骨架 | Step 25～30 |
+| **H3** | AI 旅行宠物 | 🔄 Step 25 ✅ | Step 25 ✅ · Step 26～30 |
 | **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
 | **I** | 专属模型 | 🔄 I1 ✅ | Step 35～37 |
 | **H10** | 路线可信度 | ⏳ | Step 38～41 |
@@ -418,6 +418,7 @@ pnpm --filter @douxing/server open-hours:cases                 # M3 Step 19 开�
 pnpm --filter @douxing/server playbook-order:cases             # M3 Step 20 POI 对齐
 pnpm --filter @douxing/server h9:m3-accept                       # M3 一键验收（Step 21）
 pnpm --filter @douxing/server h9:m3-accept -- --skip-db          # 无 MySQL 时跳过 CRUD
+pnpm --filter @douxing/server pet:adopt-cases                    # M4 Step 25 领养 API
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -477,7 +478,8 @@ pnpm dev
 
 ### 8.5 M4 记忆宠物（Step 25～30）
 
-- [ ] 领养 + 记忆召回 + 规划页宠物 + 悬浮层
+- [x] 领养 API（`pet:adopt-cases` · `POST /api/pets/adopt` · 2026-06-18）
+- [ ] 记忆召回 + 规划页宠物 + 悬浮层
 
 ### 8.6 M5 行中（Step 31～34）
 
@@ -540,3 +542,4 @@ pnpm dev
 | 2026-06-18 | 3.3 | **Step 18～19**：C2 `parseStartDateFromText` · openHours seed 补全 · 验收脚本全绿 |
 | 2026-06-18 | 3.4 | **Step 20 / H9+-3**：`softAlignDayPoisToPlaybook` · classicOrder 重排 + i18n warning |
 | 2026-06-18 | 3.5 | **Step 21 / M3 达成**：`h9:m3-accept` 全绿 · 修复 CRUD 脚本 DB 连接未退出 · 指针 → Step 25 |
+| 2026-06-18 | 3.6 | **Step 25 / H3-a**：`POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey |

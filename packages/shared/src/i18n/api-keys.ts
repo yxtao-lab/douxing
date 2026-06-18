@@ -210,6 +210,16 @@ export const ApiMessageKey = {
   MEMBERSHIP_ORDER_CREATED: 'api.membershipOrderCreated',
   MEMBERSHIP_UPDATED: 'api.membershipUpdated',
   MEMBERSHIP_UPGRADE_SUCCESS: 'api.membershipUpgradeSuccess',
+
+  PET_ADOPT_SUCCESS: 'api.petAdoptSuccess',
+  PET_ADOPT_FAILED: 'api.petAdoptFailed',
+  PET_ALREADY_ADOPTED: 'api.petAlreadyAdopted',
+  PET_NOT_FOUND: 'api.petNotFound',
+  PET_FETCH_FAILED: 'api.petFetchFailed',
+  PET_UPDATE_SUCCESS: 'api.petUpdateSuccess',
+  PET_UPDATE_FAILED: 'api.petUpdateFailed',
+  PET_INVALID_SPECIES: 'api.petInvalidSpecies',
+  PET_INVALID_PERSONALITY: 'api.petInvalidPersonality',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];
