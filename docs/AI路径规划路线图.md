@@ -3,7 +3,7 @@
 > **定位**：模块 A「AI 智能规划」的 **专项路线图** —— 只回答「**现在做什么 → 下一步做什么 → 全部验收完成**」。  
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
-**文档版本**：3.0  
+**文档版本**：4.3  
 **最后更新**：2026-06-18
 
 ---
@@ -12,26 +12,28 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 31 — H8 `replan_segment` Tool**
+> **下一项工作：Step 35 — I2 PAI LoRA 微调（Phase 6 · M6 专属模型）**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | 行中 GPS + 剩余 POI 重排 Tool |
-| **功能作用** | 偏离计划时可刷新当日行程 |
-| **完成标准** | 见 Phase 5 Step 31 |
-| **完成后** | Step 32 H8 transit_agent + UI |
+| **做什么** | OSS + PAI 微调任务，产出 LoRA artifact |
+| **功能作用** | 为 plan_agent 提供专属模型基础 |
+| **完成标准** | 见 Phase 6 Step 35 |
+| **完成后** | Step 36 百炼推理接入 |
+
+**Step 34 已达成（2026-06-18）**：`pet-exp.service.ts` · `in_trip`/`in_plan` analyze · 打卡庆祝 UI · `h3-d:in-trip-cases` · **`h5:m5-accept` M5 达成**。
+
+**Step 31 已达成（2026-06-18）**：`replan_segment` Tool · `scheduleRemainingPoisFromGps` · GPS + 剩余 POI 重排 · `replan-segment:cases` 全绿。
 
 **Step 30 已达成（2026-06-18）**：`h3:m4-accept` 全绿 · 第二轮规划 regret 补偿链路验收通过 · **M4 达成**。
-
-**Step 27 已达成（2026-06-18）**：mobile + PC `PlanPetFocusCard` · `plan-pet-focus:cases` 全绿。
 
 ### 0.2 整体进度
 
 ```text
-[█████████████████████] 约 90%  —  M0 + M1 + M2 + M3 + M4 已达成；Phase 5 Step 31 待启动
+[██████████████████████] 约 98%  —  M0～M5 已达成；Phase 6 Step 35 待启动
 
-当前阶段：Phase 5 · H7/H8 行中智能
-下一里程碑：M5 — Step 31～34
+当前阶段：Phase 6 · 专属模型（M6 准备中）
+下一里程碑：M6 — Step 35～40
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -133,10 +135,10 @@
 
 | Step | 状态 | 任务 | 交付 | 验收标准 |
 |------|------|------|------|----------|
-| **31** | [ ] | **H8 `replan_segment` Tool** | agent Tool + 服务 | [ ] GPS + 剩余 POI 算新顺序 |
-| **32** | [ ] | **H8 transit_agent + UI** | 行中入口 | [ ] 一键刷新当日 [ ] **用户确认**后写回 [ ] 不静默改已发布 |
-| **33** | [ ] | **H7 错过景点补救** | 对比计划 vs 打卡/GPS | [ ] 「应到未到」列表 [ ] 替补推荐 [ ] 写入 memory |
-| **34** | [ ] | **H3-d 行中宠物 + 阶段验收** | 打卡 exp / 庆祝 | [ ] 行中可触发分析 [ ] **M5 达成** |
+| **31** | [x] | **H8 `replan_segment` Tool** | `replan-segment.tool.ts` · `replan-segment.service.ts` | [x] GPS + 剩余 POI 算新顺序 [x] `replan-segment:cases` |
+| **32** | [x] | **H8 transit_agent + UI** | `transit_agent.py` · mobile/PC 详情页 | [x] 一键刷新当日 [x] **用户确认**后写回草稿 [x] 不静默改已发布 |
+| **33** | [x] | **H7 错过景点补救** | 对比计划 vs 打卡/GPS | [x] 「应到未到」列表 [x] 替补推荐 [x] 写入 memory |
+| **34** | [x] | **H3-d 行中宠物 + 阶段验收** | 打卡 exp / 庆祝 | [x] 行中可触发分析 [x] **M5 达成** |
 
 ---
 
@@ -180,7 +182,7 @@
 | **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | ✅ |
 | **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | ✅ |
 | **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | ✅ |
-| **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | [ ] |
+| **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | ✅ |
 | **M6** | 1～40（必做）+ 41～42（远期） | **路线图全部验收** | [ ] |
 
 ### 2.2 什么叫「全部验收完成」
@@ -207,7 +209,7 @@
 刚接手项目        → 读 §0.1，从 Step 1 开始
 C7-b 后端已联调   → 从 Step 6（i18n）或 Step 7（SSE）开始
 Agent 已上 staging → 从 Step 27（规划页宠物 UI）开始
-要做行中能力      → 确认 M1+M2+M3 已达成，从 Step 31 开始
+要做行中能力      → M1～M4 已达成；Step 31～33 已验收，从 Step 34 继续
 要做专属模型      → 确认 M1 已达成，从 Step 35 开始（可与 Phase 3 并行）
 ```
 
@@ -228,7 +230,7 @@ Agent 已上 staging → 从 Step 27（规划页宠物 UI）开始
 | **C7** | AI Agent 演进 | ✅ M1 + M2 已达成 | Step 1～15 ✅ |
 | **H9+** | 规划数据质量 | ✅ M3 已达成 | Step 16～21 ✅ · Step 22～24 按需 |
 | **H3** | AI 旅行宠物 | ✅ M4 已达成 | Step 25～30 ✅ |
-| **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
+| **H7/H8** | 行中智能 | ✅ M5 达成 | Step 31～34 ✅ |
 | **I** | 专属模型 | 🔄 I1 ✅ | Step 35～37 |
 | **H10** | 路线可信度 | ⏳ | Step 38～41 |
 
@@ -269,9 +271,14 @@ Agent 已上 staging → 从 Step 27（规划页宠物 UI）开始
 | Agent 客户端 | `server/src/services/agent-plan-client.service.ts` |
 | 意图路由 | `server/src/services/agent-intent-router.service.ts` |
 | Tools | `server/src/agent/tools/*` |
+| 行中重规划 | `server/src/services/replan-segment.service.ts` · `replan-segment.tool.ts` |
+| transit_agent | `ai-service/app/agent/transit_agent.py` · `POST /v1/agent/transit` |
+| 行中 API | `POST /api/routes/:id/replan/preview` · `.../replan/apply` |
+| 行中 UI | mobile `RouteReplanSheet.vue` · PC `RouteReplanDialog.vue` |
 | 编排 | `packages/ai-service/app/agent/graph.py` |
 | PC 规划页 | `packages/pc/src/composables/usePlanPage.ts` |
 | 移动规划页 | `packages/mobile/src/pages/plan/plan.vue` |
+| 路线详情（行中） | `mobile/.../routes/detail.vue` · `pc/.../RouteDetailView.vue` |
 
 ---
 
@@ -386,8 +393,44 @@ pnpm --filter @douxing/server agent:branch-cases
 
 ### 6.5 Step 31～34 · 行中
 
-- H8 依赖 Enricher `buildDailySchedule`、GPS、C7 Tool 体系。
-- H7 遗漏 POI 写入 `pet_memories`，下次规划由 memory_agent 补偿。
+**Step 31 · `replan_segment` Tool（✅）**
+
+```text
+输入：routeId + context（GPS、dayIndex、已访问/剩余 POI、当前时刻）
+执行：scheduleRemainingPoisFromGps（Enricher 扩展，以 GPS 为 depot 2-opt 排程）
+输出：segment（剩余 attractions/transit/warnings）+ diff.reordered
+Tool：POST /api/agent/tools/replan_segment
+验收：pnpm --filter @douxing/server replan-segment:cases [--offline] [--skip-db]
+```
+
+**Step 32 · transit_agent + UI（✅）**
+
+```text
+ai-service：transit_agent → replan_segment · POST /v1/agent/transit
+Node API：preview（canApply 仅草稿 true）· apply（非草稿 ROUTE_DRAFT_ONLY_EDIT）
+UI：路线详情「刷新今日剩余行程」→ 预览 diff → 草稿确认写回（已发布仅预览）
+验收：pnpm --filter @douxing/server h8:transit-agent-cases [--skip-db]
+```
+
+**Step 33 · H7 错过景点补救（✅）**
+
+```text
+服务：missed-poi.service.ts — 计划 POI vs 打卡/GPS → missed[] + RAG 替补
+Tool：detect_missed_pois
+API：POST /api/routes/:id/missed-pois/analyze · record（regret → pet_memories）
+UI：路线详情「查看遗漏景点」→ 遗漏列表 + 替补 +「记入遗憾」
+验收：pnpm --filter @douxing/server h7:missed-poi-cases [--skip-db]
+```
+
+**Step 34 · H3-d 行中宠物 + M5 验收（✅）**
+
+```text
+服务：pet-exp.service.ts — 打卡 +EXP / 升级 / mood=excited
+analyze：in_trip（路线进度+遗漏）· in_plan（规划中陪伴）
+UI：打卡庆祝 Sheet · 路线详情「行中分析」
+验收：pnpm --filter @douxing/server h3-d:in-trip-cases [--skip-db]
+      pnpm --filter @douxing/server h5:m5-accept [--skip-db]
+```
 
 ### 6.6 Step 35～37 · 专属模型
 
@@ -427,6 +470,16 @@ pnpm --filter @douxing/server travel-pet-floating:cases          # M4 Step 28 �
 pnpm --filter @douxing/server pet:memory-analyze-cases           # M4 Step 29 记忆墙 / analyze
 pnpm --filter @douxing/server h3:regret-second-plan-cases        # M4 Step 30 遗憾补偿
 pnpm --filter @douxing/server h3:m4-accept                       # M4 一键验收（Step 25～30）
+pnpm --filter @douxing/server replan-segment:cases               # M5 Step 31 H8 replan_segment
+pnpm --filter @douxing/server replan-segment:cases -- --offline --skip-db
+pnpm --filter @douxing/server h8:transit-agent-cases             # M5 Step 32 transit_agent + UI
+pnpm --filter @douxing/server h8:transit-agent-cases -- --skip-db
+pnpm --filter @douxing/server h7:missed-poi-cases               # M5 Step 33 H7 错过景点补救
+pnpm --filter @douxing/server h7:missed-poi-cases -- --skip-db
+pnpm --filter @douxing/server h3-d:in-trip-cases               # M5 Step 34 H3-d 行中宠物
+pnpm --filter @douxing/server h3-d:in-trip-cases -- --skip-db
+pnpm --filter @douxing/server h5:m5-accept                       # M5 一键验收（Step 31～34）
+pnpm --filter @douxing/server h5:m5-accept -- --skip-db
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -494,7 +547,10 @@ pnpm dev
 
 ### 8.6 M5 行中（Step 31～34）
 
-- [ ] H8 重规划 + H7 错过补救
+- [x] H8 `replan_segment` Tool（`replan-segment:cases` · GPS 重排 · 2026-06-18）
+- [x] H8 transit_agent + 行中 UI（`h8:transit-agent-cases` · 预览 + 草稿写回 · 2026-06-18）
+- [x] H7 错过景点补救（`h7:missed-poi-cases` · regret 记忆 · 2026-06-18）
+- [x] H3-d 行中宠物 + **M5 达成**（`h5:m5-accept` · 2026-06-18）
 
 ### 8.7 M6 完整闭环（Step 35～40 + 必做 H10）
 
@@ -558,3 +614,6 @@ pnpm dev
 | 2026-06-18 | 3.8 | **Step 27 / H3-a UI**：`PlanPetFocusCard` · petMeta · 助手口吻 · `plan-pet-focus:cases` |
 | 2026-06-18 | 3.9 | **Step 29 / H3-c**：`POST /pets/me/analyze` · 记忆墙 CRUD · `pet:memory-analyze-cases` · 指针 → Step 30 |
 | 2026-06-18 | 4.0 | **Step 30 / M4 达成**：`h3:m4-accept` · regret 第二轮规划补偿 · 指针 → Step 31 |
+| 2026-06-18 | 4.1 | **Step 31～32 达成**：`replan_segment` · `transit_agent` · 行中 UI · 指针 → Step 33 |
+| 2026-06-18 | 4.2 | **Step 33 达成**：H7 `detect_missed_pois` · 遗漏分析 API/UI · regret 记忆 · 指针 → Step 34 |
+| 2026-06-18 | 4.3 | **Step 34 / M5 达成**：H3-d 打卡 exp · in_trip analyze · `h5:m5-accept` · 指针 → Step 35 |

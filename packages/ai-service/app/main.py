@@ -7,10 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.route_generator import check_provider_status, generate_route
 from app.agent.graph import run_plan_agent
+from app.agent.transit_agent import run_transit_agent
 from app.observability.langfuse_client import flush_langfuse, is_langfuse_enabled, get_langfuse_host
 from app.schemas import (
     AgentPlanRequest,
     AgentPlanResponse,
+    AgentTransitRequest,
+    AgentTransitResponse,
     GenerateRouteRequest,
     GenerateRouteResponse,
     ObservabilityStatus,
@@ -75,5 +78,18 @@ async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Agent 规划失败: {exc}") from exc
+    finally:
+        flush_langfuse()
+
+
+@app.post("/v1/agent/transit", response_model=AgentTransitResponse)
+async def agent_transit(request: AgentTransitRequest) -> AgentTransitResponse:
+    try:
+        result = await run_transit_agent(request.model_dump())
+        return AgentTransitResponse(**result)
+    except ValueError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"行中 Agent 失败: {exc}") from exc
     finally:
         flush_langfuse()

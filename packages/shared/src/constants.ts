@@ -232,6 +232,18 @@ export const CHECKIN_FIRST_ATTRACTION_BONUS = 10;
 /** 单条打卡最多上传照片数 */
 export const CHECKIN_MAX_PHOTOS = 3;
 
+/** H3-d：打卡奖励宠物经验（基础） */
+export const PET_CHECKIN_EXP_BASE = 15;
+
+/** H3-d：打卡带照片额外经验 */
+export const PET_CHECKIN_EXP_PHOTO_BONUS = 5;
+
+/** H3-d：首次打卡某景点额外经验 */
+export const PET_CHECKIN_EXP_FIRST_BONUS = 10;
+
+/** H3-d：每级升级所需经验（当前等级 × 系数） */
+export const PET_EXP_PER_LEVEL_UNIT = 100;
+
 /** 旅行照片单张大小上限（J1 默认 10MB） */
 export const TRAVEL_PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024;
 

@@ -26,6 +26,9 @@ export const AGENT_TOOL_STATUS_KEYS = [
   'recall_user_memory',
   'apply_memory_context',
   'write_trip_memory',
+  'replan_segment',
+  'transit_agent',
+  'detect_missed_pois',
 ] as const;
 
 export type AgentToolStatusKey = (typeof AGENT_TOOL_STATUS_KEYS)[number];
@@ -54,6 +57,9 @@ const AGENT_STATUS_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'agent.status.recall_user_memory': '回忆旅行偏好',
     'agent.status.apply_memory_context': '注入记忆到规划',
     'agent.status.write_trip_memory': '记录旅行记忆',
+    'agent.status.replan_segment': '重排剩余行程',
+    'agent.status.transit_agent': '行中智能调整',
+    'agent.status.detect_missed_pois': '识别遗漏景点',
   },
   'en-US': {
     'agent.status.thinking': 'Understanding your request…',
@@ -78,6 +84,9 @@ const AGENT_STATUS_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'agent.status.recall_user_memory': 'Recalling preferences',
     'agent.status.apply_memory_context': 'Applying memories to plan',
     'agent.status.write_trip_memory': 'Saving trip memory',
+    'agent.status.replan_segment': 'Reordering remaining stops',
+    'agent.status.transit_agent': 'In-trip adjustments',
+    'agent.status.detect_missed_pois': 'Detecting missed stops',
   },
 };
 

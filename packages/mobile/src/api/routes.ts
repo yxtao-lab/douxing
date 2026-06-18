@@ -14,6 +14,12 @@ import type {
   RouteCommentInfo,
   CreateRouteCommentRequest,
   RoutePath,
+  RouteReplanContextInput,
+  RouteReplanPreviewResponse,
+  RouteMissedPoiAnalyzeInput,
+  RouteMissedPoiAnalyzeResponse,
+  RouteMissedPoiRecordInput,
+  RouteMissedPoiRecordResponse,
 } from '@douxing/shared';
 import { request, requestAiPlan } from '@/utils/request';
 
@@ -121,4 +127,29 @@ export function fetchRouteComments(id: number, limit = 50) {
 
 export function createRouteComment(id: number, data: CreateRouteCommentRequest) {
   return request<RouteCommentInfo>(`/routes/${id}/comments`, { method: 'POST', data });
+}
+
+export function previewRouteReplan(id: number, data: { context: RouteReplanContextInput }) {
+  return request<RouteReplanPreviewResponse>(`/routes/${id}/replan/preview`, {
+    method: 'POST',
+    data,
+  });
+}
+
+export function applyRouteReplan(id: number, data: { context: RouteReplanContextInput }) {
+  return request<TravelRouteInfo>(`/routes/${id}/replan/apply`, { method: 'POST', data });
+}
+
+export function analyzeRouteMissedPois(id: number, data: RouteMissedPoiAnalyzeInput) {
+  return request<RouteMissedPoiAnalyzeResponse>(`/routes/${id}/missed-pois/analyze`, {
+    method: 'POST',
+    data,
+  });
+}
+
+export function recordRouteMissedPois(id: number, data: RouteMissedPoiRecordInput) {
+  return request<RouteMissedPoiRecordResponse>(`/routes/${id}/missed-pois/record`, {
+    method: 'POST',
+    data,
+  });
 }

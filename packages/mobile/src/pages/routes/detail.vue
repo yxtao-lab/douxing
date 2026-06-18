@@ -88,6 +88,18 @@
         show-check-in
         @check-in="handleCheckIn"
       />
+
+      <view v-if="canRefreshDayPlan" class="replan-bar">
+        <button class="btn-replan" :disabled="replanSheetVisible" @click="replanSheetVisible = true">
+          {{ t('routes.replanRefreshDay') }}
+        </button>
+        <button class="btn-missed" :disabled="missedSheetVisible" @click="missedSheetVisible = true">
+          {{ t('routes.missedCheckDay') }}
+        </button>
+        <button class="btn-intrip" :disabled="inTripSheetVisible" @click="inTripSheetVisible = true">
+          {{ t('routes.inTripAnalyze') }}
+        </button>
+      </view>
     </view>
 
     <view v-if="showAlbumTab && detailTab === 'album'" class="card album-card">
@@ -200,6 +212,34 @@
       @close="posterSheetVisible = false"
       @generated="handlePosterGenerated"
     />
+
+    <RouteReplanSheet
+      :visible="replanSheetVisible"
+      :route-id="routeId"
+      :day-index="activeDayIndex"
+      :is-draft="route.status !== publishedStatus"
+      @close="replanSheetVisible = false"
+      @applied="handleReplanApplied"
+    />
+
+    <RouteMissedPoiSheet
+      :visible="missedSheetVisible"
+      :route-id="routeId"
+      :day-index="activeDayIndex"
+      @close="missedSheetVisible = false"
+    />
+
+    <PetInTripAnalyzeSheet
+      :visible="inTripSheetVisible"
+      :route-id="routeId"
+      @close="inTripSheetVisible = false"
+    />
+
+    <PetCheckInCelebrationSheet
+      :visible="celebrationVisible"
+      :celebration="celebrationData"
+      @close="celebrationVisible = false"
+    />
   </view>
 </template>
 
@@ -236,6 +276,10 @@ import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
 import RoutePosterSheet from '@/components/route-poster/RoutePosterSheet.vue';
 import RouteJourneyAlbumPanel from '@/components/route-journey-album/RouteJourneyAlbumPanel.vue';
+import RouteReplanSheet from '@/components/route-replan/RouteReplanSheet.vue';
+import RouteMissedPoiSheet from '@/components/route-missed/RouteMissedPoiSheet.vue';
+import PetInTripAnalyzeSheet from '@/components/travel-pet/PetInTripAnalyzeSheet.vue';
+import PetCheckInCelebrationSheet from '@/components/travel-pet/PetCheckInCelebrationSheet.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
@@ -270,6 +314,11 @@ const activeDayIndex = ref(0);
 const detailTab = ref<'itinerary' | 'album'>('itinerary');
 const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
 const posterSheetVisible = ref(false);
+const replanSheetVisible = ref(false);
+const missedSheetVisible = ref(false);
+const inTripSheetVisible = ref(false);
+const celebrationVisible = ref(false);
+const celebrationData = ref<import('@douxing/shared').PetCheckInCelebration | null>(null);
 const posterShareImagePath = ref('');
 let routeId = 0;
 
@@ -320,6 +369,10 @@ const canGeneratePoster = computed(
 const showDetailTabs = computed(() => isOwner.value && isUnlocked.value && days.value.length > 0);
 
 const showAlbumTab = computed(() => showDetailTabs.value);
+
+const canRefreshDayPlan = computed(
+  () => isOwner.value && isUnlocked.value && days.value.length > 0 && detailTab.value === 'itinerary',
+);
 
 const isUnlocked = computed(() => {
   if (route.value?.isPublic && !isOwner.value) return true;
@@ -453,6 +506,10 @@ async function loadDetail() {
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.loadFailed')), icon: 'none' });
   }
+}
+
+async function handleReplanApplied() {
+  await loadDetail();
 }
 
 function openEditModal() {
@@ -677,6 +734,10 @@ async function handleCheckIn(spot: RouteDayAttraction) {
             msg += tf('routes.checkInBadges', { count: result.newBadges.length });
           }
           uni.showToast({ title: msg, icon: 'success' });
+          if (result.petCelebration) {
+            celebrationData.value = result.petCelebration;
+            celebrationVisible.value = true;
+          }
         } catch (e) {
           uni.showToast({ title: getAppErrorMessage(e, t('routes.checkInFailed')), icon: 'none' });
         } finally {
@@ -845,6 +906,21 @@ onLoad((query) => {
   height: 1rpx;
   background: var(--dx-border);
   margin: 24rpx 0 8rpx;
+}
+.replan-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  margin-top: 16rpx;
+}
+.btn-replan,
+.btn-missed,
+.btn-intrip {
+  width: 100%;
+  font-size: 28rpx;
+  border-radius: 999rpx;
+  background: var(--dx-primary-light, rgba(37, 99, 235, 0.12));
+  color: var(--dx-primary, #2563eb);
 }
 .share-card {
   border: 2rpx solid var(--dx-primary-light);

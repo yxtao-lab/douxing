@@ -151,3 +151,19 @@ class AgentPlanResponse(BaseModel):
     memories: list[dict] = Field(default_factory=list)
     memorySummary: str | None = None
     recallExplain: list[dict] = Field(default_factory=list)
+
+
+class AgentTransitRequest(BaseModel):
+    routeId: int
+    userId: int
+    locale: str | None = "zh-CN"
+    context: dict
+
+
+class AgentTransitResponse(BaseModel):
+    routeId: int | None = None
+    dayIndex: int | None = None
+    day: dict | None = None
+    segment: dict | None = None
+    diff: dict | None = None
+    toolTrace: list[dict] = Field(default_factory=list)

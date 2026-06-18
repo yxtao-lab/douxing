@@ -3,7 +3,7 @@ import { z } from 'zod';
 import type { LocaleCode } from '@douxing/shared';
 import { ApiMessageKey } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
-import { success, fail } from '../utils/response.js';
+import { success, fail, failFromError } from '../utils/response.js';
 import {
   createRouteFromPrompt,
   regenerateRouteFromPrompt,
@@ -37,6 +37,14 @@ import {
   parseOptionalInt,
   parseOptionalString,
 } from '../utils/admin-list-filter.js';
+import {
+  applyRouteReplan,
+  previewRouteReplan,
+} from '../services/replan-segment.service.js';
+import {
+  analyzeRouteMissedPois,
+  recordMissedPoiRegrets,
+} from '../services/missed-poi.service.js';
 import planSessionsRouter from './plan-sessions.js';
 
 const router = Router();
@@ -82,6 +90,37 @@ const updateDraftSchema = z.object({
       sourcePrompt: z.string().optional(),
     })
     .optional(),
+});
+
+const replanContextSchema = z.object({
+  dayIndex: z.number().int().min(0),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  currentTimeMinutes: z.number().int().min(0).max(24 * 60 - 1).optional(),
+  visitedPoiNames: z.array(z.string()).optional(),
+  remainingPoiNames: z.array(z.string()).optional(),
+  gpsLabel: z.string().optional(),
+});
+
+const replanBodySchema = z.object({
+  context: replanContextSchema,
+});
+
+const missedPoiAnalyzeSchema = z.object({
+  dayIndex: z.number().int().min(0),
+  currentTimeMinutes: z.number().int().min(0).max(24 * 60 - 1).optional(),
+  autoRecordRegrets: z.boolean().optional(),
+});
+
+const missedPoiRecordSchema = z.object({
+  items: z
+    .array(
+      z.object({
+        name: z.string().min(1),
+        dayIndex: z.number().int().min(0),
+      }),
+    )
+    .min(1),
 });
 
 router.get('/llm-providers', async (_req, res) => {
@@ -414,6 +453,108 @@ router.post('/:id/publish', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[routes/publish]', err);
     return fail(res, '发布失败', 500, 500);
+  }
+});
+
+router.post('/:id/replan/preview', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const parsed = replanBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+    }
+
+    const locale = getRequestLocale(res);
+    const result = await previewRouteReplan({
+      routeId,
+      userId: req.auth!.userId,
+      locale,
+      context: parsed.data.context,
+    });
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/replan/preview]', err);
+    return failFromError(res, err);
+  }
+});
+
+router.post('/:id/replan/apply', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const parsed = replanBodySchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+    }
+
+    const locale = getRequestLocale(res);
+    const route = await applyRouteReplan({
+      routeId,
+      userId: req.auth!.userId,
+      locale,
+      context: parsed.data.context,
+    });
+    success(res, route);
+  } catch (err) {
+    console.error('[routes/replan/apply]', err);
+    return failFromError(res, err);
+  }
+});
+
+router.post('/:id/missed-pois/analyze', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const parsed = missedPoiAnalyzeSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+    }
+
+    const locale = getRequestLocale(res);
+    const result = await analyzeRouteMissedPois({
+      routeId,
+      userId: req.auth!.userId,
+      locale,
+      dayIndex: parsed.data.dayIndex,
+      currentTimeMinutes: parsed.data.currentTimeMinutes,
+      autoRecordRegrets: parsed.data.autoRecordRegrets,
+    });
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/missed-pois/analyze]', err);
+    return failFromError(res, err);
+  }
+});
+
+router.post('/:id/missed-pois/record', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const parsed = missedPoiRecordSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+    }
+
+    const locale = getRequestLocale(res);
+    const result = await recordMissedPoiRegrets({
+      routeId,
+      userId: req.auth!.userId,
+      locale,
+      items: parsed.data.items,
+    });
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/missed-pois/record]', err);
+    return failFromError(res, err);
   }
 });
 

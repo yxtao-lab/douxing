@@ -57,6 +57,16 @@ export {
   formatPetMemoryWallEmpty,
   formatPetFloatingViewMemoryWall,
   formatPetFloatingAnalyzePrePlan,
+  formatPetMemoryWallAnalyzeInTrip,
+  formatPetCheckInCelebrationTitle,
+  formatPetCheckInCelebrationOk,
+  formatPetCheckInCelebrationExp,
+  formatPetCheckInCelebrationLevelUp,
+  formatPetCheckInCelebrationReply,
+  formatPetCheckInCelebrationLevelUpReply,
+  formatPetInTripInsight,
+  formatPetInTripReply,
+  formatPetInTripAction,
 } from './pet-messages.js';
 export {
   formatPlanVariantLabel,

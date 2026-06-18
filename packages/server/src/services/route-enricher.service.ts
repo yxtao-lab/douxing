@@ -398,6 +398,35 @@ function appendOpenHoursWarning(
   );
 }
 
+export interface ScheduleFromGpsInput {
+  city: string;
+  remainingSpots: RouteDayAttraction[];
+  lodging: RouteDayLodging;
+  gps: LatLngPoint;
+  gpsLabel?: string;
+  startMinutes: number;
+  locale: LocaleCode;
+  calendarDate: string;
+  dayTitle?: string;
+  openHoursMap: Map<number, AttractionOpenHours>;
+  playbooks?: MatchedRoutePlaybook[];
+}
+
+/** H8：以当前 GPS 为 depot，重排剩余 POI 并补全 transit/时刻 */
+export async function scheduleRemainingPoisFromGps(
+  input: ScheduleFromGpsInput,
+): Promise<{ attractions: RouteDayAttraction[]; transit: RouteTransitSegment[]; warnings: string[] }> {
+  return scheduleDayPois(input.city, input.remainingSpots, input.lodging, input.locale, {
+    dayIndex: 0,
+    calendarDate: input.calendarDate,
+    dayTitle: input.dayTitle,
+    openHoursMap: input.openHoursMap,
+    playbooks: input.playbooks,
+    gpsDepot: { ...input.gps, label: input.gpsLabel },
+    startMinutes: input.startMinutes,
+  });
+}
+
 async function scheduleDayPois(
   city: string,
   spots: RouteDayAttraction[],
@@ -409,6 +438,9 @@ async function scheduleDayPois(
     dayTitle?: string;
     openHoursMap: Map<number, AttractionOpenHours>;
     playbooks?: MatchedRoutePlaybook[];
+    /** H8 行中重规划：以 GPS 为 depot，从指定时刻起排程 */
+    gpsDepot?: LatLngPoint & { label?: string };
+    startMinutes?: number;
   },
 ): Promise<{ attractions: RouteDayAttraction[]; transit: RouteTransitSegment[]; warnings: string[] }> {
   const warnings: string[] = [];
@@ -420,7 +452,7 @@ async function scheduleDayPois(
   const missingCoords = geocoded.filter((s) => !hasCoords(s));
 
   const transit: RouteTransitSegment[] = [];
-  let cursor = DEFAULT_DAY_START_MINUTES;
+  let cursor = options.startMinutes ?? DEFAULT_DAY_START_MINUTES;
   const scheduled: RouteDayAttraction[] = [];
 
   if (withCoords.length === 0) {
@@ -442,9 +474,13 @@ async function scheduleDayPois(
   const lodgingPoint = hasLodgingCoords(lodging)
     ? { latitude: lodging.latitude!, longitude: lodging.longitude! }
     : null;
+  const gpsDepot = options.gpsDepot
+    ? { latitude: options.gpsDepot.latitude, longitude: options.gpsDepot.longitude }
+    : null;
+  const orderDepot = gpsDepot ?? lodgingPoint;
 
-  const order = lodgingPoint
-    ? await optimizePoiOrderFromDepot(lodgingPoint, poiPoints)
+  const order = orderDepot
+    ? await optimizePoiOrderFromDepot(orderDepot, poiPoints)
     : await optimizeVisitOrder(poiPoints);
   const orderedSpots = order.map((idx) => withCoords[idx]!);
   const scenicCluster = isScenicClusterDay(
@@ -454,7 +490,19 @@ async function scheduleDayPois(
   );
   const legOptions = { playbooks, scenicCluster };
 
-  if (lodgingPoint && orderedSpots.length > 0) {
+  if (gpsDepot && orderedSpots.length > 0) {
+    const firstLeg = await buildTransitLeg(
+      gpsDepot,
+      { latitude: orderedSpots[0]!.latitude!, longitude: orderedSpots[0]!.longitude! },
+      options.gpsDepot?.label ?? (locale === 'en-US' ? 'Current location' : '当前位置'),
+      orderedSpots[0]!.name,
+      cursor,
+      locale,
+      legOptions,
+    );
+    transit.push(firstLeg.segment);
+    cursor = firstLeg.arriveMinutes;
+  } else if (lodgingPoint && orderedSpots.length > 0) {
     const firstLeg = await buildTransitLeg(
       lodgingPoint,
       { latitude: orderedSpots[0]!.latitude!, longitude: orderedSpots[0]!.longitude! },

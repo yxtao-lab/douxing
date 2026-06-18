@@ -15,6 +15,8 @@ import {
   runWriteTripMemoryTool,
 } from './memory.tools.js';
 import { runApplyMemoryContextTool } from './apply-memory-context.tool.js';
+import { runReplanSegmentTool } from './replan-segment.tool.js';
+import { runDetectMissedPoisTool } from './detect-missed-pois.tool.js';
 
 export type { ToolName } from './schemas.js';
 
@@ -33,6 +35,8 @@ export const AGENT_TOOL_NAMES: ToolName[] = [
   'recall_user_memory',
   'apply_memory_context',
   'write_trip_memory',
+  'replan_segment',
+  'detect_missed_pois',
 ];
 
 export async function executeAgentTool(name: ToolName, input: unknown) {
@@ -65,6 +69,10 @@ export async function executeAgentTool(name: ToolName, input: unknown) {
       return runApplyMemoryContextTool(input);
     case 'write_trip_memory':
       return runWriteTripMemoryTool(input);
+    case 'replan_segment':
+      return runReplanSegmentTool(input);
+    case 'detect_missed_pois':
+      return runDetectMissedPoisTool(input);
     default:
       return { ok: false as const, error: { message: `未知 Tool: ${name}`, code: 'UNKNOWN_TOOL' } };
   }

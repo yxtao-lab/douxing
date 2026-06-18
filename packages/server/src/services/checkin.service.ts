@@ -13,6 +13,8 @@ import type { CheckInInfo, CheckInTimeRange, PaginatedResult } from '@douxing/sh
 import { buildPaginatedResult } from '@douxing/shared';
 import { evaluateAchievements } from './achievement.service.js';
 import { evaluateBadges } from './badge.service.js';
+import { grantPetExpOnCheckIn } from './pet-exp.service.js';
+import type { LocaleCode } from '@douxing/shared';
 import { getAttractionForCheckIn } from './attraction.service.js';
 import { ingestCheckInPhotosToAlbum, getAlbumPhotoUrlsByCheckInIds } from './journey-album.service.js';
 import {
@@ -140,6 +142,7 @@ export async function createCheckIn(
     photos?: string[];
     remark?: string;
     addToAlbum?: boolean;
+    locale?: LocaleCode;
   },
 ) {
   if (data.location.latitude == null || data.location.longitude == null) {
@@ -211,7 +214,15 @@ export async function createCheckIn(
 
   const newAchievements = await evaluateAchievements(userId);
   const newBadges = await evaluateBadges(userId);
-  return { checkIn: enrichedCheckIn, newAchievements, newBadges };
+  const petCelebration = await grantPetExpOnCheckIn(
+    userId,
+    {
+      hasPhoto: photos.length > 0,
+      isFirstAtAttraction,
+    },
+    data.locale ?? 'zh-CN',
+  );
+  return { checkIn: enrichedCheckIn, newAchievements, newBadges, petCelebration };
 }
 
 function resolveCheckInSince(range?: CheckInTimeRange) {

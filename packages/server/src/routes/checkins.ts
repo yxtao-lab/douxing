@@ -108,8 +108,12 @@ router.post('/', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const { checkIn, newAchievements, newBadges } = await createCheckIn(req.auth!.userId, parsed.data);
-    success(res, { checkIn, newAchievements, newBadges }, '打卡成功');
+    const locale = res.locals.locale ?? 'zh-CN';
+    const { checkIn, newAchievements, newBadges, petCelebration } = await createCheckIn(
+      req.auth!.userId,
+      { ...parsed.data, locale },
+    );
+    success(res, { checkIn, newAchievements, newBadges, petCelebration }, '打卡成功');
   } catch (err) {
     const message = err instanceof Error ? err.message : '打卡失败';
     console.error('[checkins/create]', err);

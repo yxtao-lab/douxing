@@ -14,6 +14,12 @@ import {
   type RouteListQuery,
   type RouteListSort,
   type RoutePath,
+  type RouteReplanContextInput,
+  type RouteReplanPreviewResponse,
+  type RouteMissedPoiAnalyzeInput,
+  type RouteMissedPoiAnalyzeResponse,
+  type RouteMissedPoiRecordInput,
+  type RouteMissedPoiRecordResponse,
   type SetRoutePublicShareRequest,
   type TravelRouteInfo,
   type UpdateRouteDraftRequest,
@@ -121,5 +127,34 @@ export async function fetchRouteComments(id: number, limit = 50) {
 
 export async function createRouteComment(id: number, body: CreateRouteCommentRequest) {
   const { data } = await http.post<ApiResponse<RouteCommentInfo>>(`/routes/${id}/comments`, body);
+  return data.data;
+}
+
+export async function previewRouteReplan(id: number, body: { context: RouteReplanContextInput }) {
+  const { data } = await http.post<ApiResponse<RouteReplanPreviewResponse>>(
+    `/routes/${id}/replan/preview`,
+    body,
+  );
+  return data.data;
+}
+
+export async function applyRouteReplan(id: number, body: { context: RouteReplanContextInput }) {
+  const { data } = await http.post<ApiResponse<TravelRouteInfo>>(`/routes/${id}/replan/apply`, body);
+  return data.data;
+}
+
+export async function analyzeRouteMissedPois(id: number, body: RouteMissedPoiAnalyzeInput) {
+  const { data } = await http.post<ApiResponse<RouteMissedPoiAnalyzeResponse>>(
+    `/routes/${id}/missed-pois/analyze`,
+    body,
+  );
+  return data.data;
+}
+
+export async function recordRouteMissedPois(id: number, body: RouteMissedPoiRecordInput) {
+  const { data } = await http.post<ApiResponse<RouteMissedPoiRecordResponse>>(
+    `/routes/${id}/missed-pois/record`,
+    body,
+  );
   return data.data;
 }

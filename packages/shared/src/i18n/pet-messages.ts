@@ -53,6 +53,24 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.analyze.scene.pre_plan': '规划前',
     'pet.analyze.scene.post_trip': '行后复盘',
     'pet.analyze.scene.on_demand': '综合分析',
+    'pet.analyze.scene.in_plan': '规划中',
+    'pet.analyze.scene.in_trip': '行中',
+    'pet.memoryWall.analyzeInTrip': '行中分析',
+    'pet.checkInCelebration.title': '打卡成功！',
+    'pet.checkInCelebration.exp': '+{exp} EXP',
+    'pet.checkInCelebration.levelUp': '升级啦！Lv.{prev} → Lv.{next}',
+    'pet.checkInCelebration.reply.guide': '「{nickname}」：又解锁一处精彩，继续加油！',
+    'pet.checkInCelebration.reply.foodie': '美食达人「{nickname}」：这站不错，下一顿更精彩！',
+    'pet.checkInCelebration.reply.photo': '摄影向导「{nickname}」：记得多拍几张留念～',
+    'pet.checkInCelebration.reply.family': '亲子伙伴「{nickname}」：小朋友也玩得很开心吧！',
+    'pet.checkInCelebration.levelUpReply': '「{nickname}」：我变强啦，接下来陪你去更多地方！',
+    'pet.checkInCelebration.ok': '知道了',
+    'pet.inTrip.insight.progress': '今日已打卡 {checked} 处，计划还有 {remaining} 处待完成。',
+    'pet.inTrip.insight.missed': '有 {count} 处「应到未到」，可考虑替补或记入遗憾。',
+    'pet.inTrip.insight.onTrack': '行程节奏不错，按计划继续探索吧。',
+    'pet.inTrip.reply.guide': '「{nickname}」：我在帮你盯着行程，需要的话可以刷新剩余安排。',
+    'pet.inTrip.action.viewMissed': '查看遗漏',
+    'pet.inTrip.action.refreshPlan': '刷新剩余行程',
   },
   'en-US': {
     'pet.personality.guide': 'Guide',
@@ -102,6 +120,24 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.analyze.scene.pre_plan': 'Pre-plan',
     'pet.analyze.scene.post_trip': 'Post-trip',
     'pet.analyze.scene.on_demand': 'On demand',
+    'pet.analyze.scene.in_plan': 'In planning',
+    'pet.analyze.scene.in_trip': 'On trip',
+    'pet.memoryWall.analyzeInTrip': 'In-trip analysis',
+    'pet.checkInCelebration.title': 'Check-in success!',
+    'pet.checkInCelebration.exp': '+{exp} EXP',
+    'pet.checkInCelebration.levelUp': 'Level up! Lv.{prev} → Lv.{next}',
+    'pet.checkInCelebration.reply.guide': '「{nickname}」: Another great stop—keep going!',
+    'pet.checkInCelebration.reply.foodie': 'Food buddy 「{nickname}」: Nice spot—the next meal awaits!',
+    'pet.checkInCelebration.reply.photo': 'Photo guide 「{nickname}」: Capture a few more shots!',
+    'pet.checkInCelebration.reply.family': 'Family pal 「{nickname}」: Hope the kids had fun too!',
+    'pet.checkInCelebration.levelUpReply': '「{nickname}」: I leveled up—let us explore more together!',
+    'pet.checkInCelebration.ok': 'Got it',
+    'pet.inTrip.insight.progress': 'Checked in {checked} today; {remaining} planned stops left.',
+    'pet.inTrip.insight.missed': '{count} planned stop(s) missed—try alternatives or save as regret.',
+    'pet.inTrip.insight.onTrack': 'You are on track—keep exploring as planned.',
+    'pet.inTrip.reply.guide': '「{nickname}」: I am watching your itinerary—refresh remaining stops if needed.',
+    'pet.inTrip.action.viewMissed': 'View missed stops',
+    'pet.inTrip.action.refreshPlan': 'Refresh remaining plan',
   },
 };
 
@@ -275,4 +311,70 @@ export function formatPetMemoryWallDeleteConfirm(locale: LocaleCode = DEFAULT_LO
 
 export function formatPetMemoryWallCachedHint(locale: LocaleCode = DEFAULT_LOCALE): string {
   return petMsg('pet.memoryWall.cachedHint', locale);
+}
+
+export function formatPetMemoryWallAnalyzeInTrip(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return petMsg('pet.memoryWall.analyzeInTrip', locale);
+}
+
+export function formatPetCheckInCelebrationTitle(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return petMsg('pet.checkInCelebration.title', locale);
+}
+
+export function formatPetCheckInCelebrationOk(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return petMsg('pet.checkInCelebration.ok', locale);
+}
+
+export function formatPetCheckInCelebrationExp(
+  locale: LocaleCode,
+  params: { exp: number },
+): string {
+  return petMsg('pet.checkInCelebration.exp', locale, params);
+}
+
+export function formatPetCheckInCelebrationLevelUp(
+  locale: LocaleCode,
+  params: { prev: number; next: number },
+): string {
+  return petMsg('pet.checkInCelebration.levelUp', locale, params);
+}
+
+export function formatPetCheckInCelebrationReply(
+  locale: LocaleCode,
+  personality: string,
+  params: { nickname: string },
+): string {
+  const key = `pet.checkInCelebration.reply.${personality}`;
+  const table = PET_MESSAGES[locale] ?? PET_MESSAGES[DEFAULT_LOCALE];
+  if (table[key]) return petMsg(key, locale, params);
+  return petMsg('pet.checkInCelebration.reply.guide', locale, params);
+}
+
+export function formatPetCheckInCelebrationLevelUpReply(
+  locale: LocaleCode,
+  params: { nickname: string },
+): string {
+  return petMsg('pet.checkInCelebration.levelUpReply', locale, params);
+}
+
+export function formatPetInTripInsight(
+  locale: LocaleCode,
+  key: 'progress' | 'missed' | 'onTrack',
+  params?: Record<string, string | number>,
+): string {
+  return petMsg(`pet.inTrip.insight.${key}`, locale, params);
+}
+
+export function formatPetInTripReply(
+  locale: LocaleCode,
+  params: { nickname: string },
+): string {
+  return petMsg('pet.inTrip.reply.guide', locale, params);
+}
+
+export function formatPetInTripAction(
+  locale: LocaleCode,
+  kind: 'viewMissed' | 'refreshPlan',
+): string {
+  return petMsg(`pet.inTrip.action.${kind}`, locale);
 }

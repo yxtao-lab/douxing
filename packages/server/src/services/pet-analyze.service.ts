@@ -1,18 +1,24 @@
 /**
- * H3-c：宠物 AI 分析（pre_plan / post_trip）
+ * H3-c / H3-d：宠物 AI 分析（pre_plan / post_trip / in_plan / in_trip）
  * 规则模板兜底；LLM 可用时短 prompt 增强；Redis 缓存 15 分钟
  */
 import { z } from 'zod';
 import {
   ApiError,
   ApiMessageKey,
+  PoiCategory,
   TRAVEL_PET_DEFAULT_NICKNAME,
+  formatPetInTripAction,
+  formatPetInTripInsight,
+  formatPetInTripReply,
   type LocaleCode,
   type PetAnalyzeRequest,
   type PetAnalyzeResult,
   type PetAnalyzeScene,
   type PetSuggestedAction,
   type PetSuggestedMemory,
+  type RouteDayPlan,
+  type RouteDetailPayload,
 } from '@douxing/shared';
 import { chatCompletionForJson } from './llm-client.service.js';
 import { loadPlanUserContext } from './plan-user-context.service.js';
@@ -24,6 +30,8 @@ import {
 import { getTravelPetByUserId } from './travel-pet.service.js';
 import { getRouteById } from './route.service.js';
 import { getCachedPetAnalyze, setCachedPetAnalyze } from './pet-analyze-cache.service.js';
+import { listRouteCheckInsPaginated } from './checkin.service.js';
+import { analyzeRouteMissedPois, buildVisitMatchContext, isPlannedPoiVisited } from './missed-poi.service.js';
 
 const analyzeOutputSchema = z.object({
   insight: z.string(),
@@ -168,6 +176,122 @@ function buildRuleBasedOnDemand(
   };
 }
 
+function isPlayPoi(spot: { poiType?: string }): boolean {
+  const type = spot.poiType ?? PoiCategory.ATTRACTION;
+  return type !== PoiCategory.HOTEL && type !== PoiCategory.TRANSPORT;
+}
+
+function resolveActiveDayIndex(days: RouteDayPlan[]): number {
+  return Math.max(0, days.length - 1);
+}
+
+function countTripProgress(
+  days: RouteDayPlan[],
+  dayIndex: number,
+  visitCtx: ReturnType<typeof buildVisitMatchContext>,
+): { checked: number; remaining: number } {
+  let checked = 0;
+  let remaining = 0;
+  for (let i = 0; i <= dayIndex && i < days.length; i += 1) {
+    for (const spot of days[i]!.attractions.filter(isPlayPoi)) {
+      if (isPlannedPoiVisited(spot, visitCtx)) checked += 1;
+      else remaining += 1;
+    }
+  }
+  return { checked, remaining };
+}
+
+async function buildRuleBasedInTrip(
+  userId: number,
+  locale: LocaleCode,
+  nickname: string,
+  routeId: number,
+): Promise<PetAnalyzeResult> {
+  const route = await getRouteById(routeId, userId);
+  if (!route) {
+    throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
+  }
+  const detail = route.routeDetail as RouteDetailPayload | null | undefined;
+  const days = detail?.days ?? [];
+  const activeDay = resolveActiveDayIndex(days);
+
+  const missedResult = await analyzeRouteMissedPois({
+    routeId,
+    userId,
+    dayIndex: activeDay,
+    locale,
+    includeAlternatives: false,
+  });
+  const checkins = await listRouteCheckInsPaginated(routeId, userId, 1, 200);
+  const visitCtx = buildVisitMatchContext(checkins.items);
+  const progress = countTripProgress(days, activeDay, visitCtx);
+  const missedCount = missedResult.missed.length;
+
+  let insight: string;
+  if (missedCount > 0) {
+    insight = formatPetInTripInsight(locale, 'missed', { count: missedCount });
+  } else if (progress.remaining > 0) {
+    insight = formatPetInTripInsight(locale, 'progress', {
+      checked: progress.checked,
+      remaining: progress.remaining,
+    });
+  } else {
+    insight = formatPetInTripInsight(locale, 'onTrack');
+  }
+
+  const suggestedActions: PetSuggestedAction[] = [];
+  if (missedCount > 0) {
+    suggestedActions.push({
+      kind: 'view_missed',
+      label: formatPetInTripAction(locale, 'viewMissed'),
+      payload: { routeId },
+    });
+  }
+  if (progress.remaining > 0) {
+    suggestedActions.push({
+      kind: 'refresh_plan',
+      label: formatPetInTripAction(locale, 'refreshPlan'),
+      payload: { routeId, dayIndex: activeDay },
+    });
+  }
+
+  return {
+    scene: 'in_trip',
+    insight,
+    petReply: formatPetInTripReply(locale, { nickname }),
+    suggestedActions,
+    memoriesToSave: [],
+    cached: false,
+    analyzedAt: new Date().toISOString(),
+  };
+}
+
+function buildRuleBasedInPlan(
+  locale: LocaleCode,
+  nickname: string,
+  memorySummary: string,
+  themes: string[],
+): PetAnalyzeResult {
+  const isEn = locale === 'en-US';
+  const themeHint = themes.slice(0, 3).join(isEn ? ', ' : '、');
+  const insight = isEn
+    ? `Planning in progress${themeHint ? `: themes ${themeHint}` : ''}. ${memorySummary}`
+    : `正在规划中${themeHint ? `，主题：${themeHint}` : ''}。${memorySummary}`;
+  const petReply = isEn
+    ? `${nickname}: I am here while you tweak the plan—tell me if anything feels off.`
+    : `「${nickname}」：规划过程中我一直陪着你，有想法随时告诉我。`;
+
+  return {
+    scene: 'in_plan',
+    insight,
+    petReply,
+    suggestedActions: [],
+    memoriesToSave: [],
+    cached: false,
+    analyzedAt: new Date().toISOString(),
+  };
+}
+
 async function tryLlmAnalyze(
   locale: LocaleCode,
   scene: PetAnalyzeScene,
@@ -256,6 +380,31 @@ export async function analyzeTravelPet(
     result =
       (await tryLlmAnalyze(locale, scene, contextBlock)) ??
       buildRuleBasedPostTrip(locale, nickname, route.name, days);
+  } else if (scene === 'in_trip') {
+    if (!routeId) {
+      throw new ApiError(ApiMessageKey.VALIDATION_ERROR);
+    }
+    const route = await getRouteById(routeId, userId);
+    if (!route) {
+      throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
+    }
+    const contextBlock = [
+      `nickname: ${nickname}`,
+      `routeName: ${route.name}`,
+      `memorySummary: ${pack.memorySummary}`,
+    ].join('\n');
+    result =
+      (await tryLlmAnalyze(locale, scene, contextBlock)) ??
+      (await buildRuleBasedInTrip(userId, locale, nickname, routeId));
+  } else if (scene === 'in_plan') {
+    const contextBlock = [
+      `nickname: ${nickname}`,
+      `memorySummary: ${pack.memorySummary}`,
+      `themes: ${pack.context.memoryThemes.join(', ')}`,
+    ].join('\n');
+    result =
+      (await tryLlmAnalyze(locale, scene, contextBlock)) ??
+      buildRuleBasedInPlan(locale, nickname, pack.memorySummary, pack.context.memoryThemes);
   } else {
     result =
       (await tryLlmAnalyze(locale, scene, `memorySummary: ${pack.memorySummary}`)) ??

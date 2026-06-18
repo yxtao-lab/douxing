@@ -130,6 +130,18 @@
               :days="days"
               :show-day-tabs="false"
             />
+
+            <div v-if="canRefreshDayPlan" class="flex flex-wrap gap-2 pt-2">
+              <button type="button" class="dx-btn-secondary w-full sm:w-auto" @click="replanDialogVisible = true">
+                {{ t('routes.replanRefreshDay') }}
+              </button>
+              <button type="button" class="dx-btn-secondary w-full sm:w-auto" @click="missedDialogVisible = true">
+                {{ t('routes.missedCheckDay') }}
+              </button>
+              <button type="button" class="dx-btn-secondary w-full sm:w-auto" @click="inTripDialogVisible = true">
+                {{ t('routes.inTripAnalyze') }}
+              </button>
+            </div>
           </div>
 
           <!-- 旅程相册 -->
@@ -290,6 +302,31 @@
       :route="route"
       @close="posterSheetVisible = false"
     />
+
+    <RouteReplanDialog
+      v-if="route"
+      :visible="replanDialogVisible"
+      :route-id="numericRouteId"
+      :day-index="activeDayIndex"
+      :is-draft="route.status !== publishedStatus"
+      @close="replanDialogVisible = false"
+      @applied="handleReplanApplied"
+    />
+
+    <RouteMissedPoiDialog
+      v-if="route"
+      :visible="missedDialogVisible"
+      :route-id="numericRouteId"
+      :day-index="activeDayIndex"
+      @close="missedDialogVisible = false"
+    />
+
+    <PetInTripAnalyzeDialog
+      v-if="route"
+      :visible="inTripDialogVisible"
+      :route-id="numericRouteId"
+      @close="inTripDialogVisible = false"
+    />
   </div>
 </template>
 
@@ -300,6 +337,9 @@ import RouteDayFlowChart from '@/components/route/RouteDayFlowChart.vue';
 import RouteDayTabs from '@/components/route/RouteDayTabs.vue';
 import RouteMapByDay from '@/components/route/RouteMapByDay.vue';
 import RoutePosterSheet from '@/components/route/RoutePosterSheet.vue';
+import RouteReplanDialog from '@/components/route/RouteReplanDialog.vue';
+import RouteMissedPoiDialog from '@/components/route/RouteMissedPoiDialog.vue';
+import PetInTripAnalyzeDialog from '@/components/route/PetInTripAnalyzeDialog.vue';
 import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vue';
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
@@ -311,6 +351,9 @@ const { t } = useLocale();
 const { joinLabels } = useInterestTagLabels();
 
 const posterSheetVisible = ref(false);
+const replanDialogVisible = ref(false);
+const missedDialogVisible = ref(false);
+const inTripDialogVisible = ref(false);
 const detailTab = ref<'itinerary' | 'album'>('itinerary');
 const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
 const publishedStatusForPoster = RouteStatus.PUBLISHED;
@@ -368,6 +411,14 @@ const canGeneratePoster = computed(
 const showDetailTabs = computed(() => isOwner.value && isUnlocked.value && days.value.length > 0);
 
 const showAlbumTab = computed(() => showDetailTabs.value);
+
+const canRefreshDayPlan = computed(
+  () => isOwner.value && isUnlocked.value && days.value.length > 0 && detailTab.value === 'itinerary',
+);
+
+async function handleReplanApplied() {
+  await loadDetail();
+}
 
 const heroMeta = computed(() => {
   if (!route.value) return '';

@@ -47,10 +47,9 @@ function assert(condition: boolean, label: string) {
 function checkSharedHelpers() {
   console.log('--- 共享 ViewModel / i18n ---');
   assert(isPetAnalyzeScene('pre_plan'), 'pre_plan 合法场景');
-  assert(!isPetAnalyzeScene('in_trip'), 'in_trip 未纳入 MVP');
-  assert(formatPetMemoryTypeLabel('preference', 'zh-CN').length > 0, '记忆类型 zh-CN');
-  assert(formatPetMemoryTypeLabel('preference', 'en-US').length > 0, '记忆类型 en-US');
-  assert(formatPetAnalyzeSceneLabel('pre_plan', 'zh-CN').length > 0, '场景标签 zh-CN');
+  assert(isPetAnalyzeScene('in_trip'), 'in_trip 合法场景');
+  assert(isPetAnalyzeScene('in_plan'), 'in_plan 合法场景');
+  assert(formatPetAnalyzeSceneLabel('in_trip', 'zh-CN').length > 0, 'in_trip 场景标签 zh-CN');
 
   const vm = buildPetMemoryWallListItemViewModel(
     {

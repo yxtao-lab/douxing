@@ -18,8 +18,8 @@ import {
   formatPetMemoryWallUnpin,
 } from './i18n/pet-messages.js';
 
-/** H3-c：宠物分析场景（Step 29 MVP：pre_plan / post_trip） */
-export const PET_ANALYZE_SCENES = ['pre_plan', 'post_trip', 'on_demand'] as const;
+/** H3-c：宠物分析场景；H3-d 扩展 in_plan / in_trip */
+export const PET_ANALYZE_SCENES = ['pre_plan', 'post_trip', 'on_demand', 'in_plan', 'in_trip'] as const;
 export type PetAnalyzeScene = (typeof PET_ANALYZE_SCENES)[number];
 
 export function isPetAnalyzeScene(value: string): value is PetAnalyzeScene {

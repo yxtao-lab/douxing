@@ -174,6 +174,95 @@ export interface RouteDetailPayload {
   ragMatchedCount?: number;
 }
 
+/** H8 · 行中重规划上下文（POST replan/preview · replan/apply） */
+export interface RouteReplanContextInput {
+  dayIndex: number;
+  latitude: number;
+  longitude: number;
+  currentTimeMinutes?: number;
+  visitedPoiNames?: string[];
+  remainingPoiNames?: string[];
+  gpsLabel?: string;
+}
+
+export interface RouteReplanReorderItem {
+  name: string;
+  previousOrder: number;
+  newOrder: number;
+}
+
+export interface RouteReplanSegmentPayload {
+  routeId: number;
+  dayIndex: number;
+  day: RouteDayPlan;
+  segment: {
+    attractions: RouteDayAttraction[];
+    transit: RouteTransitSegment[];
+    warnings: string[];
+  };
+  diff: {
+    skippedPoiNames: string[];
+    reordered: RouteReplanReorderItem[];
+  };
+}
+
+export interface RouteReplanPreviewResponse {
+  preview: RouteReplanSegmentPayload;
+  /** 仅草稿可写回 */
+  canApply: boolean;
+  toolTrace?: AgentToolTraceEntry[];
+}
+
+/** H7 · 应到未到 POI */
+export interface MissedPoiItem {
+  name: string;
+  dayIndex: number;
+  dayTitle?: string;
+  time?: string;
+  attractionId?: number;
+  /** scheduled_past | past_day | no_checkin */
+  reason: 'scheduled_past' | 'past_day' | 'no_checkin';
+}
+
+/** H7 · 替补 POI 推荐 */
+export interface MissedPoiAlternative {
+  id: number;
+  name: string;
+  tags: string[];
+  description: string | null;
+  score: number;
+  /** 关联的遗漏 POI 名称 */
+  forMissedPoi: string;
+}
+
+/** H7 · 遗漏分析请求（POST missed-pois/analyze） */
+export interface RouteMissedPoiAnalyzeInput {
+  /** 评估截至第几天（含），0-based，默认当前选中天 */
+  dayIndex: number;
+  currentTimeMinutes?: number;
+}
+
+/** H7 · 遗漏分析响应 */
+export interface RouteMissedPoiAnalyzeResponse {
+  routeId: number;
+  city: string | null;
+  missed: MissedPoiItem[];
+  alternatives: MissedPoiAlternative[];
+  /** 已写入或已存在的 regret 记忆 id */
+  recordedMemoryIds?: number[];
+}
+
+/** H7 · 记入遗憾请求 */
+export interface RouteMissedPoiRecordInput {
+  items: Array<{ name: string; dayIndex: number }>;
+}
+
+/** H7 · 记入遗憾响应 */
+export interface RouteMissedPoiRecordResponse {
+  memoryIds: number[];
+  skipped: string[];
+}
+
 import type { AttractionOpenHours, AttractionOpenHoursWindow } from './open-hours.js';
 
 export type { AttractionOpenHours, AttractionOpenHoursWindow };
@@ -618,6 +707,18 @@ export interface CheckInResult {
   checkIn: CheckInInfo;
   newAchievements: AchievementInfo[];
   newBadges: UserBadgeInfo[];
+  /** H3-d：打卡宠物成长庆祝（可选） */
+  petCelebration?: PetCheckInCelebration | null;
+}
+
+/** H3-d：打卡后宠物经验与庆祝文案 */
+export interface PetCheckInCelebration {
+  expGained: number;
+  leveledUp: boolean;
+  previousLevel: number;
+  newLevel: number;
+  nickname: string;
+  petReply: string;
 }
 
 export interface CheckInInfo {

@@ -126,6 +126,33 @@ export const buildRouteVariantsInputSchema = z.object({
   candidateCount: z.number().int().positive().optional(),
 });
 
+export const replanSegmentContextSchema = z.object({
+  dayIndex: z.number().int().min(0),
+  latitude: z.number().min(-90).max(90),
+  longitude: z.number().min(-180).max(180),
+  currentTimeMinutes: z.number().int().min(0).max(24 * 60 - 1).optional(),
+  visitedPoiNames: z.array(z.string()).optional(),
+  remainingPoiNames: z.array(z.string()).optional(),
+  gpsLabel: z.string().optional(),
+});
+
+export const replanSegmentInputSchema = z.object({
+  routeId: z.number().int().positive(),
+  userId: z.number().int().positive(),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+  context: replanSegmentContextSchema,
+});
+
+export const detectMissedPoisInputSchema = z.object({
+  routeId: z.number().int().positive(),
+  userId: z.number().int().positive(),
+  dayIndex: z.number().int().min(0),
+  currentTimeMinutes: z.number().int().min(0).max(24 * 60 - 1).optional(),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+  includeAlternatives: z.boolean().optional(),
+  autoRecordRegrets: z.boolean().optional(),
+});
+
 export type ToolName =
   | 'parse_intent'
   | 'retrieve_attractions'
@@ -140,4 +167,6 @@ export type ToolName =
   | 'select_plan_variant'
   | 'recall_user_memory'
   | 'apply_memory_context'
-  | 'write_trip_memory';
+  | 'write_trip_memory'
+  | 'replan_segment'
+  | 'detect_missed_pois';
