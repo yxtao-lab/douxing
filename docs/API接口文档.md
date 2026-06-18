@@ -1,8 +1,8 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · J1～J5+ 旅程相册）  
+> **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · J1～J5+ 旅程相册）  
 > **更新日期**：2026-06-18  
-> **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（当前 **Step 31** · M1～M4 已验收）  
+> **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（当前 **Step 35** · **M1～M5 已验收**）  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -14,7 +14,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | 全量 **93** 个 REST 接口，含参数、Schema、JWT 鉴权 |
+| **[openapi.yaml](./openapi.yaml)** | 全量 **97** 个 REST 接口，含参数、Schema、JWT 鉴权 |
 
 **导入步骤**
 
@@ -174,65 +174,69 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 34 | GET | `/api/routes/:id/comments` | 登录 | 路线 |
 | 35 | POST | `/api/routes/:id/comments` | 登录 | 路线 |
 | 36 | GET | `/api/routes/:id/map-path` | 登录 | 路线 |
-| 37 | GET | `/api/routes/plan-sessions` | 登录 | 规划 |
-| 38 | POST | `/api/routes/plan-sessions` | 登录 | 规划 |
-| 39 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
-| 40 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
-| 41 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
-| 42 | GET | `/api/routes/plan-sessions/:sessionId/stream` | 登录 | 规划 SSE（C7-b Step 7） |
-| 43 | POST | `/api/checkins/photos` | 登录 | 打卡 |
-| 44 | POST | `/api/checkins` | 登录 | 打卡 |
-| 45 | GET | `/api/checkins` | 登录 | 打卡 |
-| 46 | GET | `/api/orders/payment-config` | 登录 | 订单 |
-| 47 | POST | `/api/orders` | 登录 | 订单 |
-| 48 | GET | `/api/orders` | 登录 | 订单 |
-| 49 | GET | `/api/orders/:id` | 登录 | 订单 |
-| 50 | POST | `/api/orders/:id/prepay` | 登录 | 订单 |
-| 51 | POST | `/api/orders/:id/pay` | 登录 | 订单 |
-| 52 | POST | `/api/orders/:id/cancel` | 登录 | 订单 |
-| 53 | POST | `/api/payments/wechat/notify` | 微信回调 | 支付 |
-| 54 | GET | `/api/achievements/catalog` | 登录 | 成就 |
-| 55 | GET | `/api/achievements/mine` | 登录 | 成就 |
-| 56 | GET | `/api/achievements` | 登录 | 成就（兼容） |
-| 57 | GET | `/api/badges` | 登录 | 徽章 |
-| 58 | GET | `/api/badges/mine` | 登录 | 徽章 |
-| 59 | GET | `/api/leaderboard` | 登录 | 排行榜 |
-| 60 | POST | `/api/speech/transcribe` | 登录 | 语音 |
-| 61 | GET | `/api/share/journey-albums/:token` | 公开 | 分享 |
-| 62 | GET | `/api/share/routes/:id` | 公开 | 分享 |
-| 63 | GET | `/api/share/routes/:id/wxacode` | 公开 | 分享 |
-| 64 | GET | `/api/share/routes/:id/link` | 公开 | 分享 |
-| 65 | GET | `/api/playbooks/admin` | 管理员 | 动线 |
-| 66 | GET | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 67 | POST | `/api/playbooks/admin` | 管理员 | 动线 |
-| 68 | PUT | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 69 | DELETE | `/api/playbooks/admin/:id` | 管理员 | 动线 |
-| 70 | GET | `/api/journey-albums` | 登录 | 相册 |
-| 71 | GET | `/api/journey-albums/photos` | 登录 | 相册 |
-| 72 | GET | `/api/journey-albums/by-route/:routeId` | 登录 | 相册 |
-| 73 | POST | `/api/journey-albums` | 登录 | 相册 |
-| 74 | GET | `/api/journey-albums/:id` | 登录 | 相册 |
-| 75 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
-| 76 | POST | `/api/journey-albums/:id/share` | 登录 | 相册 |
-| 77 | POST | `/api/journey-albums/:id/photos/apply-exif-suggestions` | 登录 | 相册 |
-| 78 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
-| 79 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
-| 80 | DELETE | `/api/journey-albums/:id` | 登录 | 相册 |
-| 81 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
-| 82 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
-| 83 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
-| 84 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
-| 85 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
-| 86 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
-| 87 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
-| 88 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
-| 89 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 90 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 91 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 92 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 93 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
+| 37 | POST | `/api/routes/:id/replan/preview` | 登录 | 行中 H8 |
+| 38 | POST | `/api/routes/:id/replan/apply` | 登录 | 行中 H8 |
+| 39 | POST | `/api/routes/:id/missed-pois/analyze` | 登录 | 行中 H7 |
+| 40 | POST | `/api/routes/:id/missed-pois/record` | 登录 | 行中 H7 |
+| 41 | GET | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 42 | POST | `/api/routes/plan-sessions` | 登录 | 规划 |
+| 43 | GET | `/api/routes/plan-sessions/:sessionId` | 登录 | 规划 |
+| 44 | POST | `/api/routes/plan-sessions/:sessionId/messages` | 登录 | 规划 |
+| 45 | POST | `/api/routes/plan-sessions/:sessionId/select-candidate` | 登录 | 规划 |
+| 46 | GET | `/api/routes/plan-sessions/:sessionId/stream` | 登录 | 规划 SSE（C7-b Step 7） |
+| 47 | POST | `/api/checkins/photos` | 登录 | 打卡 |
+| 48 | POST | `/api/checkins` | 登录 | 打卡 |
+| 49 | GET | `/api/checkins` | 登录 | 打卡 |
+| 50 | GET | `/api/orders/payment-config` | 登录 | 订单 |
+| 51 | POST | `/api/orders` | 登录 | 订单 |
+| 52 | GET | `/api/orders` | 登录 | 订单 |
+| 53 | GET | `/api/orders/:id` | 登录 | 订单 |
+| 54 | POST | `/api/orders/:id/prepay` | 登录 | 订单 |
+| 55 | POST | `/api/orders/:id/pay` | 登录 | 订单 |
+| 56 | POST | `/api/orders/:id/cancel` | 登录 | 订单 |
+| 57 | POST | `/api/payments/wechat/notify` | 微信回调 | 支付 |
+| 58 | GET | `/api/achievements/catalog` | 登录 | 成就 |
+| 59 | GET | `/api/achievements/mine` | 登录 | 成就 |
+| 60 | GET | `/api/achievements` | 登录 | 成就（兼容） |
+| 61 | GET | `/api/badges` | 登录 | 徽章 |
+| 62 | GET | `/api/badges/mine` | 登录 | 徽章 |
+| 63 | GET | `/api/leaderboard` | 登录 | 排行榜 |
+| 64 | POST | `/api/speech/transcribe` | 登录 | 语音 |
+| 65 | GET | `/api/share/journey-albums/:token` | 公开 | 分享 |
+| 66 | GET | `/api/share/routes/:id` | 公开 | 分享 |
+| 67 | GET | `/api/share/routes/:id/wxacode` | 公开 | 分享 |
+| 68 | GET | `/api/share/routes/:id/link` | 公开 | 分享 |
+| 69 | GET | `/api/playbooks/admin` | 管理员 | 动线 |
+| 70 | GET | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 71 | POST | `/api/playbooks/admin` | 管理员 | 动线 |
+| 72 | PUT | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 73 | DELETE | `/api/playbooks/admin/:id` | 管理员 | 动线 |
+| 74 | GET | `/api/journey-albums` | 登录 | 相册 |
+| 75 | GET | `/api/journey-albums/photos` | 登录 | 相册 |
+| 76 | GET | `/api/journey-albums/by-route/:routeId` | 登录 | 相册 |
+| 77 | POST | `/api/journey-albums` | 登录 | 相册 |
+| 78 | GET | `/api/journey-albums/:id` | 登录 | 相册 |
+| 79 | POST | `/api/journey-albums/:id/photos` | 登录 | 相册 |
+| 80 | POST | `/api/journey-albums/:id/share` | 登录 | 相册 |
+| 81 | POST | `/api/journey-albums/:id/photos/apply-exif-suggestions` | 登录 | 相册 |
+| 82 | PATCH | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 83 | DELETE | `/api/journey-albums/:id/photos/:photoId` | 登录 | 相册 |
+| 84 | DELETE | `/api/journey-albums/:id` | 登录 | 相册 |
+| 85 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
+| 86 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
+| 87 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
+| 88 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
+| 89 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
+| 90 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
+| 91 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
+| 92 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
+| 93 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 94 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 95 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 96 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 97 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
 
-> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 93 项（C 端 + 数据分析主链）。
+> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 97 项（C 端 + 数据分析主链）。
 
 ---
 
@@ -523,6 +527,55 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 **Query**：`day` — 可选，指定某天 0-based 索引
 
 **响应 `data`**：地图路径对象（含 polyline、节点等）
+
+### POST `/:id/replan/preview`
+
+行中局部重规划预览（H8 · Step 31～32）。基于 GPS + 剩余 POI 重算当日 segment；**不直接写库**。
+
+**Body**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `context.dayIndex` | number | 0-based 天索引 |
+| `context.latitude` / `longitude` | number | 当前 GPS |
+| `context.currentTimeMinutes` | number? | 当前时刻（分钟，0=00:00） |
+| `context.visitedPoiNames` | string[]? | 已访问 POI 名（模糊匹配） |
+| `context.remainingPoiNames` | string[]? | 显式剩余 POI（优先于推断） |
+| `context.gpsLabel` | string? | GPS 展示标签 |
+
+**响应 `data`**：`RouteReplanPreviewResponse` — `preview`（segment + diff）、`canApply`（仅草稿 true）、`toolTrace?`
+
+**验收**：`pnpm --filter @douxing/server replan-segment:cases` · `h8:transit-agent-cases`
+
+### POST `/:id/replan/apply`
+
+确认写回重规划结果（**仅草稿**；已发布 → `ROUTE_DRAFT_ONLY_EDIT`）。
+
+**Body**：同 preview  
+**响应 `data`**：更新后的 `TravelRouteInfo`
+
+### POST `/:id/missed-pois/analyze`
+
+H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替补推荐。
+
+**Body**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `dayIndex` | number | 评估截至第几天（含），0-based |
+| `currentTimeMinutes` | number? | 当前时刻 |
+| `autoRecordRegrets` | boolean? | 是否自动写入 regret 记忆 |
+
+**响应 `data`**：`RouteMissedPoiAnalyzeResponse` — `missed[]`、`alternatives[]`、`recordedMemoryIds?`
+
+### POST `/:id/missed-pois/record`
+
+将选定遗漏 POI 记入遗憾记忆（`pet_memories` · `memoryType=regret`）。
+
+**Body**：`{ items: [{ name, dayIndex }] }`  
+**响应 `data`**：`{ memoryIds, skipped }`
+
+**验收**：`pnpm --filter @douxing/server h7:missed-poi-cases`
 
 ---
 
@@ -991,7 +1044,7 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ## 20. 旅行宠物 pets
 
-前缀：`/api/pets` — **H3-a～c**（领养 · 悬浮上下文 · 记忆墙 · AI 分析）
+前缀：`/api/pets` — **H3-a～d**（领养 · 悬浮上下文 · 记忆墙 · AI 分析 · **行中 exp/庆祝**）
 
 ### POST `/adopt`
 
@@ -1048,19 +1101,19 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ### POST `/me/analyze`
 
-宠物 AI 分析（H3-c）。
+宠物 AI 分析（H3-c / H3-d）。
 
 **Body**
 
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
-| `scene` | string | 是 | `pre_plan` / `post_trip` / `on_demand` |
-| `routeId` | number | 否 | 关联路线 |
+| `scene` | string | 是 | `pre_plan` / `post_trip` / `on_demand` / **`in_plan`** / **`in_trip`** |
+| `routeId` | number | 否 | 关联路线（行中/行后建议传） |
 | `sessionId` | number | 否 | 关联规划会话 |
 
 **响应 `data`**：`PetAnalyzeResult` — `insight`、`petReply`、`suggestedActions`、`memoriesToSave`、`cached`
 
-**本地验收**：`pnpm --filter @douxing/server pet:adopt-cases` · `pet:memory-analyze-cases`
+**本地验收**：`pnpm --filter @douxing/server pet:adopt-cases` · `pet:memory-analyze-cases` · `h3-d:in-trip-cases` · `h5:m5-accept`
 
 ---
 
@@ -1089,8 +1142,12 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | `tune_route_budget` | 按新预算校正 draft（Step 4） |
 | `answer_food_qa` | 美食问答文案（不生成路线） |
 | `select_plan_variant` | 解析方案字母并返回 routeId |
+| `build_route_variants` | 生成 2～3 套候选方案（Step 13） |
+| `apply_memory_context` | 记忆召回并注入规划 context（C7-c Step 26） |
 | `recall_user_memory` | 召回 H3 宠物记忆 |
 | `write_trip_memory` | 写入行程/偏好记忆 |
+| `replan_segment` | GPS + 剩余 POI 行中重排（H8 Step 31） |
+| `detect_missed_pois` | 应到未到 POI + 替补推荐（H7 Step 33） |
 
 **响应**：与其它 API 一致 `{ code, message, data }`；Tool 业务数据在 `data` 内。
 
@@ -1134,6 +1191,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-06-18 | **M5 行中**：§7 新增 `replan/preview` · `replan/apply` · `missed-pois/*`；§20 `analyze` 增 `in_plan`/`in_trip`；§21 Agent Tool 增 `replan_segment` · `detect_missed_pois` · `apply_memory_context` · `build_route_variants`；总览 **97** 接口 |
 | 2026-06-18 | 新增 §20 旅行宠物 `/api/pets/*`（9 个接口）；修正总览序号；总览 **93** 接口 |
 | 2026-06-10 | J5++：`DELETE /journey-albums/:id`；路线列表 `listCoverImageUrl`；总览 **83** 接口 |
 | 2026-06-10 | J5：`share`、`apply-exif-suggestions`、`GET /share/journey-albums/:token`；总览 **82** 接口 |

@@ -2,25 +2,25 @@
 
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
-> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 31**  
+> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 35**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：2.5  
+**文档版本**：2.6  
 **最后更新**：2026-06-18  
-**核心结论**：线上已是 **「编排式管道 + 多轮会话 + Agent 灰度」**；M1～M4 已验收，生产默认仍 `AGENT_PLAN_ENABLED=false`。
+**核心结论**：线上已是 **「编排式管道 + 多轮会话 + Agent 灰度」**；M1～M5 已验收，生产默认仍 `AGENT_PLAN_ENABLED=false`。
 
 > **分工**：本文 = **为什么 / 怎么设计**；[AI路径规划路线图.md](./AI路径规划路线图.md) = **现在做什么 / 做到哪算完成**。
 
 ### 实现进度速览（2026-06-18）
 
-> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 31 H8 `replan_segment`**。
+> 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 35 I2 PAI LoRA 微调**。
 
 | 步 | 状态 | 已落地 | 待完成（对应 Step） |
 |----|------|--------|---------------------|
 | **C7-a** | ✅ 完成 | 9 Tool · `/v1/agent/plan` · feature flag · 等价率 · Langfuse | — |
 | **C7-b** | ✅ M1 达成 | patch · SSE · i18n · agent_state · 10 用例 | — |
-| **C7-c** | ✅ M4 达成 | memory Tool · memory_agent · 悬浮层 · 记忆墙 | — |
-| **C7-d** | 🔄 部分 | validate_route · warnings 回复 | I3 LoRA → **Step 35～37** |
+| **C7-c** | ✅ M5 达成 | memory Tool · memory_agent · 悬浮层 · 记忆墙 · 行中 analyze | — |
+| **C7-d** | 🔄 部分 | validate_route · warnings 回复 · transit_agent | I3 LoRA → **Step 35～37** |
 
 > **默认行为不变**：`AGENT_PLAN_ENABLED=false` 时，100% 走现有 `generateRoute` 管道。
 
@@ -67,7 +67,7 @@ MVP 阶段（2026-05）团队选择 **先落地可验收的管道**，理由见 
 | 意图未驱动执行 | 「第三天轻松点」与「换城市」走同一路径 | 无 Tool 路由，无 `patch_day` |
 | 能力入口分散 | 规划 / 打卡 / 相册 / 攻略各自独立 | 无统一协调器 |
 | 难观测 | 不知道哪步慢、哪步失败 | 无 Tool trace / Langfuse |
-| 无长期记忆 | 每次重复说偏好 | H3 表已建（`pet_memories`）；Agent 已接 `recall_user_memory`；**前端宠物 UI 未启动** |
+| 无长期记忆 | 每次重复说偏好 | H3 表已建（`pet_memories`）；Agent 已接 `recall_user_memory`；**行中 regret 与 in_trip analyze 已落地（M5）** |
 
 **升级 Agent 的目标**：在 **不破坏 C1～H9 已验收能力** 的前提下，让 AI **会判断、会选工具、会局部修改**。
 
@@ -290,7 +290,7 @@ Node LLM (DeepSeek / LM Studio / auto)
 | **Supervisor** | 意图分类、派单、汇总 | 路由逻辑 | C7-a |
 | **规划专家** | 排 POI、增强、局部修改 | generate / enrich / patch / variants | C7-a/b |
 | **记忆专家** | 长期偏好、行程摘要 | recall_memory / write_memory | C7-c + H3 |
-| **行中专家** | 打卡偏离、临时改计划 | replan_segment | H8 |
+| **行中专家** | 打卡偏离、临时改计划 | replan_segment · detect_missed_pois | H8/H7 ✅ |
 | **评估**（非独立 Agent） | 质量检查 | validate_route | C7-d |
 
 **暂不独立**：预订 Agent（缺 API）、搜索 Agent（RAG 覆盖）、推荐 Agent（合并入规划）。
@@ -500,7 +500,9 @@ packages/server/
 | `recall_user_memory` | userId, query, limit | `memories` | `memory.tools.ts` | ✅ C7-c |
 | `write_trip_memory` | userId, memoryType, content | ok | `memory.tools.ts` | ✅ C7-c |
 | `build_route_variants` | intent, userId | 2～3 变体 key/label/hint | `build-route-variants.tool.ts` | ✅ Step 13 |
-| `replan_segment` | routeId, context | 局部路线 | — | ⏳ H8 |
+| `replan_segment` | routeId, context | 局部路线 + diff | `replan-segment.tool.ts` | ✅ H8 Step 31 |
+| `detect_missed_pois` | routeId, dayIndex | missed[] + 替补 | `detect-missed-pois.tool.ts` | ✅ H7 Step 33 |
+| `apply_memory_context` | userId, sessionId | 记忆注入规划 | `memory.tools.ts` | ✅ C7-c Step 26 |
 
 ---
 
@@ -594,22 +596,23 @@ packages/server/
 
 **验收**：10 条典型追问用例通过（路由层 ✅）；追问不再全量重生（patch 路径 ✅）；SSE/i18n 双端进度 UI ✅（2026-06-17 M1 验收）。
 
-### C7-c · 记忆与全站 Agent（与 H3 并行）— 🔄 后端骨架
+### C7-c · 记忆与全站 Agent（与 H3 并行）— ✅ M5 达成（2026-06-18）
 
 | 顺序 | 任务 | 依赖 | 状态 |
 |------|------|------|------|
 | c1 | H3-a `pet_memories` 表 | H3 | ✅ |
 | c2 | `recall_user_memory` / `write_trip_memory` Tool | c1 | ✅ |
-| c3 | memory_agent 节点入图 | C7-b | 🔄（图内已召回记忆，无独立节点） |
-| c4 | H3 悬浮层调同一 `/v1/agent/plan` | H3-b | ⏳ |
+| c3 | memory_agent 节点入图 | C7-b | ✅ |
+| c4 | H3 悬浮层调同一 `/v1/agent/plan` | H3-b | ✅ |
+| c5 | 行中 `in_trip` analyze + H7 regret | H3-c | ✅ Step 34 |
 
 ### C7-d · 评估与专属模型 — 🔄 部分
 
 | 顺序 | 任务 | 依赖 | 状态 |
 |------|------|------|------|
 | d1 | `validate_route` Tool 抽离 | C7-a | ✅ |
-| d2 | 生成后自动 warnings 回复 | C7-b | ⏳ |
-| d3 | I3 `douxing-lora` 作为 plan_agent 子模型 | I3 | ⏳ |
+| d2 | 生成后自动 warnings 回复 | C7-b | ✅ |
+| d3 | I3 `douxing-lora` 作为 plan_agent 子模型 | I3 | ⏳ Step 35～37 |
 
 ---
 
@@ -715,6 +718,6 @@ LANGFUSE_SECRET_KEY=
 |------|------|------|
 | 2026-06-11 | 1.0 | 初版：现状 + C7 路线 + Tool 映射 |
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
-| 2026-06-17 | 2.4 | **Step 10～11 验收**：等价率 20/20 · Langfuse 双路径 · 指针 → Step 12 |
+| 2026-06-18 | 2.6 | **M5 达成**：H7/H8/H3-d · `replan_segment` · `transit_agent` · `detect_missed_pois` · 指针 → Step 35 |
 | 2026-06-17 | 2.3 | **M1 达成**：C7-b Step 1～9 验收 · SSE API ✅ · 指针 → Step 10 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |
