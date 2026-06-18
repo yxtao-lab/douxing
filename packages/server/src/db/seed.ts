@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { ensureDatabase } from './ensure-database.js';
 import { getDb } from './client.js';
 import { users, roles, userRoles, systemConfig, travelRoutes } from './schema/index.js';
-import { seedAttractions, syncAttractionsFromRouteDetail } from '../services/attraction.service.js';
+import { seedAttractions, seedMissingAttractionSeeds, syncAttractionsFromRouteDetail } from '../services/attraction.service.js';
 import { seedBadges } from '../services/badge.service.js';
 import { seedAchievementDefinitions } from '../services/achievement.service.js';
 import { seedRoutePlaybooks } from '../services/playbook.service.js';
@@ -298,6 +298,7 @@ async function main() {
   await seedAdminUser();
   const demoUserId = await seedDemoUser();
   await seedAttractions();
+  await seedMissingAttractionSeeds();
   await seedBadges();
   await seedAchievementDefinitions();
   await seedRoutePlaybooks();

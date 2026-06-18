@@ -261,6 +261,49 @@ export async function seedAttractions() {
   console.log(`[seed] Created ${ATTRACTION_SEEDS.length} attractions`);
 }
 
+/** H9+-1：增量插入 seed 中尚未入库的景点（city + name 去重） */
+export async function seedMissingAttractionSeeds(): Promise<number> {
+  const db = getDb();
+  const now = new Date();
+  let created = 0;
+
+  for (const seed of ATTRACTION_SEEDS) {
+    const existing = await db
+      .select({ id: attractions.id })
+      .from(attractions)
+      .where(and(eq(attractions.name, seed.name), eq(attractions.city, seed.city)))
+      .limit(1);
+    if (existing.length > 0) continue;
+
+    await db.insert(attractions).values({
+      name: seed.name,
+      category: AttractionCategory.ATTRACTION,
+      city: seed.city,
+      cityCode: seed.cityCode,
+      latitude: seed.latitude,
+      longitude: seed.longitude,
+      tags: seed.tags,
+      description: seed.description,
+      ticketPrice: seed.ticketPrice,
+      aliases: seed.aliases ?? null,
+      openHours: seed.openHours ?? null,
+      status: AttractionStatus.ACTIVE,
+      source: AttractionSource.SEED,
+      priceSource: AttractionPriceSource.SEED,
+      priceUpdatedAt: now,
+      verifiedAt: now,
+      matchConfidence: null,
+    });
+    created += 1;
+    console.log(`[seed] Created attraction: ${seed.city} · ${seed.name}`);
+  }
+
+  if (created === 0) {
+    console.log('[seed] No missing attraction seeds to insert');
+  }
+  return created;
+}
+
 /** H9-3 扫尾：将 seed 中的 openHours 回填到已有景点（仅补空字段） */
 export async function syncOpenHoursFromSeeds(options?: { dryRun?: boolean }) {
   const db = getDb();

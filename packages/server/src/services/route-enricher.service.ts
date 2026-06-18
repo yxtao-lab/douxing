@@ -39,6 +39,7 @@ import {
   isScenicClusterDay,
   type MatchedRoutePlaybook,
 } from './playbook-rag.service.js';
+import { softAlignDayPoisToPlaybook } from './playbook-order-align.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 
@@ -558,7 +559,9 @@ export async function enrichRouteDraft(
     const calendarDate = resolveRouteDayCalendarDate(day, dayIndex, intent.startDate);
     const city = dayCities[dayIndex] ?? matchedCity;
     const playPois = await linkPlayPoisToLibrary(city, day.attractions.filter(isPlayPoi));
-    const geocodedPois = await geocodePlayPois(city, playPois);
+    const alignResult = softAlignDayPoisToPlaybook(playPois, playbooks, locale, day.title);
+    const alignedPois = alignResult.attractions;
+    const geocodedPois = await geocodePlayPois(city, alignedPois);
     const poiPointsForLodging: LatLngPoint[] = geocodedPois
       .filter(hasCoords)
       .map((s) => ({ latitude: s.latitude!, longitude: s.longitude! }));
@@ -575,19 +578,21 @@ export async function enrichRouteDraft(
     }
 
     const openHoursMap = await getOpenHoursByAttractionIds(
-      playPois
+      alignedPois
         .map((spot) => spot.attractionId)
         .filter((id): id is number => id != null && id > 0),
     );
 
     const { attractions: scheduledPois, transit: localTransit, warnings } =
-      await scheduleDayPois(city, playPois, lodging, locale, {
+      await scheduleDayPois(city, alignedPois, lodging, locale, {
         dayIndex,
         calendarDate,
         dayTitle: day.title,
         openHoursMap,
         playbooks,
       });
+
+    const dayWarnings = [...alignResult.warnings, ...warnings];
 
     lodging.time = formatMinutesToTime(
       Math.min(21 * 60, cursorEndFromSpots(scheduledPois) + 30),
@@ -618,7 +623,7 @@ export async function enrichRouteDraft(
       attractions: scheduledPois,
       lodging,
       transit,
-      warnings: warnings.length > 0 ? warnings : undefined,
+      warnings: dayWarnings.length > 0 ? dayWarnings : undefined,
     });
   }
 

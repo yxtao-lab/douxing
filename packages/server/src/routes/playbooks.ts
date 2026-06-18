@@ -5,6 +5,7 @@ import { success, fail } from '../utils/response.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import {
   RoleCode,
+  ApiError,
   ApiMessageKey,
   type RoutePlaybookInfo,
 } from '@douxing/shared';
@@ -142,8 +143,9 @@ router.post('/admin', authMiddleware, async (req, res) => {
     const item = await createRoutePlaybook(parsed.data);
     success(res, toApiPlaybook(item), ApiMessageKey.PLAYBOOK_CREATE_SUCCESS);
   } catch (err) {
-    if (err instanceof Error && err.message === 'PLAYBOOK_ID_EXISTS') {
-      return fail(res, ApiMessageKey.PLAYBOOK_ID_EXISTS, 409, 409);
+    if (err instanceof ApiError) {
+      const status = err.messageKey === ApiMessageKey.PLAYBOOK_ID_EXISTS ? 409 : 400;
+      return fail(res, err.messageKey, status, status);
     }
     console.error('[playbooks/admin/create]', err);
     fail(res, ApiMessageKey.PLAYBOOK_CREATE_FAILED, 500, 500);
@@ -170,6 +172,9 @@ router.put('/admin/:id', authMiddleware, async (req, res) => {
     }
     success(res, toApiPlaybook(item), ApiMessageKey.PLAYBOOK_UPDATE_SUCCESS);
   } catch (err) {
+    if (err instanceof ApiError) {
+      return fail(res, err.messageKey, 400, 400);
+    }
     console.error('[playbooks/admin/update]', err);
     fail(res, ApiMessageKey.PLAYBOOK_UPDATE_FAILED, 500, 500);
   }

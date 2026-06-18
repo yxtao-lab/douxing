@@ -7,6 +7,10 @@ import type {
 import { PROVINCE_CITY_REGIONS, findCityRegionByCode, findProvinceCodeByCityName, getCityNamesByProvinceCode } from '@douxing/shared';
 import { CITY_CODE_MAP } from '../data/city-codes.js';
 import type { GeneratedRouteDraft } from './route-generator.service.js';
+import {
+  hasExplicitStartDateInPrompt,
+  parseStartDateFromText,
+} from './parse-start-date.service.js';
 
 const KNOWN_CITIES = Object.keys(CITY_CODE_MAP);
 
@@ -301,6 +305,7 @@ export function createEmptyIntent(): TravelIntentSnapshot {
     lodgingArea: null,
     lodgingTier: null,
     cities: [],
+    startDate: null,
     departureCity: null,
     excludeProvinceCodes: [],
     suggestedDestinations: [],
@@ -436,6 +441,10 @@ export function mergeSessionIntentSnapshot(
 
   const trimmedPrompt = currentPrompt?.trim() ?? '';
   const explicitDestInPrompt = trimmedPrompt ? hasExplicitDestinationInPrompt(trimmedPrompt) : false;
+  const explicitDateInPrompt = trimmedPrompt
+    ? hasExplicitStartDateInPrompt(trimmedPrompt)
+    : false;
+  const parsedStartDate = trimmedPrompt ? parseStartDateFromText(trimmedPrompt) : null;
 
   const excludeProvinceCodes = [
     ...new Set([
@@ -492,6 +501,9 @@ export function mergeSessionIntentSnapshot(
         : (sessionIntent.constraintSummary ?? parsedIntent.constraintSummary),
     confidence: parsedIntent.confidence ?? sessionIntent.confidence,
     intentSource: parsedIntent.intentSource ?? sessionIntent.intentSource,
+    startDate: explicitDateInPrompt
+      ? (parsedStartDate ?? parsedIntent.startDate ?? sessionIntent.startDate ?? null)
+      : (parsedIntent.startDate ?? sessionIntent.startDate ?? null),
   };
 
   return sanitizeTravelIntentDestinations(merged);
@@ -546,6 +558,7 @@ export function parseTravelIntent(text: string): TravelIntentSnapshot {
     lodgingArea: null,
     lodgingTier: null,
     cities: [],
+    startDate: parseStartDateFromText(trimmed),
   };
   intent.confidence = computeConfidence(intent);
   applyH9Fields(intent, trimmed);
@@ -615,6 +628,9 @@ export function buildIntentFromConversation(
       }
       const departure = detectDepartureCity(trimmed);
       if (departure) intent.departureCity = departure;
+
+      const startDate = parseStartDateFromText(trimmed);
+      if (startDate) intent.startDate = startDate;
     }
   }
 
@@ -651,6 +667,7 @@ export function formatIntentSummary(intent: TravelIntentSnapshot): string {
   const planningCity = resolvePlanningCity(intent);
   if (planningCity) parts.push(planningCity);
   if (intent.days != null) parts.push(`${intent.days}天`);
+  if (intent.startDate) parts.push(`出发${intent.startDate}`);
   if (intent.budget) parts.push(`预算${intent.budget}`);
   if (intent.themes.length > 0) parts.push(intent.themes.join('·'));
   const excludeLabel = formatExcludeProvinces(intent);
@@ -691,6 +708,9 @@ export function formatIntentConstraintsForLlm(intent: TravelIntentSnapshot): str
   }
   if (intent.days != null) {
     lines.push(`- 行程天数：${intent.days} 天（routeDetail.days 长度必须等于 ${intent.days}）`);
+  }
+  if (intent.startDate) {
+    lines.push(`- 出发日期：${intent.startDate}（第 1 天 calendarDate 以此为准）`);
   }
   if (intent.budget) {
     if (intent.budgetMin != null && intent.budgetMax != null) {
@@ -754,6 +774,10 @@ export function formatIntentConstraintsForEnricher(intent: TravelIntentSnapshot)
   }
   if (intent.cities && intent.cities.length >= 2) {
     lines.push(`- 多城顺序：${intent.cities.join(' → ')}`);
+    hasContent = true;
+  }
+  if (intent.startDate) {
+    lines.push(`- 出发日期：${intent.startDate}（跨城班次与开放时长按此推算）`);
     hasContent = true;
   }
 

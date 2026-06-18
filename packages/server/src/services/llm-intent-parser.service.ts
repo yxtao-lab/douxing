@@ -188,6 +188,7 @@ function buildUserContent(
       budget: sessionIntent.budget,
       themes: sessionIntent.themes,
       city: sessionIntent.city,
+      startDate: sessionIntent.startDate,
       constraintSummary: sessionIntent.constraintSummary,
     }));
     lines.push('');
@@ -217,6 +218,7 @@ function buildUserContent(
       budget: ruleHint.budget,
       themes: ruleHint.themes,
       transportPreference: ruleHint.transportPreference,
+      startDate: ruleHint.startDate,
     }));
   }
   return lines.join('\n');
@@ -270,6 +272,9 @@ function mergeIntentSources(
   }
   if (!merged.lodgingTier && ruleIntent.lodgingTier) {
     merged.lodgingTier = ruleIntent.lodgingTier;
+  }
+  if (!merged.startDate && ruleIntent.startDate) {
+    merged.startDate = ruleIntent.startDate;
   }
 
   return sanitizeTravelIntentDestinations(merged);

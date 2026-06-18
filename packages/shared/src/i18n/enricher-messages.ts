@@ -13,6 +13,8 @@ const ENRICHER_MESSAGES: Record<LocaleCode, Record<string, string>> = {
       '{name} 到达时间早于开放（{openTime} 起），建议 {openTime} 后再前往',
     'enricher.warn.afterClose':
       '{name} 游玩结束晚于闭馆（{closeTime}），建议缩短停留或改期',
+    'enricher.warn.playbookOrderAdjusted':
+      '已按{scope}经典动线调整游览顺序',
     'enricher.intercity.catalog': '参考班次 {scheduleNo}，可跳转第三方订票',
     'enricher.intercity.api': '班次 {scheduleNo}（实时查询），可跳转订票',
     'enricher.intercity.template': '参考耗时；演示订票链接',
@@ -30,6 +32,8 @@ const ENRICHER_MESSAGES: Record<LocaleCode, Record<string, string>> = {
       '{name}: arrival is before opening ({openTime}); visit after {openTime}',
     'enricher.warn.afterClose':
       '{name}: visit ends after closing ({closeTime}); shorten stay or reschedule',
+    'enricher.warn.playbookOrderAdjusted':
+      'Visit order adjusted to match the classic route ({scope})',
     'enricher.intercity.catalog': 'Ref. {scheduleNo} — book via partner link',
     'enricher.intercity.api': '{scheduleNo} (live) — book via partner link',
     'enricher.intercity.template': 'Reference duration only; demo booking link',
@@ -56,13 +60,15 @@ export type EnricherWarningKey =
   | 'noCoords'
   | 'closedDay'
   | 'beforeOpen'
-  | 'afterClose';
+  | 'afterClose'
+  | 'playbookOrderAdjusted';
 
 export function formatEnricherWarning(
   key: EnricherWarningKey,
   locale: LocaleCode,
   params: {
     name: string;
+    scope?: string;
     openMinutes?: number;
     closeMinutes?: number;
   },
@@ -74,6 +80,7 @@ export function formatEnricherWarning(
     params.closeMinutes != null ? formatMinutesAsTime(params.closeMinutes) : '';
   return enricherMsg(messageKey, locale, {
     name: params.name,
+    scope: params.scope ?? params.name,
     openTime,
     closeTime,
   });

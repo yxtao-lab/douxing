@@ -1,6 +1,6 @@
 import { and, asc, eq, like, or, sql, count } from 'drizzle-orm';
 import type { PaginatedResult, RoutePlaybookInfo } from '@douxing/shared';
-import { buildPaginatedResult } from '@douxing/shared';
+import { ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { routePlaybooks } from '../db/schema/route-playbooks.js';
 import {
@@ -138,13 +138,21 @@ export type UpsertRoutePlaybookInput = Omit<RoutePlaybookInfo, 'enabled' | 'sort
   sortOrder?: number;
 };
 
+function ensureValidPlaybookSegments(segments: RoutePlaybookInfo['segments']): void {
+  try {
+    assertValidPlaybookSegments(segments);
+  } catch {
+    throw new ApiError(ApiMessageKey.PLAYBOOK_VALIDATION_FAILED);
+  }
+}
+
 export async function createRoutePlaybook(input: UpsertRoutePlaybookInput): Promise<RoutePlaybookInfo> {
-  assertValidPlaybookSegments(input.segments);
+  ensureValidPlaybookSegments(input.segments);
   const db = getDb();
 
   const existing = await getRoutePlaybookById(input.id);
   if (existing) {
-    throw new Error('PLAYBOOK_ID_EXISTS');
+    throw new ApiError(ApiMessageKey.PLAYBOOK_ID_EXISTS);
   }
 
   await db.insert(routePlaybooks).values({
@@ -163,7 +171,7 @@ export async function createRoutePlaybook(input: UpsertRoutePlaybookInput): Prom
 
   invalidatePlaybookCache();
   const created = await getRoutePlaybookById(input.id);
-  if (!created) throw new Error('PLAYBOOK_CREATE_FAILED');
+  if (!created) throw new ApiError(ApiMessageKey.PLAYBOOK_CREATE_FAILED);
   return created;
 }
 
@@ -175,7 +183,7 @@ export async function updateRoutePlaybook(
   if (!existing) return null;
 
   if (input.segments) {
-    assertValidPlaybookSegments(input.segments);
+    ensureValidPlaybookSegments(input.segments);
   }
 
   const db = getDb();

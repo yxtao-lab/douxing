@@ -47,13 +47,6 @@ export const ROUTE_PLAYBOOKS: RoutePlaybook[] = [
         fromAliases: ['花港'],
         toAliases: ['雷峰'],
       },
-      {
-        from: '雷峰塔',
-        to: '西湖',
-        mode: 'walk',
-        reasonKey: 'scenicWalk',
-        fromAliases: ['雷峰'],
-      },
     ],
   },
   {
@@ -67,7 +60,13 @@ export const ROUTE_PLAYBOOKS: RoutePlaybook[] = [
     summaryEn:
       'Forbidden City central axis: Meridian Gate → Hall of Supreme Harmony → Palace of Heavenly Purity → Imperial Garden → Gate of Divine Prowess; all on foot.',
     segments: [
-      { from: '午门', to: '太和殿', mode: 'walk', reasonKey: 'classicWalk' },
+      {
+        from: '午门',
+        to: '太和殿',
+        mode: 'walk',
+        reasonKey: 'classicWalk',
+        fromAliases: ['故宫博物院', '故宫', '紫禁城'],
+      },
       { from: '太和殿', to: '乾清宫', mode: 'walk', reasonKey: 'classicWalk' },
       { from: '乾清宫', to: '御花园', mode: 'walk', reasonKey: 'classicWalk' },
       { from: '御花园', to: '神武门', mode: 'walk', reasonKey: 'classicWalk' },
@@ -235,8 +234,50 @@ export const ROUTE_PLAYBOOKS: RoutePlaybook[] = [
     summaryEn:
       'Gulangyu island: ferry → Sunlight Rock → Shuzhuang Garden; all on foot on the island.',
     segments: [
-      { from: '轮渡码头', to: '日光岩', mode: 'walk', reasonKey: 'classicWalk' },
+      {
+        from: '轮渡码头',
+        to: '日光岩',
+        mode: 'walk',
+        reasonKey: 'classicWalk',
+        fromAliases: ['厦门轮渡码头', '厦鼓码头'],
+        toAliases: ['鼓浪屿日光岩'],
+      },
       { from: '日光岩', to: '菽庄花园', mode: 'walk', reasonKey: 'scenicWalk' },
+    ],
+  },
+  {
+    id: 'hangzhou-xixi',
+    city: '杭州',
+    scope: '西溪湿地',
+    keywords: ['西溪', '湿地', '南宋御街', '河坊街'],
+    themes: ['自然', '文化', '休闲'],
+    classicOrder: ['西溪湿地', '南宋御街', '河坊街'],
+    summaryZh: '城西湿地与宋韵街区：西溪摇橹 → 南宋御街 → 河坊街小吃；段间打车或地铁。',
+    summaryEn:
+      'West Hangzhou wetlands and Song heritage: Xixi boat ride → Southern Song Imperial Street → Hefang snacks; taxi or metro between areas.',
+    segments: [
+      { from: '西溪湿地', to: '南宋御街', mode: 'taxi', reasonKey: 'taxiShort' },
+      { from: '南宋御街', to: '河坊街', mode: 'walk', reasonKey: 'scenicWalk' },
+    ],
+  },
+  {
+    id: 'shanghai-lujiazui',
+    city: '上海',
+    scope: '陆家嘴天际线',
+    keywords: ['陆家嘴', '东方明珠', '上海中心', '天际线'],
+    themes: ['都市', '夜景', '摄影'],
+    classicOrder: ['外滩', '陆家嘴观景台'],
+    summaryZh: '浦江两岸经典：外滩滨江步行 → 陆家嘴观景台看天际线；过江可步行隧道或地铁。',
+    summaryEn:
+      'Huangpu riverfront classic: Bund promenade → Lujiazui skyline viewpoint; cross via tunnel walk or metro.',
+    segments: [
+      {
+        from: '外滩',
+        to: '陆家嘴观景台',
+        mode: 'subway',
+        reasonKey: 'classicWalk',
+        toAliases: ['东方明珠', '上海中心'],
+      },
     ],
   },
 ];

@@ -88,11 +88,11 @@ function scorePlaybook(
   return score;
 }
 
-/** H9-4b：检索玩法动线（DB 启用项 + 内存缓存） */
-export async function retrievePlaybooksForPlanning(
+/** 对给定 playbook 列表打分检索（验收脚本 / 单测用，不读 DB） */
+export function retrievePlaybooksFromCatalog(
+  playbooks: RoutePlaybook[],
   input: PlaybookRetrievalInput,
-): Promise<MatchedRoutePlaybook[]> {
-  const playbooks = await loadEnabledRoutePlaybooks();
+): MatchedRoutePlaybook[] {
   const themes = input.themes ?? [];
   const promptKeywords = extractKeywords(input.prompt ?? '');
   const titleKeywords = extractKeywords(input.dayTitle ?? '');
@@ -108,6 +108,14 @@ export async function retrievePlaybooksForPlanning(
     .sort((a, b) => b.score - a.score);
 
   return scored.slice(0, limit);
+}
+
+/** H9-4b：检索玩法动线（DB 启用项 + 内存缓存） */
+export async function retrievePlaybooksForPlanning(
+  input: PlaybookRetrievalInput,
+): Promise<MatchedRoutePlaybook[]> {
+  const playbooks = await loadEnabledRoutePlaybooks();
+  return retrievePlaybooksFromCatalog(playbooks, input);
 }
 
 function findEdge(

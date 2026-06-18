@@ -20,6 +20,15 @@
             @press-enter="reload"
           />
         </a-form-item>
+        <a-form-item :label="t('playbooks.colEnabled')">
+          <a-select
+            v-model:value="enabledFilter"
+            :options="enabledOptions"
+            allow-clear
+            style="width: 160px"
+            :placeholder="t('common.statusAll')"
+          />
+        </a-form-item>
       </AdminSearchBar>
     </template>
 
@@ -185,6 +194,11 @@ usePageTitle('web.playbooksManage');
 const { t } = useI18n();
 const keyword = ref('');
 const cityFilter = ref('');
+const enabledFilter = ref<boolean | undefined>(undefined);
+const enabledOptions = computed(() => [
+  { value: true, label: t('playbooks.enabledYes') },
+  { value: false, label: t('playbooks.enabledNo') },
+]);
 const { items: list, loading, pagination, load, reload, handleTableChange } =
   useServerTablePagination((page, pageSize) =>
     fetchAdminPlaybooksPage({
@@ -192,6 +206,7 @@ const { items: list, loading, pagination, load, reload, handleTableChange } =
       pageSize,
       keyword: keyword.value.trim() || undefined,
       city: cityFilter.value.trim() || undefined,
+      enabled: enabledFilter.value,
     }),
   );
 const saving = ref(false);
@@ -281,6 +296,7 @@ function closeEditor() {
 function resetSearch() {
   keyword.value = '';
   cityFilter.value = '';
+  enabledFilter.value = undefined;
   reload();
 }
 
@@ -385,6 +401,7 @@ async function fetchExportRows(): Promise<Record<string, unknown>[]> {
       pageSize,
       keyword: keyword.value.trim() || undefined,
       city: cityFilter.value.trim() || undefined,
+      enabled: enabledFilter.value,
     }),
   );
   return rows as unknown as Record<string, unknown>[];

@@ -4,7 +4,7 @@
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
 **文档版本**：3.0  
-**最后更新**：2026-06-17
+**最后更新**：2026-06-18
 
 ---
 
@@ -12,24 +12,24 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 16 — H9+-1 Playbook 库扩充**
+> **下一项工作：Step 25 — H3-a 领养 API**（Step 22 VECTOR_RAG 为可选并行项）
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | TOP 10 城市各 ≥1 playbook · alias 对齐 · 命中率可观测 |
-| **功能作用** | 提升规划动线质量，减少 LLM 乱序 |
-| **完成标准** | 见 Phase 3 Step 16～21 · **M3 达成** |
-| **完成后** | Step 17 Web Playbook CRUD（可并行准备） |
+| **做什么** | Phase 4 记忆与宠物 · 用户领养旅行宠物 API |
+| **功能作用** | 为 C7-c / H3 记忆召回与规划页宠物 UI 打基础 |
+| **完成标准** | 见 Phase 4 Step 25 |
+| **完成后** | Step 26 memory_agent 独立图节点 |
 
-**M2 已达成（2026-06-17）**：`agent:m2-accept` 全绿 · staging 配置模板已含 Agent 开关。
+**M3 已达成（2026-06-18）**：`h9:m3-accept` 全绿 · Step 16～20 自动化验收通过。
 
 ### 0.2 整体进度
 
 ```text
-[██████████████████░░] 约 75%  —  M0 + M1 + M2 已达成；Phase 3 起
+[████████████████████] 约 85%  —  M0 + M1 + M2 + M3 已达成；Phase 4 待启动
 
-当前阶段：Phase 3 · H9+ 规划数据质量
-下一里程碑：M3 — Step 16～21
+当前阶段：Phase 4 · C7-c + H3 记忆与宠物
+下一里程碑：M4 — Step 25～30
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -95,12 +95,12 @@
 
 | Step | 状态 | 任务 | 交付 | 验收标准 |
 |------|------|------|------|----------|
-| **16** | [ ] | **H9+-1 Playbook 库扩充** | seed + alias 对齐 | [ ] TOP 10 城市各 ≥1 playbook [ ] 命中率可观测 |
-| **17** | [ ] | **H9+-2 Web Playbook CRUD** | web 管理端 | [ ] 运营增删改不发版 [ ] i18n 摘要 |
-| **18** | [ ] ∥ | **H9+-4 C2 解析 startDate** | travel-intent + Enricher | [ ] 「下周三去杭州」班次日期一致 |
-| **19** | [ ] ∥ | **H9+-5 开放时长补全** | attractions.openHours | [ ] 闭馆日 warning 或自动调序 |
-| **20** | [ ] | **H9+-3 POI soft 对齐** | Enricher + classicOrder | [ ] LLM 乱序时贴近经典线或 warning |
-| **21** | [ ] | **H9+ 阶段验收** | 手测 | [ ] Step 16～20 全勾 [ ] §10.3 全勾 [ ] **M3 达成** |
+| **16** | [x] | **H9+-1 Playbook 库扩充** | seed + alias 对齐 | [x] TOP 10 城市各 ≥1 playbook [x] 命中率可观测 |
+| **17** | [x] | **H9+-2 Web Playbook CRUD** | web 管理端 | [x] 运营增删改不发版 [x] i18n 摘要 |
+| **18** | [x] | **H9+-4 C2 解析 startDate** | travel-intent + Enricher | [x] 「下周三去杭州」班次日期一致 |
+| **19** | [x] | **H9+-5 开放时长补全** | attractions.openHours | [x] 闭馆日 warning 或自动调序 |
+| **20** | [x] | **H9+-3 POI soft 对齐** | Enricher + classicOrder | [x] LLM 乱序时贴近经典线或 warning |
+| **21** | [x] | **H9+ 阶段验收** | `h9:m3-accept` + 手测 | [x] Step 16～20 全勾 [x] §8.4 自动化全勾 [x] **M3 达成** |
 | **22** | [ ] | **（可选）VECTOR_RAG** | `VECTOR_RAG_ENABLED` | [ ] embedding 检索上线 [ ] A/B 命中率提升 |
 | **23** | [ ] | **（按需）H9+-6 景区交通 schema** | RouteTransitMode 扩展 | [ ] 观光车/游船/索道 独立标签 |
 | **24** | [ ] | **（按需）H9+-7 Juhe 实时班次** | 配置 Key | [ ] 有 Key 走 juhe；无 Key 降级 Catalog |
@@ -176,7 +176,7 @@
 | **M0** | （已完成） | C1～C6 + H9-1～4 + C7-a 管道与 Tool 基础 | ✅ |
 | **M1** | 1～9 | **Agent 追问闭环** — 局部 patch + SSE + i18n | ✅ |
 | **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | ✅ |
-| **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | [ ] |
+| **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | ✅ |
 | **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | [ ] |
 | **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | [ ] |
 | **M6** | 1～40（必做）+ 41～42（远期） | **路线图全部验收** | [ ] |
@@ -204,8 +204,8 @@
 ```text
 刚接手项目        → 读 §0.1，从 Step 1 开始
 C7-b 后端已联调   → 从 Step 6（i18n）或 Step 7（SSE）开始
-Agent 已上 staging → 从 Step 16（H9+-1）开始
-要做行中能力      → 确认 M1+M2 已达成，从 Step 31 开始
+Agent 已上 staging → 从 Step 25（H3-a 领养 API）开始
+要做行中能力      → 确认 M1+M2+M3 已达成，从 Step 31 开始
 要做专属模型      → 确认 M1 已达成，从 Step 35 开始（可与 Phase 3 并行）
 ```
 
@@ -223,8 +223,8 @@ Agent 已上 staging → 从 Step 16（H9+-1）开始
 |------|------|------|-----------|
 | **C** | 规划管道 MVP | ✅ 已验收 | M0 |
 | **H9** | 住行增强 | ✅ 已验收 | M0 |
-| **C7** | AI Agent 演进 | 🔄 M1 ✅ · M2 进行中 | Step 10～11 ✅ · **Step 12～15** |
-| **H9+** | 规划数据质量 | ⏳ | Step 16～24 |
+| **C7** | AI Agent 演进 | ✅ M1 + M2 已达成 | Step 1～15 ✅ |
+| **H9+** | 规划数据质量 | ✅ M3 已达成 | Step 16～21 ✅ · Step 22～24 按需 |
 | **H3** | AI 旅行宠物 | 🔄 后端骨架 | Step 25～30 |
 | **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
 | **I** | 专属模型 | 🔄 I1 ✅ | Step 35～37 |
@@ -236,7 +236,7 @@ Agent 已上 staging → 从 Step 16（H9+-1）开始
 |----|------|------|
 | 移动端 | `packages/mobile/src/pages/plan/plan.vue` | ✅ |
 | PC | `packages/pc/src/views/PlanView.vue` | ✅ |
-| Web 管理端 Playbook | H9+-2 | Step 17 |
+| Web 管理端 Playbook | H9+-2 | ✅ Step 17 |
 
 ---
 
@@ -411,6 +411,13 @@ pnpm --filter @douxing/server agent:intent-cases
 pnpm --filter @douxing/server agent:equivalence-cases          # 全链（含 Enricher，需 DB）
 pnpm --filter @douxing/server agent:equivalence-cases -- --fast   # CI 快速：仅 generate 阶段
 pnpm --filter @douxing/server agent:m2-accept                    # M2 一键验收（Step 15）
+pnpm --filter @douxing/server playbook:cases                     # M3 Step 16 Playbook 验收
+pnpm --filter @douxing/server playbook:crud-cases                # M3 Step 17 CRUD 验收
+pnpm --filter @douxing/server start-date:cases                   # M3 Step 18 startDate
+pnpm --filter @douxing/server open-hours:cases                 # M3 Step 19 开放时长
+pnpm --filter @douxing/server playbook-order:cases             # M3 Step 20 POI 对齐
+pnpm --filter @douxing/server h9:m3-accept                       # M3 一键验收（Step 21）
+pnpm --filter @douxing/server h9:m3-accept -- --skip-db          # 无 MySQL 时跳过 CRUD
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -462,9 +469,11 @@ pnpm dev
 
 ### 8.4 M3 数据质量（Step 16～21）
 
-- [ ] TOP 10 playbook
-- [ ] startDate + 开放时长
-- [ ] POI soft 对齐
+- [x] TOP 10 playbook（`playbook:cases` · 14 条 seed · 2026-06-18）
+- [x] Web Playbook CRUD（`playbook:crud-cases` · 双语摘要 · 启用筛选 · 2026-06-18）
+- [x] startDate + 开放时长（`start-date:cases` · `open-hours:cases` · 2026-06-18）
+- [x] POI soft 对齐（`playbook-order:cases` · 2026-06-18）
+- [x] M3 一键验收（`h9:m3-accept` · Step 16～20 全绿 · 2026-06-18）· **M3 达成**
 
 ### 8.5 M4 记忆宠物（Step 25～30）
 
@@ -526,3 +535,8 @@ pnpm dev
 | 2026-06-17 | 2.8 | **Step 11 Langfuse**：ai-service Tool trace + Node LLM generation |
 | 2026-06-17 | 2.9 | **Step 12～14**：warnings 进对话 · build_route_variants · createPlanSession Agent |
 | 2026-06-17 | 3.0 | **Step 15 / M2 达成**：`agent:m2-accept` · staging Agent 配置 · 指针 → Step 16 |
+| 2026-06-18 | 3.1 | **Step 16 / H9+-1**：14 条 playbook seed · C3 alias 对齐 · `playbook:cases` 命中率 100% |
+| 2026-06-18 | 3.2 | **Step 17 / H9+-2**：Web CRUD 验收 · `playbook:crud-cases` · 启用筛选 · ApiError 校验 |
+| 2026-06-18 | 3.3 | **Step 18～19**：C2 `parseStartDateFromText` · openHours seed 补全 · 验收脚本全绿 |
+| 2026-06-18 | 3.4 | **Step 20 / H9+-3**：`softAlignDayPoisToPlaybook` · classicOrder 重排 + i18n warning |
+| 2026-06-18 | 3.5 | **Step 21 / M3 达成**：`h9:m3-accept` 全绿 · 修复 CRUD 脚本 DB 连接未退出 · 指针 → Step 25 |
