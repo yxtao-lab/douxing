@@ -4,7 +4,7 @@
 > **定位**：用户 **专属 AI 旅行伙伴**——全系统可悬浮、可动、可交互；具备 **AI 分析** 与 **结构化记忆**；与 **路线规划（C 线）独立模块、同一主链路深度耦合**。  
 > **路线图编号**：**H3-a～H3-e**（见 [ROADMAP.md § H3](./ROADMAP.md#h3-ai-旅行宠物2026-06-10-录入)）  
 > **AI 规划路线图 Step**：**Step 25～30 → 里程碑 M4**（见 [AI路径规划路线图.md §1 Phase 4](./AI路径规划路线图.md#phase-4--c7-c--h3记忆与规划页宠物p1)）  
-> **当前状态**：**H3-a 后端骨架已落地**（2026-06-16）：`travel_pets` / `pet_memories` 表 · memory Tool。**Step 25 领养 API、Step 27～28 UI 未启动**（前置：M1/M2 建议完成）。
+> **当前状态**：**H3-a～c 已验收**（2026-06-18）：领养 API · `TravelPetFloatingLayer` · `PlanPetFocusCard` · 记忆墙/analyze · **M4 达成**。H3-d 行中成长待 M5（Step 34）。
 
 ---
 
@@ -262,12 +262,14 @@ H7 错过景点 / H8 实时重规划
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/pets` | 领养（species + nickname + 初始 personality） |
+| POST | `/pets/adopt` | 领养（species + nickname + 初始 personality） |
 | GET | `/pets/me` | 当前宠物 + 成长摘要 |
-| PATCH | `/pets/me` | 改名、换肤 |
+| PATCH | `/pets/me` | 改名、换人格 |
+| GET | `/pets/me/floating-context` | H3-b 悬浮层上下文 |
 | GET | `/pets/me/memories` | 记忆墙（分页；可删、可 pin） |
+| POST | `/pets/me/memories` | 确认写入 analyze 建议的记忆 |
+| PATCH | `/pets/me/memories/:id` | 置顶 / 取消置顶 |
 | DELETE | `/pets/me/memories/:id` | 用户删除记忆 |
-| POST | `/pets/me/interact` | 轻互动（摸头/喂食 → 仅 mood，无 LLM） |
 | POST | `/pets/me/analyze` | body: `{ scene, routeId?, sessionId? }` → insight + petReply + suggestedActions |
 
 **规划集成**：`GET/POST /plan-sessions/*` 响应可选带 `petMeta`（`mood`、`petReply`、`expGained`），减少前端往返。
@@ -280,10 +282,10 @@ H7 错过景点 / H8 实时重规划
 
 | 步 | 名称 | 记忆 | AI 分析 | UI | 依赖 | 状态 |
 |----|------|------|---------|-----|------|------|
-| **H3-a** | 领养 + 规划人格化 | 表 + memory Tool + 懒创建宠 | Agent 图内召回 | — | C1、C7-c | 🔄 后端 ✅ |
-| **H3-b** | 全站悬浮 L1/L2 | 对话抽 preference | — | `TravelPetFloatingLayer` | H3-a | ⏳ |
-| **H3-c** | 分析 API + 记忆墙 | 用户确认写入 | `pre_plan` / `post_trip` | 档案记忆墙 | H3-b | ⏳ |
-| **H3-d** | 成长 + 游戏化 | milestone；regret（H7） | `in_plan` / `in_trip` | 打卡庆祝 | H3-c、B、H7/H8 | ⏳ |
+| **H3-a** | 领养 + 规划人格化 | 表 + memory Tool | Agent 图内召回 | `PlanPetFocusCard` | C1、C7-c | ✅ |
+| **H3-b** | 全站悬浮 L1/L2 | 对话抽 preference | — | `TravelPetFloatingLayer` | H3-a | ✅ |
+| **H3-c** | 分析 API + 记忆墙 | 用户确认写入 | `pre_plan` / `post_trip` | 档案记忆墙 | H3-b | ✅ |
+| **H3-d** | 成长 + 游戏化 | milestone；regret（H7） | `in_plan` / `in_trip` | 打卡庆祝 | H3-c、B、H7/H8 | ⏳ Step 34 |
 | **H3-e** | 专属模型 + 向量记忆 | embedding 检索 | 月度「旅行 DNA」 | Lottie | I、H3-d | ⏳ |
 
 **推荐顺序**：`H3-a → H3-b → H3-c → H3-d → H3-e`。  
@@ -293,12 +295,12 @@ H7 错过景点 / H8 实时重规划
 
 ## 9. 验收清单
 
-- [ ] zh-CN / en-US 切换后：宠物文案、分析卡片、记忆墙无硬编码
-- [ ] API 错误/成功随 `Accept-Language` 变化
-- [ ] 关闭「简洁模式」后全站无浮层，规划/路线功能完整
+- [x] zh-CN / en-US 切换后：宠物文案、分析卡片、记忆墙无硬编码
+- [x] API 错误/成功随 `Accept-Language` 变化
+- [x] 关闭「简洁模式」后全站无浮层，规划/路线功能完整
 - [ ] 打卡地图页不遮挡 map 操作（隐藏或 cover-view 降级）
-- [ ] 规划 JSON 输出规则不受宠物 prompt 破坏
-- [ ] 用户可删除错误记忆；analyze 日志可审计（若启用 `pet_analyze_logs`）
+- [x] 规划 JSON 输出规则不受宠物 prompt 破坏
+- [x] 用户可删除错误记忆；analyze 可审计
 
 ---
 

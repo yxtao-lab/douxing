@@ -298,9 +298,9 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
 | 订单 | 路线解锁订单 + 模拟支付 | `POST /api/orders`、`POST /api/orders/:id/pay` |
 | 旅程相册 | 按路线存旅行照 | `GET/POST /api/journey-albums`；EXIF 智能归类 · 相册分享 · 拍摄参数/同参数拼图；我的相册选路线上传；会员配额 `GET /api/users/me/storage`；打卡归并 · 手帐选图 |
-| 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航；路线详情相册 Tab |
+| 移动端 | 首页 / 规划 / 路线 / 我的 | UniApp Tab 导航；路线详情相册 Tab；**AI 旅行宠物**悬浮层与记忆墙 |
 | 管理端 | 路线 / 订单 / 打卡 / **数据分析** / 系统管理 | 需 admin；Leaflet 打卡地图；列表筛选与 XLSX 导出见 [Web管理端表格规范.md](docs/Web管理端表格规范.md) · [PC双平台分工.md](docs/PC双平台分工.md) |
-| PC 用户端 | 规划 / 路线 / 个人中心 / 相册 / 打卡地图 | `http://localhost:5176`；与移动端能力对齐 |
+| PC 用户端 | 规划 / 路线 / 个人中心 / 相册 / 打卡地图 | `http://localhost:5176`；与移动端能力对齐；规划页 `PlanPetFocusCard` |
 
 ### AI 模型接入（DeepSeek / LM Studio）
 
@@ -332,7 +332,7 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
-> **完整接口文档**（83 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **完整接口文档**（93 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
 > **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）  
 > **系统管理接口**（`/api/system/*`）见 [docs/系统管理.md](./docs/系统管理.md)，未纳入 OpenAPI 主链
 
@@ -365,6 +365,10 @@ LLM_MODEL=你的模型名称
 - `GET /api/leaderboard` — 打卡排行榜（`period=week|month`、`metric=checkins|points`）
 - `POST /api/orders` — 创建解锁订单
 - `POST /api/orders/:id/pay` — 模拟支付
+- `POST /api/pets/adopt` — 领养旅行伙伴（H3-a）
+- `GET /api/pets/me` — 当前旅行伙伴
+- `GET /api/pets/me/memories` — 记忆墙分页
+- `POST /api/pets/me/analyze` — 宠物 AI 分析（`pre_plan` / `post_trip`）
 
 ## 数据库
 

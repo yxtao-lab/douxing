@@ -54,7 +54,7 @@ tags:
   - name: 数据分析
     description: 管理端指标与埋点（DT1）
   - name: 旅行宠物
-    description: H3-a 领养与资料
+    description: H3-a～c 领养、悬浮、记忆墙与分析
 
 security:
   - bearerAuth: []
@@ -396,6 +396,136 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/TravelPetInfo'
+
+  /api/pets/me/floating-context:
+    get:
+      tags: [旅行宠物]
+      summary: 悬浮层上下文（H3-b）
+      operationId: petsMeFloatingContext
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        description: 宠物摘要、记忆召回、分析提示等 ViewModel
+        '404':
+          description: 尚未领养
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/pets/me/memories:
+    get:
+      tags: [旅行宠物]
+      summary: 记忆墙分页列表
+      operationId: petsMeMemoriesList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PetMemoryWallPage'
+    post:
+      tags: [旅行宠物]
+      summary: 确认写入建议记忆
+      operationId: petsMeMemoriesConfirm
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmPetMemoriesRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/pets/me/memories/{id}:
+    patch:
+      tags: [旅行宠物]
+      summary: 置顶或取消置顶记忆
+      operationId: petsMeMemoriesPin
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [pinned]
+              properties:
+                pinned: { type: boolean }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [旅行宠物]
+      summary: 删除记忆
+      operationId: petsMeMemoriesDelete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/pets/me/analyze:
+    post:
+      tags: [旅行宠物]
+      summary: 宠物 AI 分析
+      operationId: petsMeAnalyze
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PetAnalyzeRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PetAnalyzeResult'
 
   /api/attractions:
     get:
@@ -2137,6 +2267,80 @@ components:
       properties:
         nickname: { type: string, minLength: 1, maxLength: 64 }
         personality: { type: string, enum: [guide, foodie, photo, family] }
+
+    PetMemoryWallItem:
+      type: object
+      properties:
+        id: { type: integer }
+        memoryType: { type: string }
+        content: { type: string }
+        importance: { type: integer }
+        pinned: { type: boolean }
+        metadata: { type: object, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    PetMemoryWallPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PetMemoryWallItem'
+        total: { type: integer }
+        page: { type: integer }
+        pageSize: { type: integer }
+
+    ConfirmPetMemoriesRequest:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: object
+            required: [memoryType, content]
+            properties:
+              memoryType: { type: string }
+              content: { type: string }
+              importance: { type: integer, minimum: 1, maximum: 10 }
+              metadata: { type: object }
+
+    PetAnalyzeRequest:
+      type: object
+      required: [scene]
+      properties:
+        scene: { type: string, enum: [pre_plan, post_trip, on_demand] }
+        routeId: { type: integer }
+        sessionId: { type: integer }
+
+    PetAnalyzeResult:
+      type: object
+      properties:
+        scene: { type: string }
+        insight: { type: string }
+        petReply: { type: string }
+        suggestedActions:
+          type: array
+          items:
+            type: object
+            properties:
+              kind: { type: string }
+              label: { type: string }
+              payload: { type: object }
+        memoriesToSave:
+          type: array
+          items:
+            type: object
+            properties:
+              memoryType: { type: string }
+              content: { type: string }
+              importance: { type: integer }
+              metadata: { type: object }
+        cached: { type: boolean }
+        analyzedAt: { type: string, format: date-time }
 
     GenerateRouteRequest:
       type: object
