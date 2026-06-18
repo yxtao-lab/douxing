@@ -194,11 +194,18 @@ usePageTitle('web.playbooksManage');
 const { t } = useI18n();
 const keyword = ref('');
 const cityFilter = ref('');
-const enabledFilter = ref<boolean | undefined>(undefined);
+const enabledFilter = ref<'true' | 'false' | undefined>(undefined);
 const enabledOptions = computed(() => [
-  { value: true, label: t('playbooks.enabledYes') },
-  { value: false, label: t('playbooks.enabledNo') },
+  { value: 'true', label: t('playbooks.enabledYes') },
+  { value: 'false', label: t('playbooks.enabledNo') },
 ]);
+
+function parseEnabledFilter(value: 'true' | 'false' | undefined): boolean | undefined {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+}
+
 const { items: list, loading, pagination, load, reload, handleTableChange } =
   useServerTablePagination((page, pageSize) =>
     fetchAdminPlaybooksPage({
@@ -206,7 +213,7 @@ const { items: list, loading, pagination, load, reload, handleTableChange } =
       pageSize,
       keyword: keyword.value.trim() || undefined,
       city: cityFilter.value.trim() || undefined,
-      enabled: enabledFilter.value,
+      enabled: parseEnabledFilter(enabledFilter.value),
     }),
   );
 const saving = ref(false);
@@ -401,7 +408,7 @@ async function fetchExportRows(): Promise<Record<string, unknown>[]> {
       pageSize,
       keyword: keyword.value.trim() || undefined,
       city: cityFilter.value.trim() || undefined,
-      enabled: enabledFilter.value,
+      enabled: parseEnabledFilter(enabledFilter.value),
     }),
   );
   return rows as unknown as Record<string, unknown>[];
