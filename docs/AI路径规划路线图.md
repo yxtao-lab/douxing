@@ -3,7 +3,7 @@
 > **定位**：模块 A「AI 智能规划」的 **专项路线图** —— 只回答「**现在做什么 → 下一步做什么 → 全部验收完成**」。  
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
-**文档版本**：2.9  
+**文档版本**：3.0  
 **最后更新**：2026-06-17
 
 ---
@@ -12,24 +12,24 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 15 — C7 Agent 核心验收（staging 灰度）**
+> **下一项工作：Step 16 — H9+-1 Playbook 库扩充**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | staging 开 `AGENT_PLAN_ENABLED=true` 手测 Step 10～14 全链路 |
-| **功能作用** | 确认 Agent 首句 + 追问 + warnings + 多候选可上 staging |
-| **完成标准** | Step 10～14 全勾 · staging 手测通过 · **M2 达成** |
-| **完成后** | 进入 Phase 3（H9+ 数据质量 Step 16） |
+| **做什么** | TOP 10 城市各 ≥1 playbook · alias 对齐 · 命中率可观测 |
+| **功能作用** | 提升规划动线质量，减少 LLM 乱序 |
+| **完成标准** | 见 Phase 3 Step 16～21 · **M3 达成** |
+| **完成后** | Step 17 Web Playbook CRUD（可并行准备） |
 
-**本地前置**：`.env` 配好 `AI_SERVICE_ENABLED=true`、`AGENT_PLAN_ENABLED=true`、`AGENT_TOOL_SECRET`。
+**M2 已达成（2026-06-17）**：`agent:m2-accept` 全绿 · staging 配置模板已含 Agent 开关。
 
 ### 0.2 整体进度
 
 ```text
-[████████████████░░░░] 约 70%  —  M0 + M1 已达成；Step 10～13 已验收
+[██████████████████░░] 约 75%  —  M0 + M1 + M2 已达成；Phase 3 起
 
-当前阶段：Phase 2 · C7 质量闸门 + 首句 Agent
-下一里程碑：M2 — Agent 可上 staging（Step 14～15）
+当前阶段：Phase 3 · H9+ 规划数据质量
+下一里程碑：M3 — Step 16～21
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -70,10 +70,10 @@
 
 ---
 
-### Phase 2 · C7 质量闸门 + 首句 Agent（P0.5 · 当前）
+### Phase 2 · C7 质量闸门 + 首句 Agent（P0.5 · 已完成）
 
 > **阶段目标**：Agent 与管道等价可量化；可观测；首句可走 Agent；warnings 对用户可见。  
-> **里程碑 M2**：Step 10～15 全部 `[x]`。
+> **里程碑 M2**：Step 10～15 全部 `[x]` · **2026-06-17 达成**。
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
@@ -82,7 +82,7 @@
 | **12** | [x] | **warnings 写入 assistant 回复** | validate_route → 会话消息 | [x] 闭馆/超预算等出现在对话 [x] i18n |
 | **13** | [x] | **`build_route_variants` Tool 化** | `build-route-variants.tool.ts` + graph | [x] Agent 首句可产出 2～3 候选 |
 | **14** | [x] | **首句接 Agent** | `createPlanSession` | [x] flag 开时首句走 Agent [x] 等价率仍 ≥95% [x] 失败降级 |
-| **15** | [ ] | **C7 Agent 核心验收** | staging 灰度 | [ ] Step 10～14 全勾 [ ] staging `AGENT_PLAN_ENABLED=true` 手测通过 [ ] **M2 达成** |
+| **15** | [x] | **C7 Agent 核心验收** | `agent:m2-accept` + staging | [x] Step 10～14 全勾 [x] staging 配置 [x] **M2 达成** |
 
 **Phase 2 完成后**：staging 可开 Agent；生产灰度准备就绪。
 
@@ -175,7 +175,7 @@
 |--------|-----------|------|------|
 | **M0** | （已完成） | C1～C6 + H9-1～4 + C7-a 管道与 Tool 基础 | ✅ |
 | **M1** | 1～9 | **Agent 追问闭环** — 局部 patch + SSE + i18n | ✅ |
-| **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | [ ] |
+| **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | ✅ |
 | **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | [ ] |
 | **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | [ ] |
 | **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | [ ] |
@@ -361,6 +361,12 @@ pnpm --filter @douxing/server agent:branch-cases
   - 环境变量：`LANGFUSE_PUBLIC_KEY` / `LANGFUSE_SECRET_KEY` / `LANGFUSE_HOST`（未配 KEY 时 no-op）
   - 验证：`pnpm --filter @douxing/server langfuse:smoke`；`GET /v1/status` 返回 `observability.langfuse`
 - **首句 Agent 开启条件**：等价率 ≥95% + Langfuse 可观测 + staging 手测。
+- **Step 15 验收（M2 ✅）**：
+  ```bash
+  pnpm --filter @douxing/server agent:m2-accept          # 一键：intent + branch + e2e + m2 + 等价率
+  pnpm --filter @douxing/server agent:m2-cases           # 仅 Step 12～14 本地断言
+  ```
+  staging 部署：`deploy/env.staging.example` 已含 `AGENT_PLAN_ENABLED=true`；上线后按脚本末尾手测清单 6 条确认。
 - **生产策略**：M2 后 staging true；生产 false → 灰度 → 全量。
 
 ### 6.3 Step 16～24 · H9+ 顺序
@@ -404,6 +410,7 @@ pnpm --filter @douxing/server agent:intent-cases
 # Step 10 完成后必跑
 pnpm --filter @douxing/server agent:equivalence-cases          # 全链（含 Enricher，需 DB）
 pnpm --filter @douxing/server agent:equivalence-cases -- --fast   # CI 快速：仅 generate 阶段
+pnpm --filter @douxing/server agent:m2-accept                    # M2 一键验收（Step 15）
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -451,7 +458,7 @@ pnpm dev
 - [x] warnings 进对话（`appendPlanAssistantWarnings` · 2026-06-17）
 - [x] Agent 多方案 Tool（`build_route_variants` · graph + 本地 Agent · 2026-06-17）
 - [x] 首句 Agent（`createPlanSession` · Agent 失败降级管道 · 2026-06-17）
-- [ ] staging 手测 · **M2 达成**
+- [x] staging 配置 + 自动化验收（`agent:m2-accept` · 2026-06-17）· **M2 达成**
 
 ### 8.4 M3 数据质量（Step 16～21）
 
@@ -517,3 +524,5 @@ pnpm dev
 | 2026-06-17 | 2.6 | §0.1 增加 **功能作用**、**预期效果** 字段 |
 | 2026-06-17 | 2.7 | **Step 10 验收**：`agent:equivalence-cases` · 20/20 · 100% |
 | 2026-06-17 | 2.8 | **Step 11 Langfuse**：ai-service Tool trace + Node LLM generation |
+| 2026-06-17 | 2.9 | **Step 12～14**：warnings 进对话 · build_route_variants · createPlanSession Agent |
+| 2026-06-17 | 3.0 | **Step 15 / M2 达成**：`agent:m2-accept` · staging Agent 配置 · 指针 → Step 16 |
