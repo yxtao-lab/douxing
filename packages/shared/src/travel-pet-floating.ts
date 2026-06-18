@@ -3,14 +3,17 @@ import {
   buildPlanPetFocusRecallItems,
   formatPetFloatingAmbientNoMemory,
   formatPetFloatingAmbientWithMemory,
+  formatPetFloatingAnalyzePrePlan,
   formatPetFloatingGoPlan,
   formatPetFloatingLevelLabel,
   formatPetFloatingMoodLabel,
   formatPetFloatingSheetTitle,
+  formatPetFloatingViewMemoryWall,
   formatPetPersonalityLabel,
   formatPlanPetEmptyMemory,
   formatPlanPetMemoryTitle,
 } from './i18n/pet-messages.js';
+import type { PetAnalyzeResult } from './pet-memory-wall.js';
 import type { PlanPetMeta } from './types.js';
 import type { TravelPetInfo } from './travel-pet.js';
 
@@ -38,6 +41,8 @@ export interface TravelPetFloatingSheetViewModel {
   recallItems: Array<{ content: string; reason: string }>;
   hasMemories: boolean;
   goPlanLabel: string;
+  viewMemoryWallLabel: string;
+  analyzePrePlanLabel: string;
 }
 
 const SPECIES_EMOJI: Record<string, string> = {
@@ -55,12 +60,16 @@ export function isPetCompanionVisibleEnabled(stored: string | null | undefined):
   return true;
 }
 
-/** L1 待机气泡：规则模板，不调 LLM */
+/** L1 待机气泡：优先读 pre_plan analyze 缓存，否则规则模板 */
 export function resolveTravelPetAmbientBubble(
   pet: Pick<TravelPetInfo, 'nickname' | 'personality' | 'mood'>,
   petMeta: PlanPetMeta | null | undefined,
   locale: LocaleCode,
+  prePlanAnalyze?: PetAnalyzeResult | null,
 ): string {
+  const cachedReply = prePlanAnalyze?.petReply?.trim();
+  if (cachedReply) return cachedReply;
+
   const hint = petMeta?.recallExplain?.[0]?.content?.trim();
   if (hint) {
     return formatPetFloatingAmbientWithMemory(locale, { nickname: pet.nickname, hint });
@@ -88,5 +97,7 @@ export function resolveTravelPetFloatingSheetViewModel(
     recallItems,
     hasMemories,
     goPlanLabel: formatPetFloatingGoPlan(locale),
+    viewMemoryWallLabel: formatPetFloatingViewMemoryWall(locale),
+    analyzePrePlanLabel: formatPetFloatingAnalyzePrePlan(locale),
   };
 }

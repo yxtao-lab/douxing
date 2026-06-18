@@ -21,6 +21,7 @@ import { getDb } from '../db/client.js';
 import { travelPets, type TravelPet } from '../db/schema/travel-pets.js';
 import { ensureTravelPet } from './pet-memory.service.js';
 import { buildPlanPetMeta } from './plan-pet-meta.service.js';
+import { getPrePlanAnalyzeForFloating } from './pet-analyze.service.js';
 
 function rowToInfo(row: TravelPet): TravelPetInfo {
   return {
@@ -80,7 +81,8 @@ export async function getTravelPetFloatingContext(
   const pet = await getTravelPetByUserId(userId);
   if (!pet) return null;
   const petMeta = await buildPlanPetMeta(userId, locale, null);
-  return { pet, petMeta };
+  const prePlanAnalyze = await getPrePlanAnalyzeForFloating(userId);
+  return { pet, petMeta, prePlanAnalyze };
 }
 
 export async function adoptTravelPet(

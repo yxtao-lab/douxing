@@ -153,6 +153,7 @@ const gridItems = computed(() => [
   { key: 'achievements', icon: '🏅', label: t('profile.gridAchievements'), bg: '#fff7e6', needLogin: true, to: { name: 'achievements' } },
   { key: 'badges', icon: '🎖️', label: t('profile.gridBadges'), bg: '#f9f0ff', needLogin: true, to: { name: 'badges' } },
   { key: 'leaderboard', icon: '🏆', label: t('profile.gridLeaderboard'), bg: '#fff1f0', needLogin: true, to: { name: 'leaderboard' } },
+  { key: 'petMemories', icon: '🧠', label: t('nav.petMemories'), bg: '#fffbeb', needLogin: true, to: { name: 'pet-memories' } },
   { key: 'membership', icon: '💎', label: t('nav.membership'), bg: '#e6fffb', needLogin: true, to: { name: 'membership' } },
 ]);
 

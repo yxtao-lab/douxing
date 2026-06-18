@@ -51,6 +51,12 @@ export {
   formatPetFloatingMoodLabel,
   formatPetFloatingAmbientNoMemory,
   formatPetFloatingAmbientWithMemory,
+  formatPetMemoryTypeLabel,
+  formatPetAnalyzeSceneLabel,
+  formatPetMemoryWallTitle,
+  formatPetMemoryWallEmpty,
+  formatPetFloatingViewMemoryWall,
+  formatPetFloatingAnalyzePrePlan,
 } from './pet-messages.js';
 export {
   formatPlanVariantLabel,

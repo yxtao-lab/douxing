@@ -223,6 +223,14 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.PET_UPDATE_FAILED]: '更新旅行伙伴失败',
   [ApiMessageKey.PET_INVALID_SPECIES]: '无效的伙伴物种',
   [ApiMessageKey.PET_INVALID_PERSONALITY]: '无效的伙伴人格',
+  [ApiMessageKey.PET_MEMORY_FETCH_FAILED]: '获取记忆墙失败',
+  [ApiMessageKey.PET_MEMORY_NOT_FOUND]: '记忆不存在或无权访问',
+  [ApiMessageKey.PET_MEMORY_DELETE_SUCCESS]: '记忆已删除',
+  [ApiMessageKey.PET_MEMORY_DELETE_FAILED]: '删除记忆失败',
+  [ApiMessageKey.PET_MEMORY_SAVE_SUCCESS]: '记忆已保存',
+  [ApiMessageKey.PET_MEMORY_SAVE_FAILED]: '保存记忆失败',
+  [ApiMessageKey.PET_ANALYZE_FAILED]: '宠物分析失败',
+  [ApiMessageKey.PET_ANALYZE_INVALID_SCENE]: '无效的分析场景',
 };
 
 const enUS: Record<string, string> = {
@@ -453,6 +461,14 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.PET_UPDATE_FAILED]: 'Failed to update travel companion',
   [ApiMessageKey.PET_INVALID_SPECIES]: 'Invalid companion species',
   [ApiMessageKey.PET_INVALID_PERSONALITY]: 'Invalid companion personality',
+  [ApiMessageKey.PET_MEMORY_FETCH_FAILED]: 'Failed to load memory wall',
+  [ApiMessageKey.PET_MEMORY_NOT_FOUND]: 'Memory not found or access denied',
+  [ApiMessageKey.PET_MEMORY_DELETE_SUCCESS]: 'Memory deleted',
+  [ApiMessageKey.PET_MEMORY_DELETE_FAILED]: 'Failed to delete memory',
+  [ApiMessageKey.PET_MEMORY_SAVE_SUCCESS]: 'Memories saved',
+  [ApiMessageKey.PET_MEMORY_SAVE_FAILED]: 'Failed to save memories',
+  [ApiMessageKey.PET_ANALYZE_FAILED]: 'Pet analysis failed',
+  [ApiMessageKey.PET_ANALYZE_INVALID_SCENE]: 'Invalid analysis scene',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

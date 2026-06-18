@@ -173,6 +173,14 @@ const travelGridItems = computed<GridItem[]>(() => [
     needLogin: true,
     action: goLeaderboard,
   },
+  {
+    key: 'petMemories',
+    icon: '🧠',
+    label: t('nav.petMemories'),
+    bg: '#fffbeb',
+    needLogin: true,
+    action: goPetMemories,
+  },
   { key: 'language', icon: '🌐', label: t('profile.language'), bg: 'var(--dx-primary-light)', action: showLocalePicker },
   { key: 'theme', icon: '🎨', label: t('profile.theme'), bg: 'var(--dx-accent-soft)', action: showThemePicker },
 ]);
@@ -245,6 +253,10 @@ function goAchievements() {
 
 function goLeaderboard() {
   uni.navigateTo({ url: '/pages/leaderboard/index' });
+}
+
+function goPetMemories() {
+  uni.navigateTo({ url: '/pages/profile/pet-memories' });
 }
 
 function goCheckinMap() {

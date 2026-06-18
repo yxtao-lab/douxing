@@ -71,7 +71,12 @@ export function usePetCompanion() {
       const ctx = await fetchTravelPetFloatingContext();
       const locale = getApiAcceptLanguage();
       speciesEmoji.value = resolveTravelPetSpeciesEmoji(ctx.pet.species);
-      ambientBubble.value = resolveTravelPetAmbientBubble(ctx.pet, ctx.petMeta, locale);
+      ambientBubble.value = resolveTravelPetAmbientBubble(
+        ctx.pet,
+        ctx.petMeta,
+        locale,
+        ctx.prePlanAnalyze,
+      );
       sheetViewModel.value = resolveTravelPetFloatingSheetViewModel(ctx.pet, ctx.petMeta, locale);
       ready.value = true;
     } catch {
@@ -94,6 +99,16 @@ export function usePetCompanion() {
   function goPlan() {
     closeSheet();
     uni.switchTab({ url: '/pages/plan/plan' });
+  }
+
+  function goMemoryWall() {
+    closeSheet();
+    uni.navigateTo({ url: '/pages/profile/pet-memories' });
+  }
+
+  async function triggerPrePlanAnalyze() {
+    closeSheet();
+    uni.navigateTo({ url: '/pages/profile/pet-memories?analyze=1' });
   }
 
   function updateBallPosition(pos: PetCompanionBallPosition) {
@@ -131,6 +146,8 @@ export function usePetCompanion() {
     openSheet,
     closeSheet,
     goPlan,
+    goMemoryWall,
+    triggerPrePlanAnalyze,
     refreshContext,
     updateBallPosition,
     setCompanionEnabled,

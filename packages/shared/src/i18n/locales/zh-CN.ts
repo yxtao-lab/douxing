@@ -113,6 +113,7 @@ export const sharedZhCN = {
     login: '登录',
     membership: '会员权益',
     myAlbum: '我的相册',
+    petMemories: '记忆墙',
   },
   memberLevel: {
     free: '免费会员',

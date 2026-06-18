@@ -1,9 +1,19 @@
 /**
  * Phase 4：H3 宠物记忆读写
  */
-import { desc, eq, and } from 'drizzle-orm';
-import { TRAVEL_PET_DEFAULT_NICKNAME } from '@douxing/shared';
-import type { LocaleCode, MemoryRecallExplainItem, MemoryRecallPackage } from '@douxing/shared';
+import { desc, eq, and, sql } from 'drizzle-orm';
+import {
+  ApiError,
+  ApiMessageKey,
+  TRAVEL_PET_DEFAULT_NICKNAME,
+  buildPaginatedResult,
+  type LocaleCode,
+  type MemoryRecallExplainItem,
+  type MemoryRecallPackage,
+  type PaginatedResult,
+  type PetMemoryWallItem,
+  type PetSuggestedMemory,
+} from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { petMemories, travelPets } from '../db/schema/index.js';
 
@@ -219,4 +229,109 @@ export function buildMemoryRecallPackage(
       boostPoiNames: extractBoostPoiNames(memories),
     },
   };
+}
+
+function rowToWallItem(row: typeof petMemories.$inferSelect): PetMemoryWallItem {
+  const metadata = row.metadata ?? null;
+  const pinned = metadata?.pinned === true;
+  return {
+    id: row.id,
+    memoryType: row.memoryType,
+    content: row.content,
+    importance: row.importance,
+    pinned,
+    metadata,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
+  };
+}
+
+/** H3-c：记忆墙分页（置顶优先） */
+export async function listUserMemoriesPaginated(
+  userId: number,
+  page: number,
+  pageSize: number,
+): Promise<PaginatedResult<PetMemoryWallItem>> {
+  try {
+    const db = getDb();
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(petMemories)
+      .where(eq(petMemories.userId, userId));
+
+    const rows = await db
+      .select()
+      .from(petMemories)
+      .where(eq(petMemories.userId, userId))
+      .orderBy(
+        sql`CASE WHEN JSON_EXTRACT(${petMemories.metadata}, '$.pinned') = true THEN 0 ELSE 1 END`,
+        desc(petMemories.importance),
+        desc(petMemories.updatedAt),
+      )
+      .limit(pageSize)
+      .offset((page - 1) * pageSize);
+
+    return buildPaginatedResult(rows.map(rowToWallItem), Number(count) || 0, page, pageSize);
+  } catch (err) {
+    console.error('[pet-memory] list 失败:', err instanceof Error ? err.message : err);
+    throw new ApiError(ApiMessageKey.PET_MEMORY_FETCH_FAILED);
+  }
+}
+
+export async function deleteUserMemory(userId: number, memoryId: number): Promise<void> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: petMemories.id })
+    .from(petMemories)
+    .where(and(eq(petMemories.id, memoryId), eq(petMemories.userId, userId)))
+    .limit(1);
+  if (!rows[0]) {
+    throw new ApiError(ApiMessageKey.PET_MEMORY_NOT_FOUND);
+  }
+  await db.delete(petMemories).where(eq(petMemories.id, memoryId));
+}
+
+export async function setUserMemoryPinned(
+  userId: number,
+  memoryId: number,
+  pinned: boolean,
+): Promise<PetMemoryWallItem> {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(petMemories)
+    .where(and(eq(petMemories.id, memoryId), eq(petMemories.userId, userId)))
+    .limit(1);
+  if (!rows[0]) {
+    throw new ApiError(ApiMessageKey.PET_MEMORY_NOT_FOUND);
+  }
+  const metadata = { ...(rows[0].metadata ?? {}), pinned };
+  await db.update(petMemories).set({ metadata }).where(eq(petMemories.id, memoryId));
+  const updated = await db
+    .select()
+    .from(petMemories)
+    .where(eq(petMemories.id, memoryId))
+    .limit(1);
+  return rowToWallItem(updated[0]!);
+}
+
+/** H3-c：用户确认写入 analyze 建议的记忆 */
+export async function confirmSuggestedMemories(
+  userId: number,
+  items: PetSuggestedMemory[],
+): Promise<number[]> {
+  const ids: number[] = [];
+  for (const item of items) {
+    const content = item.content?.trim();
+    if (!content) continue;
+    const id = await writeTripMemory({
+      userId,
+      memoryType: (item.memoryType as PetMemoryTypeValue) || PetMemoryType.PREFERENCE,
+      content,
+      importance: item.importance,
+      metadata: item.metadata,
+    });
+    if (id) ids.push(id);
+  }
+  return ids;
 }

@@ -64,6 +64,12 @@
       }
     },
     {
+      "path": "pages/profile/pet-memories",
+      "style": {
+        "navigationBarTitleText": "记忆墙"
+      }
+    },
+    {
       "path": "pages/badges/index",
       "style": {
         "navigationBarTitleText": "我的徽章"

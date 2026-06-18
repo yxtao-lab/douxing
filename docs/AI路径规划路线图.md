@@ -12,26 +12,26 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 29 — H3-c 记忆墙 / analyze**
+> **下一项工作：Step 31 — H8 `replan_segment` Tool**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | `POST /pets/me/analyze` · 记忆墙 UI |
-| **功能作用** | 用户可查看历史记忆与分析 |
-| **完成标准** | 见 Phase 4 Step 29 |
-| **完成后** | Step 30 C7-c + H3 阶段验收 |
+| **做什么** | 行中 GPS + 剩余 POI 重排 Tool |
+| **功能作用** | 偏离计划时可刷新当日行程 |
+| **完成标准** | 见 Phase 5 Step 31 |
+| **完成后** | Step 32 H8 transit_agent + UI |
 
-**Step 28 已达成（2026-06-18）**：`TravelPetFloatingLayer` · `GET /pets/me/floating-context` · `travel-pet-floating:cases` 全绿。
+**Step 30 已达成（2026-06-18）**：`h3:m4-accept` 全绿 · 第二轮规划 regret 补偿链路验收通过 · **M4 达成**。
 
 **Step 27 已达成（2026-06-18）**：mobile + PC `PlanPetFocusCard` · `plan-pet-focus:cases` 全绿。
 
 ### 0.2 整体进度
 
 ```text
-[████████████████████░] 约 87%  —  M0 + M1 + M2 + M3 已达成；Phase 4 Step 25 完成
+[█████████████████████] 约 90%  —  M0 + M1 + M2 + M3 + M4 已达成；Phase 5 Step 31 待启动
 
-当前阶段：Phase 4 · C7-c + H3 记忆与宠物
-下一里程碑：M4 — Step 26～30
+当前阶段：Phase 5 · H7/H8 行中智能
+下一里程碑：M5 — Step 31～34
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -120,8 +120,8 @@
 | **26** | [x] | **memory_agent 独立图节点** | `memory_agent.py` + Tool | [x] 偏好召回可解释 [x] 注入 plan context |
 | **27** | [x] | **规划页 Focus 宠物 UI** | mobile + PC plan 页 | [x] 口吻化 assistant [x] 记忆摘要可见 |
 | **28** | [x] | **H3-b 全站悬浮层** | `TravelPetFloatingLayer` | [x] Tab 页浮球 [x] 调同一 orchestrator |
-| **29** | [ ] | **H3-c 记忆墙 / analyze** | `POST /pets/me/analyze` | [ ] 可查看历史记忆与分析 |
-| **30** | [ ] | **C7-c + H3 阶段验收** | 手测 | [ ] 第二轮规划体现「上次遗憾」 [ ] **M4 达成** |
+| **29** | [x] | **H3-c 记忆墙 / analyze** | `POST /pets/me/analyze` | [x] 可查看历史记忆与分析 |
+| **30** | [x] | **C7-c + H3 阶段验收** | 手测 | [x] 第二轮规划体现「上次遗憾」 [x] **M4 达成** |
 
 ---
 
@@ -179,7 +179,7 @@
 | **M1** | 1～9 | **Agent 追问闭环** — 局部 patch + SSE + i18n | ✅ |
 | **M2** | 10～15 | **Agent 可上 staging** — 等价率 + 首句 Agent | ✅ |
 | **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | ✅ |
-| **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | [ ] |
+| **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | ✅ |
 | **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | [ ] |
 | **M6** | 1～40（必做）+ 41～42（远期） | **路线图全部验收** | [ ] |
 
@@ -227,7 +227,7 @@ Agent 已上 staging → 从 Step 27（规划页宠物 UI）开始
 | **H9** | 住行增强 | ✅ 已验收 | M0 |
 | **C7** | AI Agent 演进 | ✅ M1 + M2 已达成 | Step 1～15 ✅ |
 | **H9+** | 规划数据质量 | ✅ M3 已达成 | Step 16～21 ✅ · Step 22～24 按需 |
-| **H3** | AI 旅行宠物 | 🔄 Step 25 ✅ | Step 25 ✅ · Step 26～30 |
+| **H3** | AI 旅行宠物 | ✅ M4 已达成 | Step 25～30 ✅ |
 | **H7/H8** | 行中智能 | ⏳ | Step 31～34 |
 | **I** | 专属模型 | 🔄 I1 ✅ | Step 35～37 |
 | **H10** | 路线可信度 | ⏳ | Step 38～41 |
@@ -423,6 +423,10 @@ pnpm --filter @douxing/server h9:m3-accept -- --skip-db          # 无 MySQL 时
 pnpm --filter @douxing/server pet:adopt-cases                    # M4 Step 25 领养 API
 pnpm --filter @douxing/server memory-agent:cases                 # M4 Step 26 memory_agent
 pnpm --filter @douxing/server plan-pet-focus:cases               # M4 Step 27 Focus UI
+pnpm --filter @douxing/server travel-pet-floating:cases          # M4 Step 28 悬浮层
+pnpm --filter @douxing/server pet:memory-analyze-cases           # M4 Step 29 记忆墙 / analyze
+pnpm --filter @douxing/server h3:regret-second-plan-cases        # M4 Step 30 遗憾补偿
+pnpm --filter @douxing/server h3:m4-accept                       # M4 一键验收（Step 25～30）
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit
@@ -485,7 +489,8 @@ pnpm dev
 - [x] 领养 API（`pet:adopt-cases` · `POST /api/pets/adopt` · 2026-06-18）
 - [x] memory_agent 节点（`memory-agent:cases` · graph + apply_memory_context · 2026-06-18）
 - [x] 规划页 Focus UI（`plan-pet-focus:cases` · mobile + PC · 2026-06-18）
-- [ ] 全站悬浮层 + 记忆墙
+- [x] 全站悬浮层 + 记忆墙
+- [x] 第二轮规划 regret 补偿（`h3:regret-second-plan-cases` · `h3:m4-accept` · 2026-06-18）· **M4 达成**
 
 ### 8.6 M5 行中（Step 31～34）
 
@@ -551,3 +556,5 @@ pnpm dev
 | 2026-06-18 | 3.6 | **Step 25 / H3-a**：`POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey |
 | 2026-06-18 | 3.7 | **Step 26 / C7-c**：`memory_agent.py` · `apply_memory_context` Tool · `memory-agent:cases` |
 | 2026-06-18 | 3.8 | **Step 27 / H3-a UI**：`PlanPetFocusCard` · petMeta · 助手口吻 · `plan-pet-focus:cases` |
+| 2026-06-18 | 3.9 | **Step 29 / H3-c**：`POST /pets/me/analyze` · 记忆墙 CRUD · `pet:memory-analyze-cases` · 指针 → Step 30 |
+| 2026-06-18 | 4.0 | **Step 30 / M4 达成**：`h3:m4-accept` · regret 第二轮规划补偿 · 指针 → Step 31 |

@@ -220,6 +220,14 @@ export const ApiMessageKey = {
   PET_UPDATE_FAILED: 'api.petUpdateFailed',
   PET_INVALID_SPECIES: 'api.petInvalidSpecies',
   PET_INVALID_PERSONALITY: 'api.petInvalidPersonality',
+  PET_MEMORY_FETCH_FAILED: 'api.petMemoryFetchFailed',
+  PET_MEMORY_NOT_FOUND: 'api.petMemoryNotFound',
+  PET_MEMORY_DELETE_SUCCESS: 'api.petMemoryDeleteSuccess',
+  PET_MEMORY_DELETE_FAILED: 'api.petMemoryDeleteFailed',
+  PET_MEMORY_SAVE_SUCCESS: 'api.petMemorySaveSuccess',
+  PET_MEMORY_SAVE_FAILED: 'api.petMemorySaveFailed',
+  PET_ANALYZE_FAILED: 'api.petAnalyzeFailed',
+  PET_ANALYZE_INVALID_SCENE: 'api.petAnalyzeInvalidScene',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

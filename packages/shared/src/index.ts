@@ -18,3 +18,4 @@ export * from './plan-pet-focus.js';
 export * from './shooting-params.js';
 export * from './travel-pet.js';
 export * from './travel-pet-floating.js';
+export * from './pet-memory-wall.js';

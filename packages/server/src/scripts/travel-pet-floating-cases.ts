@@ -20,6 +20,10 @@ import {
   getTravelPetFloatingContext,
 } from '../services/travel-pet.service.js';
 import { writeTripMemory, PetMemoryType } from '../services/pet-memory.service.js';
+import { getDb } from '../db/client.js';
+import { users } from '../db/schema/users.js';
+import { petMemories } from '../db/schema/pet-memories.js';
+import { eq } from 'drizzle-orm';
 
 const skipDb = process.argv.includes('--skip-db');
 let failed = 0;
@@ -64,12 +68,31 @@ function checkSharedViewModel() {
   assert(sheet.speciesEmoji === '🐱', 'sheet emoji');
   assert(sheet.hasMemories === true, 'sheet hasMemories');
   assert(Boolean(sheet.goPlanLabel.length), 'goPlan label');
+  assert(Boolean(sheet.viewMemoryWallLabel.length), 'viewMemoryWall label');
+  assert(Boolean(sheet.analyzePrePlanLabel.length), 'analyzePrePlan label');
   console.log('');
+}
+
+async function resolveTestUserId(): Promise<number | null> {
+  const envId = process.env.PET_FLOATING_CASE_USER_ID;
+  if (envId) {
+    const parsed = Number(envId);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  const db = getDb();
+  const rows = await db.select({ id: users.id }).from(users).limit(1);
+  return rows[0]?.id ?? null;
+}
+
+async function cleanupUser(userId: number) {
+  const db = getDb();
+  await db.delete(petMemories).where(eq(petMemories.userId, userId));
+  await deleteTravelPetForUser(userId).catch(() => undefined);
 }
 
 async function checkFloatingContextOrchestrator(userId: number) {
   console.log('--- floating-context 与 orchestrator 同源 ---');
-  await deleteTravelPetForUser(userId).catch(() => undefined);
+  await cleanupUser(userId);
   await writeTripMemory({
     userId,
     memoryType: PetMemoryType.PREFERENCE,
@@ -101,15 +124,19 @@ async function main() {
     console.log('--- floating-context 与 orchestrator 同源 ---');
     console.log('[SKIP] --skip-db 已跳过\n');
   } else {
-    const userId = Number(process.env.PET_FLOATING_CASE_USER_ID || '900028');
     try {
-      await checkFloatingContextOrchestrator(userId);
+      const userId = await resolveTestUserId();
+      if (!userId) {
+        failed += 1;
+        console.error('[FAIL] 数据库无用户，无法跑 DB 用例\n');
+      } else {
+        await checkFloatingContextOrchestrator(userId);
+        await cleanupUser(userId);
+      }
     } catch (err) {
       failed += 1;
       console.error('[FAIL] DB 用例异常:', err instanceof Error ? err.message : err);
       console.error('提示：需 MySQL 可用；无 DB 时使用 --skip-db\n');
-    } finally {
-      await deleteTravelPetForUser(userId).catch(() => undefined);
     }
   }
 

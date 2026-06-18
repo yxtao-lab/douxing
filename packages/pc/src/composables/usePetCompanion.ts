@@ -71,7 +71,12 @@ export function usePetCompanion() {
     try {
       const ctx = await fetchTravelPetFloatingContext();
       speciesEmoji.value = resolveTravelPetSpeciesEmoji(ctx.pet.species);
-      ambientBubble.value = resolveTravelPetAmbientBubble(ctx.pet, ctx.petMeta, currentLocale.value);
+      ambientBubble.value = resolveTravelPetAmbientBubble(
+        ctx.pet,
+        ctx.petMeta,
+        currentLocale.value,
+        ctx.prePlanAnalyze,
+      );
       sheetViewModel.value = resolveTravelPetFloatingSheetViewModel(
         ctx.pet,
         ctx.petMeta,
@@ -98,6 +103,16 @@ export function usePetCompanion() {
   function goPlan() {
     closeSheet();
     router.push({ name: 'plan' });
+  }
+
+  function goMemoryWall() {
+    closeSheet();
+    router.push({ name: 'pet-memories' });
+  }
+
+  function triggerPrePlanAnalyze() {
+    closeSheet();
+    router.push({ name: 'pet-memories', query: { analyze: '1' } });
   }
 
   function updateBallPosition(pos: PetCompanionBallPosition) {
@@ -139,6 +154,8 @@ export function usePetCompanion() {
     openSheet,
     closeSheet,
     goPlan,
+    goMemoryWall,
+    triggerPrePlanAnalyze,
     refreshContext,
     updateBallPosition,
     setCompanionEnabled,

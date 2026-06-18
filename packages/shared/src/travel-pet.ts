@@ -39,6 +39,8 @@ export interface TravelPetFloatingContext {
   pet: TravelPetInfo;
   /** 与 buildPlanPetMeta / plan agent 同源 */
   petMeta: import('./types.js').PlanPetMeta;
+  /** H3-c：规划前 analyze 缓存（气泡优先读 petReply） */
+  prePlanAnalyze?: import('./pet-memory-wall.js').PetAnalyzeResult | null;
 }
 
 export function isTravelPetSpecies(value: string): value is TravelPetSpecies {

@@ -28,6 +28,10 @@ const {
 
   goPlan,
 
+  goMemoryWall,
+
+  triggerPrePlanAnalyze,
+
   updateBallPosition,
 
 } = usePetCompanion();
@@ -289,6 +293,14 @@ function onBallTap() {
         </view>
 
         <button class="travel-pet-floating__cta" @tap="goPlan">{{ sheetViewModel.goPlanLabel }}</button>
+        <view class="travel-pet-floating__secondary-actions">
+          <button class="travel-pet-floating__secondary" @tap="goMemoryWall">
+            {{ sheetViewModel.viewMemoryWallLabel }}
+          </button>
+          <button class="travel-pet-floating__secondary" @tap="triggerPrePlanAnalyze">
+            {{ sheetViewModel.analyzePrePlanLabel }}
+          </button>
+        </view>
 
       </view>
 
@@ -651,6 +663,40 @@ function onBallTap() {
   font-weight: 600;
 
   border: none;
+
+}
+
+
+
+.travel-pet-floating__secondary-actions {
+
+  display: flex;
+
+  gap: 16rpx;
+
+  margin-top: 16rpx;
+
+}
+
+
+
+.travel-pet-floating__secondary {
+
+  flex: 1;
+
+  height: 72rpx;
+
+  line-height: 72rpx;
+
+  border-radius: 999rpx;
+
+  background: rgba(255, 255, 255, 0.9);
+
+  border: 1rpx solid rgba(251, 191, 36, 0.45);
+
+  color: #b45309;
+
+  font-size: 24rpx;
 
 }
 

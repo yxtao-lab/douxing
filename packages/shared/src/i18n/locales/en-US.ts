@@ -113,6 +113,7 @@ export const sharedEnUS = {
     login: 'Sign in',
     membership: 'Membership',
     myAlbum: 'My photos',
+    petMemories: 'Memory wall',
   },
   memberLevel: {
     free: 'Free',

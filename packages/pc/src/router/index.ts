@@ -71,6 +71,12 @@ const router = createRouter({
           meta: { titleKey: 'nav.membership', navKey: 'profile', requiresAuth: true },
         },
         {
+          path: 'profile/pet-memories',
+          name: 'pet-memories',
+          component: () => import('@/views/PetMemoriesView.vue'),
+          meta: { titleKey: 'nav.petMemories', navKey: 'profile', requiresAuth: true },
+        },
+        {
           path: 'journey-albums',
           name: 'journey-albums',
           component: () => import('@/views/JourneyAlbumsView.vue'),
