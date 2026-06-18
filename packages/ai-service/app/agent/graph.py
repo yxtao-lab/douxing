@@ -20,6 +20,7 @@ class PlanAgentState(TypedDict, total=False):
     current_draft: dict[str, Any] | None
     intent: dict[str, Any] | None
     draft: dict[str, Any] | None
+    candidates: list[dict[str, Any]]
     tool_trace: list[dict[str, Any]]
     routed: dict[str, Any]
     routed_intent: str
@@ -200,6 +201,70 @@ async def _run_plan_new_branch(state: PlanAgentState) -> None:
         {"tool": "retrieve_attractions", "ok": True, "ms": int((time.time() - t_rag) * 1000)}
     )
 
+    is_first_plan = not state.get("current_draft")
+    if is_first_plan:
+        t_var = time.time()
+        variants_data = await call_node_tool(
+            "build_route_variants",
+            {
+                "intent": state["intent"],
+                "locale": state["locale"],
+                "userId": state["user_id"],
+            },
+        )
+        variants = variants_data.get("variants") or []
+        state["tool_trace"].append(
+            {
+                "tool": "build_route_variants",
+                "ok": True,
+                "ms": int((time.time() - t_var) * 1000),
+            }
+        )
+
+        candidates: list[dict[str, Any]] = []
+        for variant in variants:
+            sort_order = int(variant.get("sortOrder") or 0)
+            t_gen = time.time()
+            gen_data = await call_node_tool(
+                "generate_route_draft",
+                {
+                    "prompt": state["prompt"],
+                    "days": state["days"],
+                    "budget": state["budget"],
+                    "provider": state["provider"],
+                    "locale": state["locale"],
+                    "intent": state["intent"],
+                    "ragCandidates": rag_candidates,
+                    "userId": state["user_id"],
+                    "variantKey": variant.get("key"),
+                    "variantHint": variant.get("hint"),
+                    "ragVariantIndex": sort_order,
+                },
+            )
+            draft = gen_data.get("draft")
+            state["tool_trace"].append(
+                {
+                    "tool": "generate_route_draft",
+                    "ok": True,
+                    "ms": int((time.time() - t_gen) * 1000),
+                }
+            )
+            finalized = await _enrich_and_validate_draft(state, draft, rag_candidates)
+            if finalized:
+                candidates.append(
+                    {
+                        "draft": finalized,
+                        "variantKey": variant.get("key"),
+                        "label": variant.get("label"),
+                        "sortOrder": sort_order,
+                    }
+                )
+
+        if candidates:
+            state["draft"] = candidates[0]["draft"]
+            state["candidates"] = candidates
+        return
+
     t_gen = time.time()
     gen_data = await call_node_tool(
         "generate_route_draft",
@@ -323,6 +388,7 @@ async def _run_plan_agent_core(request: dict[str, Any], prompt: str) -> dict[str
 
     return {
         "draft": state.get("draft"),
+        "candidates": state.get("candidates"),
         "toolTrace": state["tool_trace"],
         "routedIntent": state["routed_intent"],
         "assistantHint": state.get("assistant_hint"),

@@ -37,6 +37,7 @@ export async function runGenerateRouteDraftTool(raw: unknown) {
       ragCandidates: input.ragCandidates as RagAttractionCandidate[] | undefined,
       variantHint: input.variantHint,
       variantKey: input.variantKey,
+      ragVariantIndex: input.ragVariantIndex,
       userId: input.userId,
       excludePoiNames,
       boostPoiNames,

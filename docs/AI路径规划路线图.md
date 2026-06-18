@@ -3,7 +3,7 @@
 > **定位**：模块 A「AI 智能规划」的 **专项路线图** —— 只回答「**现在做什么 → 下一步做什么 → 全部验收完成**」。  
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
-**文档版本**：2.8  
+**文档版本**：2.9  
 **最后更新**：2026-06-17
 
 ---
@@ -12,27 +12,24 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 12 — warnings 写入 assistant 回复**
+> **下一项工作：Step 15 — C7 Agent 核心验收（staging 灰度）**
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | `validate_route` 产出的 warnings（闭馆/超预算等）写入规划会话 assistant 消息 · i18n |
-| **功能作用** | 让用户在对话里直接看到行程风险与修正说明，而非只在路线详情里找 warnings |
-| **预期效果** | 追问或首句生成后，assistant 气泡含可读的校验提示；zh-CN/en-US 随 locale 切换 |
-| **改哪些文件** | `plan-session.service.ts` · `@douxing/shared` i18n · 可选 PC/mobile 展示 |
-| **完成标准** | 闭馆/超预算等出现在对话 · i18n 无硬编码 |
-| **预估** | 1 天 |
-| **完成后** | 继续 **Step 13（build_route_variants Tool 化）** |
+| **做什么** | staging 开 `AGENT_PLAN_ENABLED=true` 手测 Step 10～14 全链路 |
+| **功能作用** | 确认 Agent 首句 + 追问 + warnings + 多候选可上 staging |
+| **完成标准** | Step 10～14 全勾 · staging 手测通过 · **M2 达成** |
+| **完成后** | 进入 Phase 3（H9+ 数据质量 Step 16） |
 
 **本地前置**：`.env` 配好 `AI_SERVICE_ENABLED=true`、`AGENT_PLAN_ENABLED=true`、`AGENT_TOOL_SECRET`。
 
 ### 0.2 整体进度
 
 ```text
-[███████████████░░░░░] 约 65%  —  M0 + M1 已达成；Step 10～11 已验收
+[████████████████░░░░] 约 70%  —  M0 + M1 已达成；Step 10～13 已验收
 
 当前阶段：Phase 2 · C7 质量闸门 + 首句 Agent
-下一里程碑：M2 — Agent 可上 staging（Step 12～15）
+下一里程碑：M2 — Agent 可上 staging（Step 14～15）
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -82,9 +79,9 @@
 |------|------|------|-------------|----------|
 | **10** | [x] | **管道 vs Agent 等价率脚本** | `agent-equivalence-cases.ts` | [x] ≥20 条 seed prompt [x] 报告 JSON 等价率 **≥95%**（20/20 · 100%） |
 | **11** | [x] | **Langfuse 接入** | ai-service + Node | [x] 单次规划可查 Tool 链 [x] token/耗时可见（未配 KEY 时 no-op） |
-| **12** | [ ] | **warnings 写入 assistant 回复** | validate_route → 会话消息 | [ ] 闭馆/超预算等出现在对话 [ ] i18n |
-| **13** | [ ] | **`build_route_variants` Tool 化** | agent Tool 或 graph 封装 | [ ] Agent 首句可产出 2～3 候选 |
-| **14** | [ ] | **首句接 Agent** | `createPlanSession` | [ ] flag 开时首句走 Agent [ ] 等价率仍 ≥95% [ ] 失败降级 |
+| **12** | [x] | **warnings 写入 assistant 回复** | validate_route → 会话消息 | [x] 闭馆/超预算等出现在对话 [x] i18n |
+| **13** | [x] | **`build_route_variants` Tool 化** | `build-route-variants.tool.ts` + graph | [x] Agent 首句可产出 2～3 候选 |
+| **14** | [x] | **首句接 Agent** | `createPlanSession` | [x] flag 开时首句走 Agent [x] 等价率仍 ≥95% [x] 失败降级 |
 | **15** | [ ] | **C7 Agent 核心验收** | staging 灰度 | [ ] Step 10～14 全勾 [ ] staging `AGENT_PLAN_ENABLED=true` 手测通过 [ ] **M2 达成** |
 
 **Phase 2 完成后**：staging 可开 Agent；生产灰度准备就绪。
@@ -451,8 +448,10 @@ pnpm dev
 
 - [x] 等价率 ≥95%（`agent:equivalence-cases` · 2026-06-17 · 20/20）
 - [x] Langfuse（`app/observability/langfuse_client.py` · Node `langfuse-client.service.ts` · 2026-06-17）
-- [ ] warnings 进对话
-- [ ] 首句 Agent + 多方案
+- [x] warnings 进对话（`appendPlanAssistantWarnings` · 2026-06-17）
+- [x] Agent 多方案 Tool（`build_route_variants` · graph + 本地 Agent · 2026-06-17）
+- [x] 首句 Agent（`createPlanSession` · Agent 失败降级管道 · 2026-06-17）
+- [ ] staging 手测 · **M2 达成**
 
 ### 8.4 M3 数据质量（Step 16～21）
 

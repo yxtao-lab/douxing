@@ -34,6 +34,9 @@ export {
   buildFoodQaAssistantReply,
   buildBudgetTunedAssistantHint,
   buildLodgingTunedAssistantHint,
+  collectRouteDetailWarnings,
+  buildPlanAssistantWarningsBlock,
+  appendPlanAssistantWarnings,
 } from './plan-messages.js';
 export {
   formatPlanVariantLabel,

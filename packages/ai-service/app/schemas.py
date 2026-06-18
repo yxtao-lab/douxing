@@ -142,6 +142,7 @@ class AgentPlanRequest(BaseModel):
 
 class AgentPlanResponse(BaseModel):
     draft: dict | None = None
+    candidates: list[dict] = Field(default_factory=list)
     toolTrace: list[dict] = Field(default_factory=list)
     routedIntent: str = "plan_new"
     assistantHint: str | None = None

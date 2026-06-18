@@ -25,6 +25,8 @@ const PLAN_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'plan.assistant.foodQa.empty': '暂未找到相关美食推荐，您可以告诉我更具体的城市或口味偏好。',
     'plan.assistant.budgetTuned': '已按新预算调整方案。',
     'plan.assistant.lodgingTuned': '已按住宿偏好更新住店安排。',
+    'plan.assistant.warningsHeader': '行程提示：',
+    'plan.assistant.warningItem': '· {text}',
   },
   'en-US': {
     'plan.intent.days': '{days} days',
@@ -46,6 +48,8 @@ const PLAN_MESSAGES: Record<LocaleCode, Record<string, string>> = {
       'No food picks found yet. Try a specific city or cuisine preference.',
     'plan.assistant.budgetTuned': 'Plan updated to match your new budget.',
     'plan.assistant.lodgingTuned': 'Lodging updated to match your preferences.',
+    'plan.assistant.warningsHeader': 'Trip notes:',
+    'plan.assistant.warningItem': '· {text}',
   },
 };
 
@@ -192,4 +196,46 @@ export function buildBudgetTunedAssistantHint(locale: LocaleCode = DEFAULT_LOCAL
 
 export function buildLodgingTunedAssistantHint(locale: LocaleCode = DEFAULT_LOCALE): string {
   return planMsg('plan.assistant.lodgingTuned', locale);
+}
+
+/** 从 routeDetail 各天 warnings 去重收集（Enricher + validate_route 已按 locale 格式化） */
+export function collectRouteDetailWarnings(
+  routeDetail?: { days?: Array<{ warnings?: string[] }> } | null,
+): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const day of routeDetail?.days ?? []) {
+    for (const warning of day.warnings ?? []) {
+      const text = warning.trim();
+      if (!text || seen.has(text)) continue;
+      seen.add(text);
+      result.push(text);
+    }
+  }
+  return result;
+}
+
+/** 将 warnings 格式化为助手回复追加块 */
+export function buildPlanAssistantWarningsBlock(
+  warnings: string[],
+  locale: LocaleCode = DEFAULT_LOCALE,
+): string {
+  if (warnings.length === 0) return '';
+  const header = planMsg('plan.assistant.warningsHeader', locale);
+  const lines = warnings.map((text) =>
+    planMsg('plan.assistant.warningItem', locale, { text }),
+  );
+  return `\n\n${header}\n${lines.join('\n')}`;
+}
+
+/** 在既有助手回复后追加路线 warnings（无 warnings 时原样返回） */
+export function appendPlanAssistantWarnings(
+  baseReply: string,
+  route: { routeDetail?: Record<string, unknown> | null },
+  locale: LocaleCode = DEFAULT_LOCALE,
+): string {
+  const detail = route.routeDetail as { days?: Array<{ warnings?: string[] }> } | null | undefined;
+  const warnings = collectRouteDetailWarnings(detail);
+  const block = buildPlanAssistantWarningsBlock(warnings, locale);
+  return block ? `${baseReply}${block}` : baseReply;
 }

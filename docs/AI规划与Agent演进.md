@@ -499,7 +499,7 @@ packages/server/
 | `validate_route` | draft, ragCandidates, autoFix | draft + warnings | `validate-route.tool.ts` | ✅ C7-d |
 | `recall_user_memory` | userId, query, limit | `memories` | `memory.tools.ts` | ✅ C7-c |
 | `write_trip_memory` | userId, memoryType, content | ok | `memory.tools.ts` | ✅ C7-c |
-| `build_route_variants` | intent | 2～3 候选 | `plan-route-variants.ts` | ⏳ 仍由 plan_sessions 层处理 |
+| `build_route_variants` | intent, userId | 2～3 变体 key/label/hint | `build-route-variants.tool.ts` | ✅ Step 13 |
 | `replan_segment` | routeId, context | 局部路线 | — | ⏳ H8 |
 
 ---

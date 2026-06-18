@@ -58,6 +58,17 @@ import { loadPlanUserContext } from './plan-user-context.service.js';
 
 import { resolvePlanningCity } from './travel-intent.service.js';
 
+import { runBuildRouteVariantsTool } from '../agent/tools/build-route-variants.tool.js';
+
+
+
+export interface AgentPlanCandidateDraft {
+  draft: GeneratedRouteDraft & { generationSource?: string; intent?: TravelIntentSnapshot };
+  variantKey: string;
+  label: string;
+  sortOrder: number;
+}
+
 
 
 export interface AgentPlanRequest {
@@ -98,6 +109,9 @@ export interface AgentPlanResult {
 
   draft?: GeneratedRouteDraft & { generationSource?: string; intent?: TravelIntentSnapshot };
 
+  /** Step 13：首句多候选（与管道 plan_session_candidates 对齐） */
+  candidates?: AgentPlanCandidateDraft[];
+
   toolTrace: AgentToolTraceEntry[];
 
   routedIntent: string;
@@ -116,7 +130,7 @@ function isAgentPlanResultUsable(result: AgentPlanResult | null | undefined): re
 
   if (!result) return false;
 
-  return !!(result.draft || result.assistantMessage || result.selectedRouteId != null);
+  return !!(result.draft || result.candidates?.length || result.assistantMessage || result.selectedRouteId != null);
 
 }
 
@@ -168,6 +182,89 @@ async function finalizeDraftWithEnrich(
 
   return validated.draft;
 
+}
+
+
+
+async function generatePlanNewCandidates(
+  request: AgentPlanRequest,
+  intent: TravelIntentSnapshot,
+  routedIntent: string,
+  trace: AgentPlanResult['toolTrace'],
+  hooks?: AgentPlanStreamHooks,
+): Promise<AgentPlanResult> {
+  const locale = request.locale ?? 'zh-CN';
+  const context = await loadPlanUserContext(request.userId);
+
+  hooks?.onToolStart?.('build_route_variants');
+  const variantStart = Date.now();
+  const variantResult = await runBuildRouteVariantsTool({
+    intent,
+    locale,
+    userId: request.userId,
+  });
+  const variantMs = Date.now() - variantStart;
+  if (!variantResult.ok) {
+    trace.push({ tool: 'build_route_variants', ok: false, ms: variantMs });
+    hooks?.onToolEnd?.('build_route_variants', false, variantMs);
+    throw new Error(variantResult.error.message);
+  }
+  trace.push({ tool: 'build_route_variants', ok: true, ms: variantMs });
+  hooks?.onToolEnd?.('build_route_variants', true, variantMs);
+
+  const variants = variantResult.data.variants as Array<{
+    key: string;
+    label: string;
+    hint: string;
+    sortOrder: number;
+  }>;
+  const candidates: AgentPlanCandidateDraft[] = [];
+
+  for (const variant of variants) {
+    const genStart = Date.now();
+    hooks?.onToolStart?.('generate_route_draft');
+    const result = await generateRoute(
+      {
+        prompt: request.prompt,
+        history: request.history,
+        days: request.days,
+        budget: request.budget,
+        provider: request.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
+        locale,
+        intent,
+        userId: request.userId,
+        variantKey: variant.key,
+        variantHint: variant.hint,
+        ragVariantIndex: variant.sortOrder,
+        excludePoiNames: context.excludePoiNames,
+        boostPoiNames: context.boostPoiNames,
+      },
+      { draftOnly: true },
+    );
+    const genMs = Date.now() - genStart;
+    trace.push({ tool: 'generate_route_draft', ok: true, ms: genMs });
+    hooks?.onToolEnd?.('generate_route_draft', true, genMs);
+
+    const finalized = await finalizeDraftWithEnrich(result, intent, locale, trace, hooks);
+    candidates.push({
+      draft: { ...finalized, generationSource: 'llm', intent: result.intent ?? intent },
+      variantKey: variant.key,
+      label: variant.label,
+      sortOrder: variant.sortOrder,
+    });
+  }
+
+  const primary = candidates[0];
+  if (!primary) {
+    throw new Error('PLAN_GENERATE_EMPTY');
+  }
+
+  return {
+    draft: primary.draft,
+    candidates,
+    toolTrace: trace,
+    routedIntent,
+  };
 }
 
 
@@ -464,6 +561,10 @@ async function runLocalAgentPlan(
 
 
   const context = await loadPlanUserContext(request.userId);
+
+  if (!draft && intent) {
+    return generatePlanNewCandidates(request, intent, routed.route, trace, hooks);
+  }
 
   const genStart = Date.now();
 

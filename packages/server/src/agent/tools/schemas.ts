@@ -43,6 +43,7 @@ export const generateRouteDraftInputSchema = z.object({
   ragCandidates: z.array(z.record(z.unknown())).optional(),
   variantHint: z.string().optional(),
   variantKey: z.string().optional(),
+  ragVariantIndex: z.number().int().min(0).optional(),
   userId: z.number().int().positive().optional(),
 });
 
@@ -104,6 +105,13 @@ export const writeMemoryInputSchema = z.object({
   metadata: z.record(z.unknown()).optional(),
 });
 
+export const buildRouteVariantsInputSchema = z.object({
+  intent: z.record(z.unknown()),
+  locale: z.enum(['zh-CN', 'en-US']).optional(),
+  userId: z.number().int().positive().optional(),
+  candidateCount: z.number().int().positive().optional(),
+});
+
 export type ToolName =
   | 'parse_intent'
   | 'retrieve_attractions'
@@ -111,6 +119,7 @@ export type ToolName =
   | 'generate_route_draft'
   | 'enrich_route'
   | 'validate_route'
+  | 'build_route_variants'
   | 'patch_route_day'
   | 'tune_route_budget'
   | 'answer_food_qa'

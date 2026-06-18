@@ -144,6 +144,65 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
   };
 }
 
+/** C7 Step 14：将 Agent 已 finalize 的 draft 写入新路线（首句 Agent 入库） */
+export async function createRouteFromAgentDraft(
+  userId: number,
+  draft: GeneratedRouteDraft & {
+    generationSource?: 'llm' | 'template';
+    llmProvider?: string;
+    intent?: TravelIntentSnapshot;
+  },
+  options: { sourcePrompt: string; provider?: GenerateRouteInput['provider'] },
+) {
+  const draftWithMeta: GeneratedRouteDraft & { generationSource: 'llm' | 'template' } = {
+    ...draft,
+    generationSource: draft.generationSource ?? 'llm',
+    isAiGenerated: draft.isAiGenerated ?? true,
+  };
+  const db = getDb();
+  const linkedDays = await syncDraftToAttractionLibrary(draftWithMeta);
+  const detail = buildRouteDetailFromDraft(draftWithMeta, linkedDays, {
+    sourcePrompt: options.sourcePrompt.trim(),
+    provider: options.provider,
+  });
+
+  const [result] = await db.insert(travelRoutes).values({
+    name: draft.name,
+    description: draft.description,
+    budgetRange: draft.budgetRange,
+    days: draft.days,
+    interestTags: draft.interestTags,
+    routeDetail: detail,
+    creatorId: userId,
+    status: RouteStatus.DRAFT,
+  });
+
+  const id = Number(result.insertId);
+  const route = await getRouteById(id, userId, { recordView: false });
+  if (!route) {
+    throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
+  }
+
+  void recordPlanQualityMetrics({
+    userId,
+    routeId: id,
+    poiHitRate:
+      (draft.ragMatchedCount ?? 0) / Math.max(draft.ragCandidateCount ?? 1, 1),
+    ragMatchedCount: draft.ragMatchedCount ?? 0,
+    ragCandidateCount: draft.ragCandidateCount ?? 0,
+    generationSource: draftWithMeta.generationSource,
+    matchedCity: draft.matchedCity,
+    lodgingContentLibraryRatio: computeLodgingContentLibraryRatio(draftWithMeta),
+  });
+
+  return {
+    route,
+    generationSource: draftWithMeta.generationSource,
+    llmProvider: draft.llmProvider,
+    intent: draft.intent,
+  };
+}
+
 export async function listUserRoutes(userId: number) {
   const db = getDb();
   const rows = await db

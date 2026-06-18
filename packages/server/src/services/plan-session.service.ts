@@ -14,6 +14,7 @@ import {
   buildMultiCandidateAssistantReply,
   buildPlanAssistantReply,
   buildPlanCandidateSwitchedReply,
+  appendPlanAssistantWarnings,
   formatPlanVariantHint,
   formatPlanVariantLabel,
   type LocaleCode,
@@ -27,6 +28,7 @@ import {
 } from '../db/schema/plan-sessions.js';
 import {
   createRouteFromPrompt,
+  createRouteFromAgentDraft,
   regenerateRouteFromPrompt,
   updateRouteFromAgentDraft,
   getRouteById,
@@ -98,7 +100,7 @@ function buildPersistedAgentState(
 ): PlanSessionAgentState {
   if (
     agentResult
-    && (agentResult.draft || agentResult.assistantMessage || agentResult.selectedRouteId != null)
+    && (agentResult.draft || agentResult.candidates?.length || agentResult.assistantMessage || agentResult.selectedRouteId != null)
   ) {
     return {
       lastRoutedIntent: agentResult.routedIntent || routedRoute,
@@ -369,6 +371,107 @@ async function generateSessionCandidates(
   return { rows: results, candidateCount, memberLevel };
 }
 
+async function persistAgentResultAsSessionCandidates(
+  userId: number,
+  baseInput: GenerateRouteInput,
+  locale: LocaleCode,
+  agentResult: AgentPlanResult,
+): Promise<{ rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number } | null> {
+  const memberLevel = await getUserMemberLevel(userId);
+  const candidateCount = await getPlanCandidateCountForUser(userId);
+
+  const candidateDrafts = agentResult.candidates?.length
+    ? agentResult.candidates
+    : agentResult.draft
+      ? [{
+          draft: agentResult.draft,
+          variantKey: 'classic',
+          label: formatPlanVariantLabel('classic', locale),
+          sortOrder: 0,
+        }]
+      : [];
+
+  if (candidateDrafts.length === 0) return null;
+
+  const results: GeneratedCandidateRow[] = [];
+  for (const item of candidateDrafts) {
+    try {
+      const { route, generationSource, llmProvider } = await createRouteFromAgentDraft(
+        userId,
+        item.draft as GeneratedRouteDraft & {
+          generationSource?: 'llm' | 'template';
+          llmProvider?: string;
+          intent?: TravelIntentSnapshot;
+        },
+        {
+          sourcePrompt: baseInput.prompt.trim(),
+          provider: baseInput.provider,
+        },
+      );
+      results.push({
+        route,
+        generationSource,
+        llmProvider,
+        label: item.label,
+        variantKey: item.variantKey,
+        sortOrder: item.sortOrder,
+      });
+    } catch (err) {
+      console.warn(
+        `[plan-session] Agent 候选 ${item.variantKey} 入库失败:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+
+  if (results.length === 0) return null;
+  return { rows: results, candidateCount, memberLevel };
+}
+
+async function tryGenerateSessionCandidatesViaAgent(
+  userId: number,
+  baseInput: GenerateRouteInput,
+  intent: TravelIntentSnapshot,
+  locale: LocaleCode,
+): Promise<{
+  pack: { rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number };
+  agentState: PlanSessionAgentState;
+} | null> {
+  if (!isAgentPlanEnabled()) return null;
+
+  try {
+    const agentResult = await runAgentPlan({
+      prompt: baseInput.prompt,
+      userId,
+      days: baseInput.days,
+      budget: baseInput.budget,
+      provider: baseInput.provider ?? 'auto',
+      locale,
+      intent,
+    });
+    if (!agentResult) return null;
+
+    const pack = await persistAgentResultAsSessionCandidates(
+      userId,
+      baseInput,
+      locale,
+      agentResult,
+    );
+    if (!pack) return null;
+
+    return {
+      pack,
+      agentState: buildPersistedAgentState(agentResult.routedIntent || 'plan_new', agentResult),
+    };
+  } catch (err) {
+    console.warn(
+      '[plan-session] Agent 首句失败，降级管道:',
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
 async function persistSessionCandidates(
   sessionId: number,
   rows: GeneratedCandidateRow[],
@@ -486,7 +589,15 @@ export async function createPlanSession(
     boostPoiNames: userContext.boostPoiNames,
   };
 
-  const generatedPack = await generateSessionCandidates(userId, generateInput, resolvedIntent, locale);
+  const agentGenerated = await tryGenerateSessionCandidatesViaAgent(
+    userId,
+    generateInput,
+    resolvedIntent,
+    locale,
+  );
+  const generatedPack = agentGenerated?.pack
+    ?? await generateSessionCandidates(userId, generateInput, resolvedIntent, locale);
+  const persistedAgentState = agentGenerated?.agentState ?? null;
   const generated = generatedPack.rows;
   if (generated.length === 0) {
     throw new ApiError(ApiMessageKey.PLAN_GENERATE_EMPTY);
@@ -496,7 +607,7 @@ export async function createPlanSession(
   const memberLevel = generatedPack.memberLevel;
   const memberPlanCandidateCount = generatedPack.candidateCount;
   const memberLevelLabel = getMemberLevelLabel(memberLevel);
-  const assistantMessage =
+  const assistantMessage = appendPlanAssistantWarnings(
     generated.length > 1
       ? buildMultiCandidateAssistantReply(
           generated.length,
@@ -504,7 +615,10 @@ export async function createPlanSession(
           resolvedIntent,
           locale,
         )
-      : buildPlanAssistantReply(primary.route, resolvedIntent, locale);
+      : buildPlanAssistantReply(primary.route, resolvedIntent, locale),
+    primary.route,
+    locale,
+  );
   const snapshot = snapshotFromRoute(primary.route);
 
   const db = getDb();
@@ -515,6 +629,7 @@ export async function createPlanSession(
     status: PlanSessionStatus.ACTIVE,
     title: truncateTitle(prompt),
     intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+    agentState: persistedAgentState,
   });
   const sessionId = Number(sessionResult.insertId);
 
@@ -551,6 +666,7 @@ export async function createPlanSession(
     memberPlanCandidateCount,
     memberLevel,
     memberLevelLabel,
+    agentState: persistedAgentState,
   });
 }
 
@@ -578,9 +694,9 @@ export async function selectPlanSessionCandidate(
   if (!route) return null;
 
   const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);
-  const assistantMessage = buildPlanCandidateSwitchedReply(
-    picked.variantKey,
-    route.name,
+  const assistantMessage = appendPlanAssistantWarnings(
+    buildPlanCandidateSwitchedReply(picked.variantKey, route.name, locale),
+    route,
     locale,
   );
 
@@ -649,6 +765,7 @@ export async function appendPlanSessionMessage(
       mergeIntentWithUserContext(intent, userContext),
     );
 
+    let routeContentUpdated = false;
     let result: Awaited<ReturnType<typeof regenerateRouteFromPrompt>> = null;
     const routed = routeAgentIntent(text);
     let agentResult: AgentPlanResult | null = null;
@@ -680,6 +797,7 @@ export async function appendPlanSessionMessage(
         await applyPlanVariantToSession(sessionId, userId, agentResult.selectedRouteId);
         const switchedRoute = await getRouteById(agentResult.selectedRouteId, userId);
         if (switchedRoute) {
+          routeContentUpdated = true;
           result = {
             route: switchedRoute,
             generationSource: 'llm',
@@ -703,6 +821,7 @@ export async function appendPlanSessionMessage(
           intent: agentResult.draft.intent ?? resolvedIntent,
         });
         if (updated) {
+          routeContentUpdated = true;
           result = {
             ...updated,
             llmProvider: undefined,
@@ -728,6 +847,7 @@ export async function appendPlanSessionMessage(
         result = await runPlanSessionTrackedTool(sessionId, 'generate_route_draft', () =>
           regenerateRouteFromPrompt(routeId, userId, generateInput),
         );
+        if (result) routeContentUpdated = true;
       }
     }
 
@@ -755,6 +875,7 @@ export async function appendPlanSessionMessage(
           await applyPlanVariantToSession(sessionId, userId, selected.routeId);
           const switchedRoute = await getRouteById(selected.routeId, userId);
           if (switchedRoute) {
+            routeContentUpdated = true;
             result = {
               route: switchedRoute,
               generationSource: 'llm',
@@ -779,6 +900,7 @@ export async function appendPlanSessionMessage(
         result = await runPlanSessionTrackedTool(sessionId, 'generate_route_draft', () =>
           regenerateRouteFromPrompt(routeId, userId, generateInput),
         );
+        if (result) routeContentUpdated = true;
       }
     }
     if (!result) {
@@ -787,9 +909,12 @@ export async function appendPlanSessionMessage(
     }
 
     const { route, generationSource, llmProvider, intent: resultIntent } = result;
-    const assistantMessage =
+    let assistantMessage =
       assistantMessageOverride
       ?? buildPlanAssistantReply(route, resultIntent ?? resolvedIntent, locale);
+    if (routeContentUpdated) {
+      assistantMessage = appendPlanAssistantWarnings(assistantMessage, route, locale);
+    }
     const snapshot =
       routed.route === 'qa_food' ? null : snapshotFromRoute(route);
     const refreshedCandidates = await loadSessionCandidates(sessionId, userId, locale);

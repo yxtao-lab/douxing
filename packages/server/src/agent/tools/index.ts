@@ -5,6 +5,7 @@ import { runRetrievePlaybooksTool } from './retrieve-playbooks.tool.js';
 import { runGenerateRouteDraftTool } from './generate-route-draft.tool.js';
 import { runEnrichRouteTool } from './enrich-route.tool.js';
 import { runValidateRouteTool } from './validate-route.tool.js';
+import { runBuildRouteVariantsTool } from './build-route-variants.tool.js';
 import { runPatchRouteDayTool } from './patch-route-day.tool.js';
 import { runTuneRouteBudgetTool } from './tune-route-budget.tool.js';
 import { runAnswerFoodQaTool } from './answer-food-qa.tool.js';
@@ -23,6 +24,7 @@ export const AGENT_TOOL_NAMES: ToolName[] = [
   'generate_route_draft',
   'enrich_route',
   'validate_route',
+  'build_route_variants',
   'patch_route_day',
   'tune_route_budget',
   'answer_food_qa',
@@ -45,6 +47,8 @@ export async function executeAgentTool(name: ToolName, input: unknown) {
       return runEnrichRouteTool(input);
     case 'validate_route':
       return runValidateRouteTool(input);
+    case 'build_route_variants':
+      return runBuildRouteVariantsTool(input);
     case 'patch_route_day':
       return runPatchRouteDayTool(input);
     case 'tune_route_budget':
