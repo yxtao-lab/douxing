@@ -43,6 +43,25 @@ export function getOssPhotosPrefix(): string {
   return raw.endsWith('/') ? raw : `${raw}/`;
 }
 
+/** ML 训练数据集 OSS 前缀，默认 douxing/datasets/v0.1/ */
+export function getOssMlDatasetsPrefix(): string {
+  const raw = trimEnv('OSS_ML_DATASETS_PREFIX') || 'douxing/datasets/v0.1/';
+  return raw.endsWith('/') ? raw : `${raw}/`;
+}
+
+/** ML LoRA checkpoint 输出 OSS 前缀，默认 douxing/checkpoints/v0.1/ */
+export function getOssMlCheckpointsPrefix(): string {
+  const raw = trimEnv('OSS_ML_CHECKPOINTS_PREFIX') || 'douxing/checkpoints/v0.1/';
+  return raw.endsWith('/') ? raw : `${raw}/`;
+}
+
+/** 拼 PAI / ossutil 使用的 oss:// URI */
+export function buildOssUri(objectKey: string): string {
+  const bucket = getOssBucket();
+  const key = objectKey.replace(/^\//, '');
+  return `oss://${bucket}/${key}`;
+}
+
 /** Wikimedia 封面兜底，默认开启（OSS 无关） */
 export function isWikimediaImageEnrichEnabled(): boolean {
   return trimEnv('WIKIMEDIA_IMAGE_ENRICH_ENABLED') !== 'false';

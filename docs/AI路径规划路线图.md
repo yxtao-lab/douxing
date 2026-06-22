@@ -436,6 +436,16 @@ UI：打卡庆祝 Sheet · 路线详情「行中分析」
 
 操作手册：[阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md)
 
+**Step 35 · I2 PAI LoRA 微调（进行中）**
+
+```text
+数据：扩充 prompts-seed.jsonl（≥50 条）→ ml:generate-dataset → ml:validate-dataset -- --split
+上传：ml:upload-dataset（OSS_ENABLED=true）→ manifests/pai-job-v0.1.json
+训练：PAI Model Gallery → DeepSeek-R1-Distill-Qwen-7B → LoRA SFT（超参见 distill-qwen-7b-lora.yaml）
+验收：pnpm --filter @douxing/server i2:pai-lora-cases [--verify-oss]
+完成标准：PAI 任务成功 + checkpoint 可导入百炼（Step 36）
+```
+
 ---
 
 ## 7. 环境与验证
@@ -480,6 +490,10 @@ pnpm --filter @douxing/server h3-d:in-trip-cases               # M5 Step 34 H3-d
 pnpm --filter @douxing/server h3-d:in-trip-cases -- --skip-db
 pnpm --filter @douxing/server h5:m5-accept                       # M5 一键验收（Step 31～34）
 pnpm --filter @douxing/server h5:m5-accept -- --skip-db
+pnpm ml:upload-dataset                                           # I2 Step 35 上传 train/val 至 OSS
+pnpm ml:upload-dataset -- --dry-run                              # 仅生成 manifest，不上传
+pnpm --filter @douxing/server i2:pai-lora-cases                  # I2 Step 35 本地验收
+pnpm --filter @douxing/server i2:pai-lora-cases -- --verify-oss   # 含 OSS 对象校验
 pnpm --filter @douxing/server langfuse:smoke
 
 pnpm --filter @douxing/server exec tsc --noEmit

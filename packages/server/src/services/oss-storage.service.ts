@@ -62,6 +62,24 @@ export function parseOssObjectKeyFromUrl(url: string): string | null {
   return null;
 }
 
+export async function headOssObject(objectKey: string): Promise<{ size: number; lastModified?: Date } | null> {
+  if (!isOssEnabled()) return null;
+  const oss = getOssClient();
+  const key = objectKey.replace(/^\//, '');
+  try {
+    const meta = await oss.head(key);
+    const headers = meta.res.headers as Record<string, string | number | undefined>;
+    return {
+      size: Number(headers['content-length'] ?? 0),
+      lastModified: headers['last-modified']
+        ? new Date(String(headers['last-modified']))
+        : undefined,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function uploadBufferToOss(
   objectKey: string,
   buffer: Buffer,
@@ -76,6 +94,17 @@ export async function uploadBufferToOss(
     },
   });
   return buildOssPublicUrl(key);
+}
+
+/** 上传本地文件至 OSS（ML 数据集等） */
+export async function uploadLocalFileToOss(
+  localPath: string,
+  objectKey: string,
+  contentType = 'application/jsonl',
+): Promise<string> {
+  const { readFileSync } = await import('node:fs');
+  const buffer = readFileSync(localPath);
+  return uploadBufferToOss(objectKey, buffer, contentType);
 }
 
 export async function deleteOssObject(objectKey: string): Promise<void> {

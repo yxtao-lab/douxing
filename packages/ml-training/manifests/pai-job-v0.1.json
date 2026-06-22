@@ -1,0 +1,24 @@
+{
+  "version": "v0.1",
+  "createdAt": "2026-06-18T09:27:44.287Z",
+  "baseModel": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+  "finetuningType": "lora",
+  "dataset": {
+    "train": "oss://YOUR_OSS_BUCKET/douxing/datasets/v0.1/train.jsonl",
+    "val": "oss://YOUR_OSS_BUCKET/douxing/datasets/v0.1/val.jsonl",
+    "trainCount": 17,
+    "valCount": 1
+  },
+  "checkpointOutput": "oss://YOUR_OSS_BUCKET/douxing/checkpoints/v0.1/",
+  "hyperparams": {
+    "num_train_epochs": 3,
+    "learning_rate": 0.0001,
+    "seq_length": 4096,
+    "per_device_train_batch_size": 2,
+    "lora_rank": 16,
+    "warmup_ratio": 0.1
+  },
+  "configFile": "packages/ml-training/configs/distill-qwen-7b-lora.yaml",
+  "paiConsole": "https://pai.console.aliyun.com/",
+  "notes": "PAI Model Gallery → DeepSeek-R1-Distill-Qwen-7B → 训练 → LoRA SFT"
+}

@@ -50,6 +50,7 @@
     "db:reset": "node scripts/pm.mjs filter @douxing/server db:reset",
     "ml:generate-dataset": "node scripts/pm.mjs filter @douxing/server ml:generate-dataset",
     "ml:validate-dataset": "node scripts/pm.mjs filter @douxing/server ml:validate-dataset",
+    "ml:upload-dataset": "node scripts/pm.mjs filter @douxing/server ml:upload-dataset",
     "enrich:attraction-images": "node scripts/pm.mjs filter @douxing/server enrich:attraction-images",
     "cleanup:orphan-covers": "node scripts/pm.mjs filter @douxing/server cleanup:orphan-covers",
     "migrate:covers-to-oss": "node scripts/pm.mjs filter @douxing/server migrate:covers-to-oss",
