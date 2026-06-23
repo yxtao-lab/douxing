@@ -114,7 +114,13 @@
 | `pnpm cleanup:orphan-covers` | `cleanup-orphan-attraction-covers.ts` | 清理无引用封面文件 |
 | `pnpm migrate:covers-to-oss` | `migrate-attraction-covers-to-oss.ts` | 本地封面上传 OSS |
 | `pnpm ml:generate-dataset` | `generate-training-dataset.ts` | DeepSeek 生成训练集 JSONL |
-| `pnpm ml:validate-dataset` | `validate-training-dataset.ts` | 校验训练集格式 |
+| `pnpm ml:validate-dataset` | `validate-training-dataset.ts` | 校验训练集格式并划分 train/val |
+| `pnpm ml:upload-dataset` | `upload-training-dataset-to-oss.ts` | 上传 train/val 至 OSS + 生成 PAI manifest |
+| `pnpm --filter @douxing/server i2:pai-lora-cases` | `i2-pai-lora-cases.ts` | I2 Step 35 本地验收（可选 `--verify-oss`） |
+| `pnpm --filter @douxing/server agent:intent-cases` | `agent-intent-cases.ts` | Agent 追问意图路由用例 |
+| `pnpm --filter @douxing/server agent:equivalence-cases` | `agent-equivalence-cases.ts` | 管道 vs Agent 等价率 |
+| `pnpm --filter @douxing/server h5:m5-accept` | `h5-m5-accept.ts` | M5 行中智能一键验收 |
+| `pnpm --filter @douxing/server langfuse:smoke` | `langfuse-smoke.ts` | Langfuse 观测冒烟 |
 | `pnpm --filter @douxing/server enricher:demo` | `enricher-demo.ts` | 本地 Enricher 演示（不经过 HTTP） |
 
 ---

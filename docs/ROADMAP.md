@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.40  
-**更新日期**：2026-06-18  
+**文档版本**：3.41  
+**更新日期**：2026-06-23  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/pc` · `packages/mobile` · `packages/server` · `packages/shared`）  
 **新增专题**：[系统管理.md](./系统管理.md) · [发单接单平台.md](./发单接单平台.md) · [数字孪生与三维建模.md](./数字孪生与三维建模.md) · [AI旅行宠物.md](./AI旅行宠物.md) · [旅行日记博客.md](./旅行日记博客.md) · [用户粘性与旅友圈战略.md](./用户粘性与旅友圈战略.md) · [Web管理端表格规范.md](./Web管理端表格规范.md)
 
@@ -175,6 +175,7 @@ gantt
 | v0.9.28 | 2026-06-18 | **H3-a 领养 API** | `POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey | Step 25 ✅ |
 | v0.9.29 | 2026-06-18 | **H3-b/c + C7-c · M4** | `TravelPetFloatingLayer` · `PlanPetFocusCard` · 记忆墙/analyze · `h3:m4-accept` | **M4 达成** |
 | v0.9.31 | 2026-06-18 | **M5 达成** | H7/H8/H3-d 行中智能 · `h5:m5-accept` · 指针 → Step 35 I2 LoRA | — |
+| v0.9.32 | 2026-06-22 | **I2 Step 35 上传脚本** | `pnpm ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` · OSS 校验 | PAI 微调任务待执行 |
 | v0.9.30 | 2026-06-18 | **文档同步** | 路线图/下一步/API 文档对齐 M4；指针 → Step 31 H8 | — |
 | v0.9.23 | 2026-06-15 | **W2 Web 管理端表格规范** | 全列表 `AdminSearchBar` 筛选 · `AdminTableExportButton` XLSX 导出（表头/文件名 i18n + 时间戳）· 空值 `-` 占位 · [Web管理端表格规范.md](./Web管理端表格规范.md) · `.cursor/rules/web-admin-table-filter.mdc` | 业务/系统/监控/日志/会员/分析内嵌表均可导出；见 [§ W2](./开发记录-重难点与亮点.md#web-管理端表格筛选导出与空值占位2026-06-15) |
 
@@ -608,7 +609,7 @@ Python ai-service → Node LLM → 模板/RAG
 | 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|----------|------|------|----------|----------|
 | **I1** | [x] | 2026-06-01 | **训练数据生成与校验** | C2、C3、H9-4、DeepSeek | `generate-training-dataset.ts`；`validate-training-dataset.ts`；`buildTrainingSample` 复用线上 prompt 链；`packages/ml-training/datasets/` | `pnpm ml:generate-dataset` 产出 `raw.jsonl`；`pnpm ml:validate-dataset -- --split` 产出 train/val；无效样本被过滤 |
-| **I2** | [ ] | 待定 | **PAI LoRA 微调** | I1、阿里云 OSS | 上传 train/val 至 OSS；PAI Model Gallery 按 `distill-qwen-7b-lora.yaml` 训练 | 微调任务成功；模型 artifact 可下载或注册百炼 |
+| **I2** | [~] | 2026-06-22 | **PAI LoRA 微调** | I1、阿里云 OSS | `ml:upload-dataset` 上传 train/val + manifest；PAI Model Gallery 按 `distill-qwen-7b-lora.yaml` 训练 | 上传脚本与 `i2:pai-lora-cases` 已交付；**PAI 微调任务待完成** |
 | **I3** | [ ] | 待定 | **百炼推理接入与 A/B** | I2、G8 | DashScope Endpoint；server `llmProvider` 新增专属模型选项；失败降级 DeepSeek | 生产可切换 provider；JSON 合法率与 POI 命中率优于基线（见阿里云 doc §8） |
 
 **推荐实施顺序（专属模型）**：`I1`（已完成）→ 扩充 `prompts-seed.jsonl` 并批量造数 → `I2` → `I3`；与 **H2-a** 宣传 Sprint 可并行（不同人力线）。

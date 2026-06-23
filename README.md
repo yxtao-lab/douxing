@@ -38,7 +38,8 @@
 | Web 管理端表格规范 | [docs/Web管理端表格规范.md](docs/Web管理端表格规范.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
-| AI 路径规划路线图（Step 12→M6） | [docs/AI路径规划路线图.md](docs/AI路径规划路线图.md) |
+| AI 路径规划路线图（Step 35→M6） | [docs/AI路径规划路线图.md](docs/AI路径规划路线图.md) |
+| 专属模型训练（I2/I3） | [docs/阿里云-兜行专属模型训练与部署.md](docs/阿里云-兜行专属模型训练与部署.md) · [packages/ml-training/README.md](packages/ml-training/README.md) |
 | AI 规划与 Agent 演进（设计全稿） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
@@ -58,7 +59,8 @@ project/
 │   ├── mobile/     # UniApp 移动端
 │   ├── server/     # Node 后端 API
 │   ├── shared/     # 跨端共享类型
-│   └── ai-service/ # Python AI 微服务（可选，:8100）
+│   ├── ai-service/ # Python AI 微服务（可选，:8100）
+│   └── ml-training/# 专属模型 LoRA 训练数据与配置
 ├── docs/         # 路线图等文档
 ├── scripts/      # 部署脚本
 ├── docker-compose.yml
@@ -239,9 +241,14 @@ pnpm lint          # 各包 TypeScript 检查（若配置）
 
 # 修改 Drizzle schema 后生成迁移（在 server 包）
 pnpm --filter @douxing/server db:generate
+
+# 专属模型训练数据（I2，需 DEEPSEEK_API_KEY + MySQL）
+pnpm ml:generate-dataset
+pnpm ml:validate-dataset -- --split
+pnpm ml:upload-dataset              # 上传 OSS + 生成 PAI manifest（需 OSS_ENABLED=true）
 ```
 
-AI 路线生成（DeepSeek / LM Studio）环境变量与接口说明见下文 [AI 模型接入](#ai-模型接入-deepseek--lm-studio)。
+AI 路线生成（DeepSeek / LM Studio）环境变量与接口说明见下文 [AI 模型接入](#ai-模型接入-deepseek--lm-studio)。专属模型全流程见 [docs/阿里云-兜行专属模型训练与部署.md](docs/阿里云-兜行专属模型训练与部署.md)。
 
 ### 平台标识表
 
@@ -332,7 +339,7 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
-> **完整接口文档**（93 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **完整接口文档**（97 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
 > **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）  
 > **系统管理接口**（`/api/system/*`）见 [docs/系统管理.md](./docs/系统管理.md)，未纳入 OpenAPI 主链
 
@@ -554,7 +561,8 @@ project/                    ← 根包（douxing），只做编排，不写业�
 │   ├── mobile/             ← @douxing/mobile  移动端
 │   ├── server/             ← @douxing/server  后端
 │   ├── shared/             ← @douxing/shared  跨端共享
-│   └── ai-service/         ← @douxing/ai      Python AI 微服务
+│   ├── ai-service/         ← @douxing/ai      Python AI 微服务
+│   └── ml-training/        ← @douxing/ml      专属模型训练数据
 ├── scripts/                ← 全仓库级脚本（bootstrap）
 ├── docker-compose.yml      ← 全仓库级基础设施
 └── .env                    ← 全仓库级环境变量

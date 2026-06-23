@@ -39,6 +39,7 @@
 | [amap-geocoding.md](./amap-geocoding.md) | 高德 POI 搜索 / 地理编码 / **封面拉图** 接入与配置 |
 | [代码解析与审核.md](./代码解析与审核.md) | **功能代码解析模板** + 实现原理 / 运行步骤 / Review 清单 |
 | [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) | **专属模型**：DeepSeek 造数据 → PAI LoRA → 百炼推理 → Debian 接入 |
+| [../packages/ml-training/README.md](../packages/ml-training/README.md) | **ML 训练数据**：`pnpm ml:*` 命令与目录结构 |
 | [移动端支付联调说明.md](./移动端支付联调说明.md) | 微信小程序支付联调与沙箱说明 |
 | [../scripts/app-native.md](../scripts/app-native.md) | iOS / Android 一键部署与单平台开发 |
 | [../scripts/mp-weixin.md](../scripts/mp-weixin.md) | 微信小程序编译与开发者工具 |
@@ -62,4 +63,4 @@
 
 日常开发脚本说明见 [../scripts/README.md](../scripts/README.md)。详细设计以 **Markdown 版** [详细设计文档.md](./详细设计文档.md) 为准（含 **§17 实施补充**）。
 
-**最后更新**：2026-06-18（**M5 已达成** · **H7/H8/H3-d 行中智能已交付** · 当前 **Step 35 I2 PAI LoRA**）
+**最后更新**：2026-06-23（**M5 已达成** · **I2 Step 35 上传脚本已交付** · 当前 **PAI LoRA 微调** · S1 RBAC 并行）

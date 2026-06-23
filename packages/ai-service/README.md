@@ -117,6 +117,6 @@ Tool 权威实现：`packages/server/src/agent/tools/`。
 
 ## 相关文档
 
-- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · M1 ✅ · Step 10～11 ✅ · 当前 Step 12**
+- [AI路径规划路线图.md](../../docs/AI路径规划路线图.md) — **Step 1～42 · M1～M5 ✅ · 当前 Step 35（I2 PAI LoRA）**
 - [AI规划与Agent演进.md](../../docs/AI规划与Agent演进.md) — 设计全稿
 - [开发记录 § C7](../../docs/开发记录-重难点与亮点.md#c7-ai-agent-代码落地2026-06-16) · [Step 10～11](../../docs/开发记录-重难点与亮点.md#c7--step-1011-等价率与-langfuse2026-06-17)
