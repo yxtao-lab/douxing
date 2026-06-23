@@ -6,12 +6,12 @@
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：2.6  
-**最后更新**：2026-06-18  
+**最后更新**：2026-06-23  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话 + Agent 灰度」**；M1～M5 已验收，生产默认仍 `AGENT_PLAN_ENABLED=false`。
 
 > **分工**：本文 = **为什么 / 怎么设计**；[AI路径规划路线图.md](./AI路径规划路线图.md) = **现在做什么 / 做到哪算完成**。
 
-### 实现进度速览（2026-06-18）
+### 实现进度速览（2026-06-23）
 
 > 逐步验收清单与 **Step 1～42** 见 **[AI路径规划路线图 §1](./AI路径规划路线图.md#1-主执行路径step-1--step-40)**；**下一项：Step 35 I2 PAI LoRA 微调**。
 
@@ -719,5 +719,6 @@ LANGFUSE_SECRET_KEY=
 | 2026-06-11 | 1.0 | 初版：现状 + C7 路线 + Tool 映射 |
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
 | 2026-06-18 | 2.6 | **M5 达成**：H7/H8/H3-d · `replan_segment` · `transit_agent` · `detect_missed_pois` · 指针 → Step 35 |
+| 2026-06-22 | 2.7 | **I2 Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest |
 | 2026-06-17 | 2.3 | **M1 达成**：C7-b Step 1～9 验收 · SSE API ✅ · 指针 → Step 10 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |

@@ -691,3 +691,7 @@ sudo bash scripts/setup-ubuntu22.sh
 | `scripts/deploy-server.mjs` | API 部署 |
 | `scripts/diagnose-server.sh` | 故障诊断 |
 | `deploy/env.production.example` | 生产 `.env` 模板 |
+
+---
+
+*最后更新：2026-06-23*

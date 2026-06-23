@@ -122,7 +122,22 @@ pnpm build:web
 
 ---
 
-## 8. 相关文档
+## 8. OSS 与 ML 训练数据（I2）
+
+| 变量 | 说明 |
+|------|------|
+| `OSS_ENABLED` | `true` 时启用 OSS 上传（封面、相册、**ML 数据集**） |
+| `OSS_REGION` / `OSS_BUCKET` | 阿里云 OSS 地域与 Bucket |
+| `OSS_ACCESS_KEY_ID` / `OSS_ACCESS_KEY_SECRET` | RAM 密钥（勿提交 Git） |
+| `OSS_ML_DATASETS_PREFIX` | ML train/val 上传前缀，如 `douxing/datasets/v0.1/` |
+| `OSS_ML_CHECKPOINTS_PREFIX` | PAI 产出 checkpoint 前缀（可选） |
+
+上传命令：`pnpm ml:upload-dataset`（生成 `packages/ml-training/manifests/pai-job-v0.1.json`）。  
+详见 [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) · [packages/ml-training/README.md](../packages/ml-training/README.md)。
+
+---
+
+## 9. 相关文档
 
 | 文档 | 内容 |
 |------|------|
@@ -132,4 +147,4 @@ pnpm build:web
 
 ---
 
-*最后更新：2026-06-18*
+*最后更新：2026-06-23*

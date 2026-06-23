@@ -21,6 +21,8 @@
 | **完成标准** | 见 Phase 6 Step 35 |
 | **完成后** | Step 36 百炼推理接入 |
 
+**Step 35 进行中（2026-06-22）**：`ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` 已交付；**PAI Model Gallery 微调任务待执行**。
+
 **Step 34 已达成（2026-06-18）**：`pet-exp.service.ts` · `in_trip`/`in_plan` analyze · 打卡庆祝 UI · `h3-d:in-trip-cases` · **`h5:m5-accept` M5 达成**。
 
 **Step 31 已达成（2026-06-18）**：`replan_segment` Tool · `scheduleRemainingPoisFromGps` · GPS + 剩余 POI 重排 · `replan-segment:cases` 全绿。
@@ -631,3 +633,4 @@ pnpm dev
 | 2026-06-18 | 4.1 | **Step 31～32 达成**：`replan_segment` · `transit_agent` · 行中 UI · 指针 → Step 33 |
 | 2026-06-18 | 4.2 | **Step 33 达成**：H7 `detect_missed_pois` · 遗漏分析 API/UI · regret 记忆 · 指针 → Step 34 |
 | 2026-06-18 | 4.3 | **Step 34 / M5 达成**：H3-d 打卡 exp · in_trip analyze · `h5:m5-accept` · 指针 → Step 35 |
+| 2026-06-22 | 4.4 | **Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest · PAI 微调待执行 |

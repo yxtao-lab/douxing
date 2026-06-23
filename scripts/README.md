@@ -2,7 +2,8 @@
 
 > 根目录 `package.json` 里的 `pnpm xxx` 命令，多数会转发到本目录下的脚本。  
 > 日常只需记住：**开发 `pnpm dev`**、**查环境 `pnpm env:status`**、**部署 `pnpm bootstrap` / `pnpm deploy:server`**。  
-> **发版流程原理** → [docs/发版流程与CI-CD解析.md](../docs/发版流程与CI-CD解析.md) · **命令速查** → [docs/服务端命令手册.md](../docs/服务端命令手册.md)
+> **发版流程原理** → [docs/发版流程与CI-CD解析.md](../docs/发版流程与CI-CD解析.md) · **命令速查** → [docs/服务端命令手册.md](../docs/服务端命令手册.md)  
+> **最后更新**：2026-06-23
 
 ---
 
