@@ -16,6 +16,7 @@ import {
   invalidateSiteStatusCache,
   syncPcSiteOfflineFlag,
 } from './site-status.service.js';
+import { getAccessibleMenuIdsForUser } from './permission.service.js';
 import {
   sysDept,
   sysPost,
@@ -150,6 +151,15 @@ export interface MenuTreeNode {
   path?: string;
   icon?: string;
   children?: MenuTreeNode[];
+}
+
+/** S2 · 侧栏导航节点（按用户 role_menu 过滤） */
+export interface NavMenuNode {
+  menuKey: string;
+  menuName: string;
+  path?: string;
+  icon?: string;
+  children?: NavMenuNode[];
 }
 
 export const MenuType = {
@@ -356,6 +366,41 @@ export async function getMenuTree(): Promise<MenuTreeNode[]> {
   }
 
   return toNavTree();
+}
+
+/** S2 · 当前用户可访问的侧栏菜单树（目录 + 菜单，不含按钮） */
+export async function getNavMenuTreeForUser(userId: number): Promise<NavMenuNode[]> {
+  const accessibleIds = await getAccessibleMenuIdsForUser(userId);
+  if (accessibleIds.size === 0) return [];
+
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(sysMenu)
+    .where(and(eq(sysMenu.visible, 1), eq(sysMenu.status, 1)))
+    .orderBy(sysMenu.sortOrder, sysMenu.id);
+  const navRows = rows.filter(
+    (row) => row.menuType !== MenuType.BUTTON && accessibleIds.has(row.id),
+  );
+
+  function toUserNavTree(parentId = 0): NavMenuNode[] {
+    return navRows
+      .filter((row) => row.parentId === parentId)
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+      .map((row) => {
+        const children = toUserNavTree(row.id);
+        const node: NavMenuNode = {
+          menuKey: row.menuKey,
+          menuName: row.menuName,
+        };
+        if (row.path) node.path = row.path;
+        if (row.icon) node.icon = row.icon;
+        if (children.length > 0) node.children = children;
+        return node;
+      });
+  }
+
+  return toUserNavTree();
 }
 
 export interface MenuSeedItem {

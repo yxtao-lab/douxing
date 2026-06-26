@@ -1,6 +1,6 @@
 import { computed, h } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
   ApartmentOutlined,
@@ -35,7 +35,9 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons-vue';
 import type { Component } from 'vue';
-import { usePermissions } from '@/composables/usePermissions';
+import type { NavMenuNode } from '@/api/system';
+import { useMenuStore } from '@/stores/menu';
+import { resolveMenuLabel } from '@/utils/menu-i18n';
 
 export const menuIconMap: Record<string, Component> = {
   HomeOutlined,
@@ -73,26 +75,6 @@ export const menuIconMap: Record<string, Component> = {
 /** 可选图标列表（按名称排序，供菜单图标选择器使用） */
 export const menuIconOptions = Object.keys(menuIconMap).sort();
 
-const MENU_GROUPS = [
-  { key: 'web.menu.data', groupId: 'group-data', icon: 'BarChartOutlined' },
-  { key: 'web.menu.biz', groupId: 'group-biz', icon: 'UnorderedListOutlined' },
-  { key: 'web.menu.content', groupId: 'group-content', icon: 'AuditOutlined' },
-  { key: 'web.menu.system', groupId: 'group-system', icon: 'SettingOutlined' },
-  { key: 'web.menu.monitor', groupId: 'group-monitor', icon: 'RadarChartOutlined' },
-  { key: 'web.menu.log', groupId: 'group-log', icon: 'FileTextOutlined' },
-] as const;
-
-/** 二级菜单下的三级分组（如：业务管理 → 会员 → 会员管理） */
-const MENU_SUB_GROUPS = [
-  {
-    key: 'web.menu.membership',
-    groupId: 'subgroup-membership',
-    icon: 'CrownOutlined',
-    parentGroupKey: 'web.menu.biz',
-    sortAfterPath: 'orders',
-  },
-] as const;
-
 export interface AppRouteMeta {
   requiresAuth?: boolean;
   titleKey?: string;
@@ -106,12 +88,6 @@ export interface AppRouteMeta {
   hideInTabs?: boolean;
 }
 
-interface MenuRouteItem {
-  path: string;
-  name?: string;
-  meta?: AppRouteMeta;
-}
-
 function toMenuPath(path: string) {
   if (!path) return '/';
   return path.startsWith('/') ? path : `/${path}`;
@@ -122,106 +98,95 @@ export function renderMenuIcon(name?: string | null) {
   return () => h(menuIconMap[name]);
 }
 
+function navNodeKey(node: NavMenuNode): string {
+  if (node.path) return toMenuPath(node.path);
+  return `menu-${node.menuKey}`;
+}
+
+function navNodeToMenuItem(
+  node: NavMenuNode,
+  t: (key: string) => string,
+): NonNullable<MenuProps['items']>[number] {
+  const label = resolveMenuLabel(node.menuKey, node.menuName, t);
+  const base = {
+    key: navNodeKey(node),
+    icon: renderMenuIcon(node.icon),
+    label,
+    title: label,
+  };
+  if (node.children?.length) {
+    return {
+      ...base,
+      children: node.children.map((child) => navNodeToMenuItem(child, t)),
+    };
+  }
+  return base;
+}
+
+function findNavChain(
+  nodes: NavMenuNode[],
+  targetPath: string,
+  chain: NavMenuNode[] = [],
+): NavMenuNode[] | null {
+  for (const node of nodes) {
+    const next = [...chain, node];
+    if (node.path && toMenuPath(node.path) === targetPath) {
+      return next;
+    }
+    if (node.children?.length) {
+      const found = findNavChain(node.children, targetPath, next);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function findOpenKeysForPath(
+  nodes: NavMenuNode[],
+  targetPath: string,
+  ancestors: string[] = [],
+): string[] | null {
+  for (const node of nodes) {
+    const nodeKey = navNodeKey(node);
+    if (node.path && toMenuPath(node.path) === targetPath) {
+      return ancestors;
+    }
+    if (node.children?.length) {
+      const found = findOpenKeysForPath(node.children, targetPath, [...ancestors, nodeKey]);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
+
 export function useAppMenu() {
   const { t } = useI18n();
   const route = useRoute();
-  const router = useRouter();
-  const { hasPerm } = usePermissions();
+  const menuStore = useMenuStore();
 
-  const menuRoutes = computed(() => {
-    const layoutRoute = router.getRoutes().find((item) => item.name === 'layout');
-    return (layoutRoute?.children ?? []) as MenuRouteItem[];
-  });
-
-  function canShowRoute(item: MenuRouteItem): boolean {
-    if (!item.meta?.titleKey || item.meta.hideInMenu) return false;
-    return hasPerm(item.meta.perm);
-  }
-
-  const menuItems = computed<MenuProps['items']>(() => {
-    const visible = menuRoutes.value.filter(canShowRoute);
-    const workbench = visible.filter((item) => !item.meta?.menuGroupKey);
-
-    const toMenuItem = (item: MenuRouteItem) => ({
-      key: toMenuPath(item.path),
-      icon: renderMenuIcon(item.meta?.icon),
-      label: t(item.meta!.titleKey!),
-      title: t(item.meta!.titleKey!),
-    });
-
-    const buildSubGroupMenu = (
-      subGroup: (typeof MENU_SUB_GROUPS)[number],
-      groupRoutes: MenuRouteItem[],
-    ) => ({
-      key: subGroup.groupId,
-      icon: renderMenuIcon(subGroup.icon),
-      label: t(subGroup.key),
-      title: t(subGroup.key),
-      children: groupRoutes
-        .filter((item) => item.meta?.menuSubGroupKey === subGroup.key)
-        .map(toMenuItem),
-    });
-
-    const buildGroupChildren = (groupKey: string, groupRoutes: MenuRouteItem[]) => {
-      const directRoutes = groupRoutes.filter((item) => !item.meta?.menuSubGroupKey);
-      const subGroups = MENU_SUB_GROUPS.filter((item) => item.parentGroupKey === groupKey);
-      const children: NonNullable<MenuProps['items']> = [];
-
-      for (const item of directRoutes) {
-        children.push(toMenuItem(item));
-        for (const subGroup of subGroups) {
-          if ('sortAfterPath' in subGroup && subGroup.sortAfterPath === item.path) {
-            const subMenu = buildSubGroupMenu(subGroup, groupRoutes);
-            if (subMenu.children?.length) children.push(subMenu);
-          }
-        }
-      }
-
-      for (const subGroup of subGroups) {
-        if ('sortAfterPath' in subGroup && subGroup.sortAfterPath) continue;
-        const subMenu = buildSubGroupMenu(subGroup, groupRoutes);
-        if (subMenu.children?.length) children.push(subMenu);
-      }
-
-      return children;
-    };
-
-    const groups: NonNullable<MenuProps['items']> = [];
-    workbench.forEach((item) => groups.push(toMenuItem(item)));
-
-    for (const group of MENU_GROUPS) {
-      const groupRoutes = visible.filter((item) => item.meta?.menuGroupKey === group.key);
-      if (groupRoutes.length) {
-        groups.push({
-          key: group.groupId,
-          icon: renderMenuIcon(group.icon),
-          label: t(group.key),
-          title: t(group.key),
-          children: buildGroupChildren(group.key, groupRoutes),
-        });
-      }
-    }
-
-    return groups;
-  });
+  const menuItems = computed<MenuProps['items']>(() =>
+    menuStore.navTree.map((node) => navNodeToMenuItem(node, t)),
+  );
 
   const selectedKeys = computed(() => [route.path]);
 
   const openKeys = computed(() => {
-    const keys: string[] = [];
-    const groupKey = route.meta.menuGroupKey as string | undefined;
-    const matched = MENU_GROUPS.find((g) => g.key === groupKey);
-    if (matched) keys.push(matched.groupId);
-
-    const subGroupKey = route.meta.menuSubGroupKey as string | undefined;
-    const matchedSub = MENU_SUB_GROUPS.find((g) => g.key === subGroupKey);
-    if (matchedSub) keys.push(matchedSub.groupId);
-
-    return keys;
+    const keys = findOpenKeysForPath(menuStore.navTree, route.path);
+    return keys ?? [];
   });
 
   const breadcrumbItems = computed(() => {
     const items: { title: string }[] = [{ title: t('web.layout.breadcrumbHome') }];
+    if (route.path === '/') return items;
+
+    const chain = findNavChain(menuStore.navTree, route.path);
+    if (chain) {
+      for (const node of chain) {
+        items.push({ title: resolveMenuLabel(node.menuKey, node.menuName, t) });
+      }
+      return items;
+    }
+
     const subGroupKey = route.meta.menuSubGroupKey as string | undefined;
     if (subGroupKey) {
       items.push({ title: t(subGroupKey) });

@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { RoleCode } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { roles, userRoles } from '../db/schema/index.js';
@@ -64,6 +64,50 @@ export async function getPermissionsForUser(userId: number): Promise<string[]> {
     if (row.perms) set.add(row.perms);
   }
   return [...set];
+}
+
+/** 用户可访问的菜单 id（含 role_menu 分配项及其祖先目录） */
+export async function getAccessibleMenuIdsForUser(userId: number): Promise<Set<number>> {
+  const db = getDb();
+  const roleRows = await db
+    .select({ code: roles.code, roleId: roles.id })
+    .from(userRoles)
+    .innerJoin(roles, eq(userRoles.roleId, roles.id))
+    .where(eq(userRoles.userId, userId));
+
+  const roleCodes = roleRows.map((row) => row.code);
+  let assignedIds: Set<number>;
+
+  if (isAdminRole(roleCodes)) {
+    const allRows = await db.select({ id: sysMenu.id }).from(sysMenu);
+    assignedIds = new Set(allRows.map((row) => row.id));
+  } else {
+    const roleIds = roleRows.map((row) => row.roleId);
+    if (roleIds.length === 0) return new Set();
+    const menuRows = await db
+      .select({ menuId: roleMenu.menuId })
+      .from(roleMenu)
+      .where(inArray(roleMenu.roleId, roleIds));
+    assignedIds = new Set(menuRows.map((row) => row.menuId));
+  }
+
+  if (assignedIds.size === 0) return assignedIds;
+
+  const navRows = await db
+    .select({ id: sysMenu.id, parentId: sysMenu.parentId })
+    .from(sysMenu)
+    .where(and(eq(sysMenu.visible, 1), eq(sysMenu.status, 1)));
+  const parentById = new Map(navRows.map((row) => [row.id, row.parentId]));
+
+  const expanded = new Set(assignedIds);
+  for (const id of assignedIds) {
+    let parentId = parentById.get(id);
+    while (parentId != null && parentId > 0) {
+      expanded.add(parentId);
+      parentId = parentById.get(parentId);
+    }
+  }
+  return expanded;
 }
 
 export async function userHasPermission(

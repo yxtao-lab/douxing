@@ -121,6 +121,15 @@ export interface MenuRow {
   children?: MenuRow[];
 }
 
+/** S2 · 侧栏导航菜单树（按当前用户 role_menu 过滤） */
+export interface NavMenuNode {
+  menuKey: string;
+  menuName: string;
+  path?: string;
+  icon?: string;
+  children?: NavMenuNode[];
+}
+
 /** @deprecated 使用 MenuRow */
 export interface MenuTreeNode {
   key: string;
@@ -201,6 +210,11 @@ export async function updateRoleMenus(roleId: number, menuIds: number[]) {
 export async function fetchMenusTree(name?: string) {
   const q = name ? `?name=${encodeURIComponent(name)}` : '';
   return getData<MenuRow[]>(`/system/menus${q}`);
+}
+
+/** S2 · 当前用户可访问的侧栏菜单树 */
+export async function fetchNavMenuTree() {
+  return getData<NavMenuNode[]>('/system/menus/tree');
 }
 
 /** @deprecated 使用 fetchMenusTree */

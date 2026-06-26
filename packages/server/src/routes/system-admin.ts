@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { ApiMessageKey } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
-import { requireAdmin, requirePerm } from '../middleware/admin.middleware.js';
+import { requireAdmin, requirePerm, requireStaff } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
 import {
@@ -45,6 +45,7 @@ import {
   listOperLogsPaginated,
   listLoginLogsPaginated,
   getMenuTree,
+  getNavMenuTreeForUser,
   listMenusTree,
   getMenuById,
   createMenu,
@@ -282,6 +283,17 @@ router.put('/roles/:id/menus', async (req, res) => {
     const msg = err instanceof Error ? err.message : '更新失败';
     console.error('[system/roles/menus PUT]', err);
     fail(res, msg, 500, 500);
+  }
+});
+
+router.get('/menus/tree', async (req, res) => {
+  try {
+    const user = await requireStaff(req, res);
+    if (!user) return;
+    success(res, await getNavMenuTreeForUser(user.id));
+  } catch (err) {
+    console.error('[system/menus/tree]', err);
+    fail(res, '获取导航菜单失败', 500, 500);
   }
 });
 

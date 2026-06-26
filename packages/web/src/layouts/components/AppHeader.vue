@@ -52,10 +52,12 @@ import { isLocaleCode } from '@douxing/shared';
 import { useAppMenu } from '@/composables/useAppMenu';
 import { useLocale } from '@/i18n/useLocale';
 import { useLayoutStore } from '@/stores/layout';
+import { useMenuStore } from '@/stores/menu';
 import { useUserStore } from '@/stores/user';
 
 const router = useRouter();
 const layoutStore = useLayoutStore();
+const menuStore = useMenuStore();
 const userStore = useUserStore();
 const { t, currentLocale, localeOptions, setLocale } = useLocale();
 const { breadcrumbItems } = useAppMenu();
@@ -78,6 +80,7 @@ function onLocaleChange(value: unknown) {
 
 function handleLogout() {
   userStore.logout();
+  menuStore.clearNavTree();
   layoutStore.clearViews();
   router.push('/login');
 }

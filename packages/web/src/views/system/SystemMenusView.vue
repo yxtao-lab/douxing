@@ -192,6 +192,7 @@ import {
   updateMenu,
   type MenuRow,
 } from '@/api/system';
+import { useMenuStore } from '@/stores/menu';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
@@ -213,6 +214,7 @@ const MENU_TYPE = {
 } as const;
 
 const { t } = useI18n();
+const menuStore = useMenuStore();
 const items = ref<MenuRow[]>([]);
 const loading = ref(false);
 const keyword = ref('');
@@ -450,6 +452,7 @@ async function submit() {
     message.success(t('common.success'));
     modalOpen.value = false;
     await load();
+    void menuStore.loadNavTree(true);
   } catch (err) {
     message.error(err instanceof Error ? err.message : t('common.failed'));
   } finally {
@@ -465,6 +468,7 @@ function handleDelete(record: MenuRow) {
         await deleteMenu(record.id);
         message.success(t('common.success'));
         await load();
+        void menuStore.loadNavTree(true);
       } catch (err) {
         message.error(err instanceof Error ? err.message : t('common.failed'));
       }

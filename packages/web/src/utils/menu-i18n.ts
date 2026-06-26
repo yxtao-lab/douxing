@@ -1,0 +1,47 @@
+/** sys_menu.menuKey → web i18n titleKey（与 router meta 对齐；未知键回退 menuName） */
+export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
+  home: 'web.home',
+  data: 'web.menu.data',
+  analytics: 'web.analytics',
+  biz: 'web.menu.biz',
+  routes: 'web.routes',
+  orders: 'web.orders',
+  membership: 'web.menu.membership',
+  'membership-users': 'web.membershipUsers',
+  'membership-logs': 'web.membershipLogs',
+  'membership-products': 'web.membershipProducts',
+  checkins: 'web.checkins',
+  'checkins-map': 'web.checkinMap',
+  content: 'web.menu.content',
+  'attractions-pending': 'web.attractionsPending',
+  'attractions-manage': 'web.attractionsManage',
+  playbooks: 'web.playbooksManage',
+  system: 'web.menu.system',
+  'sys-users': 'web.sysUsers',
+  'sys-roles': 'web.sysRoles',
+  'sys-menus': 'web.sysMenus',
+  'sys-depts': 'web.sysDepts',
+  'sys-posts': 'web.sysPosts',
+  'sys-dict': 'web.sysDict',
+  'sys-config': 'web.sysConfig',
+  'sys-notices': 'web.sysNotices',
+  monitor: 'web.menu.monitor',
+  online: 'web.monitorOnline',
+  jobs: 'web.monitorJobs',
+  'data-monitor': 'web.monitorData',
+  server: 'web.monitorServer',
+  cache: 'web.monitorCache',
+  'cache-list': 'web.monitorCacheList',
+  log: 'web.menu.log',
+  'oper-log': 'web.logOper',
+  'login-log': 'web.logLogin',
+};
+
+export function resolveMenuLabel(
+  menuKey: string,
+  menuName: string,
+  t: (key: string) => string,
+): string {
+  const titleKey = MENU_KEY_TITLE_KEYS[menuKey];
+  return titleKey ? t(titleKey) : menuName;
+}

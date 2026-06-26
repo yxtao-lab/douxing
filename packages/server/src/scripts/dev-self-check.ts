@@ -7,6 +7,7 @@
  */
 import '../config/env.js';
 import { runS1RbacCases } from './s1-rbac-cases.js';
+import { runS2DynamicMenuCases } from './s2-dynamic-menu-cases.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -127,12 +128,24 @@ async function checkRbac() {
   console.log('');
 }
 
+async function checkDynamicMenu() {
+  console.log('--- S2 动态菜单 ---');
+  const passed = await runS2DynamicMenuCases();
+  if (passed) {
+    ok('s2:dynamic-menu-cases 全绿');
+  } else {
+    fail('s2:dynamic-menu-cases 未通过');
+  }
+  console.log('');
+}
+
 async function main() {
   console.log('=== 开发环境联调自检 ===\n');
   await checkDatabase();
   await checkCoverEnrichEnv();
   await checkJourneyAlbumEnv();
   await checkRbac();
+  await checkDynamicMenu();
 
   console.log(`完成：${failed} 失败 · ${warned} 警告`);
   process.exit(failed > 0 ? 1 : 0);

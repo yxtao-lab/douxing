@@ -19,6 +19,14 @@
 import AppHeader from './components/AppHeader.vue';
 import AppSider from './components/AppSider.vue';
 import AppTabs from './components/AppTabs.vue';
+import { onMounted } from 'vue';
+import { useMenuStore } from '@/stores/menu';
+
+const menuStore = useMenuStore();
+
+onMounted(() => {
+  void menuStore.loadNavTree();
+});
 </script>
 
 <style scoped>
