@@ -1,5 +1,6 @@
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, lt, lte, sql } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
+import { analyticsDailyMetrics } from '../db/schema/analytics-daily-metrics.js';
 import { analyticsEvents } from '../db/schema/analytics-events.js';
 import { checkIns } from '../db/schema/check-ins.js';
 import { orders } from '../db/schema/orders.js';
@@ -18,6 +19,7 @@ import {
   type AnalyticsOverview,
   type TrackAnalyticsEventInput,
 } from '@douxing/shared';
+import { aggregateMetricsForDate } from './analytics-rollup.service.js';
 
 const ANALYTICS_MAX_TREND_DAYS = 90;
 const ANALYTICS_DEFAULT_TREND_DAYS = 30;
@@ -176,6 +178,79 @@ export async function getAnalyticsOverview(): Promise<AnalyticsOverview> {
 }
 
 export async function getAnalyticsTrends(daysInput?: number): Promise<AnalyticsDailyPoint[]> {
+  const days = Math.min(
+    ANALYTICS_MAX_TREND_DAYS,
+    Math.max(1, daysInput ?? ANALYTICS_DEFAULT_TREND_DAYS),
+  );
+  const dateRange = buildDateRange(days);
+  const today = formatLocalDate(startOfLocalDay(new Date()));
+  const historicalDates = dateRange.filter((date) => date !== today);
+
+  if (historicalDates.length === 0) {
+    return [await loadLiveTrendPoint(today)];
+  }
+
+  const db = getDb();
+  const rollupRows =
+    historicalDates.length > 0
+      ? await db
+          .select()
+          .from(analyticsDailyMetrics)
+          .where(
+            and(
+              gte(analyticsDailyMetrics.metricDate, historicalDates[0]!),
+              lte(analyticsDailyMetrics.metricDate, historicalDates[historicalDates.length - 1]!),
+            ),
+          )
+      : [];
+
+  const rollupMap = Object.fromEntries(
+    rollupRows.map((row) => [
+      row.metricDate,
+      {
+        date: row.metricDate,
+        users: row.usersNew,
+        routes: row.routesNew,
+        orders: row.ordersNew,
+        checkins: row.checkinsNew,
+        planSessions: row.planSessionsNew,
+      } satisfies AnalyticsDailyPoint,
+    ]),
+  );
+
+  const missingHistorical = historicalDates.filter((date) => !(date in rollupMap));
+  if (rollupRows.length === 0) {
+    return getAnalyticsTrendsFromSource(days);
+  }
+
+  const missingLive =
+    missingHistorical.length > 0
+      ? await Promise.all(missingHistorical.map((date) => loadLiveTrendPoint(date)))
+      : [];
+  const missingMap = Object.fromEntries(missingLive.map((point) => [point.date, point]));
+  const todayPoint = dateRange.includes(today) ? await loadLiveTrendPoint(today) : undefined;
+
+  return dateRange.map((date) => {
+    if (date === today && todayPoint) return todayPoint;
+    if (date in rollupMap) return rollupMap[date]!;
+    if (date in missingMap) return missingMap[date]!;
+    return {
+      date,
+      users: 0,
+      routes: 0,
+      orders: 0,
+      checkins: 0,
+      planSessions: 0,
+    };
+  });
+}
+
+async function loadLiveTrendPoint(metricDate: string): Promise<AnalyticsDailyPoint> {
+  return aggregateMetricsForDate(metricDate);
+}
+
+/** DT1 实时聚合（汇总表未回填时的回退路径） */
+async function getAnalyticsTrendsFromSource(daysInput?: number): Promise<AnalyticsDailyPoint[]> {
   const days = Math.min(
     ANALYTICS_MAX_TREND_DAYS,
     Math.max(1, daysInput ?? ANALYTICS_DEFAULT_TREND_DAYS),

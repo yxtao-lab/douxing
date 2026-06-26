@@ -8,6 +8,7 @@ import { attractionCoversDir } from './routes/attractions.js';
 import { getPhotosUploadRoot } from './utils/local-photo-upload.util.js';
 import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
+import { startAnalyticsRollupJob } from './jobs/analytics-rollup.job.js';
 import { wechatPayNotifyHandler } from './routes/payments.js';
 import { getCheckinConfigSummary } from './config/checkin.js';
 import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
@@ -49,6 +50,7 @@ app.get('/', (_req, res) => {
 
 app.listen(port, () => {
   startOrderTimeoutJob();
+  startAnalyticsRollupJob();
   const checkinConfig = getCheckinConfigSummary();
   const routeUnlockConfig = getRouteUnlockConfigSummary();
   console.log(`[server] ${APP_NAME} API listening on http://localhost:${port}`);

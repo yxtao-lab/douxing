@@ -169,7 +169,7 @@ export const MenuType = {
 } as const;
 
 const SCHEDULED_JOBS = [
-  { id: 'analytics-rollup', name: '指标日汇总', cron: '0 2 * * *', status: 'pending', remark: 'DT2 跑批任务' },
+  { id: 'analytics-rollup', name: '指标日汇总', cron: '0 2 * * *', status: 'active', remark: 'DT2 跑批任务（进程内定时 + pnpm analytics:rollup）' },
   { id: 'cache-cleanup', name: '缓存清理', cron: '0 3 * * 0', status: 'pending', remark: 'Redis 过期键扫描' },
   { id: 'log-archive', name: '日志归档', cron: '0 4 1 * *', status: 'pending', remark: '操作/登录日志归档' },
 ];

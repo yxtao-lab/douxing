@@ -47,6 +47,7 @@
     "db:migrate": "node scripts/pm.mjs filter @douxing/server db:migrate",
     "db:seed": "node scripts/pm.mjs filter @douxing/server db:seed",
     "db:setup": "node scripts/pm.mjs run db:migrate && node scripts/pm.mjs run db:seed",
+    "analytics:rollup": "node scripts/pm.mjs filter @douxing/server analytics:rollup",
     "db:reset": "node scripts/pm.mjs filter @douxing/server db:reset",
     "ml:generate-dataset": "node scripts/pm.mjs filter @douxing/server ml:generate-dataset",
     "ml:validate-dataset": "node scripts/pm.mjs filter @douxing/server ml:validate-dataset",

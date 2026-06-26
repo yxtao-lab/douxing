@@ -204,6 +204,13 @@
       "when": 1750060800000,
       "tag": "0029_role_menu",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "5",
+      "when": 1750147200000,
+      "tag": "0030_analytics_daily_metrics",
+      "breakpoints": true
     }
   ]
 }

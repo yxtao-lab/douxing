@@ -747,12 +747,12 @@ Python ai-service → Node LLM → 模板/RAG
 | 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|----------|------|------|----------|----------|
 | **DT1** | [x] | 2026-06-09 | 指标 API + 埋点表 + 看板 | G8、W1 | `analytics_events` 迁移；`analytics.service`；`GET /analytics/overview` · `/trends` · `/top-cities`；Web「数据分析」页 + ECharts | 管理员可看概览、30 日趋势、城市 Top10 |
-| **DT2** | [ ] | — | 日汇总跑批 | DT1 | `analytics_daily_metrics`；`pnpm analytics:rollup` | 趋势查询走汇总表 |
-| **DT3** | [ ] | — | 客户端埋点 | DT1 | mobile/pc `POST /analytics/events`；漏斗指标 | 规划完成等行为可统计 |
+| **DT2** | [x] | 2026-06-26 | 日汇总跑批 | DT1 | `analytics_daily_metrics`；`pnpm analytics:rollup`；进程内定时 | 趋势查询走汇总表 |
+| **DT3** | [x] | 2026-06-26 | 客户端埋点 | DT1 | mobile/pc `POST /analytics/events`；`GET /analytics/funnel`；看板漏斗 | 规划完成等行为可统计 |
 | **DT4** | [ ] | — | ClickHouse 升级（可选） | DT2、§7 详细设计 | MySQL → ClickHouse 同步 | 大数据量 OLAP |
 | **DT5** | [ ] | — | 旅行运营大屏 | DT1、DT3（推荐） | `web` `ScreenLayout` + `/screen/travel`；`GET /analytics/geo/*` · `/journey-funnel`；ECharts 全国分布 + 漏斗；可选 Leaflet 热力 | 管理员全屏可见全站旅行分布与路径漏斗；见 [数据中台 §9](./数据中台.md#9-dt5-旅行运营大屏规划) |
 
-**推荐顺序**：`DT1` → `DT3`（漏斗）→ **`DT5`（按需）** → `DT2` → `DT4`。DT5 与 F 线 L3 3D 底图可二期叠加 Cesium。
+**推荐顺序（当前）**：`DT1` ✅ → `DT3` ✅ → `DT2` ✅ → **`DT5`（按需）** → `DT4`。DT5 与 F 线 L3 3D 底图可二期叠加 Cesium。
 
 ---
 

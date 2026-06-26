@@ -995,7 +995,7 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 
 ### GET `/trends`
 
-按日趋势序列。
+按日趋势序列（**DT2**：历史日期优先读 `analytics_daily_metrics`；当天实时聚合）。
 
 **Query**
 
@@ -1022,9 +1022,21 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 
 **响应 `data`**：`AnalyticsCityRankItem[]` — `{ cityCode, checkinCount }`
 
+### GET `/funnel`
+
+旅程漏斗（**DT3**）：规划页 → 提交 → 会话 → 保存 → 发布 → 打卡，按独立 user/session 去重。
+
+**Query**
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `days` | number | 30 | 1～90 |
+
+**响应 `data`**：`AnalyticsFunnelStep[]` — `{ stepKey, eventName, count, rateFromFirst, rateFromPrev }`
+
 ### POST `/events`
 
-写入埋点事件（DT1 供服务端/管理端扩展；DT3 开放客户端上报）。
+写入单条埋点事件（**DT3** mobile/pc 客户端；白名单 `eventName`；登录用户自动关联 `userId`）。
 
 **Body**
 
@@ -1039,6 +1051,14 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 | `occurredAt` | string | 否 | ISO 8601 业务发生时间 |
 
 **响应 `data`**：`{ ok: true }`
+
+### POST `/events/batch`
+
+批量写入埋点（**DT3** mobile/pc）。
+
+**Body**：`{ events: ClientAnalyticsEvent[] }`（单条字段同 `POST /events`）
+
+**响应 `data`**：`{ ok: true, count: number }`
 
 ---
 

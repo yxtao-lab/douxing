@@ -8,6 +8,7 @@
 import '../config/env.js';
 import { runS1RbacCases } from './s1-rbac-cases.js';
 import { runS2DynamicMenuCases } from './s2-dynamic-menu-cases.js';
+import { runDt2AnalyticsCases } from './dt2-analytics-cases.js';
 import { runDt3AnalyticsCases } from './dt3-analytics-cases.js';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -140,6 +141,17 @@ async function checkDynamicMenu() {
   console.log('');
 }
 
+async function checkDt2Analytics() {
+  console.log('--- DT2 指标日汇总 ---');
+  const passed = await runDt2AnalyticsCases();
+  if (passed) {
+    ok('dt2:analytics-cases 全绿');
+  } else {
+    fail('dt2:analytics-cases 未通过');
+  }
+  console.log('');
+}
+
 async function checkDt3Analytics() {
   console.log('--- DT3 客户端埋点 ---');
   const passed = await runDt3AnalyticsCases();
@@ -158,6 +170,7 @@ async function main() {
   await checkJourneyAlbumEnv();
   await checkRbac();
   await checkDynamicMenu();
+  await checkDt2Analytics();
   await checkDt3Analytics();
 
   console.log(`完成：${failed} 失败 · ${warned} 警告`);
