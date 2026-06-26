@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { onLaunch, onShow } from '@dcloudio/uni-app';
-import { APP_NAME } from '@douxing/shared';
+import { APP_NAME, AnalyticsEventName } from '@douxing/shared';
 import { initAppTheme } from '@/i18n/useTheme';
 import { guardSiteOnlineRoute } from '@/utils/site-status-guard';
+import { initAnalytics, trackAnalytics } from '@/utils/analytics';
 
 onLaunch(async () => {
   initAppTheme();
+  initAnalytics();
+  trackAnalytics(AnalyticsEventName.APP_LAUNCH);
   console.log(`${APP_NAME} 移动端启动`);
   await guardSiteOnlineRoute();
 });

@@ -9,10 +9,12 @@ import { users } from '../db/schema/users.js';
 import {
   AnalyticsEventCategory,
   AnalyticsEventSource,
+  ANALYTICS_FUNNEL_STEPS,
   CheckInStatus,
   OrderStatus,
   type AnalyticsCityRankItem,
   type AnalyticsDailyPoint,
+  type AnalyticsFunnelStep,
   type AnalyticsOverview,
   type TrackAnalyticsEventInput,
 } from '@douxing/shared';
@@ -278,5 +280,62 @@ export async function trackAnalyticsEvent(input: TrackAnalyticsEventInput): Prom
     properties: input.properties ?? null,
     source,
     occurredAt: input.occurredAt ?? new Date(),
+  });
+}
+
+export async function trackAnalyticsEvents(inputs: TrackAnalyticsEventInput[]): Promise<void> {
+  if (inputs.length === 0) return;
+  const db = getDb();
+  await db.insert(analyticsEvents).values(
+    inputs.map((input) => ({
+      eventName: input.eventName,
+      eventCategory: input.eventCategory ?? AnalyticsEventCategory.BEHAVIOR,
+      userId: input.userId ?? null,
+      sessionId: input.sessionId ?? null,
+      properties: input.properties ?? null,
+      source: input.source ?? AnalyticsEventSource.MOBILE,
+      occurredAt: input.occurredAt ?? new Date(),
+    })),
+  );
+}
+
+async function countDistinctFunnelActors(eventName: string, since: Date): Promise<number> {
+  const db = getDb();
+  const [row] = await db
+    .select({
+      count: sql<number>`COUNT(DISTINCT COALESCE(CAST(${analyticsEvents.userId} AS CHAR), ${analyticsEvents.sessionId}))`.as(
+        'count',
+      ),
+    })
+    .from(analyticsEvents)
+    .where(and(eq(analyticsEvents.eventName, eventName), gte(analyticsEvents.occurredAt, since)));
+  return Number(row?.count ?? 0);
+}
+
+/** DT3 · 旅程漏斗（按独立 user/session 去重） */
+export async function getAnalyticsFunnel(daysInput?: number): Promise<AnalyticsFunnelStep[]> {
+  const days = Math.min(
+    ANALYTICS_MAX_TREND_DAYS,
+    Math.max(1, daysInput ?? ANALYTICS_DEFAULT_TREND_DAYS),
+  );
+  const since = addLocalDays(startOfLocalDay(new Date()), -(days - 1));
+
+  const counts: number[] = [];
+  for (const step of ANALYTICS_FUNNEL_STEPS) {
+    counts.push(await countDistinctFunnelActors(step.eventName, since));
+  }
+
+  const firstCount = counts[0] ?? 0;
+  return ANALYTICS_FUNNEL_STEPS.map((step, index) => {
+    const count = counts[index] ?? 0;
+    const prevCount = index > 0 ? (counts[index - 1] ?? 0) : 0;
+    return {
+      stepKey: step.stepKey,
+      eventName: step.eventName,
+      count,
+      rateFromFirst: firstCount > 0 ? Math.round((count / firstCount) * 1000) / 10 : null,
+      rateFromPrev:
+        index > 0 && prevCount > 0 ? Math.round((count / prevCount) * 1000) / 10 : null,
+    };
   });
 }

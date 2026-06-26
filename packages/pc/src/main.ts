@@ -4,6 +4,8 @@ import App from './App.vue';
 import router from './router';
 import { i18n } from './i18n';
 import { bootstrapSession, setupHttpAuthHandlers } from './utils/session';
+import { initAnalytics, trackAnalytics } from './utils/analytics';
+import { AnalyticsEventName } from '@douxing/shared';
 import './styles/main.css';
 
 async function bootstrap() {
@@ -15,6 +17,8 @@ async function bootstrap() {
 
   await bootstrapSession();
   setupHttpAuthHandlers(router);
+  initAnalytics();
+  trackAnalytics(AnalyticsEventName.APP_LAUNCH);
   app.mount('#app');
 }
 

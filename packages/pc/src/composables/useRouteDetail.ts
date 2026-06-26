@@ -23,6 +23,8 @@ import { useLocale } from '@/i18n/useLocale';
 import { appMessage } from '@/composables/useAppMessage';
 import { useUserStore } from '@/stores/user';
 import { getAppErrorMessage } from '@/utils/error-message';
+import { trackAnalytics } from '@/utils/analytics';
+import { AnalyticsEventName } from '@douxing/shared';
 
 export function useRouteDetail(routeId: () => number) {
   const { t } = useLocale();
@@ -146,6 +148,7 @@ export function useRouteDetail(routeId: () => number) {
         regeneratePrompt.value = route.value?.description ?? '';
       }
       await loadComments();
+      trackAnalytics(AnalyticsEventName.ROUTE_VIEW, { routeId: id });
     } catch (err) {
       loadError.value = getAppErrorMessage(err, t('routes.loadFailed'));
     } finally {
@@ -311,6 +314,7 @@ export function useRouteDetail(routeId: () => number) {
     if (!id) return;
     try {
       route.value = await publishRoute(id);
+      trackAnalytics(AnalyticsEventName.ROUTE_PUBLISH, { routeId: id });
       showToast(t('routes.publishSuccess'), 'success');
     } catch (err) {
       showToast(getAppErrorMessage(err, t('routes.publishFailed')), 'error');

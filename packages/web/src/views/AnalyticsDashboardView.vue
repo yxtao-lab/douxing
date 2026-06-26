@@ -112,6 +112,26 @@
           </a-card>
         </a-col>
       </a-row>
+
+      <a-row :gutter="[16, 16]" class="content-row">
+        <a-col :span="24">
+          <a-card :title="t('analytics.funnelTitle')">
+            <p class="funnel-desc">{{ t('analytics.funnelDesc') }}</p>
+            <template #extra>
+              <a-segmented v-model:value="funnelDays" :options="trendDayOptions" @change="loadFunnel" />
+            </template>
+            <DouxingAdminTable
+              :columns="funnelColumns"
+              :data-source="funnelRows"
+              :pagination="false"
+              size="small"
+              row-key="stepKey"
+              :auto-body-scroll="false"
+              class="analytics-embed-table"
+            />
+          </a-card>
+        </a-col>
+      </a-row>
     </a-spin>
   </div>
 </template>
@@ -120,8 +140,9 @@
 import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnType } from 'ant-design-vue';
-import type { AnalyticsDailyPoint, AnalyticsOverview } from '@douxing/shared';
+import type { AnalyticsDailyPoint, AnalyticsFunnelStep, AnalyticsOverview } from '@douxing/shared';
 import {
+  fetchAnalyticsFunnel,
   fetchAnalyticsOverview,
   fetchAnalyticsTrends,
   fetchTopCheckinCities,
@@ -139,7 +160,18 @@ const loading = ref(false);
 const overview = ref<AnalyticsOverview | null>(null);
 const trends = ref<AnalyticsDailyPoint[]>([]);
 const cityRows = ref<Array<{ cityCode: string; checkinCount: number; rank: number }>>([]);
+const funnelRows = ref<AnalyticsFunnelStep[]>([]);
 const trendDays = ref<number>(30);
+const funnelDays = ref<number>(30);
+
+const funnelStepLabelKeys: Record<string, string> = {
+  planPage: 'analytics.funnelPlanPage',
+  planSubmit: 'analytics.funnelPlanSubmit',
+  planSession: 'analytics.funnelPlanSession',
+  routeSaved: 'analytics.funnelRouteSaved',
+  routePublish: 'analytics.funnelRoutePublish',
+  checkin: 'analytics.funnelCheckin',
+};
 
 const trendDayOptions = computed(() => [
   { label: t('analytics.range7d'), value: 7 },
@@ -160,6 +192,28 @@ const cityColumns = computed<TableColumnType[]>(() => [
   { title: t('analytics.colRank'), dataIndex: 'rank', key: 'rank', width: 56 },
   { title: t('analytics.colCity'), dataIndex: 'cityCode', key: 'cityCode' },
   { title: t('analytics.colCheckins'), dataIndex: 'checkinCount', key: 'checkinCount', width: 88 },
+]);
+
+const funnelColumns = computed<TableColumnType[]>(() => [
+  {
+    title: t('analytics.colStep'),
+    dataIndex: 'stepLabel',
+    key: 'stepLabel',
+  },
+  { title: t('analytics.colEvent'), dataIndex: 'eventName', key: 'eventName', width: 180 },
+  { title: t('analytics.colCount'), dataIndex: 'count', key: 'count', width: 88 },
+  {
+    title: t('analytics.colRateFromFirst'),
+    dataIndex: 'rateFromFirstLabel',
+    key: 'rateFromFirstLabel',
+    width: 100,
+  },
+  {
+    title: t('analytics.colRateFromPrev'),
+    dataIndex: 'rateFromPrevLabel',
+    key: 'rateFromPrevLabel',
+    width: 100,
+  },
 ]);
 
 const trendTableRows = computed(() => [...trends.value].reverse());
@@ -194,10 +248,25 @@ async function loadCities() {
   }));
 }
 
+function formatRate(value: number | null): string {
+  if (value == null) return '-';
+  return `${value}%`;
+}
+
+async function loadFunnel() {
+  const rows = await fetchAnalyticsFunnel(funnelDays.value);
+  funnelRows.value = rows.map((row) => ({
+    ...row,
+    stepLabel: t(funnelStepLabelKeys[row.stepKey] ?? row.stepKey),
+    rateFromFirstLabel: formatRate(row.rateFromFirst),
+    rateFromPrevLabel: formatRate(row.rateFromPrev),
+  }));
+}
+
 async function loadAll() {
   loading.value = true;
   try {
-    await Promise.all([loadOverview(), loadTrends(), loadCities()]);
+    await Promise.all([loadOverview(), loadTrends(), loadCities(), loadFunnel()]);
   } finally {
     loading.value = false;
   }
@@ -222,6 +291,12 @@ onMounted(() => {
 .stat-sub {
   margin: 8px 0 0;
   font-size: 12px;
+  color: #6b7280;
+}
+
+.funnel-desc {
+  margin: 0 0 12px;
+  font-size: 13px;
   color: #6b7280;
 }
 

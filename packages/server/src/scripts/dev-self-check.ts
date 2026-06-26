@@ -8,6 +8,7 @@
 import '../config/env.js';
 import { runS1RbacCases } from './s1-rbac-cases.js';
 import { runS2DynamicMenuCases } from './s2-dynamic-menu-cases.js';
+import { runDt3AnalyticsCases } from './dt3-analytics-cases.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -139,6 +140,17 @@ async function checkDynamicMenu() {
   console.log('');
 }
 
+async function checkDt3Analytics() {
+  console.log('--- DT3 客户端埋点 ---');
+  const passed = await runDt3AnalyticsCases();
+  if (passed) {
+    ok('dt3:analytics-cases 全绿');
+  } else {
+    fail('dt3:analytics-cases 未通过');
+  }
+  console.log('');
+}
+
 async function main() {
   console.log('=== 开发环境联调自检 ===\n');
   await checkDatabase();
@@ -146,6 +158,7 @@ async function main() {
   await checkJourneyAlbumEnv();
   await checkRbac();
   await checkDynamicMenu();
+  await checkDt3Analytics();
 
   console.log(`完成：${failed} 失败 · ${warned} 警告`);
   process.exit(failed > 0 ? 1 : 0);

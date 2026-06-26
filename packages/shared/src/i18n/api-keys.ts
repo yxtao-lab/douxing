@@ -198,6 +198,8 @@ export const ApiMessageKey = {
   ANALYTICS_TRENDS_FAILED: 'api.analyticsTrendsFailed',
   ANALYTICS_TOP_CITIES_FAILED: 'api.analyticsTopCitiesFailed',
   ANALYTICS_EVENT_TRACK_FAILED: 'api.analyticsEventTrackFailed',
+  ANALYTICS_FUNNEL_FAILED: 'api.analyticsFunnelFailed',
+  ANALYTICS_EVENT_NOT_ALLOWED: 'api.analyticsEventNotAllowed',
 
   MEMBERSHIP_PRODUCT_NOT_FOUND: 'api.membershipProductNotFound',
   MEMBERSHIP_ALREADY_MAX: 'api.membershipAlreadyMax',

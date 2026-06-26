@@ -48,6 +48,7 @@
     "i2:pai-lora-cases": "tsx src/scripts/i2-pai-lora-cases.ts",
     "s1:rbac-cases": "tsx src/scripts/s1-rbac-cases.ts",
     "s2:dynamic-menu-cases": "tsx src/scripts/s2-dynamic-menu-cases.ts",
+    "dt3:analytics-cases": "tsx src/scripts/dt3-analytics-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

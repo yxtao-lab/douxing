@@ -201,6 +201,8 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: '获取趋势数据失败',
   [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: '获取城市排行失败',
   [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: '写入埋点事件失败',
+  [ApiMessageKey.ANALYTICS_FUNNEL_FAILED]: '获取漏斗数据失败',
+  [ApiMessageKey.ANALYTICS_EVENT_NOT_ALLOWED]: '不允许上报该埋点事件',
 
   [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: '会员套餐不存在',
   [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: '已是最高会员等级',
@@ -439,6 +441,8 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_TRENDS_FAILED]: 'Failed to load trend data',
   [ApiMessageKey.ANALYTICS_TOP_CITIES_FAILED]: 'Failed to load city rankings',
   [ApiMessageKey.ANALYTICS_EVENT_TRACK_FAILED]: 'Failed to track analytics event',
+  [ApiMessageKey.ANALYTICS_FUNNEL_FAILED]: 'Failed to load funnel data',
+  [ApiMessageKey.ANALYTICS_EVENT_NOT_ALLOWED]: 'This analytics event is not allowed',
 
   [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: 'Membership plan not found',
   [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: 'Already at the highest membership tier',

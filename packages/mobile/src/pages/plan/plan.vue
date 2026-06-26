@@ -220,6 +220,7 @@ import { fetchMembershipInfo } from '@/api/user';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getAppErrorMessage } from '@/utils/request';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
+import { trackAnalytics } from '@/utils/analytics';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
 import PlanPetFocusCard from '@/components/plan/PlanPetFocusCard.vue';
@@ -235,6 +236,7 @@ import type {
   TravelRouteInfo,
 } from '@douxing/shared';
 import {
+  AnalyticsEventName,
   LlmProvider,
   formatPlanIntentSummary,
   formatPlanVariantLabel,
@@ -603,6 +605,10 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
     candidates.value = result.candidates ?? [];
     ragMatchedCount.value = result.ragMatchedCount ?? 0;
     syncPetMeta(result);
+    trackAnalytics(AnalyticsEventName.PLAN_ROUTE_SAVED, {
+      sessionId: sessionId.value,
+      routeId: result.id,
+    });
     uni.showToast({ title: t('plan.candidateSwitched'), icon: 'success' });
   } catch (e) {
     uni.showToast({
@@ -636,6 +642,7 @@ onMounted(async () => {
 
 onShow(() => {
   hideNativeTabBar();
+  trackAnalytics(AnalyticsEventName.PLAN_PAGE_VIEW);
   user.value = authStorage.getStoredUser();
   refreshRecentPrompts();
   if (user.value) {
@@ -703,10 +710,18 @@ async function handleSend(text: string) {
   resetComposerInput();
   scrollToBottom();
 
+  trackAnalytics(AnalyticsEventName.PLAN_PROMPT_SUBMIT, {
+    hasSession: Boolean(sessionId.value),
+  });
+
   try {
     if (!sessionId.value) {
       const planActionResult = await submitNewPlanSession(content);
       sessionId.value = planActionResult.sessionId;
+      trackAnalytics(AnalyticsEventName.PLAN_SESSION_CREATED, {
+        sessionId: planActionResult.sessionId,
+        routeId: planActionResult.id,
+      });
       currentRouteId.value = planActionResult.id;
       syncCurrentRoutePreview(planActionResult.id, planActionResult);
       intentSnapshot.value = planActionResult.intentSnapshot ?? null;

@@ -1051,6 +1051,15 @@ export interface TrackAnalyticsEventInput {
   occurredAt?: Date;
 }
 
+/** DT3 · 旅程漏斗单步统计 */
+export interface AnalyticsFunnelStep {
+  stepKey: string;
+  eventName: string;
+  count: number;
+  rateFromFirst: number | null;
+  rateFromPrev: number | null;
+}
+
 /** C7-c：单条记忆召回解释 */
 export interface MemoryRecallExplainItem {
   memoryType: string;

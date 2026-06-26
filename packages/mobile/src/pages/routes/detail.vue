@@ -268,7 +268,8 @@ import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/ord
 import { fetchOrderPaymentConfig } from '@/api/orders';
 import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
-import { RouteStatus } from '@douxing/shared';
+import { RouteStatus, AnalyticsEventName } from '@douxing/shared';
+import { trackAnalytics } from '@/utils/analytics';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import TravelPetFloatingLayer from '@/components/travel-pet-floating-layer/TravelPetFloatingLayer.vue';
 import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
@@ -503,6 +504,7 @@ async function loadDetail() {
       regeneratePrompt.value = route.value?.description ?? '';
     }
     await loadComments();
+    trackAnalytics(AnalyticsEventName.ROUTE_VIEW, { routeId });
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.loadFailed')), icon: 'none' });
   }
@@ -656,6 +658,7 @@ async function handleUnlock() {
 async function handlePublish() {
   try {
     route.value = await publishRoute(routeId);
+    trackAnalytics(AnalyticsEventName.ROUTE_PUBLISH, { routeId });
     uni.showToast({ title: t('routes.publishSuccess'), icon: 'success' });
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.publishFailed')), icon: 'none' });
@@ -720,6 +723,11 @@ async function handleCheckIn(spot: RouteDayAttraction) {
             },
             photos,
             addToAlbum: photos != null && photos.length > 0,
+          });
+
+          trackAnalytics(AnalyticsEventName.CHECKIN_CREATE, {
+            routeId,
+            checkInId: result.checkIn.id,
           });
 
           if (photos != null && photos.length > 0 && detailTab.value === 'album') {

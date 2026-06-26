@@ -36,6 +36,8 @@ import {
   resolvePlanPetFocusViewModel,
 } from '@douxing/shared';
 import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
+import { trackAnalytics } from '@/utils/analytics';
+import { AnalyticsEventName } from '@douxing/shared';
 
 export interface ChatMessage {
   id: number | string;
@@ -310,6 +312,10 @@ export function usePlanPage() {
       candidates.value = result.candidates ?? [];
       ragMatchedCount.value = result.ragMatchedCount ?? 0;
       syncPetMeta(result);
+      trackAnalytics(AnalyticsEventName.PLAN_ROUTE_SAVED, {
+        sessionId: sessionId.value,
+        routeId: result.id,
+      });
       appMessage.success(t('plan.candidateSwitched'));
     } catch (err) {
       appMessage.error(getAppErrorMessage(err, t('plan.candidateSwitchFailed')));
@@ -369,10 +375,18 @@ export function usePlanPage() {
     inputText.value = '';
     scrollToBottom();
 
+    trackAnalytics(AnalyticsEventName.PLAN_PROMPT_SUBMIT, {
+      hasSession: Boolean(sessionId.value),
+    });
+
     try {
       if (!sessionId.value) {
         const result = await createPlanSession({ prompt: content, provider: provider.value });
         sessionId.value = result.sessionId;
+        trackAnalytics(AnalyticsEventName.PLAN_SESSION_CREATED, {
+          sessionId: result.sessionId,
+          routeId: result.id,
+        });
         syncCurrentRoute(result.id, result);
         intentSnapshot.value = result.intentSnapshot ?? null;
         ragMatchedCount.value = result.ragMatchedCount ?? 0;
@@ -449,6 +463,7 @@ export function usePlanPage() {
   }
 
   onMounted(async () => {
+    trackAnalytics(AnalyticsEventName.PLAN_PAGE_VIEW);
     refreshRecentPrompts();
     await initLlmStatus();
     await refreshMembership();
