@@ -10,6 +10,7 @@ import { runS1RbacCases } from './s1-rbac-cases.js';
 import { runS2DynamicMenuCases } from './s2-dynamic-menu-cases.js';
 import { runDt2AnalyticsCases } from './dt2-analytics-cases.js';
 import { runDt3AnalyticsCases } from './dt3-analytics-cases.js';
+import { runDt5AnalyticsCases } from './dt5-analytics-cases.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -152,6 +153,17 @@ async function checkDt2Analytics() {
   console.log('');
 }
 
+async function checkDt5Analytics() {
+  console.log('--- DT5 旅行运营大屏 ---');
+  const passed = await runDt5AnalyticsCases();
+  if (passed) {
+    ok('dt5:analytics-cases 全绿');
+  } else {
+    fail('dt5:analytics-cases 未通过');
+  }
+  console.log('');
+}
+
 async function checkDt3Analytics() {
   console.log('--- DT3 客户端埋点 ---');
   const passed = await runDt3AnalyticsCases();
@@ -172,6 +184,7 @@ async function main() {
   await checkDynamicMenu();
   await checkDt2Analytics();
   await checkDt3Analytics();
+  await checkDt5Analytics();
 
   console.log(`完成：${failed} 失败 · ${warned} 警告`);
   process.exit(failed > 0 ? 1 : 0);

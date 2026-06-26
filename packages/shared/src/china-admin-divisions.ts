@@ -238,6 +238,26 @@ export function buildNationalProvinceCityRegions(): Array<{
     .filter((item): item is NonNullable<typeof item> => item != null);
 }
 
+/** 省级 slug → DataV/ECharts 六位 adcode（如 zhejiang → 330000） */
+export function getProvinceAdcodeBySlug(provinceSlug: string): string | undefined {
+  const gb = PROVINCE_SLUG_TO_GB[provinceSlug];
+  if (!gb) return undefined;
+  return `${gb}0000`;
+}
+
+/** 省级中文简称 → GeoJSON 面名称（如 浙江 → 浙江省） */
+export function getProvinceGeoMapName(nameZh: string): string {
+  if (nameZh === '内蒙古') return '内蒙古自治区';
+  if (nameZh === '广西') return '广西壮族自治区';
+  if (nameZh === '西藏') return '西藏自治区';
+  if (nameZh === '宁夏') return '宁夏回族自治区';
+  if (nameZh === '新疆') return '新疆维吾尔自治区';
+  if (nameZh === '香港') return '香港特别行政区';
+  if (nameZh === '澳门') return '澳门特别行政区';
+  if (['北京', '天津', '上海', '重庆'].includes(nameZh)) return `${nameZh}市`;
+  return `${nameZh}省`;
+}
+
 /** 构建中文名 → city_code 全量映射（含全国地级） */
 export function buildNationalCityCodeMap(): Record<string, string> {
   const map: Record<string, string> = { ...LEGACY_CITY_SLUG_BY_ZH };

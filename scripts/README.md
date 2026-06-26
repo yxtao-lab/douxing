@@ -117,6 +117,12 @@
 | `pnpm ml:generate-dataset` | `generate-training-dataset.ts` | DeepSeek 生成训练集 JSONL |
 | `pnpm ml:validate-dataset` | `validate-training-dataset.ts` | 校验训练集格式并划分 train/val |
 | `pnpm ml:upload-dataset` | `upload-training-dataset-to-oss.ts` | 上传 train/val 至 OSS + 生成 PAI manifest |
+| `pnpm analytics:rollup` | `analytics-rollup.ts` | DT2 指标日汇总（`--backfill N` 回填） |
+| `pnpm --filter @douxing/server dt2:analytics-cases` | `dt2-analytics-cases.ts` | DT2 日汇总验收 |
+| `pnpm --filter @douxing/server dt3:analytics-cases` | `dt3-analytics-cases.ts` | DT3 客户端埋点验收 |
+| `pnpm --filter @douxing/server s1:rbac-cases` | `s1-rbac-cases.ts` | S1 RBAC 闭环验收 |
+| `pnpm --filter @douxing/server s2:dynamic-menu-cases` | `s2-dynamic-menu-cases.ts` | S2 动态菜单验收 |
+| `pnpm --filter @douxing/server dev:self-check` | `dev-self-check.ts` | 开发环境联调自检 |
 | `pnpm --filter @douxing/server i2:pai-lora-cases` | `i2-pai-lora-cases.ts` | I2 Step 35 本地验收（可选 `--verify-oss`） |
 | `pnpm --filter @douxing/server agent:intent-cases` | `agent-intent-cases.ts` | Agent 追问意图路由用例 |
 | `pnpm --filter @douxing/server agent:equivalence-cases` | `agent-equivalence-cases.ts` | 管道 vs Agent 等价率 |

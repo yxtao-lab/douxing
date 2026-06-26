@@ -694,4 +694,4 @@ sudo bash scripts/setup-ubuntu22.sh
 
 ---
 
-*最后更新：2026-06-23*
+*最后更新：2026-06-26*

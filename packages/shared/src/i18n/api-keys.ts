@@ -200,6 +200,8 @@ export const ApiMessageKey = {
   ANALYTICS_EVENT_TRACK_FAILED: 'api.analyticsEventTrackFailed',
   ANALYTICS_FUNNEL_FAILED: 'api.analyticsFunnelFailed',
   ANALYTICS_EVENT_NOT_ALLOWED: 'api.analyticsEventNotAllowed',
+  ANALYTICS_GEO_DISTRIBUTION_FAILED: 'api.analyticsGeoDistributionFailed',
+  ANALYTICS_GEO_FLOWS_FAILED: 'api.analyticsGeoFlowsFailed',
 
   MEMBERSHIP_PRODUCT_NOT_FOUND: 'api.membershipProductNotFound',
   MEMBERSHIP_ALREADY_MAX: 'api.membershipAlreadyMax',

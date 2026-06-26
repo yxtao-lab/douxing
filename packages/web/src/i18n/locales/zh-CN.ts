@@ -239,6 +239,19 @@ export const webZhCN = {
     funnelRoutePublish: '发布路线',
     funnelCheckin: '完成打卡',
   },
+  screen: {
+    travel: {
+      title: '兜行旅行运营驾驶舱',
+      eyebrow: 'DOUXING TRAVEL COCKPIT',
+      back: '返回看板',
+      open: '打开运营大屏',
+      mapTitle: '全国旅行分布',
+      cityRankTitle: '热门打卡城市',
+      funnelTitle: '用户旅程漏斗',
+      flowTitle: '城际流动 Top',
+      rangeDays: '近 {days} 天',
+    },
+  },
   routes: {
     title: '路线管理',
     desc: '查看平台全部用户路线（MVP 管理端）',

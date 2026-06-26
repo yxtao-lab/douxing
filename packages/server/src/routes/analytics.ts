@@ -19,6 +19,10 @@ import {
   trackAnalyticsEvent,
   trackAnalyticsEvents,
 } from '../services/analytics.service.js';
+import {
+  getAnalyticsGeoDistribution,
+  getAnalyticsGeoFlows,
+} from '../services/analytics-geo.service.js';
 
 const router = Router();
 
@@ -27,6 +31,11 @@ const trendsQuerySchema = z.object({
 });
 
 const topCitiesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+const geoFlowsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(90).optional(),
   limit: z.coerce.number().int().min(1).max(50).optional(),
 });
 
@@ -140,6 +149,42 @@ router.get('/funnel', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[analytics/funnel]', err);
     fail(res, ApiMessageKey.ANALYTICS_FUNNEL_FAILED, 500, 500);
+  }
+});
+
+router.get('/geo/distribution', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
+
+  const parsed = trendsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    fail(res, ApiMessageKey.PARAM_ERROR, 400, 400);
+    return;
+  }
+
+  try {
+    const locale = res.locals.locale ?? 'zh-CN';
+    success(res, await getAnalyticsGeoDistribution(parsed.data.days, locale));
+  } catch (err) {
+    console.error('[analytics/geo/distribution]', err);
+    fail(res, ApiMessageKey.ANALYTICS_GEO_DISTRIBUTION_FAILED, 500, 500);
+  }
+});
+
+router.get('/geo/flows', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
+
+  const parsed = geoFlowsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    fail(res, ApiMessageKey.PARAM_ERROR, 400, 400);
+    return;
+  }
+
+  try {
+    const locale = res.locals.locale ?? 'zh-CN';
+    success(res, await getAnalyticsGeoFlows(parsed.data.days, parsed.data.limit, locale));
+  } catch (err) {
+    console.error('[analytics/geo/flows]', err);
+    fail(res, ApiMessageKey.ANALYTICS_GEO_FLOWS_FAILED, 500, 500);
   }
 });
 

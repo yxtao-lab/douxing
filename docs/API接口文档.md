@@ -1,7 +1,7 @@
 # 兜行 API 接口文档
 
 > **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · J1～J5+ 旅程相册）  
-> **更新日期**：2026-06-23  
+> **更新日期**：2026-06-26  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（当前 **Step 35** · **M1～M5 已验收**）  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
@@ -225,18 +225,20 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 85 | GET | `/api/analytics/overview` | 管理员 | 数据分析 |
 | 86 | GET | `/api/analytics/trends` | 管理员 | 数据分析 |
 | 87 | GET | `/api/analytics/top-cities` | 管理员 | 数据分析 |
-| 88 | POST | `/api/analytics/events` | 管理员 | 数据分析 |
-| 89 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
-| 90 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
-| 91 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
-| 92 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
-| 93 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 94 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 95 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 96 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 97 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
+| 88 | GET | `/api/analytics/funnel` | 管理员 | 数据分析 |
+| 89 | POST | `/api/analytics/events` | 登录可选 | 数据分析（DT3 埋点） |
+| 90 | POST | `/api/analytics/events/batch` | 登录可选 | 数据分析（DT3 批量埋点） |
+| 91 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
+| 92 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
+| 93 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
+| 94 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
+| 95 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 96 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 97 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 98 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 99 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
 
-> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 97 项（C 端 + 数据分析主链）。
+> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 **99** 项（C 端 + 数据分析主链）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
 
 ---
 
@@ -976,7 +978,7 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 
 ## 19. 数据分析 analytics
 
-前缀：`/api/analytics`（均需 **管理员** JWT）。指标口径与分阶段路线见 [数据中台.md](./数据中台.md)。
+前缀：`/api/analytics`。读接口（overview/trends/top-cities/funnel）需 **管理员** JWT；埋点写入（`POST /events`、`/events/batch`）使用 `optionalAuthMiddleware`（**登录可选**，mobile/pc 客户端上报）。指标口径与分阶段路线见 [数据中台.md](./数据中台.md)。
 
 ### GET `/overview`
 
@@ -1211,6 +1213,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-06-26 | **DT2/DT3**：§19 增 `GET /funnel` · `POST /events/batch`；埋点写入改为登录可选；总览 **99** 接口 |
 | 2026-06-18 | **M5 行中**：§7 新增 `replan/preview` · `replan/apply` · `missed-pois/*`；§20 `analyze` 增 `in_plan`/`in_trip`；§21 Agent Tool 增 `replan_segment` · `detect_missed_pois` · `apply_memory_context` · `build_route_variants`；总览 **97** 接口 |
 | 2026-06-18 | 新增 §20 旅行宠物 `/api/pets/*`（9 个接口）；修正总览序号；总览 **93** 接口 |
 | 2026-06-10 | J5++：`DELETE /journey-albums/:id`；路线列表 `listCoverImageUrl`；总览 **83** 接口 |

@@ -1,6 +1,10 @@
 <template>
   <div class="analytics-page">
-    <a-page-header :title="t('analytics.title')" :sub-title="t('analytics.desc')" />
+    <a-page-header :title="t('analytics.title')" :sub-title="t('analytics.desc')">
+      <template #extra>
+        <a-button type="primary" @click="openTravelScreen">{{ t('screen.travel.open') }}</a-button>
+      </template>
+    </a-page-header>
 
     <a-spin :spinning="loading">
       <a-row :gutter="[16, 16]" class="overview-row">
@@ -138,6 +142,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnType } from 'ant-design-vue';
 import type { AnalyticsDailyPoint, AnalyticsFunnelStep, AnalyticsOverview } from '@douxing/shared';
@@ -155,6 +160,7 @@ import { createClientAdminPaginationConfig } from '@/utils/adminPagination';
 
 usePageTitle('web.analytics');
 
+const router = useRouter();
 const { t } = useI18n();
 const loading = ref(false);
 const overview = ref<AnalyticsOverview | null>(null);
@@ -270,6 +276,11 @@ async function loadAll() {
   } finally {
     loading.value = false;
   }
+}
+
+function openTravelScreen() {
+  const route = router.resolve({ name: 'screen-travel' });
+  window.open(route.href, '_blank', 'noopener,noreferrer');
 }
 
 onMounted(() => {

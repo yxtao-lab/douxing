@@ -22,6 +22,26 @@ const router = createRouter({
       ],
     },
     {
+      path: '/screen',
+      component: () => import('@/layouts/ScreenLayout.vue'),
+      meta: { hideInMenu: true, hideInTabs: true },
+      children: [
+        {
+          path: 'travel',
+          name: 'screen-travel',
+          component: () => import('@/views/screen/TravelCockpitView.vue'),
+          meta: {
+            requiresAuth: true,
+            fullscreen: true,
+            hideInMenu: true,
+            hideInTabs: true,
+            titleKey: 'screen.travel.title',
+            perm: 'data:analytics:view',
+          },
+        },
+      ],
+    },
+    {
       path: '/',
       name: 'layout',
       component: BasicLayout,

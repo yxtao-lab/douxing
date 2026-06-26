@@ -2,7 +2,7 @@
 
 > **适用范围**：`packages/web` 全部数据列表页（业务、系统、监控、日志、会员、数据分析内嵌表等）。  
 > **代码约束**：`.cursor/rules/web-admin-table-filter.mdc`、`.cursor/rules/web-admin-table-actions.mdc`（Agent 开发时自动引用）。  
-> **最后更新**：2026-06-23
+> **最后更新**：2026-06-26
 
 ---
 

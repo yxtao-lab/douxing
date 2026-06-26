@@ -3,7 +3,7 @@
 > 本文说明：**从代码提交到线上生效**的完整链路、各脚本职责、实现原理，以及首次手动配置与后续 CI/CD 参考。  
 > 速查命令见 [服务端命令手册](服务端命令手册.md) · 生产步骤见 [deploy-production.md](deploy-production.md)
 
-**最后更新**：2026-06-23
+**最后更新**：2026-06-26
 
 ---
 
@@ -504,4 +504,4 @@ ssh user@server 'cd /opt/douxing && git pull && bash scripts/gitee-webhook-deplo
 
 ---
 
-*文档版本：2026-06-23 · 对应当前 Webhook + 服务器构建方案*
+*文档版本：2026-06-26 · 对应当前 Webhook + 服务器构建方案*

@@ -1060,6 +1060,51 @@ export interface AnalyticsFunnelStep {
   rateFromPrev: number | null;
 }
 
+/** DT5 · 省级旅行分布 */
+export interface AnalyticsProvinceGeoStat {
+  provinceCode: string;
+  geoName: string;
+  adcode: string;
+  checkinCount: number;
+}
+
+/** DT5 · 城市级分布（含聚合中心点） */
+export interface AnalyticsCityGeoStat {
+  cityCode: string;
+  cityName: string;
+  latitude: number;
+  longitude: number;
+  checkinCount: number;
+}
+
+/** DT5 · 打卡热力点（网格聚合） */
+export interface AnalyticsHeatPoint {
+  latitude: number;
+  longitude: number;
+  weight: number;
+}
+
+/** DT5 · GET /analytics/geo/distribution */
+export interface AnalyticsGeoDistribution {
+  provinces: AnalyticsProvinceGeoStat[];
+  cities: AnalyticsCityGeoStat[];
+  heatPoints: AnalyticsHeatPoint[];
+  generatedAt: string;
+}
+
+/** DT5 · 城际 OD 流动 */
+export interface AnalyticsGeoFlow {
+  fromCityCode: string;
+  toCityCode: string;
+  fromName: string;
+  toName: string;
+  fromLatitude: number;
+  fromLongitude: number;
+  toLatitude: number;
+  toLongitude: number;
+  count: number;
+}
+
 /** C7-c：单条记忆召回解释 */
 export interface MemoryRecallExplainItem {
   memoryType: string;

@@ -239,6 +239,19 @@ export const webEnUS = {
     funnelRoutePublish: 'Route published',
     funnelCheckin: 'Check-in',
   },
+  screen: {
+    travel: {
+      title: 'Douxing Travel Cockpit',
+      eyebrow: 'DOUXING TRAVEL COCKPIT',
+      back: 'Back to dashboard',
+      open: 'Open travel cockpit',
+      mapTitle: 'National travel map',
+      cityRankTitle: 'Top check-in cities',
+      funnelTitle: 'Journey funnel',
+      flowTitle: 'Top intercity flows',
+      rangeDays: 'Last {days} days',
+    },
+  },
   routes: {
     title: 'Routes',
     desc: 'All platform routes (admin MVP)',
