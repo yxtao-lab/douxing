@@ -1,4 +1,5 @@
-import { mysqlTable, int, varchar, text, tinyint, timestamp } from 'drizzle-orm/mysql-core';
+import { mysqlTable, int, varchar, text, tinyint, timestamp, primaryKey } from 'drizzle-orm/mysql-core';
+import { roles } from './roles.js';
 
 export const sysDept = mysqlTable('sys_dept', {
   id: int('id').primaryKey().autoincrement(),
@@ -93,3 +94,19 @@ export const sysMenu = mysqlTable('sys_menu', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),
 });
+
+/** 角色 ↔ 菜单（S1 RBAC） */
+export const roleMenu = mysqlTable(
+  'role_menu',
+  {
+    roleId: int('role_id')
+      .notNull()
+      .references(() => roles.id, { onDelete: 'cascade' }),
+    menuId: int('menu_id')
+      .notNull()
+      .references(() => sysMenu.id, { onDelete: 'cascade' }),
+  },
+  (table) => ({
+    pk: primaryKey({ columns: [table.roleId, table.menuId] }),
+  }),
+);

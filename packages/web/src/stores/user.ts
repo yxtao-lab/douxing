@@ -13,7 +13,8 @@ export const useUserStore = defineStore('user', () => {
     const raw = localStorage.getItem(USER_KEY);
     if (!raw) return null;
     try {
-      return JSON.parse(raw) as UserInfo;
+      const parsed = JSON.parse(raw) as UserInfo;
+      return { ...parsed, permissions: parsed.permissions ?? [] };
     } catch {
       return null;
     }

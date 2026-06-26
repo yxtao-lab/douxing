@@ -1,10 +1,9 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth.js';
+import { requirePerm } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
-import { getUserWithRoles } from '../services/user.service.js';
 import {
-  RoleCode,
   ApiError,
   ApiMessageKey,
   type RoutePlaybookInfo,
@@ -70,21 +69,14 @@ const playbookUpdateSchema = playbookBodySchema
   .partial()
   .refine((body) => Object.keys(body).length > 0, { message: 'empty update' });
 
-async function requireAdmin(req: import('express').Request, res: import('express').Response) {
-  const user = await getUserWithRoles(req.auth!.userId);
-  if (!user?.roles.includes(RoleCode.ADMIN)) {
-    fail(res, ApiMessageKey.ADMIN_REQUIRED, 403, 403);
-    return null;
-  }
-  return user;
-}
+const PlaybookPerm = 'content:playbooks:list';
 
 function toApiPlaybook(item: RoutePlaybookInfo): RoutePlaybookInfo {
   return item;
 }
 
 router.get('/admin', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, PlaybookPerm))) return;
 
   try {
     const city = typeof req.query.city === 'string' ? req.query.city : undefined;
@@ -112,7 +104,7 @@ router.get('/admin', authMiddleware, async (req, res) => {
 });
 
 router.get('/admin/:id', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, PlaybookPerm))) return;
 
   const id = String(req.params.id ?? '').trim();
   if (!id) {
@@ -132,7 +124,7 @@ router.get('/admin/:id', authMiddleware, async (req, res) => {
 });
 
 router.post('/admin', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, PlaybookPerm))) return;
 
   const parsed = playbookBodySchema.safeParse(req.body);
   if (!parsed.success) {
@@ -153,7 +145,7 @@ router.post('/admin', authMiddleware, async (req, res) => {
 });
 
 router.put('/admin/:id', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, PlaybookPerm))) return;
 
   const id = String(req.params.id ?? '').trim();
   if (!id) {
@@ -181,7 +173,7 @@ router.put('/admin/:id', authMiddleware, async (req, res) => {
 });
 
 router.delete('/admin/:id', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, PlaybookPerm))) return;
 
   const id = String(req.params.id ?? '').trim();
   if (!id) {

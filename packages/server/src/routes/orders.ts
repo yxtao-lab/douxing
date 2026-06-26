@@ -21,7 +21,7 @@ import { createOrderPrepay } from '../services/payment.service.js';
 import { getPaymentMode, isWechatPayConfigured } from '../config/payment.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 import { getUserWithRoles } from '../services/user.service.js';
-import { RoleCode } from '@douxing/shared';
+import { hasPermission } from '../services/permission.service.js';
 
 const router = Router();
 
@@ -58,7 +58,11 @@ router.get('/', authMiddleware, async (req, res) => {
   try {
     const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
     const user = await getUserWithRoles(req.auth!.userId);
-    if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
+    if (
+      req.query.all === '1' &&
+      user &&
+      hasPermission(user.roles, user.permissions, 'biz:orders:list')
+    ) {
       const { dateStart, dateEnd } = parseDateRangeFilter(req.query as Record<string, unknown>);
       const result = await listAllOrdersForAdminPaginated(page, pageSize, {
         keyword: parseOptionalString(req.query as Record<string, unknown>, 'keyword'),

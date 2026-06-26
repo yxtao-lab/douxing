@@ -29,7 +29,7 @@ import { getAllProvidersStatus, listProviderOptions } from '../services/llm-clie
 import { checkAiServiceStatus } from '../services/ai-service-client.service.js';
 import { isLlmEnabled } from '../config/llm.js';
 import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
-import { RoleCode } from '@douxing/shared';
+import { hasPermission } from '../services/permission.service.js';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
 import {
@@ -189,7 +189,11 @@ router.post('/generate', authMiddleware, async (req, res) => {
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await getUserWithRoles(req.auth!.userId);
-    if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
+    if (
+      req.query.all === '1' &&
+      user &&
+      hasPermission(user.roles, user.permissions, 'biz:routes:list')
+    ) {
       const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
       const query = req.query as Record<string, unknown>;
       const { dateStart, dateEnd } = parseDateRangeFilter(query);

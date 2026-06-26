@@ -47,7 +47,14 @@
             :show-delete="record.code !== 'admin' && record.code !== 'user'"
             @edit="openEdit(record)"
             @delete="handleDelete(record)"
-          />
+          >
+            <TableActionButton
+              v-if="record.code !== 'admin'"
+              variant="info"
+              :label="t('system.assignMenus')"
+              @click="openMenuAssign(record)"
+            />
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -70,6 +77,26 @@
         </a-form-item>
       </a-form>
     </a-modal>
+
+    <a-modal
+      v-model:open="menuModalOpen"
+      :title="t('system.assignMenus')"
+      width="520px"
+      :confirm-loading="menuSaving"
+      @ok="submitMenus"
+    >
+      <a-spin :spinning="menuLoading">
+        <a-tree
+          v-if="menuTree.length"
+          v-model:checked-keys="checkedMenuIds"
+          checkable
+          :tree-data="menuTree"
+          :field-names="{ title: 'menuName', key: 'id', children: 'children' }"
+          default-expand-all
+        />
+        <a-empty v-else :description="t('system.empty')" />
+      </a-spin>
+    </a-modal>
   </PageContainer>
 </template>
 
@@ -79,11 +106,12 @@ import { message } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
-import { createRole, deleteRole, fetchRoles, updateRole, type RoleRow } from '@/api/system';
+import { createRole, deleteRole, fetchMenusTree, fetchRoleMenus, fetchRoles, updateRole, updateRoleMenus, type MenuRow, type RoleRow } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -98,13 +126,19 @@ const modalOpen = ref(false);
 const saving = ref(false);
 const editingId = ref<number | null>(null);
 const form = reactive({ code: '', name: '', description: '' });
+const menuModalOpen = ref(false);
+const menuLoading = ref(false);
+const menuSaving = ref(false);
+const menuTree = ref<MenuRow[]>([]);
+const checkedMenuIds = ref<number[]>([]);
+const assigningRoleId = ref<number | null>(null);
 
 const columns = computed<TableColumnsType<RoleRow>>(() => [
   { title: t('system.colCode'), dataIndex: 'code', width: 120 },
   { title: t('system.colName'), dataIndex: 'name', width: 140 },
   { title: t('system.colDescription'), dataIndex: 'description', ellipsis: true },
   { title: t('system.colUserCount'), dataIndex: 'userCount', width: 100 },
-  { title: t('system.colAction'), key: 'action', width: 160, fixed: 'right' },
+  { title: t('system.colAction'), key: 'action', width: 220, fixed: 'right' },
 ]);
 
 async function load() {
@@ -164,6 +198,36 @@ async function handleDelete(record: RoleRow) {
     await load();
   } catch (err) {
     message.error(err instanceof Error ? err.message : t('common.failed'));
+  }
+}
+
+async function openMenuAssign(record: RoleRow) {
+  assigningRoleId.value = record.id;
+  menuModalOpen.value = true;
+  menuLoading.value = true;
+  try {
+    const [tree, assigned] = await Promise.all([fetchMenusTree(), fetchRoleMenus(record.id)]);
+    menuTree.value = tree;
+    checkedMenuIds.value = assigned.menuIds;
+  } catch (err) {
+    message.error(err instanceof Error ? err.message : t('common.failed'));
+    menuModalOpen.value = false;
+  } finally {
+    menuLoading.value = false;
+  }
+}
+
+async function submitMenus() {
+  if (!assigningRoleId.value) return;
+  menuSaving.value = true;
+  try {
+    await updateRoleMenus(assigningRoleId.value, checkedMenuIds.value);
+    message.success(t('common.success'));
+    menuModalOpen.value = false;
+  } catch (err) {
+    message.error(err instanceof Error ? err.message : t('common.failed'));
+  } finally {
+    menuSaving.value = false;
   }
 }
 

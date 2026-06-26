@@ -467,6 +467,7 @@ export const webEnUS = {
     statusDisabled: 'Disabled',
     searchUser: 'Search user',
     assignRoles: 'Assign roles',
+    assignMenus: 'Assign menus',
     resetPassword: 'Reset password',
     newPassword: 'New password',
     colCode: 'Code',

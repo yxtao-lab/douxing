@@ -190,6 +190,14 @@ export async function deleteRole(id: number) {
   await http.delete(`/system/roles/${id}`);
 }
 
+export async function fetchRoleMenus(roleId: number) {
+  return getData<{ menuIds: number[] }>(`/system/roles/${roleId}/menus`);
+}
+
+export async function updateRoleMenus(roleId: number, menuIds: number[]) {
+  await http.put(`/system/roles/${roleId}/menus`, { menuIds });
+}
+
 export async function fetchMenusTree(name?: string) {
   const q = name ? `?name=${encodeURIComponent(name)}` : '';
   return getData<MenuRow[]>(`/system/menus${q}`);

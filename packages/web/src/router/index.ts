@@ -2,6 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router';
 import { i18n } from '@/i18n';
 import { useLayoutStore } from '@/stores/layout';
 import { useUserStore } from '@/stores/user';
+import { usePermissions } from '@/composables/usePermissions';
 import BasicLayout from '@/layouts/BasicLayout.vue';
 import UserLayout from '@/layouts/UserLayout.vue';
 
@@ -45,6 +46,7 @@ const router = createRouter({
             titleKey: 'web.routes',
             menuGroupKey: 'web.menu.biz',
             icon: 'UnorderedListOutlined',
+            perm: 'biz:routes:list',
           },
         },
         {
@@ -56,6 +58,7 @@ const router = createRouter({
             titleKey: 'web.orders',
             menuGroupKey: 'web.menu.biz',
             icon: 'ShoppingOutlined',
+            perm: 'biz:orders:list',
           },
         },
         {
@@ -68,6 +71,7 @@ const router = createRouter({
             menuGroupKey: 'web.menu.biz',
             menuSubGroupKey: 'web.menu.membership',
             icon: 'CrownOutlined',
+            perm: 'biz:membership:users',
           },
         },
         {
@@ -80,6 +84,7 @@ const router = createRouter({
             menuGroupKey: 'web.menu.biz',
             menuSubGroupKey: 'web.menu.membership',
             icon: 'HistoryOutlined',
+            perm: 'biz:membership:logs',
           },
         },
         {
@@ -92,6 +97,7 @@ const router = createRouter({
             menuGroupKey: 'web.menu.biz',
             menuSubGroupKey: 'web.menu.membership',
             icon: 'GiftOutlined',
+            perm: 'biz:membership:products',
           },
         },
         {
@@ -103,6 +109,7 @@ const router = createRouter({
             titleKey: 'web.checkins',
             menuGroupKey: 'web.menu.biz',
             icon: 'EnvironmentOutlined',
+            perm: 'biz:checkins:list',
           },
         },
         {
@@ -114,6 +121,7 @@ const router = createRouter({
             titleKey: 'web.checkinMap',
             menuGroupKey: 'web.menu.biz',
             icon: 'GlobalOutlined',
+            perm: 'biz:checkins:map',
           },
         },
         {
@@ -125,6 +133,7 @@ const router = createRouter({
             titleKey: 'web.attractionsPending',
             menuGroupKey: 'web.menu.content',
             icon: 'AuditOutlined',
+            perm: 'content:attractions:pending',
           },
         },
         {
@@ -136,6 +145,7 @@ const router = createRouter({
             titleKey: 'web.attractionsManage',
             menuGroupKey: 'web.menu.content',
             icon: 'PictureOutlined',
+            perm: 'content:attractions:manage',
           },
         },
         {
@@ -147,6 +157,7 @@ const router = createRouter({
             titleKey: 'web.playbooksManage',
             menuGroupKey: 'web.menu.content',
             icon: 'BookOutlined',
+            perm: 'content:playbooks:list',
           },
         },
         {
@@ -158,6 +169,7 @@ const router = createRouter({
             titleKey: 'web.analytics',
             menuGroupKey: 'web.menu.data',
             icon: 'BarChartOutlined',
+            perm: 'data:analytics:view',
           },
         },
         {
@@ -169,6 +181,7 @@ const router = createRouter({
             titleKey: 'web.sysUsers',
             menuGroupKey: 'web.menu.system',
             icon: 'UserOutlined',
+            perm: 'system:user:list',
           },
         },
         {
@@ -180,6 +193,7 @@ const router = createRouter({
             titleKey: 'web.sysRoles',
             menuGroupKey: 'web.menu.system',
             icon: 'TeamOutlined',
+            perm: 'system:role:list',
           },
         },
         {
@@ -191,6 +205,7 @@ const router = createRouter({
             titleKey: 'web.sysMenus',
             menuGroupKey: 'web.menu.system',
             icon: 'MenuOutlined',
+            perm: 'system:menu:list',
           },
         },
         {
@@ -202,6 +217,7 @@ const router = createRouter({
             titleKey: 'web.sysDepts',
             menuGroupKey: 'web.menu.system',
             icon: 'ApartmentOutlined',
+            perm: 'system:dept:list',
           },
         },
         {
@@ -213,6 +229,7 @@ const router = createRouter({
             titleKey: 'web.sysPosts',
             menuGroupKey: 'web.menu.system',
             icon: 'IdcardOutlined',
+            perm: 'system:post:list',
           },
         },
         {
@@ -224,6 +241,7 @@ const router = createRouter({
             titleKey: 'web.sysDict',
             menuGroupKey: 'web.menu.system',
             icon: 'ReadOutlined',
+            perm: 'system:dict:list',
           },
         },
         {
@@ -235,6 +253,7 @@ const router = createRouter({
             titleKey: 'web.sysConfig',
             menuGroupKey: 'web.menu.system',
             icon: 'FormOutlined',
+            perm: 'system:config:list',
           },
         },
         {
@@ -246,6 +265,7 @@ const router = createRouter({
             titleKey: 'web.sysNotices',
             menuGroupKey: 'web.menu.system',
             icon: 'NotificationOutlined',
+            perm: 'system:notice:list',
           },
         },
         {
@@ -257,6 +277,7 @@ const router = createRouter({
             titleKey: 'web.monitorOnline',
             menuGroupKey: 'web.menu.monitor',
             icon: 'WifiOutlined',
+            perm: 'monitor:online:list',
           },
         },
         {
@@ -268,6 +289,7 @@ const router = createRouter({
             titleKey: 'web.monitorJobs',
             menuGroupKey: 'web.menu.monitor',
             icon: 'ClockCircleOutlined',
+            perm: 'monitor:job:list',
           },
         },
         {
@@ -279,6 +301,7 @@ const router = createRouter({
             titleKey: 'web.monitorData',
             menuGroupKey: 'web.menu.monitor',
             icon: 'RadarChartOutlined',
+            perm: 'monitor:data:view',
           },
         },
         {
@@ -290,6 +313,7 @@ const router = createRouter({
             titleKey: 'web.monitorServer',
             menuGroupKey: 'web.menu.monitor',
             icon: 'DesktopOutlined',
+            perm: 'monitor:server:view',
           },
         },
         {
@@ -301,6 +325,7 @@ const router = createRouter({
             titleKey: 'web.monitorCache',
             menuGroupKey: 'web.menu.monitor',
             icon: 'HddOutlined',
+            perm: 'monitor:cache:view',
           },
         },
         {
@@ -312,6 +337,7 @@ const router = createRouter({
             titleKey: 'web.monitorCacheList',
             menuGroupKey: 'web.menu.monitor',
             icon: 'BlockOutlined',
+            perm: 'monitor:cache:list',
           },
         },
         {
@@ -323,6 +349,7 @@ const router = createRouter({
             titleKey: 'web.logOper',
             menuGroupKey: 'web.menu.log',
             icon: 'FileTextOutlined',
+            perm: 'log:oper:list',
           },
         },
         {
@@ -334,6 +361,7 @@ const router = createRouter({
             titleKey: 'web.logLogin',
             menuGroupKey: 'web.menu.log',
             icon: 'AuditOutlined',
+            perm: 'log:login:list',
           },
         },
       ],
@@ -343,11 +371,21 @@ const router = createRouter({
 
 router.beforeEach((to) => {
   const userStore = useUserStore();
+  const { hasPerm, isStaff } = usePermissions();
   if (to.meta.requiresAuth && !userStore.token) {
     return { name: 'login', query: { redirect: to.fullPath } };
   }
   if (to.name === 'login' && userStore.token) {
     return { name: 'home' };
+  }
+  if (to.meta.requiresAuth && userStore.token && to.name !== 'home') {
+    const perm = to.meta.perm as string | undefined;
+    if (perm && !hasPerm(perm)) {
+      return { name: 'home' };
+    }
+    if (!isStaff.value && to.path !== '/') {
+      return { name: 'login' };
+    }
   }
 });
 

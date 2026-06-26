@@ -1,5 +1,5 @@
 import os from 'node:os';
-import { count, desc, eq, like, or, and, gte, lte } from 'drizzle-orm';
+import { count, desc, eq, inArray, like, or, and, gte, lte } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import {
   APP_NAME,
@@ -25,6 +25,7 @@ import {
   sysOperLog,
   sysLoginLog,
   sysMenu,
+  roleMenu,
 } from '../db/schema/sys-admin.js';
 import { getUserWithRoles } from './user.service.js';
 import { getAnalyticsOverview } from './analytics.service.js';
@@ -407,6 +408,32 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'login-log', menuName: '登录日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/login', perms: 'log:login:list', icon: 'BlockOutlined', sortOrder: 62 },
 ];
 
+/** S1 · 预置角色默认菜单（menuKey）；admin 使用全部菜单 */
+export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
+  [RoleCode.ADMIN]: 'ALL',
+  [RoleCode.OPERATOR]: [
+    'home',
+    'data',
+    'analytics',
+    'biz',
+    'routes',
+    'orders',
+    'membership',
+    'membership-users',
+    'membership-logs',
+    'membership-products',
+    'checkins',
+    'checkins-map',
+    'content',
+    'attractions-manage',
+    'playbooks',
+    'log',
+    'oper-log',
+    'login-log',
+  ],
+  [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'playbooks'],
+};
+
 export async function listAdminUsersPaginated(
   page: number,
   pageSize: number,
@@ -540,6 +567,72 @@ export async function deleteRole(id: number) {
   }
   await db.delete(roles).where(eq(roles.id, id));
   return { ok: true };
+}
+
+export async function getRoleMenuIds(roleId: number): Promise<number[]> {
+  const db = getDb();
+  const rows = await db
+    .select({ menuId: roleMenu.menuId })
+    .from(roleMenu)
+    .where(eq(roleMenu.roleId, roleId));
+  return rows.map((row) => row.menuId);
+}
+
+export async function updateRoleMenus(roleId: number, menuIds: number[]) {
+  const db = getDb();
+  const roleRow = await db.select().from(roles).where(eq(roles.id, roleId)).limit(1);
+  if (!roleRow[0]) throw new Error('角色不存在');
+  if (roleRow[0].code === RoleCode.ADMIN) {
+    throw new Error('超级管理员拥有全部菜单，不可修改');
+  }
+
+  const uniqueIds = [...new Set(menuIds.filter((id) => Number.isInteger(id) && id > 0))];
+  if (uniqueIds.length > 0) {
+    const existing = await db
+      .select({ id: sysMenu.id })
+      .from(sysMenu)
+      .where(inArray(sysMenu.id, uniqueIds));
+    const validIds = new Set(existing.map((row) => row.id));
+    for (const id of uniqueIds) {
+      if (!validIds.has(id)) throw new Error(`菜单 id=${id} 不存在`);
+    }
+  }
+
+  await db.delete(roleMenu).where(eq(roleMenu.roleId, roleId));
+  if (uniqueIds.length > 0) {
+    await db.insert(roleMenu).values(uniqueIds.map((menuId) => ({ roleId, menuId })));
+  }
+}
+
+export async function seedDefaultRoleMenus() {
+  const db = getDb();
+  const menuRows = await db.select({ id: sysMenu.id, menuKey: sysMenu.menuKey }).from(sysMenu);
+  const idByKey = new Map(menuRows.map((row) => [row.menuKey, row.id]));
+  const roleRows = await db.select().from(roles);
+  const roleIdByCode = new Map(roleRows.map((row) => [row.code, row.id]));
+
+  for (const [roleCode, menuKeys] of Object.entries(DEFAULT_ROLE_MENU_KEYS)) {
+    const roleId = roleIdByCode.get(roleCode);
+    if (!roleId) continue;
+
+    const existing = await db
+      .select({ menuId: roleMenu.menuId })
+      .from(roleMenu)
+      .where(eq(roleMenu.roleId, roleId))
+      .limit(1);
+    if (existing.length > 0) continue;
+
+    const targetIds =
+      menuKeys === 'ALL'
+        ? menuRows.map((row) => row.id)
+        : menuKeys
+            .map((key) => idByKey.get(key))
+            .filter((id): id is number => id != null);
+
+    if (targetIds.length === 0) continue;
+    await db.insert(roleMenu).values(targetIds.map((menuId) => ({ roleId, menuId })));
+    console.log(`[seed] role_menu: ${roleCode} ← ${targetIds.length} menus`);
+  }
 }
 
 export async function listDepts(filter?: {

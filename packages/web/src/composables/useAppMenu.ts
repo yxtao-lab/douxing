@@ -35,6 +35,7 @@ import {
   HistoryOutlined,
 } from '@ant-design/icons-vue';
 import type { Component } from 'vue';
+import { usePermissions } from '@/composables/usePermissions';
 
 export const menuIconMap: Record<string, Component> = {
   HomeOutlined,
@@ -98,6 +99,8 @@ export interface AppRouteMeta {
   menuGroupKey?: string;
   /** 三级菜单分组键（需配合 menuGroupKey 使用） */
   menuSubGroupKey?: string;
+  /** S1 RBAC：菜单权限标识，与 sys_menu.perms 对齐 */
+  perm?: string;
   icon?: keyof typeof menuIconMap;
   hideInMenu?: boolean;
   hideInTabs?: boolean;
@@ -123,14 +126,20 @@ export function useAppMenu() {
   const { t } = useI18n();
   const route = useRoute();
   const router = useRouter();
+  const { hasPerm } = usePermissions();
 
   const menuRoutes = computed(() => {
     const layoutRoute = router.getRoutes().find((item) => item.name === 'layout');
     return (layoutRoute?.children ?? []) as MenuRouteItem[];
   });
 
+  function canShowRoute(item: MenuRouteItem): boolean {
+    if (!item.meta?.titleKey || item.meta.hideInMenu) return false;
+    return hasPerm(item.meta.perm);
+  }
+
   const menuItems = computed<MenuProps['items']>(() => {
-    const visible = menuRoutes.value.filter((item) => !item.meta?.hideInMenu && item.meta?.titleKey);
+    const visible = menuRoutes.value.filter(canShowRoute);
     const workbench = visible.filter((item) => !item.meta?.menuGroupKey);
 
     const toMenuItem = (item: MenuRouteItem) => ({

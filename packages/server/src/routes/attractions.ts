@@ -6,9 +6,9 @@ import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import '../config/env.js';
 import { authMiddleware } from '../middleware/auth.js';
+import { requirePerm } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
-import { getUserWithRoles } from '../services/user.service.js';
-import { RoleCode, ApiMessageKey, AttractionImageSource, ApiError } from '@douxing/shared';
+import { ApiMessageKey, AttractionImageSource, ApiError } from '@douxing/shared';
 import {
   listAttractions,
   getAttractionById,
@@ -66,15 +66,6 @@ const coverUpload = multer({
   },
 });
 
-async function requireAdmin(req: import('express').Request, res: import('express').Response) {
-  const user = await getUserWithRoles(req.auth!.userId);
-  if (!user?.roles.includes(RoleCode.ADMIN)) {
-    fail(res, '需要管理员权限', 403, 403);
-    return null;
-  }
-  return user;
-}
-
 const listQuerySchema = z.object({
   city: z.string().max(64).optional(),
   cityCode: z.string().max(32).optional(),
@@ -120,7 +111,7 @@ const adminPendingSchema = z.object({
 
 router.get('/admin/pending', authMiddleware, async (req, res) => {
   try {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
     const parsed = adminPendingSchema.safeParse(req.query);
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
@@ -147,7 +138,7 @@ router.get('/admin/pending', authMiddleware, async (req, res) => {
 
 router.get('/admin/catalog', authMiddleware, async (req, res) => {
   try {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requirePerm(req, res, 'content:attractions:manage'))) return;
     const parsed = adminCatalogSchema.safeParse(req.query);
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
@@ -179,7 +170,7 @@ router.post('/admin/:id/cover', authMiddleware, (req, res, next) => {
   });
 }, async (req, res) => {
   try {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requirePerm(req, res, 'content:attractions:manage'))) return;
     const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id) || id <= 0) {
       return fail(res, ApiMessageKey.ATTRACTION_INVALID_ID);
@@ -224,7 +215,7 @@ router.post('/admin/:id/cover', authMiddleware, (req, res, next) => {
 
 router.post('/admin/:id/cover/refresh-amap', authMiddleware, async (req, res) => {
   try {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requirePerm(req, res, 'content:attractions:manage'))) return;
     const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id) || id <= 0) {
       return fail(res, ApiMessageKey.ATTRACTION_INVALID_ID);
@@ -257,7 +248,7 @@ router.post('/admin/:id/cover/refresh-amap', authMiddleware, async (req, res) =>
 
 router.post('/admin/:id/approve', authMiddleware, async (req, res) => {
   try {
-    if (!(await requireAdmin(req, res))) return;
+    if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
     const id = parseInt(String(req.params.id), 10);
     if (Number.isNaN(id) || id <= 0) {
       return fail(res, ApiMessageKey.ATTRACTION_INVALID_ID);

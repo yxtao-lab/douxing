@@ -19,6 +19,8 @@ export interface UserInfo {
   memberLevel: number;
   status: number;
   roles: string[];
+  /** 管理端权限标识（S1 RBAC）；C 端用户通常为空数组 */
+  permissions: string[];
 }
 
 /** 更新当前用户资料（PUT /users/me） */

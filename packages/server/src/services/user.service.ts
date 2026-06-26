@@ -4,6 +4,7 @@ import { users, roles, userRoles } from '../db/schema/index.js';
 import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
 import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel, ApiError, ApiMessageKey } from '@douxing/shared';
 import { rewritePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
+import { getPermissionsForUser } from './permission.service.js';
 
 const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
 
@@ -27,6 +28,7 @@ function normalizeInterestTags(tags: string[] | undefined): string[] | undefined
 function mapUserRow(
   user: typeof users.$inferSelect,
   roleCodes: string[],
+  permissions: string[],
 ): UserInfo {
   return {
     id: user.id,
@@ -39,6 +41,7 @@ function mapUserRow(
     memberLevel: normalizeMemberLevel(user.memberLevel),
     status: user.status,
     roles: roleCodes,
+    permissions,
   };
 }
 
@@ -66,7 +69,9 @@ export async function getUserWithRoles(userId: number): Promise<UserInfo | null>
     .innerJoin(roles, eq(userRoles.roleId, roles.id))
     .where(eq(userRoles.userId, userId));
 
-  return mapUserRow(user, roleRows.map((r) => r.code));
+  const roleCodes = roleRows.map((r) => r.code);
+  const permissions = await getPermissionsForUser(userId);
+  return mapUserRow(user, roleCodes, permissions);
 }
 
 export async function updateUserProfile(

@@ -466,6 +466,7 @@ export const webZhCN = {
     statusDisabled: '停用',
     searchUser: '搜索用户名/昵称/手机号',
     assignRoles: '分配角色',
+    assignMenus: '分配菜单',
     resetPassword: '重置密码',
     newPassword: '新密码',
     colCode: '编码',

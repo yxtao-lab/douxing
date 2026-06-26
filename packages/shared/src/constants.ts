@@ -17,6 +17,8 @@ export const UserStatus = {
 
 export const RoleCode = {
   ADMIN: 'admin',
+  OPERATOR: 'operator',
+  AUDITOR: 'auditor',
   USER: 'user',
 } as const;
 

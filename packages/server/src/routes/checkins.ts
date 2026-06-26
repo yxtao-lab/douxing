@@ -19,8 +19,9 @@ import {
   parseOptionalString,
 } from '../utils/admin-list-filter.js';
 import type { CheckInTimeRange } from '@douxing/shared';
+import { CHECKIN_MAX_PHOTOS } from '@douxing/shared';
 import { getUserWithRoles } from '../services/user.service.js';
-import { RoleCode, CHECKIN_MAX_PHOTOS } from '@douxing/shared';
+import { hasPermission } from '../services/permission.service.js';
 import { isCheckinValidationError } from '../utils/checkin-errors.js';
 import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
@@ -132,7 +133,11 @@ router.get('/', authMiddleware, async (req, res) => {
         : undefined;
 
     const user = await getUserWithRoles(req.auth!.userId);
-    if (user?.roles.includes(RoleCode.ADMIN) && req.query.all === '1') {
+    if (
+      req.query.all === '1' &&
+      user &&
+      hasPermission(user.roles, user.permissions, 'biz:checkins:list')
+    ) {
       const query = req.query as Record<string, unknown>;
       const { dateStart, dateEnd } = parseDateRangeFilter(query);
       const result = await listAllCheckInsForAdminPaginated(page, pageSize, {

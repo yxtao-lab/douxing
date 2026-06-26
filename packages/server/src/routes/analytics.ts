@@ -4,11 +4,10 @@ import {
   AnalyticsEventCategory,
   AnalyticsEventSource,
   ApiMessageKey,
-  RoleCode,
 } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
+import { requirePerm } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
-import { getUserWithRoles } from '../services/user.service.js';
 import {
   getAnalyticsOverview,
   getAnalyticsTrends,
@@ -49,17 +48,8 @@ const trackEventSchema = z.object({
   occurredAt: z.string().datetime().optional(),
 });
 
-async function requireAdmin(req: import('express').Request, res: import('express').Response) {
-  const user = await getUserWithRoles(req.auth!.userId);
-  if (!user?.roles.includes(RoleCode.ADMIN)) {
-    fail(res, ApiMessageKey.ADMIN_REQUIRED, 403, 403);
-    return null;
-  }
-  return user;
-}
-
 router.get('/overview', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
 
   try {
     const data = await getAnalyticsOverview();
@@ -71,7 +61,7 @@ router.get('/overview', authMiddleware, async (req, res) => {
 });
 
 router.get('/trends', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
 
   const parsed = trendsQuerySchema.safeParse(req.query);
   if (!parsed.success) {
@@ -89,7 +79,7 @@ router.get('/trends', authMiddleware, async (req, res) => {
 });
 
 router.get('/top-cities', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
 
   const parsed = topCitiesQuerySchema.safeParse(req.query);
   if (!parsed.success) {
@@ -107,7 +97,7 @@ router.get('/top-cities', authMiddleware, async (req, res) => {
 });
 
 router.post('/events', authMiddleware, async (req, res) => {
-  if (!(await requireAdmin(req, res))) return;
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
 
   const parsed = trackEventSchema.safeParse(req.body);
   if (!parsed.success) {
