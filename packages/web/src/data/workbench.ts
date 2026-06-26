@@ -23,7 +23,22 @@ export interface WorkbenchQuickAction {
   labelKey: string;
   to: string;
   icon: 'routes' | 'checkinMap' | 'attractions' | 'playbooks';
+  /** 与路由 meta.perm / sys_menu.perms 对齐 */
+  perm: string;
 }
+
+export interface WorkbenchStatItem {
+  key: 'routes' | 'orders' | 'checkins' | 'pending';
+  titleKey: string;
+  perm: string;
+}
+
+export const WORKBENCH_STATS: WorkbenchStatItem[] = [
+  { key: 'routes', titleKey: 'home.statRoutes', perm: 'biz:routes:list' },
+  { key: 'orders', titleKey: 'home.statOrders', perm: 'biz:orders:list' },
+  { key: 'checkins', titleKey: 'home.statCheckins', perm: 'biz:checkins:list' },
+  { key: 'pending', titleKey: 'home.statPending', perm: 'content:attractions:pending' },
+];
 
 export const WORKBENCH_SITES: WorkbenchSiteItem[] = [
   {
@@ -82,8 +97,33 @@ export const WORKBENCH_CHANGELOG: WorkbenchChangelogItem[] = [
 ];
 
 export const WORKBENCH_QUICK_ACTIONS: WorkbenchQuickAction[] = [
-  { id: 'routes', labelKey: 'web.routes', to: '/routes', icon: 'routes' },
-  { id: 'checkinMap', labelKey: 'web.checkinMap', to: '/checkins/map', icon: 'checkinMap' },
-  { id: 'attractions', labelKey: 'web.attractionsPending', to: '/attractions/pending', icon: 'attractions' },
-  { id: 'playbooks', labelKey: 'web.playbooksManage', to: '/playbooks/manage', icon: 'playbooks' },
+  { id: 'routes', labelKey: 'web.routes', to: '/routes', icon: 'routes', perm: 'biz:routes:list' },
+  {
+    id: 'checkinMap',
+    labelKey: 'web.checkinMap',
+    to: '/checkins/map',
+    icon: 'checkinMap',
+    perm: 'biz:checkins:map',
+  },
+  {
+    id: 'attractionsPending',
+    labelKey: 'web.attractionsPending',
+    to: '/attractions/pending',
+    icon: 'attractions',
+    perm: 'content:attractions:pending',
+  },
+  {
+    id: 'attractionsManage',
+    labelKey: 'web.attractionsManage',
+    to: '/attractions/manage',
+    icon: 'attractions',
+    perm: 'content:attractions:manage',
+  },
+  {
+    id: 'playbooks',
+    labelKey: 'web.playbooksManage',
+    to: '/playbooks/manage',
+    icon: 'playbooks',
+    perm: 'content:playbooks:list',
+  },
 ];

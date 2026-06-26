@@ -29,13 +29,16 @@ import { onMounted, ref } from 'vue';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import { fetchSiteStatus, updateSiteOnline } from '@/api/site-status';
+import { usePermissions } from '@/composables/usePermissions';
 
 const { t } = useI18n();
+const { hasPerm } = usePermissions();
 const loading = ref(false);
 const saving = ref(false);
 const online = ref(true);
 
 async function load() {
+  if (!hasPerm('system:config:list')) return;
   loading.value = true;
   try {
     const status = await fetchSiteStatus();

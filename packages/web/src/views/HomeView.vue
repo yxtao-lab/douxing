@@ -6,33 +6,24 @@
       :sub-title="t('home.desc')"
     />
 
-    <a-row :gutter="[16, 16]" class="stats-row">
-      <a-col :xs="12" :sm="12" :md="6">
+    <a-row v-if="visibleStats.length" :gutter="[16, 16]" class="stats-row">
+      <a-col
+        v-for="item in visibleStats"
+        :key="item.key"
+        :xs="12"
+        :sm="12"
+        :md="Math.max(6, 24 / visibleStats.length)"
+      >
         <a-card>
-          <a-statistic :title="t('home.statRoutes')" :value="stats.routes" />
-        </a-card>
-      </a-col>
-      <a-col :xs="12" :sm="12" :md="6">
-        <a-card>
-          <a-statistic :title="t('home.statOrders')" :value="stats.orders" />
-        </a-card>
-      </a-col>
-      <a-col :xs="12" :sm="12" :md="6">
-        <a-card>
-          <a-statistic :title="t('home.statCheckins')" :value="stats.checkins" />
-        </a-card>
-      </a-col>
-      <a-col :xs="12" :sm="12" :md="6">
-        <a-card>
-          <a-statistic :title="t('home.statPending')" :value="stats.pending" />
+          <a-statistic :title="t(item.titleKey)" :value="stats[item.key]" />
         </a-card>
       </a-col>
     </a-row>
 
     <a-row :gutter="[16, 16]" class="main-row">
-      <a-col :xs="24" :lg="16">
+      <a-col :xs="24" :lg="showMainColumn ? 16 : 24">
         <div class="main-stack">
-          <WorkbenchPanel :title="t('home.mySites')">
+          <WorkbenchPanel v-if="showSitesPanel" :title="t('home.mySites')">
             <template #extra>
               <a-button type="link" size="small" class="panel-link" @click="openApiHealth">
                 <GlobalOutlined />
@@ -66,7 +57,7 @@
             </div>
           </WorkbenchPanel>
 
-          <WorkbenchPanel :title="t('home.changelogTitle')">
+          <WorkbenchPanel v-if="showChangelogPanel" :title="t('home.changelogTitle')">
             <template #extra>
               <a-space :size="4">
                 <a-button type="link" size="small" class="panel-link" @click="toggleChangelogExpand">
@@ -85,11 +76,11 @@
         </div>
       </a-col>
 
-      <a-col :xs="24" :lg="8">
+      <a-col v-if="showSideColumn" :xs="24" :lg="showMainColumn ? 8 : 24">
         <div class="side-stack">
-          <SiteStatusPanel />
+          <SiteStatusPanel v-if="canManageSiteStatus" />
 
-          <WorkbenchPanel :title="t('home.latestNotices')">
+          <WorkbenchPanel v-if="showNoticesPanel" :title="t('home.latestNotices')">
             <a-empty :image="Empty.PRESENTED_IMAGE_SIMPLE">
               <template #description>
                 <span>{{ t('home.noNotices') }}</span>
@@ -98,7 +89,7 @@
             </a-empty>
           </WorkbenchPanel>
 
-          <WorkbenchPanel :title="t('home.systemInfo')">
+          <WorkbenchPanel v-if="showSystemInfoPanel" :title="t('home.systemInfo')">
             <div class="info-scroll overlay-scrollbar">
               <section
                 v-for="group in systemInfoGroups"
@@ -116,10 +107,10 @@
             </div>
           </WorkbenchPanel>
 
-          <WorkbenchPanel :title="t('home.quickActions')">
+          <WorkbenchPanel v-if="visibleQuickActions.length" :title="t('home.quickActions')">
             <div class="action-grid">
               <router-link
-                v-for="action in quickActions"
+                v-for="action in visibleQuickActions"
                 :key="action.id"
                 :to="action.to"
                 class="action-item"
@@ -161,7 +152,9 @@ import {
   WORKBENCH_CHANGELOG,
   WORKBENCH_QUICK_ACTIONS,
   WORKBENCH_SITES,
+  WORKBENCH_STATS,
   type WorkbenchSiteItem,
+  type WorkbenchStatItem,
 } from '@/data/workbench';
 import {
   WORKBENCH_SYSTEM_INFO_GROUPS,
@@ -170,6 +163,7 @@ import {
 import WorkbenchChangelog from '@/components/workbench/WorkbenchChangelog.vue';
 import WorkbenchPanel from '@/components/workbench/WorkbenchPanel.vue';
 import SiteStatusPanel from '@/components/system/SiteStatusPanel.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { useUserStore } from '@/stores/user';
 import { usePageTitle } from '@/i18n/usePageTitle';
 
@@ -179,6 +173,7 @@ const APP_VERSION = '1.0.0';
 
 const { t } = useI18n();
 const userStore = useUserStore();
+const { hasPerm, isAdmin } = usePermissions();
 const health = ref<{ name: string; status: string; timestamp: string } | null>(null);
 const stats = ref({ routes: 0, orders: 0, checkins: 0, pending: 0 });
 const serverTime = ref('');
@@ -186,10 +181,32 @@ const changelogActiveKeys = ref<string[]>([WORKBENCH_CHANGELOG[0]?.id ?? '']);
 
 const sites = WORKBENCH_SITES;
 const changelog = WORKBENCH_CHANGELOG;
-const quickActions = WORKBENCH_QUICK_ACTIONS;
 const systemInfoGroups = WORKBENCH_SYSTEM_INFO_GROUPS;
 
 let serverTimeTimer: ReturnType<typeof setInterval> | null = null;
+
+const visibleStats = computed(() =>
+  WORKBENCH_STATS.filter((item) => hasPerm(item.perm)),
+);
+
+const visibleQuickActions = computed(() =>
+  WORKBENCH_QUICK_ACTIONS.filter((action) => hasPerm(action.perm)),
+);
+
+const canManageSiteStatus = computed(() => hasPerm('system:config:list'));
+
+const showSitesPanel = computed(() => isAdmin.value);
+const showChangelogPanel = computed(() => isAdmin.value);
+const showNoticesPanel = computed(() => isAdmin.value);
+const showSystemInfoPanel = computed(() => isAdmin.value);
+const showMainColumn = computed(() => showSitesPanel.value || showChangelogPanel.value);
+const showSideColumn = computed(
+  () =>
+    canManageSiteStatus.value ||
+    showNoticesPanel.value ||
+    showSystemInfoPanel.value ||
+    visibleQuickActions.value.length > 0,
+);
 
 const welcomeText = computed(() =>
   t('home.welcome', {
@@ -256,21 +273,37 @@ function syncServerTimeFromHealth() {
   }
 }
 
+async function fetchStatTotal(item: WorkbenchStatItem): Promise<number> {
+  try {
+    if (item.key === 'routes') {
+      const result = await fetchRoutesPage({ page: 1, pageSize: 1 });
+      return normalizePaginatedResult(result).total;
+    }
+    if (item.key === 'orders') {
+      const result = await fetchOrdersPage({ page: 1, pageSize: 1 });
+      return normalizePaginatedResult(result).total;
+    }
+    if (item.key === 'checkins') {
+      const result = await fetchCheckInsPage({ page: 1, pageSize: 1, all: true });
+      return normalizePaginatedResult(result).total;
+    }
+    if (item.key === 'pending') {
+      const result = await fetchPendingAttractionsPage({ page: 1, pageSize: 1 });
+      return normalizePaginatedResult(result).total;
+    }
+  } catch {
+    return 0;
+  }
+  return 0;
+}
+
 async function loadStats() {
-  const [routes, orders, checkins, pending] = await Promise.allSettled([
-    fetchRoutesPage({ page: 1, pageSize: 1 }),
-    fetchOrdersPage({ page: 1, pageSize: 1 }),
-    fetchCheckInsPage({ page: 1, pageSize: 1, all: true }),
-    fetchPendingAttractionsPage({ page: 1, pageSize: 1 }),
-  ]);
-  stats.value.routes =
-    routes.status === 'fulfilled' ? normalizePaginatedResult(routes.value).total : 0;
-  stats.value.orders =
-    orders.status === 'fulfilled' ? normalizePaginatedResult(orders.value).total : 0;
-  stats.value.checkins =
-    checkins.status === 'fulfilled' ? normalizePaginatedResult(checkins.value).total : 0;
-  stats.value.pending =
-    pending.status === 'fulfilled' ? normalizePaginatedResult(pending.value).total : 0;
+  const items = visibleStats.value;
+  const results = await Promise.all(items.map((item) => fetchStatTotal(item)));
+  for (let i = 0; i < items.length; i += 1) {
+    const item = items[i];
+    if (item) stats.value[item.key] = results[i] ?? 0;
+  }
 }
 
 async function loadHealth() {
@@ -286,7 +319,7 @@ async function loadHealth() {
 }
 
 onMounted(async () => {
-  loadStats();
+  await loadStats();
   await loadHealth();
   serverTimeTimer = setInterval(() => {
     if (health.value?.timestamp) {
@@ -448,7 +481,6 @@ a.site-card:hover,
   max-height: 420px;
   overflow-y: auto;
   overflow-x: hidden;
-  /* 滚动条贴卡片右缘，不挤压内容 */
   margin-right: -16px;
   padding-right: 8px;
 }
