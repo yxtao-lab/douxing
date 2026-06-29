@@ -250,6 +250,11 @@ export const webEnUS = {
       funnelTitle: 'Journey funnel',
       flowTitle: 'Top intercity flows',
       rangeDays: 'Last {days} days',
+      daysLabel: 'Time range',
+      daysOption: '{days}d',
+      scopeAllTime: 'All-time fallback',
+      loadFailed: 'Failed to load data. Retrying shortly.',
+      updatedAt: 'Map data updated at {time}',
     },
   },
   routes: {

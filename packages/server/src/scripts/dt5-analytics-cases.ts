@@ -33,6 +33,11 @@ async function main(): Promise<boolean> {
   assert(Array.isArray(distribution.cities), 'geo/distribution 返回 cities');
   assert(Array.isArray(distribution.heatPoints), 'geo/distribution 返回 heatPoints');
   assert(Boolean(distribution.generatedAt), 'geo/distribution 含 generatedAt');
+  assert(distribution.scopeDays === 30, 'geo/distribution 含 scopeDays');
+  assert(
+    distribution.effectiveScope === 'window' || distribution.effectiveScope === 'allTime',
+    'geo/distribution 含 effectiveScope',
+  );
 
   if (distribution.provinces.length > 0) {
     const first = distribution.provinces[0]!;

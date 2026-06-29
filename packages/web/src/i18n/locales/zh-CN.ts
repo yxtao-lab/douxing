@@ -250,6 +250,11 @@ export const webZhCN = {
       funnelTitle: '用户旅程漏斗',
       flowTitle: '城际流动 Top',
       rangeDays: '近 {days} 天',
+      daysLabel: '统计时间范围',
+      daysOption: '{days} 天',
+      scopeAllTime: '全量回退',
+      loadFailed: '数据加载失败，将自动重试',
+      updatedAt: '地图数据更新于 {time}',
     },
   },
   routes: {

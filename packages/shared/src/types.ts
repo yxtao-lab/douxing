@@ -1084,11 +1084,18 @@ export interface AnalyticsHeatPoint {
   weight: number;
 }
 
+/** DT5 · 地理统计时间口径 */
+export type AnalyticsGeoEffectiveScope = 'window' | 'allTime';
+
 /** DT5 · GET /analytics/geo/distribution */
 export interface AnalyticsGeoDistribution {
   provinces: AnalyticsProvinceGeoStat[];
   cities: AnalyticsCityGeoStat[];
   heatPoints: AnalyticsHeatPoint[];
+  /** 请求的时间窗天数 */
+  scopeDays: number;
+  /** window=时间窗内有数据；allTime=时间窗无数据时回退全量 */
+  effectiveScope: AnalyticsGeoEffectiveScope;
   generatedAt: string;
 }
 

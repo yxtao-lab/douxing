@@ -154,6 +154,8 @@ async function buildGeoDistribution(
     provinces,
     cities: cities.slice(0, 30),
     heatPoints,
+    scopeDays: 0,
+    effectiveScope: 'window',
     generatedAt: new Date().toISOString(),
   };
 }
@@ -167,10 +169,19 @@ export async function getAnalyticsGeoDistribution(
 
   const windowResult = await buildGeoDistribution(since, locale);
   if (windowResult.provinces.length > 0 || windowResult.cities.length > 0) {
-    return windowResult;
+    return {
+      ...windowResult,
+      scopeDays: days,
+      effectiveScope: 'window',
+    };
   }
 
-  return buildGeoDistribution(null, locale);
+  const allTimeResult = await buildGeoDistribution(null, locale);
+  return {
+    ...allTimeResult,
+    scopeDays: days,
+    effectiveScope: 'allTime',
+  };
 }
 
 export async function getAnalyticsGeoFlows(
