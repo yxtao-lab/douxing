@@ -49,6 +49,13 @@ export const WORKBENCH_SITES: WorkbenchSiteItem[] = [
     emoji: '📱',
   },
   {
+    id: 'pc',
+    titleKey: 'home.sites.pc.title',
+    descKey: 'home.sites.pc.desc',
+    tagKeys: ['home.sites.pc.tag1', 'home.sites.pc.tag2', 'home.sites.pc.tag3'],
+    emoji: '💻',
+  },
+  {
     id: 'web',
     titleKey: 'home.sites.web.title',
     descKey: 'home.sites.web.desc',

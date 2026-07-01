@@ -16,18 +16,18 @@ export const parseIntentInputSchema = z.object({
       }),
     )
     .optional(),
-  days: z.number().int().positive().optional(),
-  budget: z.string().optional(),
-  userId: z.number().int().positive().optional(),
-  sessionIntent: z.record(z.unknown()).optional(),
+  days: z.number().int().positive().nullish(),
+  budget: z.string().nullish(),
+  userId: z.number().int().positive().nullish(),
+  sessionIntent: z.record(z.unknown()).nullish(),
 });
 
 export const retrieveAttractionsInputSchema = z.object({
   city: z.string().optional(),
   themes: z.array(z.string()).optional(),
   prompt: z.string().optional(),
-  days: z.number().int().positive().optional(),
-  limit: z.number().int().positive().optional(),
+  days: z.number().int().positive().nullish(),
+  limit: z.number().int().positive().nullish(),
   excludeIds: z.array(z.number()).optional(),
   excludeNames: z.array(z.string()).optional(),
   boostNames: z.array(z.string()).optional(),
@@ -35,9 +35,9 @@ export const retrieveAttractionsInputSchema = z.object({
 
 export const generateRouteDraftInputSchema = z.object({
   prompt: z.string().min(1),
-  days: z.number().int().positive().optional(),
-  budget: z.string().optional(),
-  provider: z.string().optional(),
+  days: z.number().int().positive().nullish(),
+  budget: z.string().nullish(),
+  provider: z.string().nullish(),
   locale: z.enum(['zh-CN', 'en-US']).optional(),
   intent: z.record(z.unknown()).optional(),
   ragCandidates: z.array(z.record(z.unknown())).optional(),

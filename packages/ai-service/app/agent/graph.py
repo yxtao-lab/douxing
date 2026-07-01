@@ -53,6 +53,51 @@ def _resolve_planning_city(intent: dict) -> str | None:
     return None
 
 
+def _build_generate_route_draft_payload(
+    state: PlanAgentState,
+    rag_candidates: list[dict[str, Any]],
+    *,
+    variant_key: str | None = None,
+    variant_hint: str | None = None,
+    rag_variant_index: int | None = None,
+) -> dict[str, Any]:
+    """
+    组装 generate_route_draft 入参；days/budget 优先会话字段，否则回退 intent。
+
+    @param state - Agent 状态
+    @param rag_candidates - RAG 候选景点
+    @param variant_key - 方案变体键；首屏多候选时传入
+    @param variant_hint - 变体提示文案
+    @param rag_variant_index - RAG 轮换索引
+    @returns 可直接传给 Node Tool API 的字典（`None` 由 node_client 剔除）
+    """
+    intent = state.get("intent") or {}
+    days = state.get("days")
+    if days is None:
+        days = intent.get("days")
+    budget = state.get("budget")
+    if budget is None:
+        budget = intent.get("budget")
+
+    payload: dict[str, Any] = {
+        "prompt": state["prompt"],
+        "days": days,
+        "budget": budget,
+        "provider": state.get("provider") or "auto",
+        "locale": state["locale"],
+        "intent": state["intent"],
+        "ragCandidates": rag_candidates,
+        "userId": state["user_id"],
+    }
+    if variant_key:
+        payload["variantKey"] = variant_key
+    if variant_hint:
+        payload["variantHint"] = variant_hint
+    if rag_variant_index is not None:
+        payload["ragVariantIndex"] = rag_variant_index
+    return payload
+
+
 async def _enrich_and_validate_draft(
     state: PlanAgentState,
     draft: dict[str, Any] | None,
@@ -232,19 +277,13 @@ async def _run_plan_new_branch(state: PlanAgentState) -> None:
             t_gen = time.time()
             gen_data = await call_node_tool(
                 "generate_route_draft",
-                {
-                    "prompt": state["prompt"],
-                    "days": state["days"],
-                    "budget": state["budget"],
-                    "provider": state["provider"],
-                    "locale": state["locale"],
-                    "intent": state["intent"],
-                    "ragCandidates": rag_candidates,
-                    "userId": state["user_id"],
-                    "variantKey": variant.get("key"),
-                    "variantHint": variant.get("hint"),
-                    "ragVariantIndex": sort_order,
-                },
+                _build_generate_route_draft_payload(
+                    state,
+                    rag_candidates,
+                    variant_key=variant.get("key"),
+                    variant_hint=variant.get("hint"),
+                    rag_variant_index=sort_order,
+                ),
             )
             draft = gen_data.get("draft")
             state["tool_trace"].append(
@@ -273,16 +312,7 @@ async def _run_plan_new_branch(state: PlanAgentState) -> None:
     t_gen = time.time()
     gen_data = await call_node_tool(
         "generate_route_draft",
-        {
-            "prompt": state["prompt"],
-            "days": state["days"],
-            "budget": state["budget"],
-            "provider": state["provider"],
-            "locale": state["locale"],
-            "intent": state["intent"],
-            "ragCandidates": rag_candidates,
-            "userId": state["user_id"],
-        },
+        _build_generate_route_draft_payload(state, rag_candidates),
     )
     draft = gen_data.get("draft")
     state["tool_trace"].append(

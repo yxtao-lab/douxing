@@ -33,7 +33,7 @@ router.post('/:name', async (req, res) => {
   try {
     const result = await executeAgentTool(name, req.body ?? {});
     if (!result.ok) {
-      fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+      fail(res, result.error?.message ?? ApiMessageKey.VALIDATION_ERROR, 1, 400);
       return;
     }
     success(res, result.data);

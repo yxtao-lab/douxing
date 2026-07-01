@@ -160,6 +160,13 @@ export const webZhCN = {
         tag2: '微信小程序',
         tag3: 'H5',
       },
+      pc: {
+        title: '兜行 PC 端',
+        desc: '桌面浏览器智能规划、路线与打卡',
+        tag1: 'Vue 3',
+        tag2: 'Tailwind CSS',
+        tag3: 'Leaflet',
+      },
       web: {
         title: '管理后台',
         desc: '路线、订单与内容运营',

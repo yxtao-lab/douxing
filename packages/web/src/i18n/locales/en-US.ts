@@ -160,6 +160,13 @@ export const webEnUS = {
         tag2: 'WeChat MP',
         tag3: 'H5',
       },
+      pc: {
+        title: 'Douxing PC',
+        desc: 'Desktop planning, routes, and check-ins',
+        tag1: 'Vue 3',
+        tag2: 'Tailwind CSS',
+        tag3: 'Leaflet',
+      },
       web: {
         title: 'Admin console',
         desc: 'Routes, orders, and content ops',

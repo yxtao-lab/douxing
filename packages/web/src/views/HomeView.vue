@@ -166,6 +166,7 @@ import SiteStatusPanel from '@/components/system/SiteStatusPanel.vue';
 import { usePermissions } from '@/composables/usePermissions';
 import { useUserStore } from '@/stores/user';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { getPcClientUrl } from '@/utils/pc-client-url';
 
 usePageTitle('web.home');
 
@@ -230,15 +231,22 @@ function resolveSystemInfoValue(row: WorkbenchSystemInfoRow) {
   return t(row.valueKey);
 }
 
+function resolveSiteHref(site: WorkbenchSiteItem): string | undefined {
+  if (site.href) return site.href;
+  if (site.id === 'pc') return getPcClientUrl();
+  return undefined;
+}
+
 function siteLinkComponent(site: WorkbenchSiteItem) {
   if (site.to) return 'router-link';
-  if (site.href) return 'a';
+  if (resolveSiteHref(site)) return 'a';
   return 'div';
 }
 
 function siteLinkProps(site: WorkbenchSiteItem) {
   if (site.to) return { to: site.to };
-  if (site.href) return { href: site.href, target: '_blank', rel: 'noopener noreferrer' };
+  const href = resolveSiteHref(site);
+  if (href) return { href, target: '_blank', rel: 'noopener noreferrer' };
   return {};
 }
 
