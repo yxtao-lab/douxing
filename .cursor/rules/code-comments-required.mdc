@@ -1,0 +1,77 @@
+---
+description: 新增或修改函数时必须补充完整中文 JSDoc
+alwaysApply: true
+---
+
+# 代码注释（JSDoc）强制要求
+
+后续**所有**新开发与改动，新增或修改函数时须**同步**编写/更新中文 JSDoc，不得事后补、不得省略适用字段。
+
+## 禁止
+
+- 新增 `export` 函数、Hook、Service、路由 handler 却无 JSDoc
+- 仅复述函数名的单行注释（如 `/** 合并项 */`）
+- 有 `@param` 却缺少 `@returns`（有返回值时）
+- 用注释替代 i18n 用户可见文案
+- 注释中出现密钥、token、内网地址等敏感信息
+
+## 必须带完整 JSDoc 的函数
+
+| 类型 | 要求 |
+|------|------|
+| `export` 函数 / 方法 | 完整 JSDoc |
+| 模块内业务函数（有参数或返回值） | 完整 JSDoc |
+| React 自定义 Hook（`useXxx`） | 完整 JSDoc |
+| 类公有方法 | 完整 JSDoc |
+| 路由 handler、Service 方法 | 完整 JSDoc + 权限/副作用 |
+
+可仅一行摘要（仍建议写 `@param` / `@returns` 若签名不直观）：无参、单行、含义一目了然的私有工具。
+
+## JSDoc 必备字段
+
+按顺序书写，**不得省略**适用项：
+
+```typescript
+/**
+ * 一句话说明函数职责；必要时第二句写边界、副作用或不做什么。
+ *
+ * @param paramName - 含义；有效取值/单位；可选时说明默认行为
+ * @returns 返回什么；`null`/`undefined`/空数组分别表示什么
+ * @throws {ApiError} 何种条件下抛出（写 messageKey，勿硬编码面向用户文案）
+ */
+```
+
+| 标签 | 何时必填 |
+|------|----------|
+| 首行摘要 | 始终 |
+| `@param` | 每个参数（含 options 内重要字段） |
+| `@returns` | 有返回值时（含需说明副作用的 `void`） |
+| `@throws` | 会抛错时 |
+| `@example` | 用法不直观或公共 API 时可选 |
+
+## Hook 示例
+
+```typescript
+/**
+ * 订阅实体详情，locale 变化时自动重新请求。
+ *
+ * @param entityId - 实体 ID；为空时不发起请求
+ * @returns `data` 详情；`isLoading` 首次加载；`refetch` 手动刷新
+ */
+export function useEntityDetail(entityId: string | undefined) { ... }
+```
+
+## 非函数注释（按需）
+
+对非显而易见的业务规则、复杂算法、魔法数、workaround、`try/catch` 吞错原因补充说明。不要注释能从命名读懂的一两行逻辑。
+
+## 验收自检
+
+- [ ] 每个新增/修改的函数是否有 JSDoc？
+- [ ] 首行是否说清「做什么」及重要边界？
+- [ ] 每个 `@param` 是否说明含义与有效取值？
+- [ ] `@returns` 是否说明各返回值语义（含 null/空）？
+- [ ] 会抛错时是否列出 `@throws`？
+- [ ] 修改签名后注释是否已同步？
+
+仅对单行 typo、纯格式化且未动函数签名时，可不改函数注释。

@@ -1,5 +1,6 @@
 # 项目基础规范
 - 语言要求：所有回复、代码注释、提交信息必须使用中文。
+- 函数注释：新增或修改函数时必须同步编写完整中文 JSDoc（`@param`、`@returns`、适用时 `@throws`），详见 `.cursor/rules/code-comments-required.mdc`。
 - 代码风格：变量和函数命名使用驼峰式 (camelCase)，常量使用全大写加下划线 (UPPER_SNAKE_CASE)。
 - 修改代码前，必须先阅读并理解当前的代码上下文，不要盲目重构。
 
