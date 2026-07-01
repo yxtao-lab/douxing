@@ -26,6 +26,8 @@ const dryRun = args.includes('--dry-run');
 const datasetsDir = resolve(repoRoot, 'packages/ml-training/datasets');
 const trainPath = resolve(datasetsDir, 'train.jsonl');
 const valPath = resolve(datasetsDir, 'val.jsonl');
+const trainPaiPath = resolve(datasetsDir, 'train-pai.jsonl');
+const valPaiPath = resolve(datasetsDir, 'val-pai.jsonl');
 const manifestDir = resolve(repoRoot, 'packages/ml-training/manifests');
 const manifestPath = resolve(manifestDir, `pai-job-${version}.json`);
 
@@ -37,11 +39,6 @@ const {
   getOssMlDatasetsPrefix,
   isOssEnabled,
 } = await import('../config/oss.js');
-
-function countJsonlLines(filePath: string): number {
-  const content = readFileSync(filePath, 'utf8');
-  return content.split('\n').map((l) => l.trim()).filter(Boolean).length;
-}
 
 function assertFileExists(filePath: string): void {
   try {
@@ -55,11 +52,15 @@ function assertFileExists(filePath: string): void {
 assertFileExists(trainPath);
 assertFileExists(valPath);
 
-const trainCount = countJsonlLines(trainPath);
-const valCount = countJsonlLines(valPath);
+const { convertJsonlToPaiAlpaca } = await import('../services/training-data-pai-format.service.js');
+
+const trainCount = convertJsonlToPaiAlpaca(trainPath, trainPaiPath);
+const valCount = convertJsonlToPaiAlpaca(valPath, valPaiPath);
 
 console.log(`train: ${trainCount} 条 → ${trainPath}`);
 console.log(`val:   ${valCount} 条 → ${valPath}`);
+console.log(`train-pai (Alpaca): ${trainCount} 条 → ${trainPaiPath}`);
+console.log(`val-pai (Alpaca):   ${valCount} 条 → ${valPaiPath}`);
 
 if (trainCount < 1) {
   console.error('train.jsonl 为空，请先执行 pnpm ml:generate-dataset && pnpm ml:validate-dataset -- --split');
@@ -70,6 +71,9 @@ const datasetsPrefix = getOssMlDatasetsPrefix();
 const checkpointsPrefix = getOssMlCheckpointsPrefix();
 const trainKey = `${datasetsPrefix}train.jsonl`;
 const valKey = `${datasetsPrefix}val.jsonl`;
+/** PAI Model Gallery 请使用 Alpaca 格式文件 */
+const trainPaiKey = `${datasetsPrefix}train-pai.jsonl`;
+const valPaiKey = `${datasetsPrefix}val-pai.jsonl`;
 
 const bucket = getOssBucket() || 'YOUR_OSS_BUCKET';
 function ossUri(key: string): string {
@@ -84,6 +88,9 @@ const manifest = {
   dataset: {
     train: ossUri(trainKey),
     val: ossUri(valKey),
+    /** PAI 控制台训练集请填此路径（Alpaca：instruction/input/output） */
+    trainPai: ossUri(trainPaiKey),
+    valPai: ossUri(valPaiKey),
     trainCount,
     valCount,
   },
@@ -91,20 +98,23 @@ const manifest = {
   hyperparams: {
     num_train_epochs: 3,
     learning_rate: 1e-4,
-    seq_length: 4096,
-    per_device_train_batch_size: 2,
+    seq_length: 8192,
+    per_device_train_batch_size: 1,
     lora_rank: 16,
     warmup_ratio: 0.1,
   },
   configFile: 'packages/ml-training/configs/distill-qwen-7b-lora.yaml',
   paiConsole: 'https://pai.console.aliyun.com/',
-  notes: 'PAI Model Gallery → DeepSeek-R1-Distill-Qwen-7B → 训练 → LoRA SFT',
+  notes:
+    'PAI Model Gallery → DeepSeek-R1-Distill-Qwen-7B → LoRA SFT；训练集用 dataset.trainPai（Alpaca），seq_length≥8192，batch=1',
 };
 
 if (dryRun) {
   console.log('\n[dry-run] 将上传至 OSS：');
   console.log(`  ${manifest.dataset.train}`);
   console.log(`  ${manifest.dataset.val}`);
+  console.log(`  [PAI 请用] ${manifest.dataset.trainPai}`);
+  console.log(`  [PAI 请用] ${manifest.dataset.valPai}`);
   console.log(`  checkpoint 输出: ${manifest.checkpointOutput}`);
   mkdirSync(manifestDir, { recursive: true });
   writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n', 'utf8');
@@ -127,6 +137,12 @@ try {
 
   await uploadLocalFileToOss(valPath, valKey);
   console.log(`[OK] val   → ${manifest.dataset.val}`);
+
+  await uploadLocalFileToOss(trainPaiPath, trainPaiKey);
+  console.log(`[OK] train-pai → ${manifest.dataset.trainPai}`);
+
+  await uploadLocalFileToOss(valPaiPath, valPaiKey);
+  console.log(`[OK] val-pai   → ${manifest.dataset.valPai}`);
 } catch (err) {
   console.error('OSS 上传失败:', err instanceof Error ? err.message : err);
   process.exit(1);
