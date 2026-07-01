@@ -21,7 +21,7 @@ import { optionalQueryInt } from '../utils/query-coerce.util.js';
 
 const router = Router();
 
-const providerSchema = z.enum(['auto', 'deepseek', 'lmstudio']).optional();
+const providerSchema = z.enum(['auto', 'douxing', 'deepseek', 'lmstudio']).optional();
 
 const createSessionSchema = z.object({
   prompt: z.string().min(2, '请描述您的旅行需求'),

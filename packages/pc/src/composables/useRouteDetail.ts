@@ -272,8 +272,10 @@ export function useRouteDetail(routeId: () => number) {
       let tip = t('routes.regenerateTemplate');
       if (result.generationSource === 'llm') {
         tip =
-          result.llmProvider === 'ai-service'
-            ? t('routes.regenerateAiService')
+        result.llmProvider === 'ai-service'
+          ? t('routes.regenerateAiService')
+          : result.llmProvider === 'douxing'
+            ? t('routes.regenerateDouxing')
             : result.llmProvider === 'deepseek'
               ? t('routes.regenerateDeepseek')
               : result.llmProvider === 'lmstudio'

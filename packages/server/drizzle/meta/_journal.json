@@ -211,6 +211,20 @@
       "when": 1750147200000,
       "tag": "0030_analytics_daily_metrics",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "5",
+      "when": 1750233600000,
+      "tag": "0031_sys_api_log",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "5",
+      "when": 1750320000000,
+      "tag": "0032_sys_api_log_module",
+      "breakpoints": true
     }
   ]
 }

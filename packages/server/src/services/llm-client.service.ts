@@ -14,8 +14,11 @@ import {
   resolveProviderChain,
   isLlmEnabled,
   hasDeepseekApiKey,
+  hasDouxingLlmCredentials,
+  isDouxingLlmEnabled,
   getLmStudioConfig,
   getDeepseekConfig,
+  getDouxingLlmConfig,
 } from '../config/llm.js';
 import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
 import { formatRagContextForLlm } from './attraction-rag.service.js';
@@ -198,7 +201,11 @@ function authHeaders(apiKey: string): Record<string, string> {
 
 async function resolveModelId(provider: LlmProviderId): Promise<string> {
   const config = getProviderConfig(provider);
-  if (provider === 'deepseek' || (config.model && config.model !== 'local-model')) {
+  if (
+    provider === 'douxing' ||
+    provider === 'deepseek' ||
+    (config.model && config.model !== 'local-model')
+  ) {
     return config.model;
   }
   try {
@@ -218,6 +225,39 @@ async function resolveModelId(provider: LlmProviderId): Promise<string> {
   return config.model;
 }
 
+function providerConfigError(provider: LlmProviderId): string {
+  switch (provider) {
+    case 'douxing':
+      return '未配置 DOUXING_LLM_API_KEY / DOUXING_LLM_MODEL';
+    case 'deepseek':
+      return '未配置 DEEPSEEK_API_KEY';
+    default:
+      return '本地服务未配置';
+  }
+}
+
+/** DeepSeek / 百炼兼容模式支持 response_format=json_object */
+function supportsJsonResponseFormat(provider: LlmProviderId): boolean {
+  return provider === 'deepseek' || provider === 'douxing';
+}
+
+/**
+ * 百炼 Qwen3 非流式调用须显式关闭 thinking，否则 API 报错。
+ *
+ * @param provider - LLM 提供方
+ * @param body - chat/completions 请求体
+ * @returns 合并 provider 专属参数后的请求体
+ */
+function applyProviderCompletionOptions(
+  provider: LlmProviderId,
+  body: Record<string, unknown>,
+): Record<string, unknown> {
+  if (provider === 'douxing') {
+    return { ...body, enable_thinking: false };
+  }
+  return body;
+}
+
 export async function checkProviderStatus(provider: LlmProviderId): Promise<ProviderStatus> {
   const config = getProviderConfig(provider);
   const base: ProviderStatus = {
@@ -230,7 +270,7 @@ export async function checkProviderStatus(provider: LlmProviderId): Promise<Prov
   if (!config.configured) {
     return {
       ...base,
-      error: provider === 'deepseek' ? '未配置 DEEPSEEK_API_KEY' : '本地服务未配置',
+      error: providerConfigError(provider),
     };
   }
 
@@ -245,7 +285,7 @@ export async function checkProviderStatus(provider: LlmProviderId): Promise<Prov
     }
     const data = (await res.json()) as { data?: Array<{ id?: string }> };
     const model =
-      provider === 'deepseek'
+      provider === 'deepseek' || provider === 'douxing'
         ? config.model
         : data.data?.find((m) => m.id && !m.id.includes('embed'))?.id ?? config.model;
     return { ...base, available: true, model };
@@ -261,9 +301,12 @@ export async function getAllProvidersStatus(): Promise<{
   enabled: boolean;
   defaultProvider: string;
   deepseekConfigured: boolean;
+  douxingConfigured: boolean;
+  douxingEnabled: boolean;
   providers: ProviderStatus[];
 }> {
   const providers = await Promise.all([
+    checkProviderStatus('douxing'),
     checkProviderStatus('deepseek'),
     checkProviderStatus('lmstudio'),
   ]);
@@ -271,6 +314,8 @@ export async function getAllProvidersStatus(): Promise<{
     enabled: isLlmEnabled(),
     defaultProvider: process.env.LLM_DEFAULT_PROVIDER ?? 'auto',
     deepseekConfigured: hasDeepseekApiKey(),
+    douxingConfigured: hasDouxingLlmCredentials(),
+    douxingEnabled: isDouxingLlmEnabled(),
     providers,
   };
 }
@@ -364,16 +409,20 @@ async function chatCompletionWithProvider(
     stream: false,
   };
 
-  const useJsonMode = provider === 'deepseek';
+  const useJsonMode = supportsJsonResponseFormat(provider);
+
+  const buildBody = (withJsonMode: boolean) =>
+    applyProviderCompletionOptions(
+      provider,
+      withJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
+    );
 
   let res = await fetchWithTimeout(
     `${config.baseUrl}/chat/completions`,
     {
       method: 'POST',
       headers: authHeaders(config.apiKey),
-      body: JSON.stringify(
-        useJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
-      ),
+      body: JSON.stringify(buildBody(useJsonMode)),
     },
     config.timeoutMs,
   );
@@ -385,7 +434,7 @@ async function chatCompletionWithProvider(
       {
         method: 'POST',
         headers: authHeaders(config.apiKey),
-        body: JSON.stringify(baseBody),
+        body: JSON.stringify(buildBody(false)),
       },
       config.timeoutMs,
     );
@@ -524,16 +573,20 @@ export async function chatCompletionForJson<T>(
         max_tokens: options?.maxTokens ?? 1024,
         stream: false,
       };
-      const useJsonMode = provider === 'deepseek';
+      const useJsonMode = supportsJsonResponseFormat(provider);
+
+      const buildBody = (withJsonMode: boolean) =>
+        applyProviderCompletionOptions(
+          provider,
+          withJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
+        );
 
       let res = await fetchWithTimeout(
         `${config.baseUrl}/chat/completions`,
         {
           method: 'POST',
           headers: authHeaders(config.apiKey),
-          body: JSON.stringify(
-            useJsonMode ? { ...baseBody, response_format: { type: 'json_object' } } : baseBody,
-          ),
+          body: JSON.stringify(buildBody(useJsonMode)),
         },
         config.timeoutMs,
       );
@@ -545,7 +598,7 @@ export async function chatCompletionForJson<T>(
           {
             method: 'POST',
             headers: authHeaders(config.apiKey),
-            body: JSON.stringify(baseBody),
+            body: JSON.stringify(buildBody(false)),
           },
           config.timeoutMs,
         );
@@ -590,11 +643,17 @@ export function listProviderOptions(): Array<{
   label: string;
   available: boolean;
 }> {
+  const douxing = getDouxingLlmConfig();
   return [
     {
       id: 'auto',
-      label: '自动（优先 DeepSeek，其次本地）',
-      available: hasDeepseekApiKey() || true,
+      label: '自动（优先兜行微调 → DeepSeek → 本地）',
+      available: isDouxingLlmEnabled() || hasDeepseekApiKey() || true,
+    },
+    {
+      id: 'douxing',
+      label: `兜行专属（${douxing.model}）`,
+      available: isDouxingLlmEnabled(),
     },
     {
       id: 'deepseek',

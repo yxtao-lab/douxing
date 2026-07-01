@@ -53,7 +53,7 @@ function getRequestLocale(res: Response): LocaleCode {
   return res.locals.locale ?? 'zh-CN';
 }
 
-const providerSchema = z.enum(['auto', 'deepseek', 'lmstudio']).optional();
+const providerSchema = z.enum(['auto', 'douxing', 'deepseek', 'lmstudio']).optional();
 
 const generateSchema = z.object({
   prompt: z.string().min(2, '请描述您的旅行需求'),
@@ -152,6 +152,8 @@ router.get('/llm-status', async (_req, res) => {
       model: ready?.model,
       defaultProvider: status.defaultProvider,
       deepseekConfigured: status.deepseekConfigured,
+      douxingConfigured: status.douxingConfigured,
+      douxingEnabled: status.douxingEnabled,
       providers: status.providers,
       aiService,
       error: ready || aiService.available

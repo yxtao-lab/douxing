@@ -2,12 +2,12 @@ import type { LlmProviderChoice } from '../config/llm.js';
 import type { GenerateRouteInput, GeneratedRouteDraft } from './route-generator.service.js';
 import { chatCompletionForRoute } from './llm-client.service.js';
 import { enforceRouteConstraints } from './travel-intent.service.js';
-import { isLlmEnabled, hasDeepseekApiKey, resolveProviderChain } from '../config/llm.js';
+import { isLlmEnabled, resolveProviderChain } from '../config/llm.js';
 
 export type GenerationSource = 'llm' | 'template';
-export type LlmProviderUsed = 'deepseek' | 'lmstudio';
+export type LlmProviderUsed = 'douxing' | 'deepseek' | 'lmstudio';
 
-/** 使用大模型生成路线（支持 DeepSeek / LM Studio） */
+/** 使用大模型生成路线（兜行微调 / DeepSeek / LM Studio，auto 按链降级） */
 export async function generateRouteFromLlm(
   input: GenerateRouteInput,
 ): Promise<GeneratedRouteDraft & { llmProvider: LlmProviderUsed }> {
@@ -52,5 +52,5 @@ export async function generateRouteFromLlm(
 
 export function canUseLlm(): boolean {
   if (!isLlmEnabled()) return false;
-  return resolveProviderChain('auto').length > 0 || hasDeepseekApiKey();
+  return resolveProviderChain('auto').length > 0;
 }

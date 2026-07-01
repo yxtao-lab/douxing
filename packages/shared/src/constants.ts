@@ -87,6 +87,7 @@ export const PaymentChannel = {
 /** LLM 模型提供商（路线生成） */
 export const LlmProvider = {
   AUTO: 'auto',
+  DOUXING: 'douxing',
   DEEPSEEK: 'deepseek',
   LMSTUDIO: 'lmstudio',
 } as const;

@@ -44,6 +44,7 @@ import {
   updateConfig,
   listOperLogsPaginated,
   listLoginLogsPaginated,
+  listApiLogsPaginated,
   getMenuTree,
   getNavMenuTreeForUser,
   listMenusTree,
@@ -91,6 +92,7 @@ const AdminPerm = {
   monitorCacheList: 'monitor:cache:list',
   logOper: 'log:oper:list',
   logLogin: 'log:login:list',
+  logApi: 'log:api:list',
   membershipUsers: 'biz:membership:users',
   membershipLogs: 'biz:membership:logs',
   membershipProducts: 'biz:membership:products',
@@ -853,6 +855,30 @@ router.get('/logs/login', async (req, res) => {
   } catch (err) {
     console.error('[system/logs/login]', err);
     fail(res, '获取登录日志失败', 500, 500);
+  }
+});
+
+router.get('/logs/api', async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, AdminPerm.logApi))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const query = req.query as Record<string, unknown>;
+    const { dateStart, dateEnd } = parseDateRangeFilter(query);
+    success(
+      res,
+      await listApiLogsPaginated(page, pageSize, {
+        keyword: parseOptionalString(query, 'keyword'),
+        operName: parseOptionalString(query, 'operName'),
+        method: parseOptionalString(query, 'method'),
+        moduleKey: parseOptionalString(query, 'moduleKey'),
+        status: parseOptionalInt(query, 'status'),
+        dateStart,
+        dateEnd,
+      }),
+    );
+  } catch (err) {
+    console.error('[system/logs/api]', err);
+    fail(res, '获取接口日志失败', 500, 500);
   }
 });
 

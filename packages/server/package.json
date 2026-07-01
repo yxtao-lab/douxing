@@ -46,6 +46,7 @@
     "ml:validate-dataset": "tsx src/scripts/validate-training-dataset.ts",
     "ml:upload-dataset": "tsx src/scripts/upload-training-dataset-to-oss.ts",
     "i2:pai-lora-cases": "tsx src/scripts/i2-pai-lora-cases.ts",
+    "i3:douxing-llm-cases": "tsx src/scripts/i3-douxing-llm-cases.ts",
     "s1:rbac-cases": "tsx src/scripts/s1-rbac-cases.ts",
     "s2:dynamic-menu-cases": "tsx src/scripts/s2-dynamic-menu-cases.ts",
     "dt3:analytics-cases": "tsx src/scripts/dt3-analytics-cases.ts",

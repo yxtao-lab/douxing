@@ -9,7 +9,7 @@ import { seedBadges } from '../services/badge.service.js';
 import { seedAchievementDefinitions } from '../services/achievement.service.js';
 import { seedRoutePlaybooks } from '../services/playbook.service.js';
 import { sysDept, sysPost, sysDictType, sysDictData, sysNotice, sysMenu } from '../db/schema/sys-admin.js';
-import { DEFAULT_MENU_SEED, seedDefaultRoleMenus } from '../services/sys-admin.service.js';
+import { DEFAULT_MENU_SEED, seedDefaultRoleMenus, syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
 import {
@@ -285,6 +285,8 @@ async function seedSystemAdmin() {
     }
     console.log('[seed] Synced menu icons and sortOrder from DEFAULT_MENU_SEED');
   }
+
+  await syncMissingMenusFromSeed();
 
   await seedDefaultRoleMenus();
 }

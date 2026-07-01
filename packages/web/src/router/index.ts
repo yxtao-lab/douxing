@@ -384,6 +384,18 @@ const router = createRouter({
             perm: 'log:login:list',
           },
         },
+        {
+          path: 'log/api',
+          name: 'log-api',
+          component: () => import('@/views/log/LogApiView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.logApi',
+            menuGroupKey: 'web.menu.log',
+            icon: 'ApiOutlined',
+            perm: 'log:api:list',
+          },
+        },
       ],
     },
   ],

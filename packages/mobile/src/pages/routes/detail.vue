@@ -621,7 +621,9 @@ async function handleRegenerate() {
       tip =
         result.llmProvider === 'ai-service'
           ? t('routes.regenerateAiService')
-          : result.llmProvider === 'deepseek'
+          : result.llmProvider === 'douxing'
+            ? t('routes.regenerateDouxing')
+            : result.llmProvider === 'deepseek'
             ? t('routes.regenerateDeepseek')
             : result.llmProvider === 'lmstudio'
               ? t('routes.regenerateLmstudio')

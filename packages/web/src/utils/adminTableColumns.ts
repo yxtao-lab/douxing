@@ -1,4 +1,6 @@
+import type { Ref } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 
 export const MIN_COLUMN_WIDTH = 60;
 export const COLUMN_RESIZE_HANDLE_WIDTH = 8;
@@ -90,4 +92,24 @@ export function getAdminColumnKey(col: ColumnType, index: number): string {
 export function isColumnResizeEdge(e: MouseEvent, cell: HTMLElement): boolean {
   const rect = cell.getBoundingClientRect();
   return e.clientX >= rect.right - COLUMN_RESIZE_HANDLE_WIDTH;
+}
+
+/**
+ * 服务端分页表格序号列（跨页连续编号）。
+ */
+export function createAdminRowIndexColumn<T>(
+  title: string,
+  page: Ref<number>,
+  pageSize: Ref<number>,
+): AdminExportColumn<T> {
+  return {
+    title,
+    key: 'rowIndex',
+    width: 72,
+    align: 'center',
+    resizable: false,
+    skipEmptyPlaceholder: true,
+    customRender: ({ index }: { index: number }) => (page.value - 1) * pageSize.value + index + 1,
+    exportValue: (_record, index) => index + 1,
+  } as AdminExportColumn<T>;
 }

@@ -315,6 +315,11 @@ const {
 function resolveProviderLabel(opt: LlmProviderOption): string {
   if (opt.id === LlmProvider.AUTO) return t('plan.providerAuto');
   if (opt.id === LlmProvider.LMSTUDIO) return t('plan.providerLmstudio');
+  if (opt.id === LlmProvider.DOUXING) {
+    const modelMatch = opt.label.match(/[（(]([^）)]+)[）)]/);
+    const model = modelMatch?.[1] ?? opt.label;
+    return t('plan.providerDouxing', { model });
+  }
   if (opt.id === LlmProvider.DEEPSEEK) {
     const modelMatch = opt.label.match(/[（(]([^）)]+)[）)]/);
     const model = modelMatch?.[1] ?? opt.label;

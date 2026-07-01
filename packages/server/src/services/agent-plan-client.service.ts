@@ -244,7 +244,7 @@ async function generatePlanNewCandidates(
         history: request.history,
         days: request.days,
         budget: request.budget,
-        provider: request.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
+        provider: request.provider as 'auto' | 'douxing' | 'deepseek' | 'lmstudio' | undefined,
         locale,
         intent,
         userId: request.userId,
@@ -750,7 +750,7 @@ async function runLocalAgentPlan(
 
     budget: request.budget,
 
-    provider: request.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
+    provider: request.provider as 'auto' | 'douxing' | 'deepseek' | 'lmstudio' | undefined,
 
     locale,
 

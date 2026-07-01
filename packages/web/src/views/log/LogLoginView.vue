@@ -82,6 +82,8 @@ import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
+import { formatAdminDateTime } from '@/utils/adminDateTime';
+import { createAdminRowIndexColumn } from '@/utils/adminTableColumns';
 
 usePageTitle('web.logLogin');
 
@@ -95,7 +97,7 @@ const statusOptions = computed(() => [
   { label: t('common.failed'), value: 0 },
 ]);
 
-const { items, loading, pagination, load, reload, handleTableChange } =
+const { items, loading, pagination, page, pageSize, load, reload, handleTableChange } =
   useServerTablePagination<LoginLogRow>((page, pageSize) =>
     fetchLoginLogsPage({
       page,
@@ -108,6 +110,7 @@ const { items, loading, pagination, load, reload, handleTableChange } =
   );
 
 const columns = computed<AdminExportColumn<LoginLogRow>[]>(() => [
+  createAdminRowIndexColumn<LoginLogRow>(t('system.colRowIndex'), page, pageSize),
   { title: t('system.colUsername'), dataIndex: 'username', width: 120 },
   { title: t('system.colOperIp'), dataIndex: 'ip', width: 130 },
   { title: t('system.colBrowser'), dataIndex: 'browser', width: 100 },
@@ -123,8 +126,9 @@ const columns = computed<AdminExportColumn<LoginLogRow>[]>(() => [
   {
     title: t('system.colLoginTime'),
     dataIndex: 'loginTime',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
+    width: 170,
+    customRender: ({ text }) => formatAdminDateTime(text),
+    exportValue: (record) => formatAdminDateTime(record.loginTime),
   },
 ]);
 

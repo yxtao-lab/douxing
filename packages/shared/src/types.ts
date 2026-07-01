@@ -333,7 +333,7 @@ export interface TravelRouteInfo {
   unlockPrice?: number;
   isUnlocked?: boolean;
   generationSource?: 'llm' | 'template';
-  llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
+  llmProvider?: 'douxing' | 'deepseek' | 'lmstudio' | 'ai-service';
   /** AI 生成时用户输入的原始需求 */
   sourcePrompt?: string | null;
   /**
@@ -402,10 +402,10 @@ export interface CreateRouteCommentRequest {
   content: string;
 }
 
-export type LlmProviderChoice = 'auto' | 'deepseek' | 'lmstudio';
+export type LlmProviderChoice = 'auto' | 'douxing' | 'deepseek' | 'lmstudio';
 
 export interface LlmProviderStatusItem {
-  id: 'deepseek' | 'lmstudio';
+  id: 'douxing' | 'deepseek' | 'lmstudio';
   label: string;
   configured: boolean;
   available: boolean;
@@ -633,7 +633,7 @@ export interface PlanSessionActionResult extends TravelRouteInfo {
   memberLevel?: number;
   memberLevelLabel?: string;
   generationSource?: 'llm' | 'template';
-  llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
+  llmProvider?: 'douxing' | 'deepseek' | 'lmstudio' | 'ai-service';
   /** C7-b：本次操作 Agent 状态（与 DB agent_state 一致） */
   agentState?: PlanSessionAgentState | null;
   /** H3-a：规划页 Focus 宠物（与 agentState.petMeta 同步） */

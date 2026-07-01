@@ -10,6 +10,7 @@ export function buildRouteGenerationMessage(
     return `${prefix}（模板模式）`;
   }
   if (llmProvider === 'ai-service') return `${prefix}（Python AI 服务）`;
+  if (llmProvider === 'douxing') return `${prefix}（兜行专属模型）`;
   if (llmProvider === 'deepseek') return `${prefix}（DeepSeek）`;
   if (llmProvider === 'lmstudio') return `${prefix}（本地模型）`;
   return `${prefix}（AI）`;

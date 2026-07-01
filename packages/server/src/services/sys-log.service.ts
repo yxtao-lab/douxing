@@ -1,13 +1,16 @@
 import type { Request } from 'express';
+import { normalizeIpv4Address } from '@douxing/shared';
 import { getDb } from '../db/client.js';
-import { sysLoginLog, sysOperLog } from '../db/schema/sys-admin.js';
+import { sysApiLog, sysLoginLog, sysOperLog } from '../db/schema/sys-admin.js';
 
 export function getClientIp(req: Request): string {
   const forwarded = req.headers['x-forwarded-for'];
   if (typeof forwarded === 'string' && forwarded.length > 0) {
-    return forwarded.split(',')[0]?.trim() ?? 'unknown';
+    const first = forwarded.split(',')[0]?.trim() ?? 'unknown';
+    return normalizeIpv4Address(first) || first;
   }
-  return req.socket.remoteAddress ?? 'unknown';
+  const remote = req.socket.remoteAddress ?? 'unknown';
+  return normalizeIpv4Address(remote) || remote;
 }
 
 export function parseUserAgent(ua: string | undefined) {
@@ -90,4 +93,39 @@ export async function recordOperLogFromRequest(
     status,
     errorMsg,
   });
+}
+
+export async function recordApiLog(input: {
+  operName: string;
+  requestUrl: string;
+  method: string;
+  apiModule?: string;
+  requestParams?: string | null;
+  responseBody?: string | null;
+  statusCode: number;
+  operIp: string;
+  costTime: number;
+  status?: number;
+  errorMsg?: string;
+  traceId?: string;
+}) {
+  try {
+    const db = getDb();
+    await db.insert(sysApiLog).values({
+      traceId: input.traceId ?? null,
+      operName: input.operName,
+      apiModule: input.apiModule ?? null,
+      requestUrl: input.requestUrl,
+      method: input.method,
+      requestParams: input.requestParams ?? null,
+      responseBody: input.responseBody ?? null,
+      statusCode: input.statusCode,
+      operIp: input.operIp,
+      costTime: input.costTime,
+      status: input.status ?? 1,
+      errorMsg: input.errorMsg ?? null,
+    });
+  } catch (err) {
+    console.warn('[sys-log] 接口日志写入失败:', err);
+  }
 }

@@ -27,7 +27,7 @@ import {
 
 export interface GenerateRouteResult extends TravelRouteInfo {
   generationSource?: 'llm' | 'template';
-  llmProvider?: 'deepseek' | 'lmstudio' | 'ai-service';
+  llmProvider?: 'douxing' | 'deepseek' | 'lmstudio' | 'ai-service';
 }
 
 export async function fetchLlmProviders() {

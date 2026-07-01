@@ -91,6 +91,8 @@ import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
+import { formatAdminDateTime } from '@/utils/adminDateTime';
+import { createAdminRowIndexColumn } from '@/utils/adminTableColumns';
 
 usePageTitle('web.logOper');
 
@@ -105,7 +107,7 @@ const statusOptions = computed(() => [
   { label: t('common.failed'), value: 0 },
 ]);
 
-const { items, loading, pagination, load, reload, handleTableChange } =
+const { items, loading, pagination, page, pageSize, load, reload, handleTableChange } =
   useServerTablePagination<OperLogRow>((page, pageSize) =>
     fetchOperLogsPage({
       page,
@@ -119,6 +121,7 @@ const { items, loading, pagination, load, reload, handleTableChange } =
   );
 
 const columns = computed<AdminExportColumn<OperLogRow>[]>(() => [
+  createAdminRowIndexColumn<OperLogRow>(t('system.colRowIndex'), page, pageSize),
   { title: t('system.colOperTitle'), dataIndex: 'title', width: 120 },
   { title: t('system.colOperName'), dataIndex: 'operName', width: 100 },
   { title: t('system.colOperUrl'), dataIndex: 'operUrl', ellipsis: true },
@@ -134,8 +137,9 @@ const columns = computed<AdminExportColumn<OperLogRow>[]>(() => [
   {
     title: t('system.colOperTime'),
     dataIndex: 'operTime',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
+    width: 170,
+    customRender: ({ text }) => formatAdminDateTime(text),
+    exportValue: (record) => formatAdminDateTime(record.operTime),
   },
 ]);
 

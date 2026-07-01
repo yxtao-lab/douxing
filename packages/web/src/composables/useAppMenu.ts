@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
   ApartmentOutlined,
+  ApiOutlined,
   AuditOutlined,
   BarChartOutlined,
   BlockOutlined,
@@ -53,6 +54,7 @@ export const menuIconMap: Record<string, Component> = {
   TeamOutlined,
   MenuOutlined,
   ApartmentOutlined,
+  ApiOutlined,
   IdcardOutlined,
   ReadOutlined,
   FormOutlined,

@@ -35,6 +35,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   log: 'web.menu.log',
   'oper-log': 'web.logOper',
   'login-log': 'web.logLogin',
+  'api-log': 'web.logApi',
 };
 
 export function resolveMenuLabel(

@@ -18,6 +18,7 @@ import { localeMiddleware } from './middleware/locale.js';
 import { optionalAuthMiddleware } from './middleware/auth.js';
 import { siteOfflineMiddleware } from './middleware/site-offline.middleware.js';
 import { loginRateLimitMiddleware } from './middleware/login-rate-limit.middleware.js';
+import { apiLogMiddleware } from './middleware/api-log.middleware.js';
 import { success } from './utils/response.js';
 import { ApiMessageKey } from '@douxing/shared';
 
@@ -37,6 +38,7 @@ app.use(express.json());
 app.use(localeMiddleware);
 app.use(optionalAuthMiddleware);
 app.use(loginRateLimitMiddleware);
+app.use(apiLogMiddleware);
 app.use(siteOfflineMiddleware);
 app.use('/uploads/avatars', express.static(uploadsDir));
 app.use('/uploads/checkins', express.static(checkInPhotosDir));

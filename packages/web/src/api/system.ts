@@ -102,6 +102,24 @@ export interface LoginLogRow {
   loginTime: string;
 }
 
+export interface ApiLogRow {
+  id: number;
+  traceId: string | null;
+  operName: string;
+  requestUrl: string;
+  method: string;
+  apiModuleKey: string;
+  apiDescKey: string;
+  requestParams: string | null;
+  responseBody: string | null;
+  statusCode: number;
+  operIp: string | null;
+  costTime: number;
+  status: number;
+  errorMsg: string | null;
+  requestTime: string;
+}
+
 export interface MenuRow {
   id: number;
   parentId: number;
@@ -416,9 +434,21 @@ export interface AdminLoginLogListParams {
   dateEnd?: string;
 }
 
+export interface AdminApiLogListParams {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  operName?: string;
+  method?: string;
+  moduleKey?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
 function appendLogQuery(
   query: URLSearchParams,
-  params: AdminOperLogListParams | AdminLoginLogListParams,
+  params: AdminOperLogListParams | AdminLoginLogListParams | AdminApiLogListParams,
 ) {
   query.set('page', String(params.page));
   query.set('pageSize', String(params.pageSize));
@@ -443,6 +473,18 @@ export async function fetchLoginLogsPage(params: AdminLoginLogListParams) {
   appendLogQuery(query, params);
   const { data } = await http.get<ApiResponse<PaginatedResult<LoginLogRow>>>(
     `/system/logs/login?${query.toString()}`,
+  );
+  return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
+}
+
+export async function fetchApiLogsPage(params: AdminApiLogListParams) {
+  const query = new URLSearchParams();
+  appendLogQuery(query, params);
+  if (params.method) query.set('method', params.method);
+  if (params.operName) query.set('operName', params.operName);
+  if (params.moduleKey) query.set('moduleKey', params.moduleKey);
+  const { data } = await http.get<ApiResponse<PaginatedResult<ApiLogRow>>>(
+    `/system/logs/api?${query.toString()}`,
   );
   return normalizePaginatedResult(data.data, { page: params.page, pageSize: params.pageSize });
 }

@@ -60,7 +60,7 @@ export const sysOperLog = mysqlTable('sys_oper_log', {
   operIp: varchar('oper_ip', { length: 64 }),
   status: tinyint('status').notNull().default(1),
   errorMsg: varchar('error_msg', { length: 512 }),
-  operTime: timestamp('oper_time').notNull().defaultNow(),
+  operTime: timestamp('oper_time', { mode: 'string' }).notNull().defaultNow(),
 });
 
 export const sysLoginLog = mysqlTable('sys_login_log', {
@@ -71,7 +71,24 @@ export const sysLoginLog = mysqlTable('sys_login_log', {
   os: varchar('os', { length: 64 }),
   status: tinyint('status').notNull().default(1),
   msg: varchar('msg', { length: 255 }),
-  loginTime: timestamp('login_time').notNull().defaultNow(),
+  loginTime: timestamp('login_time', { mode: 'string' }).notNull().defaultNow(),
+});
+
+export const sysApiLog = mysqlTable('sys_api_log', {
+  id: int('id').primaryKey().autoincrement(),
+  traceId: varchar('trace_id', { length: 64 }),
+  operName: varchar('oper_name', { length: 64 }).notNull().default('anonymous'),
+  apiModule: varchar('api_module', { length: 32 }),
+  requestUrl: varchar('request_url', { length: 512 }).notNull(),
+  method: varchar('method', { length: 16 }).notNull(),
+  requestParams: text('request_params'),
+  responseBody: text('response_body'),
+  statusCode: int('status_code').notNull().default(200),
+  operIp: varchar('oper_ip', { length: 64 }),
+  costTime: int('cost_time').notNull().default(0),
+  status: tinyint('status').notNull().default(1),
+  errorMsg: varchar('error_msg', { length: 512 }),
+  requestTime: timestamp('request_time', { mode: 'string' }).notNull().defaultNow(),
 });
 
 /** 菜单类型：1 目录 2 菜单 3 按钮 */

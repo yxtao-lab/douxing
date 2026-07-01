@@ -31,7 +31,7 @@ export async function runGenerateRouteDraftTool(raw: unknown) {
       prompt: input.prompt,
       days: input.days,
       budget: input.budget,
-      provider: input.provider as 'auto' | 'deepseek' | 'lmstudio' | undefined,
+      provider: input.provider as 'auto' | 'douxing' | 'deepseek' | 'lmstudio' | undefined,
       locale: input.locale as LocaleCode | undefined,
       intent,
       ragCandidates: input.ragCandidates as RagAttractionCandidate[] | undefined,

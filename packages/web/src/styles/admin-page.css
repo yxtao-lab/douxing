@@ -26,33 +26,119 @@
 
 .admin-page-search {
   margin-bottom: 16px;
-  padding: 16px 16px 4px;
+  padding: 16px 16px 12px;
   background: #fafafa;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
 }
 
 .admin-search-form {
+  width: 100%;
+}
+
+.admin-search-form.ant-form-inline {
+  display: block;
+}
+
+.admin-search-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  column-gap: 16px;
+  row-gap: 12px;
+  width: 100%;
+}
+
+.admin-search-fields.is-collapsed {
+  max-height: var(--admin-search-row-height, 32px);
+  overflow: hidden;
+}
+
+.admin-search-fields.is-expanded {
+  max-height: none;
+  overflow: visible;
+}
+
+.admin-search-fields .ant-form-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0;
+  margin-inline-end: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-search-fields .ant-form-item-row {
   display: flex;
   flex-wrap: nowrap;
-  align-items: flex-start;
-  gap: 0 16px;
+  align-items: center;
   width: 100%;
-  overflow-x: auto;
 }
 
-.admin-search-form .ant-form-item {
-  margin-bottom: 12px;
-  flex-shrink: 0;
+.admin-search-fields .ant-form-item-label {
+  flex: 0 0 var(--admin-search-label-width, 5.5em);
+  max-width: var(--admin-search-label-width, 5.5em);
+  padding-bottom: 0;
+  overflow: hidden;
 }
 
-.admin-search-actions {
-  margin-left: auto;
+.admin-search-fields .ant-form-item-label > label {
+  height: 32px;
+  line-height: 32px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.admin-search-actions .ant-form-item-control-input-content {
+.admin-search-fields .ant-form-item-label > label::after {
+  margin-inline: 4px 8px;
+}
+
+.admin-search-fields .ant-form-item-control {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+}
+
+.admin-search-fields .ant-form-item-control-input,
+.admin-search-fields .ant-form-item-control-input-content {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-search-fields .ant-input,
+.admin-search-fields .ant-input-affix-wrapper,
+.admin-search-fields .ant-input-number,
+.admin-search-fields .ant-input-number-affix-wrapper,
+.admin-search-fields .ant-select,
+.admin-search-fields .ant-picker {
+  width: 100% !important;
+  max-width: 100%;
+}
+
+.admin-search-fields .ant-select .ant-select-selector {
+  width: 100% !important;
+}
+
+.admin-search-actions-row {
   display: flex;
   justify-content: flex-end;
+  margin-top: 12px;
+  padding-top: 4px;
+}
+
+.admin-search-toggle {
+  padding-inline: 4px;
+  height: auto;
+}
+
+.admin-search-toggle-icon {
+  margin-left: 4px;
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.admin-search-toggle-icon.is-expanded {
+  transform: rotate(180deg);
 }
 
 .admin-toolbar {

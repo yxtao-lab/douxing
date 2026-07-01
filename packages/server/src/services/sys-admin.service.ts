@@ -1,9 +1,12 @@
 import os from 'node:os';
-import { count, desc, eq, inArray, like, or, and, gte, lte } from 'drizzle-orm';
+import { count, desc, eq, inArray, isNull, like, notLike, or, and, gte, lte } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import {
   APP_NAME,
   buildPaginatedResult,
+  resolveApiLogMeta,
+  getApiModuleUrlLikePatterns,
+  getAllKnownApiModuleUrlLikePatterns,
   RoleCode,
   SystemConfigKey,
   UserStatus,
@@ -17,6 +20,7 @@ import {
   syncPcSiteOfflineFlag,
 } from './site-status.service.js';
 import { getAccessibleMenuIdsForUser } from './permission.service.js';
+import { formatDbDateTimeForApi } from '../utils/api-datetime.js';
 import {
   sysDept,
   sysPost,
@@ -25,6 +29,7 @@ import {
   sysNotice,
   sysOperLog,
   sysLoginLog,
+  sysApiLog,
   sysMenu,
   roleMenu,
 } from '../db/schema/sys-admin.js';
@@ -126,6 +131,24 @@ export interface LoginLogRow {
   loginTime: string;
 }
 
+export interface ApiLogRow {
+  id: number;
+  traceId: string | null;
+  operName: string;
+  requestUrl: string;
+  method: string;
+  apiModuleKey: string;
+  apiDescKey: string;
+  requestParams: string | null;
+  responseBody: string | null;
+  statusCode: number;
+  operIp: string | null;
+  costTime: number;
+  status: number;
+  errorMsg: string | null;
+  requestTime: string;
+}
+
 export interface MenuRow {
   id: number;
   parentId: number;
@@ -171,7 +194,7 @@ export const MenuType = {
 const SCHEDULED_JOBS = [
   { id: 'analytics-rollup', name: '指标日汇总', cron: '0 2 * * *', status: 'active', remark: 'DT2 跑批任务（进程内定时 + pnpm analytics:rollup）' },
   { id: 'cache-cleanup', name: '缓存清理', cron: '0 3 * * 0', status: 'pending', remark: 'Redis 过期键扫描' },
-  { id: 'log-archive', name: '日志归档', cron: '0 4 1 * *', status: 'pending', remark: '操作/登录日志归档' },
+  { id: 'log-archive', name: '日志归档', cron: '0 4 1 * *', status: 'pending', remark: '操作/登录/接口日志归档' },
 ];
 
 function mapMenuRow(row: typeof sysMenu.$inferSelect): MenuRow {
@@ -451,6 +474,7 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'log', menuName: '日志管理', menuType: MenuType.DIRECTORY, path: 'log', icon: 'FileTextOutlined', sortOrder: 60 },
   { menuKey: 'oper-log', menuName: '操作日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/oper', perms: 'log:oper:list', icon: 'FileTextOutlined', sortOrder: 61 },
   { menuKey: 'login-log', menuName: '登录日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/login', perms: 'log:login:list', icon: 'BlockOutlined', sortOrder: 62 },
+  { menuKey: 'api-log', menuName: '接口日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/api', perms: 'log:api:list', icon: 'ApiOutlined', sortOrder: 63 },
 ];
 
 /** S1 · 预置角色默认菜单（menuKey）；admin 使用全部菜单 */
@@ -475,6 +499,7 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'log',
     'oper-log',
     'login-log',
+    'api-log',
   ],
   [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'playbooks'],
 };
@@ -677,6 +702,64 @@ export async function seedDefaultRoleMenus() {
     if (targetIds.length === 0) continue;
     await db.insert(roleMenu).values(targetIds.map((menuId) => ({ roleId, menuId })));
     console.log(`[seed] role_menu: ${roleCode} ← ${targetIds.length} menus`);
+  }
+}
+
+/** 将 DEFAULT_MENU_SEED 中缺失的菜单写入库，并授予管理员/预置角色 */
+export async function syncMissingMenusFromSeed() {
+  const db = getDb();
+  const menuRows = await db.select({ id: sysMenu.id, menuKey: sysMenu.menuKey }).from(sysMenu);
+  const idByKey = new Map(menuRows.map((row) => [row.menuKey, row.id]));
+  const existingKeys = new Set(menuRows.map((row) => row.menuKey));
+  const insertedMenuIds: number[] = [];
+
+  for (const item of DEFAULT_MENU_SEED) {
+    if (existingKeys.has(item.menuKey)) continue;
+    const parentId = item.parentKey ? (idByKey.get(item.parentKey) ?? 0) : 0;
+    const [result] = await db.insert(sysMenu).values({
+      parentId,
+      menuKey: item.menuKey,
+      menuName: item.menuName,
+      menuType: item.menuType,
+      path: item.path ?? null,
+      component: item.component ?? null,
+      perms: item.perms ?? null,
+      icon: item.icon ?? null,
+      sortOrder: item.sortOrder,
+    });
+    const newId = Number(result.insertId);
+    idByKey.set(item.menuKey, newId);
+    existingKeys.add(item.menuKey);
+    insertedMenuIds.push(newId);
+    console.log(`[seed] Inserted missing menu: ${item.menuKey}`);
+  }
+
+  if (insertedMenuIds.length === 0) return;
+
+  const adminRole = await db.select().from(roles).where(eq(roles.code, RoleCode.ADMIN)).limit(1);
+  if (adminRole[0]) {
+    await db
+      .insert(roleMenu)
+      .values(insertedMenuIds.map((menuId) => ({ roleId: adminRole[0]!.id, menuId })));
+  }
+
+  for (const [roleCode, menuKeys] of Object.entries(DEFAULT_ROLE_MENU_KEYS)) {
+    if (menuKeys === 'ALL') continue;
+    const roleRow = await db.select().from(roles).where(eq(roles.code, roleCode)).limit(1);
+    if (!roleRow[0]) continue;
+    const roleId = roleRow[0].id;
+    for (const menuId of insertedMenuIds) {
+      const menuKey = [...idByKey.entries()].find(([, id]) => id === menuId)?.[0];
+      if (!menuKey || !menuKeys.includes(menuKey)) continue;
+      const assigned = await db
+        .select({ menuId: roleMenu.menuId })
+        .from(roleMenu)
+        .where(and(eq(roleMenu.roleId, roleId), eq(roleMenu.menuId, menuId)))
+        .limit(1);
+      if (assigned.length === 0) {
+        await db.insert(roleMenu).values({ roleId, menuId });
+      }
+    }
   }
 }
 
@@ -1081,10 +1164,10 @@ function buildOperLogWhere(filter?: AdminOperLogListFilter) {
     conditions.push(eq(sysOperLog.status, filter.status));
   }
   if (filter?.dateStart) {
-    conditions.push(gte(sysOperLog.operTime, new Date(`${filter.dateStart}T00:00:00`)));
+    conditions.push(gte(sysOperLog.operTime, `${filter.dateStart} 00:00:00`));
   }
   if (filter?.dateEnd) {
-    conditions.push(lte(sysOperLog.operTime, new Date(`${filter.dateEnd}T23:59:59.999`)));
+    conditions.push(lte(sysOperLog.operTime, `${filter.dateEnd} 23:59:59`));
   }
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
@@ -1106,10 +1189,10 @@ function buildLoginLogWhere(filter?: AdminLoginLogListFilter) {
     conditions.push(eq(sysLoginLog.status, filter.status));
   }
   if (filter?.dateStart) {
-    conditions.push(gte(sysLoginLog.loginTime, new Date(`${filter.dateStart}T00:00:00`)));
+    conditions.push(gte(sysLoginLog.loginTime, `${filter.dateStart} 00:00:00`));
   }
   if (filter?.dateEnd) {
-    conditions.push(lte(sysLoginLog.loginTime, new Date(`${filter.dateEnd}T23:59:59.999`)));
+    conditions.push(lte(sysLoginLog.loginTime, `${filter.dateEnd} 23:59:59`));
   }
   return conditions.length > 0 ? and(...conditions) : undefined;
 }
@@ -1139,7 +1222,7 @@ export async function listOperLogsPaginated(
     operIp: r.operIp,
     status: r.status,
     errorMsg: r.errorMsg,
-    operTime: String(r.operTime),
+    operTime: formatDbDateTimeForApi(r.operTime),
   }));
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
 }
@@ -1168,8 +1251,117 @@ export async function listLoginLogsPaginated(
     os: r.os,
     status: r.status,
     msg: r.msg,
-    loginTime: String(r.loginTime),
+    loginTime: formatDbDateTimeForApi(r.loginTime),
   }));
+  return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
+}
+
+export interface AdminApiLogListFilter {
+  keyword?: string;
+  operName?: string;
+  method?: string;
+  moduleKey?: string;
+  status?: number;
+  dateStart?: string;
+  dateEnd?: string;
+}
+
+function buildApiLogWhere(filter?: AdminApiLogListFilter) {
+  const conditions = [];
+  const keyword = filter?.keyword?.trim();
+  if (keyword) {
+    const pattern = `%${keyword}%`;
+    conditions.push(
+      or(
+        like(sysApiLog.requestUrl, pattern),
+        like(sysApiLog.operIp, pattern),
+        like(sysApiLog.errorMsg, pattern),
+        like(sysApiLog.apiModule, pattern),
+      )!,
+    );
+  }
+  const operName = filter?.operName?.trim();
+  if (operName) {
+    conditions.push(like(sysApiLog.operName, `%${operName}%`));
+  }
+  const method = filter?.method?.trim().toUpperCase();
+  if (method) {
+    conditions.push(eq(sysApiLog.method, method));
+  }
+  const moduleKey = filter?.moduleKey?.trim();
+  if (moduleKey) {
+    if (moduleKey === 'other') {
+      const knownPatterns = getAllKnownApiModuleUrlLikePatterns();
+      const legacyOther =
+        knownPatterns.length > 0
+          ? and(
+              or(isNull(sysApiLog.apiModule), eq(sysApiLog.apiModule, '')),
+              ...knownPatterns.map((pattern) => notLike(sysApiLog.requestUrl, pattern)),
+            )
+          : undefined;
+      conditions.push(
+        or(eq(sysApiLog.apiModule, 'other'), legacyOther)!,
+      );
+    } else {
+      const patterns = getApiModuleUrlLikePatterns(moduleKey);
+      const legacyMatch =
+        patterns.length > 0
+          ? and(
+              or(isNull(sysApiLog.apiModule), eq(sysApiLog.apiModule, '')),
+              or(...patterns.map((pattern) => like(sysApiLog.requestUrl, pattern)))!,
+            )
+          : undefined;
+      conditions.push(or(eq(sysApiLog.apiModule, moduleKey), legacyMatch)!);
+    }
+  }
+  if (filter?.status != null) {
+    conditions.push(eq(sysApiLog.status, filter.status));
+  }
+  if (filter?.dateStart) {
+    conditions.push(gte(sysApiLog.requestTime, `${filter.dateStart} 00:00:00`));
+  }
+  if (filter?.dateEnd) {
+    conditions.push(lte(sysApiLog.requestTime, `${filter.dateEnd} 23:59:59`));
+  }
+  return conditions.length > 0 ? and(...conditions) : undefined;
+}
+
+export async function listApiLogsPaginated(
+  page: number,
+  pageSize: number,
+  filter?: AdminApiLogListFilter,
+): Promise<PaginatedResult<ApiLogRow>> {
+  const db = getDb();
+  const offset = (page - 1) * pageSize;
+  const where = buildApiLogWhere(filter);
+  const [totalRow] = await db.select({ total: count() }).from(sysApiLog).where(where);
+  const rows = await db
+    .select()
+    .from(sysApiLog)
+    .where(where)
+    .orderBy(desc(sysApiLog.id))
+    .limit(pageSize)
+    .offset(offset);
+  const items = rows.map((r) => {
+    const meta = resolveApiLogMeta(r.method, r.requestUrl);
+    return {
+      id: r.id,
+      traceId: r.traceId,
+      operName: r.operName,
+      requestUrl: r.requestUrl,
+      method: r.method,
+      apiModuleKey: r.apiModule ?? meta.moduleKey,
+      apiDescKey: meta.descKey,
+      requestParams: r.requestParams,
+      responseBody: r.responseBody,
+      statusCode: r.statusCode,
+      operIp: r.operIp,
+      costTime: r.costTime,
+      status: r.status,
+      errorMsg: r.errorMsg,
+      requestTime: formatDbDateTimeForApi(r.requestTime),
+    };
+  });
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
 }
 
