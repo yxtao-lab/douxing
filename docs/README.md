@@ -4,7 +4,7 @@
 |------|------|
 | [项目概述.md](./项目概述.md) | **工作区说明**：Monorepo 结构、模块 A/B 主链、当前阶段 |
 | [API接口文档.md](./API接口文档.md) | **REST API 全量接口说明**（人类可读；Apifox 请导入 [openapi.yaml](./openapi.yaml)） |
-| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（REST 接口；Apifox / Postman 直接导入；内网 Agent Tools 见 [API接口文档 §20](./API接口文档.md#20-agent-tools内网)） |
+| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（REST 接口 **101** 个；Apifox / Postman 直接导入；内网 Agent Tools 见 [API接口文档 §20](./API接口文档.md#20-agent-tools内网)） |
 | [下一步工作.md](./下一步工作.md) | **当前建议先做什么**（精简排期，不重复 ROADMAP 全文） |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划（含 **S/M/F/K-A/P6** 等专题线） |
 | [详细设计文档.md](./详细设计文档.md) | 平台详细设计 V2.0 + §17 实施补充 |
@@ -54,6 +54,7 @@
 - **研发 · 模块 A（AI 规划）**：[AI路径规划路线图.md §0](./AI路径规划路线图.md#0-当前指针必读)（**M1～M5 已达成 · 当前 Step 35 → M6**）→ [AI规划与Agent演进.md](./AI规划与Agent演进.md)（架构设计）→ 详细设计 §3；旅程相册见 [旅行照片存储系统.md](./旅行照片存储系统.md)  
 - **研发 · API 联调**：[API接口文档.md](./API接口文档.md) + [openapi.yaml](./openapi.yaml)  
 - **研发 · 系统管理（S 线）**：[系统管理.md](./系统管理.md)（**S0～S2 已完成**）  
+- **研发 · 数据中台 / 运营大屏**：[数据中台.md](./数据中台.md) · [旅行运营大屏.md](./旅行运营大屏.md)（**DT1～DT3 + DT5 一期已完成**）
 - **研发 · 发单接单（M 线）**：[发单接单平台.md](./发单接单平台.md)（M0 代码未启动）  
 - **研发 · 数字孪生 / 3D（F 线）**：[数字孪生与三维建模.md](./数字孪生与三维建模.md)（F0 代码未启动）  
 - **运维 / 发版**：[发版流程与CI-CD解析.md](./发版流程与CI-CD解析.md) → [服务端命令手册.md](./服务端命令手册.md) → [deploy-production.md](./deploy-production.md)  
@@ -64,4 +65,4 @@
 
 日常开发脚本说明见 [../scripts/README.md](../scripts/README.md)。详细设计以 **Markdown 版** [详细设计文档.md](./详细设计文档.md) 为准（含 **§17 实施补充**）。
 
-**最后更新**：2026-06-26（**M5 已达成** · **S1/S2 RBAC 已验收** · **DT2/DT3 已验收** · 当前 **Step 35 PAI LoRA 微调**）
+**最后更新**：2026-07-01（**M5 已达成** · **S1/S2 RBAC 已验收** · **DT2/DT3/DT5 一期已验收** · 当前 **Step 35 PAI LoRA 微调**）

@@ -2008,6 +2008,105 @@ paths:
         '403':
           description: 非管理员
 
+  /api/analytics/funnel:
+    get:
+      tags: [数据分析]
+      summary: 旅程漏斗（管理员，DT3）
+      operationId: analyticsFunnel
+      parameters:
+        - name: days
+          in: query
+          description: 天数，1～90，默认 30
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 30
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnalyticsFunnelStep'
+        '403':
+          description: 非管理员
+
+  /api/analytics/geo/distribution:
+    get:
+      tags: [数据分析]
+      summary: 地理分布与热力点（管理员，DT5）
+      operationId: analyticsGeoDistribution
+      parameters:
+        - name: days
+          in: query
+          description: 天数，1～90，默认 30
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 30
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AnalyticsGeoDistribution'
+        '403':
+          description: 非管理员
+
+  /api/analytics/geo/flows:
+    get:
+      tags: [数据分析]
+      summary: 城际 OD 流动（管理员，DT5）
+      operationId: analyticsGeoFlows
+      parameters:
+        - name: days
+          in: query
+          description: 天数，1～90，默认 30
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 90
+            default: 30
+        - name: limit
+          in: query
+          description: Top N，1～50，默认 20
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AnalyticsGeoFlow'
+        '403':
+          description: 非管理员
+
   /api/analytics/events:
     post:
       tags: [数据分析]
@@ -2670,6 +2769,73 @@ components:
       properties:
         cityCode: { type: string }
         checkinCount: { type: integer }
+
+    AnalyticsFunnelStep:
+      type: object
+      properties:
+        stepKey: { type: string }
+        eventName: { type: string }
+        count: { type: integer }
+        rateFromFirst: { type: number, nullable: true }
+        rateFromPrev: { type: number, nullable: true }
+
+    AnalyticsProvinceGeoStat:
+      type: object
+      properties:
+        provinceCode: { type: string }
+        geoName: { type: string }
+        adcode: { type: string }
+        checkinCount: { type: integer }
+
+    AnalyticsCityGeoStat:
+      type: object
+      properties:
+        cityCode: { type: string }
+        cityName: { type: string }
+        latitude: { type: number }
+        longitude: { type: number }
+        checkinCount: { type: integer }
+
+    AnalyticsHeatPoint:
+      type: object
+      properties:
+        latitude: { type: number }
+        longitude: { type: number }
+        weight: { type: number }
+
+    AnalyticsGeoDistribution:
+      type: object
+      properties:
+        provinces:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsProvinceGeoStat'
+        cities:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsCityGeoStat'
+        heatPoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsHeatPoint'
+        scopeDays: { type: integer }
+        effectiveScope:
+          type: string
+          enum: [window, allTime]
+        generatedAt: { type: string, format: date-time }
+
+    AnalyticsGeoFlow:
+      type: object
+      properties:
+        fromCityCode: { type: string }
+        toCityCode: { type: string }
+        fromName: { type: string }
+        toName: { type: string }
+        fromLatitude: { type: number }
+        fromLongitude: { type: number }
+        toLatitude: { type: number }
+        toLongitude: { type: number }
+        count: { type: integer }
 
     TrackAnalyticsEventRequest:
       type: object

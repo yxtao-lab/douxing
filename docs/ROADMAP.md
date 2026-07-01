@@ -3,8 +3,8 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.42  
-**更新日期**：2026-06-26  
+**文档版本**：3.43  
+**更新日期**：2026-07-01  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/pc` · `packages/mobile` · `packages/server` · `packages/shared`）  
 **新增专题**：[系统管理.md](./系统管理.md) · [发单接单平台.md](./发单接单平台.md) · [数字孪生与三维建模.md](./数字孪生与三维建模.md) · [AI旅行宠物.md](./AI旅行宠物.md) · [旅行日记博客.md](./旅行日记博客.md) · [用户粘性与旅友圈战略.md](./用户粘性与旅友圈战略.md) · [Web管理端表格规范.md](./Web管理端表格规范.md)
 
@@ -32,8 +32,8 @@
 | 维度 | 状态 | 说明 |
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
-| **当前焦点** | **Step 35 I2 PAI LoRA 微调**（上传脚本已交付）· **DT5 运营大屏**（按需） | **M1～M5 已达成**；**S1/S2 RBAC** · **DT2/DT3** 已验收；`ml:upload-dataset` · `i2:pai-lora-cases` 已落地；见 [下一步工作.md](./下一步工作.md) |
-| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI路径规划路线图 §0](./AI路径规划路线图.md#0-当前指针必读)** | **AI 规划：Step 35～40 → M6 主链验收**；全站：**DT5**（按需）· **M0**（模块 B，不阻塞 A） |
+| **当前焦点** | **Step 35 I2 PAI LoRA 微调**（上传脚本已交付）· **DT5 一期已验收** | **M1～M5 已达成**；**S1/S2 RBAC** · **DT2/DT3/DT5** 已验收；`ml:upload-dataset` · `dt5:analytics-cases` 已落地；见 [下一步工作.md](./下一步工作.md) |
+| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI路径规划路线图 §0](./AI路径规划路线图.md#0-当前指针必读)** | **AI 规划：Step 35～40 → M6 主链验收**；全站：**DT5 二期**（按需）· **M0**（模块 B，不阻塞 A） |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -178,7 +178,8 @@ gantt
 | v0.9.32 | 2026-06-22 | **I2 Step 35 上传脚本** | `pnpm ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` · OSS 校验 | PAI 微调任务待执行 |
 | v0.9.33 | 2026-06-24 | **S1 RBAC 闭环** | `role_menu` · `requirePerm` · 登录 `permissions` · 角色菜单分配 UI · `s1:rbac-cases` | 见 [系统管理.md](./系统管理.md) |
 | v0.9.34 | 2026-06-26 | **DT2/DT3 数据中台** | `analytics_daily_metrics` · `pnpm analytics:rollup` · mobile/pc 埋点 · 漏斗 API · 看板旅程漏斗表 | `dt2:analytics-cases` · `dt3:analytics-cases` 全绿 |
-| v0.9.35 | 2026-06-26 | **S2 动态菜单** | `GET /api/system/menus/tree` · `useAppMenu` + `menuStore` · 侧栏按角色权限渲染 · `s2:dynamic-menu-cases` | operator/auditor 菜单裁剪验收通过 |
+| v0.9.36 | 2026-06-26 | **DT5 旅行运营大屏一期** | `/screen/travel` · `analytics/geo/*` · ECharts 地图/漏斗 · `dt5:analytics-cases` | 见 [旅行运营大屏.md](./旅行运营大屏.md) |
+| v0.9.37 | 2026-07-01 | **DT5 地理时间口径 + 热力图层** | `scopeDays` / `effectiveScope` · 页头角标 · `TravelGeoMap` heatmap | — |
 | v0.9.30 | 2026-06-18 | **文档同步** | 路线图/下一步/API 文档对齐 M4；指针 → Step 31 H8 | — |
 | v0.9.23 | 2026-06-15 | **W2 Web 管理端表格规范** | 全列表 `AdminSearchBar` 筛选 · `AdminTableExportButton` XLSX 导出（表头/文件名 i18n + 时间戳）· 空值 `-` 占位 · [Web管理端表格规范.md](./Web管理端表格规范.md) · `.cursor/rules/web-admin-table-filter.mdc` | 业务/系统/监控/日志/会员/分析内嵌表均可导出；见 [§ W2](./开发记录-重难点与亮点.md#web-管理端表格筛选导出与空值占位2026-06-15) |
 
@@ -277,6 +278,7 @@ gantt
 | 2026-06-08 | P0～P4 PC 用户端功能迁移 | [§ P0～P4](./开发记录-重难点与亮点.md#p0p4-pc-用户端功能迁移) |
 | 2026-06-08 | 双端 Logo 与主题色 | [§ 双端品牌](./开发记录-重难点与亮点.md#双端-logo-与主题色) |
 | 2026-06-09 | G4/DT1 管理端数据分析与数据中台 | [§ G4/DT1](./开发记录-重难点与亮点.md#g4dt1-管理端数据分析与数据中台) |
+| 2026-06-26 | DT5 旅行运营大屏（一期） | [旅行运营大屏.md](./旅行运营大屏.md) · [§ DT5](./开发记录-重难点与亮点.md#dt5-旅行运营大屏一期2026-06-26) |
 | 2026-06-09 | 双模块架构 · 系统管理与发单接单（产品定稿） | [§ 双模块](./开发记录-重难点与亮点.md#双模块架构系统管理与发单接单2026-06-09) |
 | 2026-06-10 | F 线 · 数字孪生与三维建模（方案定稿） | [§ F 线](./开发记录-重难点与亮点.md#f-线数字孪生与三维建模思路录入2026-06-10) |
 | 2026-06-10 | J1～J5 + J5+ 旅程相册 | [§ J1～J4](./开发记录-重难点与亮点.md#j1j4-旅程相册数据模型配额ui与打卡手帐打通) · [§ J5](./开发记录-重难点与亮点.md#j5-exif-智能归类与相册-h5-分享) · [§ J5+](./开发记录-重难点与亮点.md#j5-我的相册上传拍摄参数与同参数拼图) · [§ J5++](./开发记录-重难点与亮点.md#j5-pc-相册列表详情与删除相册) |
@@ -395,6 +397,9 @@ GET  /api/share/journey-albums/:token
 GET  /api/analytics/overview
 GET  /api/analytics/trends
 GET  /api/analytics/top-cities
+GET  /api/analytics/funnel
+GET  /api/analytics/geo/distribution
+GET  /api/analytics/geo/flows
 POST /api/analytics/events
 ```
 
@@ -753,9 +758,9 @@ Python ai-service → Node LLM → 模板/RAG
 | **DT2** | [x] | 2026-06-26 | 日汇总跑批 | DT1 | `analytics_daily_metrics`；`pnpm analytics:rollup`；进程内定时 | 趋势查询走汇总表 |
 | **DT3** | [x] | 2026-06-26 | 客户端埋点 | DT1 | mobile/pc `POST /analytics/events`；`GET /analytics/funnel`；看板漏斗 | 规划完成等行为可统计 |
 | **DT4** | [ ] | — | ClickHouse 升级（可选） | DT2、§7 详细设计 | MySQL → ClickHouse 同步 | 大数据量 OLAP |
-| **DT5** | [ ] | — | 旅行运营大屏 | DT1、DT3（推荐） | `web` `ScreenLayout` + `/screen/travel`；`GET /analytics/geo/*` · `/journey-funnel`；ECharts 全国分布 + 漏斗；可选 Leaflet 热力 | 管理员全屏可见全站旅行分布与路径漏斗；见 [数据中台 §9](./数据中台.md#9-dt5-旅行运营大屏规划) |
+| **DT5** | [x] | 2026-06-26 | 旅行运营大屏（一期） | DT1、DT3 | `web` `ScreenLayout` + `/screen/travel`；`GET /analytics/geo/*` · `/funnel`；ECharts 全国分布 + 漏斗 + 热力点 | 管理员全屏可见全站旅行分布与路径漏斗；`dt5:analytics-cases` 全绿；见 [旅行运营大屏.md](./旅行运营大屏.md) |
 
-**推荐顺序（当前）**：`DT1` ✅ → `DT3` ✅ → `DT2` ✅ → **`DT5`（按需）** → `DT4`。DT5 与 F 线 L3 3D 底图可二期叠加 Cesium。
+**推荐顺序（当前）**：`DT1` ✅ → `DT3` ✅ → `DT2` ✅ → **`DT5` 一期 ✅** → `DT4`（按需）· **DT5 二期**（全球 3D / 时间窗切换，按需）。DT5 二期与 F 线 L3 3D 底图可叠加 Cesium。
 
 ---
 
@@ -1076,7 +1081,7 @@ Python ai-service → Node LLM → 模板/RAG
 | **专属模型降本增效** | **[I1](#阶段-i专属模型2026-06-01-录入)**（已完成）→ 扩充 seed → **I2** PAI → **I3** 百炼接入 | 与宣传 Sprint 可并行 |
 | 沉浸与传播（深化） | **H1-c** → **H3** → **H4** → **H2-b** |
 | **3D / 旅行孪生（pc）** | **F0** → **F1** → **F2** → **F3** → **F4** | [数字孪生与三维建模.md](./数字孪生与三维建模.md)；仅 pc；mobile 不做 3D |
-| **运营旅行大屏** | **DT5**（2D 分布 + 漏斗）→ 可选叠 F-L3 Cesium | [数据中台 §9](./数据中台.md#9-dt5-旅行运营大屏规划)；web `/screen/travel` |
+| **运营旅行大屏** | **DT5 一期 ✅** → 二期（3D / 时间窗）→ 可选叠 F-L3 Cesium | [旅行运营大屏.md](./旅行运营大屏.md)；web `/screen/travel` |
 | 合规与安全 | **H6** → E2 → [后期待办](./后期待办.md) |
 | 工程可上线 | G8（已完成）→ G7 → G2 → E2 真支付 |
 | 小程序提审 / 出海 | **[宣传类目 Sprint](#宣传类目h1--h2--d5-最小版分-phase-实施)** → 合规 [后期待办](./后期待办.md) → E2 真支付 |
@@ -1439,4 +1444,4 @@ Step 35～40（M6 主链验收）
 
 ---
 
-*文档版本 3.42 · 最后更新：2026-06-26*
+*文档版本 3.43 · 最后更新：2026-07-01*

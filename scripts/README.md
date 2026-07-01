@@ -120,6 +120,7 @@
 | `pnpm analytics:rollup` | `analytics-rollup.ts` | DT2 指标日汇总（`--backfill N` 回填） |
 | `pnpm --filter @douxing/server dt2:analytics-cases` | `dt2-analytics-cases.ts` | DT2 日汇总验收 |
 | `pnpm --filter @douxing/server dt3:analytics-cases` | `dt3-analytics-cases.ts` | DT3 客户端埋点验收 |
+| `pnpm --filter @douxing/server dt5:analytics-cases` | `dt5-analytics-cases.ts` | DT5 旅行运营大屏验收 |
 | `pnpm --filter @douxing/server s1:rbac-cases` | `s1-rbac-cases.ts` | S1 RBAC 闭环验收 |
 | `pnpm --filter @douxing/server s2:dynamic-menu-cases` | `s2-dynamic-menu-cases.ts` | S2 动态菜单验收 |
 | `pnpm --filter @douxing/server dev:self-check` | `dev-self-check.ts` | 开发环境联调自检 |
