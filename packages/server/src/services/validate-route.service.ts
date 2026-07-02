@@ -8,6 +8,7 @@ import {
   type ValidatorWarningKey,
 } from '@douxing/shared';
 import { geoSimilarity, tagJaccardSimilarity } from '../utils/mmr-rank.util.js';
+import { matchRagCandidateBySpotName } from './attraction-rag.service.js';
 
 export interface ValidateRouteOptions {
   locale?: LocaleCode;
@@ -39,6 +40,23 @@ function collectPlayPoiNames(draft: GeneratedRouteDraft): Map<string, number[]> 
   return map;
 }
 
+function applyRagReplacementSpot(
+  spot: GeneratedRouteDraft['routeDetail']['days'][0]['attractions'][0],
+  replacement: RagAttractionCandidate,
+): GeneratedRouteDraft['routeDetail']['days'][0]['attractions'][0] {
+  return {
+    ...spot,
+    attractionId: replacement.id,
+    name: replacement.name,
+    cost: replacement.ticketPrice,
+    description: spot.description?.trim()
+      ? spot.description
+      : (replacement.description ?? replacement.name),
+    latitude: replacement.latitude ?? spot.latitude,
+    longitude: replacement.longitude ?? spot.longitude,
+  };
+}
+
 function findReplacementCandidate(
   excludeIds: Set<number>,
   excludeNames: Set<string>,
@@ -50,6 +68,28 @@ function findReplacementCandidate(
     return c;
   }
   return null;
+}
+
+/**
+ * 优先按名称匹配 RAG 候选，失败时再取首个未占用候选。
+ *
+ * @param name - 当前 POI 名称
+ * @param excludeIds - 已使用的 attractionId
+ * @param excludeNames - 已使用的 POI 名称
+ * @param candidates - RAG 白名单
+ * @returns 可替换候选；无可用时为 `null`
+ */
+function resolveReplacementCandidate(
+  name: string,
+  excludeIds: Set<number>,
+  excludeNames: Set<string>,
+  candidates: RagAttractionCandidate[],
+): RagAttractionCandidate | null {
+  const matched = matchRagCandidateBySpotName(name, candidates);
+  if (matched && !excludeIds.has(matched.id) && !excludeNames.has(matched.name.trim())) {
+    return matched;
+  }
+  return findReplacementCandidate(excludeIds, excludeNames, candidates);
 }
 
 function dayGeoSpan(day: GeneratedRouteDraft['routeDetail']['days'][0]): number {
@@ -133,19 +173,9 @@ export function validateRouteDraft(
       if (!spot.attractionId) {
         pushDayWarning(dayIndex, 'poiNotInLibrary', { name });
         if (autoFix && candidates.length > 0) {
-          const replacement = findReplacementCandidate(usedIds, usedNames, candidates);
+          const replacement = resolveReplacementCandidate(name, usedIds, usedNames, candidates);
           if (replacement) {
-            day.attractions[spotIndex] = {
-              ...spot,
-              attractionId: replacement.id,
-              name: replacement.name,
-              cost: replacement.ticketPrice,
-              description: spot.description?.trim()
-                ? spot.description
-                : (replacement.description ?? replacement.name),
-              latitude: replacement.latitude ?? spot.latitude,
-              longitude: replacement.longitude ?? spot.longitude,
-            };
+            day.attractions[spotIndex] = applyRagReplacementSpot(spot, replacement);
             usedIds.add(replacement.id);
             usedNames.add(replacement.name.trim());
             fixedCount += 1;
@@ -157,17 +187,9 @@ export function validateRouteDraft(
       if (usedNames.has(name)) {
         pushDayWarning(dayIndex, 'duplicatePoi', { name });
         if (autoFix && candidates.length > 0) {
-          const replacement = findReplacementCandidate(usedIds, usedNames, candidates);
+          const replacement = resolveReplacementCandidate(name, usedIds, usedNames, candidates);
           if (replacement) {
-            day.attractions[spotIndex] = {
-              ...spot,
-              attractionId: replacement.id,
-              name: replacement.name,
-              cost: replacement.ticketPrice,
-              description: replacement.description ?? replacement.name,
-              latitude: replacement.latitude ?? spot.latitude,
-              longitude: replacement.longitude ?? spot.longitude,
-            };
+            day.attractions[spotIndex] = applyRagReplacementSpot(spot, replacement);
             usedIds.add(replacement.id);
             usedNames.add(replacement.name.trim());
             fixedCount += 1;

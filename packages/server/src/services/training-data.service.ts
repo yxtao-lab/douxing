@@ -7,6 +7,7 @@ import {
   type LlmRoutePayload,
   type RoutePlannerMessageOptions,
 } from './llm-client.service.js';
+import { matchRagCandidateBySpotName } from './attraction-rag.service.js';
 
 export interface TrainingSample {
   messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>;
@@ -59,16 +60,25 @@ export function buildTrainingSample(
   };
 }
 
+/**
+ * 计算路线中 attraction 节点命中 RAG 白名单的比例（含别名与模糊名匹配）。
+ *
+ * @param payload - LLM 路线 JSON 结构
+ * @param ragCandidates - 内容库候选 POI
+ * @returns 0–1；无 attraction 节点时返回 1
+ */
 export function computePoiHitRate(
   payload: LlmRoutePayload,
   ragCandidates: RagAttractionCandidate[],
 ): number {
-  const names = new Set(ragCandidates.map((c) => c.name.trim()));
   const attractions = payload.routeDetail.days.flatMap((day) =>
     day.attractions.filter((s) => s.poiType === PoiCategory.ATTRACTION),
   );
   if (attractions.length === 0) return 1;
-  const hits = attractions.filter((s) => names.has(s.name.trim())).length;
+  if (ragCandidates.length === 0) return 0;
+  const hits = attractions.filter((s) =>
+    matchRagCandidateBySpotName(s.name, ragCandidates),
+  ).length;
   return hits / attractions.length;
 }
 

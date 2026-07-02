@@ -37,6 +37,14 @@ export async function generateRouteFromAiService(
   };
 }
 
-export function canUseAiServiceForRoute(): boolean {
-  return canUseAiService();
+/**
+ * 判断当前路线生成是否应优先走 Python AI 微服务。
+ *
+ * @param input - 路线生成入参；`provider=douxing` 时返回 `false`（专属模型仅 Node LLM 支持）
+ * @returns 微服务已启用且 provider 可被 Python 侧接受时为 `true`
+ */
+export function canUseAiServiceForRoute(input?: GenerateRouteInput): boolean {
+  if (!canUseAiService()) return false;
+  if (input?.provider === 'douxing') return false;
+  return true;
 }

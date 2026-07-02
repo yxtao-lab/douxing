@@ -12,6 +12,13 @@ import type { RagAttractionCandidate } from '@douxing/shared';
 
 const POI_HIT_RATE_FALLBACK_THRESHOLD = 0.8;
 
+/**
+ * 计算生成路线相对 RAG 候选的 POI 命中率（含别名/模糊名，与 RAG 对齐逻辑一致）。
+ *
+ * @param draft - 生成中的路线 draft
+ * @param ragCandidates - 内容库 RAG 候选
+ * @returns 0–1 命中率
+ */
 export function resolvePoiHitRate(
   draft: GeneratedRouteDraft,
   ragCandidates: RagAttractionCandidate[],

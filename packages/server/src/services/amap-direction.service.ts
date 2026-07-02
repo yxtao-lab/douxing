@@ -1,9 +1,15 @@
 import { haversineDistanceMeters, interpolateSegment } from '@douxing/shared';
 import type { RoutePathSegmentMode, RouteTransitMode } from '@douxing/shared';
-import { getAmapWebKey, getAmapGeocodeTimeoutMs, isAmapGeocodeEnabled } from '../config/amap.js';
+import {
+  getAmapWebKey,
+  getAmapGeocodeTimeoutMs,
+  getAmapDirectionConcurrency,
+  isAmapGeocodeEnabled,
+} from '../config/amap.js';
 import {
   getCachedTravelDuration,
   setCachedTravelDuration,
+  type MatrixDistanceCacheEntry,
 } from './matrix-cache.service.js';
 import {
   getCachedDirectionPolyline,
@@ -77,6 +83,75 @@ async function fetchWithTimeout(url: string, timeoutMs: number): Promise<Respons
   }
 }
 
+type SemaphoreRelease = () => void;
+
+/**
+ * 创建异步信号量，限制同时执行的异步任务数量。
+ *
+ * @param maxConcurrent - 最大并发数；小于 1 时按 1 处理
+ * @returns `acquire` 获取槽位（满则排队）；`release` 释放槽位
+ */
+function createAsyncSemaphore(maxConcurrent: number): {
+  acquire: () => Promise<void>;
+  release: SemaphoreRelease;
+} {
+  const limit = Math.max(1, maxConcurrent);
+  let activeCount = 0;
+  const waitQueue: Array<() => void> = [];
+
+  const release: SemaphoreRelease = () => {
+    activeCount -= 1;
+    const next = waitQueue.shift();
+    if (next) next();
+  };
+
+  const acquire = (): Promise<void> => {
+    if (activeCount < limit) {
+      activeCount += 1;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      waitQueue.push(() => {
+        activeCount += 1;
+        resolve();
+      });
+    });
+  };
+
+  return { acquire, release };
+}
+
+/** 高德 direction/distance Web API 并发闸门（进程内单例，distance 与 polyline 共用） */
+let amapDirectionRequestSemaphore: ReturnType<typeof createAsyncSemaphore> | null = null;
+
+/**
+ * 获取高德路网 API 并发闸门；上限由 `AMAP_DIRECTION_CONCURRENCY` 控制。
+ *
+ * @returns 模块级共享信号量实例
+ */
+function getAmapDirectionRequestSemaphore(): ReturnType<typeof createAsyncSemaphore> {
+  if (!amapDirectionRequestSemaphore) {
+    amapDirectionRequestSemaphore = createAsyncSemaphore(getAmapDirectionConcurrency());
+  }
+  return amapDirectionRequestSemaphore;
+}
+
+/**
+ * 在路网 API 并发闸门内执行异步任务（distance + direction polyline 共用）。
+ *
+ * @param task - 需限流的高德 HTTP 请求逻辑
+ * @returns `task` 的返回值
+ */
+async function runWithAmapDirectionConcurrency<T>(task: () => Promise<T>): Promise<T> {
+  const semaphore = getAmapDirectionRequestSemaphore();
+  await semaphore.acquire();
+  try {
+    return await task();
+  } finally {
+    semaphore.release();
+  }
+}
+
 function estimateByHaversine(from: LatLngPoint, to: LatLngPoint): TravelDurationResult {
   const distanceMeters = haversineDistanceMeters(
     from.latitude,
@@ -121,6 +196,45 @@ function pickLocalTransitMode(
   return 'drive';
 }
 
+/**
+ * 由缓存的距离/耗时条目组装最终结果，并按当前场景重算交通方式。
+ *
+ * @param cached - L1/Redis 命中的距离/耗时
+ * @param options - 玩法动线或 playbook 交通偏好
+ * @returns 含 `mode` 的完整耗时结果
+ */
+function buildTravelDurationFromCache(
+  cached: MatrixDistanceCacheEntry,
+  options?: TravelDurationOptions,
+): TravelDurationResult {
+  return {
+    distanceMeters: cached.distanceMeters,
+    durationMinutes: cached.durationMinutes,
+    estimated: cached.estimated,
+    mode: pickLocalTransitMode(cached.distanceMeters, cached.durationMinutes, options),
+  };
+}
+
+/**
+ * 写入 Haversine 估算缓存，避免 CUQPS 等失败时对同路段重复打 API。
+ *
+ * @param from - 起点
+ * @param to - 终点
+ * @param result - 已含 `mode` 的估算结果
+ * @returns `void`
+ */
+async function cacheEstimatedTravelDuration(
+  from: LatLngPoint,
+  to: LatLngPoint,
+  result: TravelDurationResult,
+): Promise<void> {
+  await setCachedTravelDuration(from.latitude, from.longitude, to.latitude, to.longitude, {
+    distanceMeters: result.distanceMeters,
+    durationMinutes: result.durationMinutes,
+    estimated: true,
+  });
+}
+
 /** @deprecated 使用 pickLocalTransitMode；保留命名供内部调用 */
 function pickModeFromDistance(
   distanceMeters: number,
@@ -128,6 +242,69 @@ function pickModeFromDistance(
   options?: TravelDurationOptions,
 ): RouteTransitMode {
   return pickLocalTransitMode(distanceMeters, durationMinutes, options);
+}
+
+/**
+ * 调用高德 distance API 查询驾车距离与耗时；失败时返回 `null` 由上层降级 Haversine。
+ *
+ * @param from - 起点坐标
+ * @param to - 终点坐标
+ * @returns 成功时为精确结果；API 失败或数据无效时为 `null`
+ */
+async function fetchTravelDurationFromAmapDistance(
+  from: LatLngPoint,
+  to: LatLngPoint,
+  options?: TravelDurationOptions,
+): Promise<TravelDurationResult | null> {
+  const key = getAmapWebKey();
+  if (!key || !isAmapGeocodeEnabled()) return null;
+
+  const origins = `${from.longitude},${from.latitude}`;
+  const destination = `${to.longitude},${to.latitude}`;
+  const params = new URLSearchParams({
+    key,
+    origins,
+    destination,
+    type: '1',
+  });
+
+  try {
+    const timeoutMs = getAmapGeocodeTimeoutMs();
+    const res = await fetchWithTimeout(`${AMAP_DISTANCE_URL}?${params}`, timeoutMs);
+    const data = (await res.json()) as AmapDistanceResponse;
+
+    if (data.status !== '1' || !data.results?.[0]) {
+      console.warn('[amap-direction] distance 无结果:', data.info ?? res.status);
+      return null;
+    }
+
+    const distanceMeters = parseInt(data.results[0].distance ?? '0', 10);
+    const durationSec = parseInt(data.results[0].duration ?? '0', 10);
+    if (!Number.isFinite(distanceMeters) || !Number.isFinite(durationSec) || durationSec <= 0) {
+      return null;
+    }
+
+    const durationMinutes = Math.max(5, Math.round(durationSec / 60));
+    const cacheEntry: MatrixDistanceCacheEntry = {
+      distanceMeters,
+      durationMinutes,
+      estimated: false,
+    };
+    await setCachedTravelDuration(
+      from.latitude,
+      from.longitude,
+      to.latitude,
+      to.longitude,
+      cacheEntry,
+    );
+    return buildTravelDurationFromCache(cacheEntry, options);
+  } catch (err) {
+    console.warn(
+      '[amap-direction] distance 请求失败:',
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
 }
 
 /**
@@ -146,79 +323,32 @@ export async function getTravelDuration(
     to.longitude,
   );
   if (cached) {
-    if (!options?.preferredMode && !options?.scenicCluster) return cached;
+    return buildTravelDurationFromCache(cached, options);
   }
 
   const key = getAmapWebKey();
   if (!key || !isAmapGeocodeEnabled()) {
     const estimated = estimateByHaversine(from, to);
-    return {
+    const result = {
       ...estimated,
       mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
     };
-  }
-
-  const origins = `${from.longitude},${from.latitude}`;
-  const destination = `${to.longitude},${to.latitude}`;
-  const params = new URLSearchParams({
-    key,
-    origins,
-    destination,
-    type: '1',
-  });
-
-  try {
-    const timeoutMs = getAmapGeocodeTimeoutMs();
-    const res = await fetchWithTimeout(`${AMAP_DISTANCE_URL}?${params}`, timeoutMs);
-    const data = (await res.json()) as AmapDistanceResponse;
-
-    if (data.status !== '1' || !data.results?.[0]) {
-      console.warn('[amap-direction] distance 无结果:', data.info ?? res.status);
-      const estimated = estimateByHaversine(from, to);
-      return {
-        ...estimated,
-        mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
-      };
-    }
-
-    const distanceMeters = parseInt(data.results[0].distance ?? '0', 10);
-    const durationSec = parseInt(data.results[0].duration ?? '0', 10);
-    if (!Number.isFinite(distanceMeters) || !Number.isFinite(durationSec) || durationSec <= 0) {
-      const estimated = estimateByHaversine(from, to);
-      return {
-        ...estimated,
-        mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
-      };
-    }
-
-    const durationMinutes = Math.max(5, Math.round(durationSec / 60));
-    const result: TravelDurationResult = {
-      durationMinutes,
-      distanceMeters,
-      mode: pickLocalTransitMode(distanceMeters, durationMinutes, options),
-      estimated: false,
-    };
-    if (!options?.preferredMode && !options?.scenicCluster) {
-      await setCachedTravelDuration(
-        from.latitude,
-        from.longitude,
-        to.latitude,
-        to.longitude,
-        result,
-      );
-    }
+    await cacheEstimatedTravelDuration(from, to, result);
     return result;
-  } catch (err) {
-    console.warn(
-      '[amap-direction] distance 请求失败:',
-      err instanceof Error ? err.message : err,
-    );
-    const estimated = estimateByHaversine(from, to);
-    return {
-      ...estimated,
-      mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
-    };
   }
+
+  const fromAmap = await runWithAmapDirectionConcurrency(() =>
+    fetchTravelDurationFromAmapDistance(from, to, options),
+  );
+  if (fromAmap) return fromAmap;
+
+  const estimated = estimateByHaversine(from, to);
+  const result = {
+    ...estimated,
+    mode: pickLocalTransitMode(estimated.distanceMeters, estimated.durationMinutes, options),
+  };
+  await cacheEstimatedTravelDuration(from, to, result);
+  return result;
 }
 
 /** 构建 N 点 pairwise 耗时矩阵（对称缓存复用） */
@@ -525,7 +655,9 @@ export async function getDirectionPolyline(
     return { ...cached, mode: segmentMode };
   }
 
-  const fromAmap = await fetchDirectionPolylineFromAmap(from, to, apiMode);
+  const fromAmap = await runWithAmapDirectionConcurrency(() =>
+    fetchDirectionPolylineFromAmap(from, to, apiMode),
+  );
   if (fromAmap) {
     const result: DirectionPolylineResult = { ...fromAmap, mode: segmentMode };
     await setCachedDirectionPolyline(

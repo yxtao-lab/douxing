@@ -53,11 +53,12 @@ function checkFocusViewModel() {
   const zh = resolvePlanPetFocusViewModel(meta, 'zh-CN');
   assert(Boolean(zh?.showPanel), 'showPanel');
   assert(zh?.hasMemories === true, 'hasMemories');
-  assert((zh?.recallItems.length ?? 0) === 2, 'recallItems');
+  assert((zh?.recallItems.length ?? 0) === 0, '规划页不展开 recallItems');
+  assert(Boolean(zh?.memoryAppliedHint), 'memoryAppliedHint');
   assert(Boolean(zh?.personalityLabel.includes('摄影')), 'zh personality label');
 
   const en = resolvePlanPetFocusViewModel(meta, 'en-US');
-  assert(Boolean(en?.memoryTitle.toLowerCase().includes('remember')), 'en memory title');
+  assert(Boolean(en?.memoryAppliedHint.toLowerCase().includes('companion')), 'en memoryAppliedHint');
   console.log('');
 }
 

@@ -176,7 +176,7 @@ export async function retrieveAttractionsForPlanning(
   const themes = input.themes ?? [];
   const keywords = extractPromptKeywords(input.prompt ?? '');
   const limit = Math.min(
-    Math.max(input.limit ?? (input.days ?? 3) * 5, 8),
+    Math.max(input.limit ?? (input.days ?? 3) * 6, 10),
     MAX_CANDIDATES,
   );
 
@@ -371,7 +371,7 @@ export function formatRagContextForLlm(candidates: RagAttractionCandidate[]): st
   ].join('\n');
 }
 
-function findCandidateByName(
+function findRagCandidateBySpotName(
   name: string,
   candidates: RagAttractionCandidate[],
 ): RagAttractionCandidate | null {
@@ -391,6 +391,20 @@ function findCandidateByName(
   }
 
   return null;
+}
+
+/**
+ * 按景点名称在 RAG 候选中查找匹配项（精确名、别名、包含关系）。
+ *
+ * @param name - LLM 或用户输入的 POI 名称
+ * @param candidates - 内容库 RAG 候选列表
+ * @returns 命中候选；无匹配时为 `null`
+ */
+export function matchRagCandidateBySpotName(
+  name: string,
+  candidates: RagAttractionCandidate[],
+): RagAttractionCandidate | null {
+  return findRagCandidateBySpotName(name, candidates);
 }
 
 function shouldLinkSpot(poiType?: string): boolean {
@@ -414,7 +428,7 @@ export function applyRagToRouteDraft(
       attractions: day.attractions.map((spot) => {
         if (!shouldLinkSpot(spot.poiType)) return { ...spot };
 
-        const hit = findCandidateByName(spot.name, candidates);
+        const hit = findRagCandidateBySpotName(spot.name, candidates);
         if (!hit) return { ...spot };
 
         matched += 1;

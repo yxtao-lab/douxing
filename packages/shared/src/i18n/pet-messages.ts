@@ -12,6 +12,7 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.personality.family': '亲子伙伴',
     'pet.planFocus.title': '旅行伙伴',
     'pet.planFocus.memoryTitle': '我记得的事',
+    'pet.planFocus.memoryAppliedHint': '已参考你的长期偏好，完整记忆可在右下角旅行伙伴中查看',
     'pet.planFocus.emptyMemory': '还没有长期记忆，多规划几次我会更懂你',
     'pet.assistant.prefix.guide': '「{nickname}」：',
     'pet.assistant.prefix.foodie': '美食达人「{nickname}」：',
@@ -79,6 +80,7 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.personality.family': 'Family buddy',
     'pet.planFocus.title': 'Travel companion',
     'pet.planFocus.memoryTitle': 'What I remember',
+    'pet.planFocus.memoryAppliedHint': 'Your past preferences are applied. Open the travel companion for full memories.',
     'pet.planFocus.emptyMemory': 'No long-term memories yet—plan a few trips and I will learn your style',
     'pet.assistant.prefix.guide': '「{nickname}」: ',
     'pet.assistant.prefix.foodie': 'Food buddy 「{nickname}」: ',
@@ -165,6 +167,16 @@ export function formatPlanPetMemoryTitle(locale: LocaleCode = DEFAULT_LOCALE): s
 
 export function formatPlanPetEmptyMemory(locale: LocaleCode = DEFAULT_LOCALE): string {
   return petMsg('pet.planFocus.emptyMemory', locale);
+}
+
+/**
+ * 规划页紧凑提示：记忆已参与推理，详情不在此展开。
+ *
+ * @param locale - 界面语言
+ * @returns 一行提示文案
+ */
+export function formatPlanPetMemoryAppliedHint(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return petMsg('pet.planFocus.memoryAppliedHint', locale);
 }
 
 function resolveAssistantPrefix(

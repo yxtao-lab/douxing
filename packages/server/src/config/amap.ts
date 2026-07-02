@@ -31,3 +31,24 @@ export function getAmapImageFetchDelayMs(): number {
   const raw = parseInt(trimEnv('AMAP_IMAGE_FETCH_DELAY_MS') || '300', 10);
   return Number.isFinite(raw) && raw >= 0 ? raw : 300;
 }
+
+/**
+ * 高德 direction/distance Web API 最大并发数，用于规避 CUQPS 超限。
+ *
+ * @returns 有效范围 1–10，默认 2；优先 `AMAP_DIRECTION_CONCURRENCY`，兼容 `AMAP_DISTANCE_CONCURRENCY`
+ */
+export function getAmapDirectionConcurrency(): number {
+  const raw = parseInt(
+    trimEnv('AMAP_DIRECTION_CONCURRENCY') || trimEnv('AMAP_DISTANCE_CONCURRENCY') || '2',
+    10,
+  );
+  if (!Number.isFinite(raw) || raw < 1) return 2;
+  return Math.min(raw, 10);
+}
+
+/**
+ * @deprecated 请使用 {@link getAmapDirectionConcurrency}；仍读取相同环境变量
+ */
+export function getAmapDistanceConcurrency(): number {
+  return getAmapDirectionConcurrency();
+}

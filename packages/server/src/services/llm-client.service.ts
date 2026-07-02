@@ -41,8 +41,9 @@ const routeSpotSchema = z
     cost: z.number().min(0),
     description: z.string().min(1),
     poiType: poiTypeEnum,
-    latitude: z.number().min(-90).max(90).optional(),
-    longitude: z.number().min(-180).max(180).optional(),
+    // Python 微服务 Pydantic 序列化 Optional 为 null；与 Node .optional()（仅 undefined）对齐
+    latitude: z.number().min(-90).max(90).nullish(),
+    longitude: z.number().min(-180).max(180).nullish(),
   })
   .superRefine((spot, ctx) => {
     if (
@@ -179,6 +180,54 @@ function extractJsonObject(text: string): string {
     return trimmed.slice(start, end + 1);
   }
   return trimmed;
+}
+
+/**
+ * 从 chat/completions 的 message.content 提取文本（兼容 string / 多段 content 数组）。
+ *
+ * @param raw - API 返回的 message.content
+ * @returns 合并后的文本；无法识别时返回空字符串
+ */
+function extractMessageContent(raw: unknown): string {
+  if (typeof raw === 'string') return raw;
+  if (Array.isArray(raw)) {
+    return raw
+      .map((part) => {
+        if (typeof part === 'string') return part;
+        if (part && typeof part === 'object' && 'text' in part) {
+          return String((part as { text?: string }).text ?? '');
+        }
+        return '';
+      })
+      .join('');
+  }
+  return '';
+}
+
+/**
+ * 解析 LLM 路线 JSON；兼容百炼 json_object 模式返回的「JSON 字符串套 JSON 对象」。
+ *
+ * @param content - LLM 原始文本响应
+ * @returns 解析后的 JSON 值（期望为 object）
+ * @throws 无法解析为 JSON 时抛出 Error
+ */
+function parseLlmJsonPayload(content: string): unknown {
+  let jsonText = extractJsonObject(content);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    throw new Error('返回的不是有效 JSON');
+  }
+  for (let depth = 0; depth < 2 && typeof parsed === 'string'; depth += 1) {
+    jsonText = extractJsonObject(parsed);
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      throw new Error('返回的不是有效 JSON');
+    }
+  }
+  return parsed;
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
@@ -445,15 +494,14 @@ async function chatCompletionWithProvider(
     throw new Error(data.error?.message ?? `${config.label} 请求失败 HTTP ${res.status}`);
   }
 
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) {
+  const content = extractMessageContent(data.choices?.[0]?.message?.content);
+  if (!content.trim()) {
     throw new Error(`${config.label} 返回内容为空`);
   }
 
-  const jsonText = extractJsonObject(content);
   let parsed: unknown;
   try {
-    parsed = JSON.parse(jsonText);
+    parsed = parseLlmJsonPayload(content);
   } catch {
     throw new Error(`${config.label} 返回的不是有效 JSON`);
   }
@@ -609,15 +657,14 @@ export async function chatCompletionForJson<T>(
         throw new Error(data.error?.message ?? `${config.label} 请求失败 HTTP ${res.status}`);
       }
 
-      const content = data.choices?.[0]?.message?.content;
-      if (!content) {
+      const content = extractMessageContent(data.choices?.[0]?.message?.content);
+      if (!content.trim()) {
         throw new Error(`${config.label} 返回内容为空`);
       }
 
-      const jsonText = extractJsonObject(content);
       let parsed: unknown;
       try {
-        parsed = JSON.parse(jsonText);
+        parsed = parseLlmJsonPayload(content);
       } catch {
         throw new Error(`${config.label} 返回的不是有效 JSON`);
       }

@@ -250,10 +250,46 @@ export async function generateRoute(
     };
   };
 
-  if (canUseAiServiceForRoute()) {
+  /**
+   * 对 LLM draft 先做 RAG 对齐再评估命中率，避免可修正的别名/模糊名误触发 RAG 降级。
+   *
+   * @param draft - LLM 原始输出
+   * @param llmProvider - 实际使用的模型提供方
+   * @returns 对齐后完成 enrich 的结果，或命中不足时 RAG 组装路线
+   */
+  const completeLlmDraftWithPoiQualityGate = async (
+    draft: GeneratedRouteDraft,
+    llmProvider?: string,
+  ) => {
+    const aligned = applyRagToRouteDraft(draft, ragCandidates);
+    const hitRate = resolvePoiHitRate(aligned, ragCandidates);
+    if (
+      shouldFallbackToRagCatalog(hitRate, getPoiHitRateFallbackThreshold()) &&
+      resolvePlanningCity(intent) &&
+      ragCandidates.length >= (intent.days ?? 3)
+    ) {
+      console.warn(
+        `[route-generator] POI 命中率 ${(hitRate * 100).toFixed(0)}% 低于阈值，降级 RAG 组装`,
+      );
+      const ragDraft = buildRouteFromRagCatalog(
+        intent,
+        ragCandidates,
+        input.prompt,
+        input.ragVariantIndex ?? 0,
+        input.variantKey,
+        input.locale,
+      );
+      if (ragDraft) {
+        return completeDraft(ragDraft, 'template');
+      }
+    }
+    return completeDraft(aligned, 'llm', llmProvider);
+  };
+
+  if (canUseAiServiceForRoute(enrichedInput)) {
     try {
       const draft = await generateRouteFromAiService(enrichedInput);
-      return await completeDraft(draft, 'llm', draft.llmProvider);
+      return await completeLlmDraftWithPoiQualityGate(draft, draft.llmProvider);
     } catch (err) {
       console.warn(
         '[route-generator] Python AI 微服务失败，回退 Node LLM:',
@@ -265,28 +301,7 @@ export async function generateRoute(
   if (canUseLlm()) {
     try {
       const draft = await generateRouteFromLlm(enrichedInput);
-      const hitRate = resolvePoiHitRate(draft, ragCandidates);
-      if (
-        shouldFallbackToRagCatalog(hitRate, getPoiHitRateFallbackThreshold()) &&
-        resolvePlanningCity(intent) &&
-        ragCandidates.length >= (intent.days ?? 3)
-      ) {
-        console.warn(
-          `[route-generator] POI 命中率 ${(hitRate * 100).toFixed(0)}% 低于阈值，降级 RAG 组装`,
-        );
-        const ragDraft = buildRouteFromRagCatalog(
-          intent,
-          ragCandidates,
-          input.prompt,
-          input.ragVariantIndex ?? 0,
-          input.variantKey,
-          input.locale,
-        );
-        if (ragDraft) {
-          return await completeDraft(ragDraft, 'template');
-        }
-      }
-      return await completeDraft(draft, 'llm', draft.llmProvider);
+      return await completeLlmDraftWithPoiQualityGate(draft, draft.llmProvider);
     } catch (err) {
       console.warn(
         '[route-generator] LLM 生成失败，回退模板:',
