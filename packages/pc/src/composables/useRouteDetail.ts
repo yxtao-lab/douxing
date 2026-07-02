@@ -45,6 +45,11 @@ export function useRouteDetail(routeId: () => number) {
   const regeneratePrompt = ref('');
   const comments = ref<RouteCommentInfo[]>([]);
   const commentText = ref('');
+  const commentFocus = ref<{
+    dayIndex: number;
+    attractionId?: number;
+    poiName: string;
+  } | null>(null);
 
   const publishedStatus = RouteStatus.PUBLISHED;
 
@@ -118,6 +123,16 @@ export function useRouteDetail(routeId: () => number) {
     }
   }
 
+  const commentFilterLabel = computed(() => {
+    if (commentFocus.value?.poiName) {
+      return t('routes.commentFilterPoi', { name: commentFocus.value.poiName });
+    }
+    return '';
+  });
+
+  /**
+   * 按当前筛选条件拉取评论列表。
+   */
   async function loadComments() {
     const id = routeId();
     if (!route.value?.isPublic || !id) {
@@ -125,10 +140,46 @@ export function useRouteDetail(routeId: () => number) {
       return;
     }
     try {
-      comments.value = await fetchRouteComments(id);
+      const params: { limit?: number; dayIndex?: number; attractionId?: number } = { limit: 50 };
+      if (commentFocus.value?.attractionId != null) {
+        params.attractionId = commentFocus.value.attractionId;
+      } else if (commentFocus.value != null) {
+        params.dayIndex = commentFocus.value.dayIndex;
+      }
+      comments.value = await fetchRouteComments(id, params);
     } catch {
       comments.value = [];
     }
+  }
+
+  /**
+   * 聚焦某 POI 相关评论并刷新列表。
+   *
+   * @param payload - POI 上下文
+   */
+  async function focusRouteCommentPoi(payload: {
+    dayIndex: number;
+    attractionId?: number;
+    poiName: string;
+  }) {
+    commentFocus.value = payload;
+    await loadComments();
+  }
+
+  /**
+   * 清除 POI 评论筛选，恢复路线级全量评论。
+   */
+  async function clearCommentFocus() {
+    commentFocus.value = null;
+    await loadComments();
+  }
+
+  /**
+   * 按当前行程天筛选评论。
+   */
+  async function filterCommentsByActiveDay() {
+    commentFocus.value = { dayIndex: activeDayIndex.value, poiName: '' };
+    await loadComments();
   }
 
   async function loadDetail() {
@@ -139,6 +190,7 @@ export function useRouteDetail(routeId: () => number) {
     loadError.value = '';
     try {
       activeDayIndex.value = 0;
+      commentFocus.value = null;
       route.value = await fetchRouteDetail(id);
       editName.value = route.value?.name ?? '';
       editDesc.value = route.value?.description ?? '';
@@ -196,7 +248,12 @@ export function useRouteDetail(routeId: () => number) {
     }
     postingComment.value = true;
     try {
-      const created = await createRouteComment(id, { content: text });
+      const created = await createRouteComment(id, {
+        content: text,
+        dayIndex: commentFocus.value?.dayIndex,
+        attractionId: commentFocus.value?.attractionId,
+        poiName: commentFocus.value?.poiName || undefined,
+      });
       comments.value = [created, ...comments.value];
       if (route.value) {
         route.value.commentCount = (route.value.commentCount ?? 0) + 1;
@@ -338,6 +395,11 @@ export function useRouteDetail(routeId: () => number) {
     regeneratePrompt,
     comments,
     commentText,
+    commentFocus,
+    commentFilterLabel,
+    focusRouteCommentPoi,
+    clearCommentFocus,
+    filterCommentsByActiveDay,
     publishedStatus,
     isOwner,
     canEditRouteInfo,

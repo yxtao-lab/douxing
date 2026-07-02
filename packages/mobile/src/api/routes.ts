@@ -13,6 +13,7 @@ import type {
   SetRoutePublicShareRequest,
   RouteCommentInfo,
   CreateRouteCommentRequest,
+  FetchRouteCommentsParams,
   RoutePath,
   RouteReplanContextInput,
   RouteReplanPreviewResponse,
@@ -121,8 +122,13 @@ export function setRoutePublicShare(id: number, data: SetRoutePublicShareRequest
   return request<TravelRouteInfo>(`/routes/${id}/share`, { method: 'POST', data });
 }
 
-export function fetchRouteComments(id: number, limit = 50) {
-  return request<RouteCommentInfo[]>(`/routes/${id}/comments?limit=${limit}`);
+export function fetchRouteComments(id: number, params: FetchRouteCommentsParams = {}) {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set('limit', String(params.limit));
+  if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
+  if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  const query = qs.toString();
+  return request<RouteCommentInfo[]>(`/routes/${id}/comments${query ? `?${query}` : ''}`);
 }
 
 export function createRouteComment(id: number, data: CreateRouteCommentRequest) {

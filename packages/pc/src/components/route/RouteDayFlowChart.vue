@@ -88,12 +88,61 @@
                 />
               </button>
               <div class="min-w-0 flex-1">
-                <p class="font-medium text-dx-text">{{ node.title }}</p>
+                <div
+                  v-if="node.kind === 'play' && node.spot"
+                  class="flex cursor-pointer items-start justify-between gap-2"
+                  @click="togglePoiExpand(node.spot)"
+                >
+                  <p class="font-medium text-dx-text">{{ node.title }}</p>
+                  <span v-if="poiExpandHint(node.spot)" class="shrink-0 text-xs text-dx-primary">
+                    {{ poiExpandHint(node.spot) }}
+                  </span>
+                </div>
+                <p v-else class="font-medium text-dx-text">{{ node.title }}</p>
                 <p v-if="node.subtitle" class="mt-0.5 text-sm text-dx-primary">{{ node.subtitle }}</p>
                 <p v-if="nodeMeta(node)" class="mt-1 text-xs text-dx-muted">{{ nodeMeta(node) }}</p>
-                <p v-if="node.description" class="mt-2 text-sm leading-relaxed text-dx-muted">
+                <p
+                  v-if="node.kind !== 'play' && node.description"
+                  class="mt-2 text-sm leading-relaxed text-dx-muted"
+                >
                   {{ node.description }}
                 </p>
+                <p
+                  v-else-if="node.kind === 'play' && node.spot && !isPoiExpanded(node.spot)"
+                  class="mt-2 line-clamp-2 text-sm leading-relaxed text-dx-muted"
+                >
+                  {{ poiPreviewDescription(node.spot) }}
+                </p>
+
+                <div
+                  v-if="node.kind === 'play' && node.spot && isPoiExpanded(node.spot)"
+                  class="mt-3 border-t border-dashed border-dx-border pt-3"
+                >
+                  <p v-if="poiFullDescription(node.spot)" class="text-sm leading-relaxed text-dx-muted">
+                    {{ poiFullDescription(node.spot) }}
+                  </p>
+                  <div v-if="node.spot.checkInPhotoUrls?.length" class="mt-3">
+                    <p class="mb-2 text-xs text-dx-muted">{{ t('routes.poiCheckInPhotos') }}</p>
+                    <div class="flex gap-2 overflow-x-auto pb-1">
+                      <button
+                        v-for="(url, pi) in node.spot.checkInPhotoUrls"
+                        :key="`${url}-${pi}`"
+                        type="button"
+                        class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dx-border"
+                        @click.stop="previewCheckInPhotos(node.spot!.checkInPhotoUrls!, url)"
+                      >
+                        <img :src="url" :alt="node.title" class="h-full w-full object-cover" />
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="mt-3 text-sm text-dx-primary hover:underline"
+                    @click.stop="emitPoiCommentFocus(node.spot)"
+                  >
+                    {{ t('routes.poiViewComments') }}
+                  </button>
+                </div>
                 <a
                   v-if="node.transit?.bookingUrl"
                   :href="node.transit.bookingUrl"
@@ -114,7 +163,12 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { RouteDayPlan, RouteTransitSegment } from '@douxing/shared';
+import type { RouteDayAttraction, RouteDayPlan, RouteTransitSegment } from '@douxing/shared';
+import {
+  buildRoutePoiKey,
+  hasPoiTrustContent,
+  resolvePoiDisplayDescription,
+} from '@douxing/shared';
 import RouteDayTabs from '@/components/route/RouteDayTabs.vue';
 import { useLocale } from '@/i18n/useLocale';
 import {
@@ -141,11 +195,13 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:activeDayIndex': [index: number];
+  'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t } = useLocale();
 
 const internalActiveDayIndex = ref(props.initialDayIndex);
+const expandedPoiKey = ref<string | null>(null);
 
 const resolvedActiveDayIndex = computed(() =>
   props.activeDayIndex !== undefined ? props.activeDayIndex : internalActiveDayIndex.value,
@@ -158,6 +214,82 @@ function setActiveDayIndex(index: number) {
     return;
   }
   internalActiveDayIndex.value = index;
+}
+
+watch(
+  () => resolvedActiveDayIndex.value,
+  () => {
+    expandedPoiKey.value = null;
+  },
+);
+
+function poiKey(spot: RouteDayAttraction): string {
+  return buildRoutePoiKey(resolvedActiveDayIndex.value, spot);
+}
+
+function isPoiExpanded(spot: RouteDayAttraction): boolean {
+  return expandedPoiKey.value === poiKey(spot);
+}
+
+/**
+ * 切换 POI 信任链详情展开态。
+ *
+ * @param spot - 游玩 POI
+ */
+function togglePoiExpand(spot: RouteDayAttraction) {
+  const key = poiKey(spot);
+  expandedPoiKey.value = expandedPoiKey.value === key ? null : key;
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 折叠态预览说明
+ */
+function poiPreviewDescription(spot: RouteDayAttraction): string {
+  const full = resolvePoiDisplayDescription(spot.description, spot.catalogDescription);
+  if (full.length <= 96) return full;
+  return `${full.slice(0, 96)}…`;
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 展开态完整说明
+ */
+function poiFullDescription(spot: RouteDayAttraction): string {
+  return resolvePoiDisplayDescription(spot.description, spot.catalogDescription);
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 展开/收起提示
+ */
+function poiExpandHint(spot: RouteDayAttraction): string {
+  if (!hasPoiTrustContent(spot)) return '';
+  return isPoiExpanded(spot) ? t('routes.poiCollapse') : t('routes.poiExpand');
+}
+
+/**
+ * 预览他人打卡实拍图。
+ *
+ * @param urls - 缩略图列表
+ * @param url - 当前图片
+ */
+function previewCheckInPhotos(urls: string[], url: string) {
+  if (!urls.length) return;
+  window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/**
+ * 通知父级聚焦该 POI 相关评论。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiCommentFocus(spot: RouteDayAttraction) {
+  emit('poi-comment-focus', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
+  });
 }
 
 watch(

@@ -29,6 +29,7 @@
     "pet:adopt-cases": "tsx src/scripts/pet-adopt-cases.ts",
     "memory-agent:cases": "tsx src/scripts/memory-agent-cases.ts",
     "plan-pet-focus:cases": "tsx src/scripts/plan-pet-focus-cases.ts",
+    "h10-a:trust-cases": "tsx src/scripts/h10-a-trust-cases.ts",
     "travel-pet-floating:cases": "tsx src/scripts/travel-pet-floating-cases.ts",
     "pet:memory-analyze-cases": "tsx src/scripts/pet-memory-analyze-cases.ts",
     "h3:regret-second-plan-cases": "tsx src/scripts/h3-regret-second-plan-cases.ts",

@@ -129,6 +129,7 @@
               v-model:active-day-index="activeDayIndex"
               :days="days"
               :show-day-tabs="false"
+              @poi-comment-focus="handlePoiCommentFocus"
             />
 
             <div v-if="canRefreshDayPlan" class="flex flex-wrap gap-2 pt-2">
@@ -180,13 +181,55 @@
           </div>
 
           <!-- 评论 -->
-          <div v-if="showComments" class="dx-card">
+          <div v-if="showComments" ref="commentsSectionRef" class="dx-card">
             <h3 class="mb-4 font-semibold text-dx-text">{{ t('routes.commentsTitle') }}</h3>
+            <div class="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                class="rounded-full border px-3 py-1 text-xs transition"
+                :class="
+                  !commentFocus
+                    ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                    : 'border-dx-border text-dx-muted hover:border-dx-primary/40'
+                "
+                @click="clearCommentFocus"
+              >
+                {{ t('routes.commentFilterAll') }}
+              </button>
+              <button
+                type="button"
+                class="rounded-full border px-3 py-1 text-xs transition"
+                :class="
+                  commentFocus && commentFocus.attractionId == null && !commentFocus.poiName?.trim()
+                    ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                    : 'border-dx-border text-dx-muted hover:border-dx-primary/40'
+                "
+                @click="filterCommentsByActiveDay"
+              >
+                {{ t('routes.commentFilterDay', { day: activeDayIndex + 1 }) }}
+              </button>
+              <button
+                v-if="commentFocus?.poiName"
+                type="button"
+                class="rounded-full border border-dx-primary bg-dx-primary-light px-3 py-1 text-xs text-dx-primary"
+                @click="clearCommentFocus"
+              >
+                {{ commentFilterLabel }} ×
+              </button>
+            </div>
             <p v-if="comments.length === 0" class="mb-4 text-sm text-dx-muted">
               {{ t('routes.commentsEmpty') }}
             </p>
             <div v-for="c in comments" :key="c.id" class="mb-4 border-b border-dx-border pb-4 last:border-0">
-              <p class="text-sm font-medium text-dx-text">{{ c.userNickname }}</p>
+              <p class="text-sm font-medium text-dx-text">
+                {{ c.userNickname }}
+                <span
+                  v-if="c.poiName || c.dayIndex != null"
+                  class="ml-2 text-xs font-normal text-dx-muted"
+                >
+                  {{ formatCommentScope(c) }}
+                </span>
+              </p>
               <p class="mt-1 text-sm text-dx-muted">{{ c.content }}</p>
             </div>
             <textarea
@@ -344,7 +387,7 @@ import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vu
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
-import { RouteStatus } from '@douxing/shared';
+import { RouteStatus, type RouteCommentInfo } from '@douxing/shared';
 
 const vueRoute = useRoute();
 const { t } = useLocale();
@@ -356,6 +399,7 @@ const missedDialogVisible = ref(false);
 const inTripDialogVisible = ref(false);
 const detailTab = ref<'itinerary' | 'album'>('itinerary');
 const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
+const commentsSectionRef = ref<HTMLElement | null>(null);
 const publishedStatusForPoster = RouteStatus.PUBLISHED;
 
 const numericRouteId = computed(() => Number(vueRoute.params.id));
@@ -375,6 +419,11 @@ const {
   regeneratePrompt,
   comments,
   commentText,
+  commentFocus,
+  commentFilterLabel,
+  focusRouteCommentPoi,
+  clearCommentFocus,
+  filterCommentsByActiveDay,
   publishedStatus,
   isOwner,
   canEditRouteInfo,
@@ -418,6 +467,36 @@ const canRefreshDayPlan = computed(
 
 async function handleReplanApplied() {
   await loadDetail();
+}
+
+/**
+ * 聚焦 POI 评论并滚动至评论区。
+ *
+ * @param payload - POI 上下文
+ */
+async function handlePoiCommentFocus(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  await focusRouteCommentPoi(payload);
+  commentsSectionRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+/**
+ * 格式化评论关联的行程范围标签。
+ *
+ * @param comment - 评论项
+ * @returns 展示用范围文案
+ */
+function formatCommentScope(comment: RouteCommentInfo): string {
+  if (comment.poiName?.trim()) {
+    return t('routes.commentScopePoi', { name: comment.poiName.trim() });
+  }
+  if (comment.dayIndex != null) {
+    return t('routes.commentScopeDay', { day: comment.dayIndex + 1 });
+  }
+  return '';
 }
 
 const heroMeta = computed(() => {

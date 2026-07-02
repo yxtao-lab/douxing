@@ -87,6 +87,7 @@
         :show-day-tabs="false"
         show-check-in
         @check-in="handleCheckIn"
+        @poi-comment-focus="handlePoiCommentFocus"
       />
 
       <view v-if="canRefreshDayPlan" class="replan-bar">
@@ -186,11 +187,37 @@
       </button>
     </view>
 
-    <view v-if="showComments" class="card comments-card">
+    <view v-if="showComments" id="route-comments-section" class="card comments-card">
       <text class="comments-title">{{ t('routes.commentsTitle') }}</text>
+      <view class="comment-filters">
+        <text
+          class="comment-filter-chip"
+          :class="{ active: !commentFocus }"
+          @click="clearCommentFocus"
+        >
+          {{ t('routes.commentFilterAll') }}
+        </text>
+        <text
+          class="comment-filter-chip"
+          :class="{ active: commentFocus && commentFocus.attractionId == null && !commentFocus.poiName?.trim() }"
+          @click="filterCommentsByActiveDay"
+        >
+          {{ tf('routes.commentFilterDay', { day: activeDayIndex + 1 }) }}
+        </text>
+        <text
+          v-if="commentFocus?.poiName"
+          class="comment-filter-chip active"
+          @click="clearCommentFocus"
+        >
+          {{ commentFilterLabel }} ×
+        </text>
+      </view>
       <view v-if="comments.length === 0" class="comments-empty">{{ t('routes.commentsEmpty') }}</view>
       <view v-for="c in comments" :key="c.id" class="comment-item">
-        <text class="comment-user">{{ c.userNickname }}</text>
+        <text class="comment-user">
+          {{ c.userNickname }}
+          <text v-if="formatCommentScope(c)" class="comment-scope">{{ formatCommentScope(c) }}</text>
+        </text>
         <text class="comment-content">{{ c.content }}</text>
       </view>
       <textarea
@@ -309,6 +336,11 @@ const savingDraft = ref(false);
 const sharing = ref(false);
 const comments = ref<RouteCommentInfo[]>([]);
 const commentText = ref('');
+const commentFocus = ref<{
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+} | null>(null);
 const postingComment = ref(false);
 const aiPlanning = computed(() => aiPlanLoadingState.active);
 const activeDayIndex = ref(0);
@@ -480,21 +512,95 @@ function computeTextareaMinHeight(
   return `${heightRpx}rpx`;
 }
 
+const commentFilterLabel = computed(() => {
+  if (commentFocus.value?.poiName) {
+    return tf('routes.commentFilterPoi', { name: commentFocus.value.poiName });
+  }
+  return '';
+});
+
 async function loadComments() {
   if (!route.value?.isPublic) {
     comments.value = [];
     return;
   }
   try {
-    comments.value = await fetchRouteComments(routeId);
+    const params: { limit?: number; dayIndex?: number; attractionId?: number } = { limit: 50 };
+    if (commentFocus.value?.attractionId != null) {
+      params.attractionId = commentFocus.value.attractionId;
+    } else if (commentFocus.value != null) {
+      params.dayIndex = commentFocus.value.dayIndex;
+    }
+    comments.value = await fetchRouteComments(routeId, params);
   } catch {
     comments.value = [];
   }
 }
 
+/**
+ * 聚焦 POI 相关评论。
+ *
+ * @param payload - POI 上下文
+ */
+async function focusRouteCommentPoi(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  commentFocus.value = payload;
+  await loadComments();
+}
+
+/**
+ * 清除评论筛选。
+ */
+async function clearCommentFocus() {
+  commentFocus.value = null;
+  await loadComments();
+}
+
+/**
+ * 按当前行程天筛选评论。
+ */
+async function filterCommentsByActiveDay() {
+  commentFocus.value = { dayIndex: activeDayIndex.value, poiName: '' };
+  await loadComments();
+}
+
+/**
+ * 从 POI 详情跳转评论并滚动至评论区。
+ *
+ * @param payload - POI 上下文
+ */
+async function handlePoiCommentFocus(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  await focusRouteCommentPoi(payload);
+  uni.pageScrollTo({ selector: '#route-comments-section', duration: 300 });
+}
+
+/**
+ * 格式化评论关联范围标签。
+ *
+ * @param comment - 评论项
+ * @returns 范围文案；无关联时为空字符串
+ */
+function formatCommentScope(comment: RouteCommentInfo): string {
+  if (comment.poiName?.trim()) {
+    return tf('routes.commentScopePoi', { name: comment.poiName.trim() });
+  }
+  if (comment.dayIndex != null) {
+    return tf('routes.commentScopeDay', { day: comment.dayIndex + 1 });
+  }
+  return '';
+}
+
 async function loadDetail() {
   try {
     resetActiveDayIndex();
+    commentFocus.value = null;
     route.value = await fetchRouteDetail(routeId);
     editName.value = route.value?.name ?? '';
     editDesc.value = route.value?.description ?? '';
@@ -548,7 +654,12 @@ async function handlePostComment() {
   }
   postingComment.value = true;
   try {
-    const created = await createRouteComment(routeId, { content: text });
+    const created = await createRouteComment(routeId, {
+      content: text,
+      dayIndex: commentFocus.value?.dayIndex,
+      attractionId: commentFocus.value?.attractionId,
+      poiName: commentFocus.value?.poiName || undefined,
+    });
     comments.value = [created, ...comments.value];
     if (route.value) {
       route.value.commentCount = (route.value.commentCount ?? 0) + 1;
@@ -1105,6 +1216,32 @@ onLoad((query) => {
   display: block;
   margin-bottom: 16rpx;
   color: var(--dx-text);
+}
+.comment-filters {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+.comment-filter-chip {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1rpx solid #e5e7eb;
+}
+.comment-filter-chip.active {
+  color: var(--dx-primary);
+  background: var(--dx-primary-light);
+  border-color: rgba(249, 115, 22, 0.35);
+}
+.comment-scope {
+  margin-left: 8rpx;
+  font-size: 22rpx;
+  font-weight: 400;
+  color: #9ca3af;
 }
 .comments-empty {
   color: var(--dx-text-muted);

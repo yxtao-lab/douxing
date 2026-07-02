@@ -225,6 +225,13 @@
       "when": 1750320000000,
       "tag": "0032_sys_api_log_module",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "5",
+      "when": 1750406400000,
+      "tag": "0033_route_comment_poi",
+      "breakpoints": true
     }
   ]
 }

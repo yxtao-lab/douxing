@@ -4,6 +4,7 @@ import {
   normalizePaginatedResult,
   type ApiResponse,
   type CreateRouteCommentRequest,
+  type FetchRouteCommentsParams,
   type LlmProviderOption,
   type LlmStatusInfo,
   type PaginatedResult,
@@ -118,9 +119,14 @@ export async function setRoutePublicShare(id: number, body: SetRoutePublicShareR
   return data.data;
 }
 
-export async function fetchRouteComments(id: number, limit = 50) {
+export async function fetchRouteComments(id: number, params: FetchRouteCommentsParams = {}) {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set('limit', String(params.limit));
+  if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
+  if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  const query = qs.toString();
   const { data } = await http.get<ApiResponse<RouteCommentInfo[]>>(
-    `/routes/${id}/comments?limit=${limit}`,
+    `/routes/${id}/comments${query ? `?${query}` : ''}`,
   );
   return data.data;
 }

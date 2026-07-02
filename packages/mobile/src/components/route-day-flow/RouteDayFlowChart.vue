@@ -74,10 +74,50 @@
                 />
               </view>
               <view class="flow-card-main">
-                <text class="flow-title">{{ node.title }}</text>
+                <view
+                  v-if="node.kind === 'play' && node.spot"
+                  class="flow-title-row"
+                  @click="togglePoiExpand(node.spot)"
+                >
+                  <text class="flow-title">{{ node.title }}</text>
+                  <text class="flow-expand-hint">{{ poiExpandHint(node.spot) }}</text>
+                </view>
+                <text v-else class="flow-title">{{ node.title }}</text>
                 <text v-if="node.subtitle" class="flow-time">{{ node.subtitle }}</text>
                 <text v-if="nodeMeta(node)" class="flow-meta">{{ nodeMeta(node) }}</text>
-                <text v-if="node.description" class="flow-desc">{{ node.description }}</text>
+                <text
+                  v-if="node.kind !== 'play' && node.description"
+                  class="flow-desc"
+                >{{ node.description }}</text>
+                <text
+                  v-else-if="node.kind === 'play' && node.spot && !isPoiExpanded(node.spot)"
+                  class="flow-desc flow-desc--clamp"
+                >{{ poiPreviewDescription(node.spot) }}</text>
+
+                <view
+                  v-if="node.kind === 'play' && node.spot && isPoiExpanded(node.spot)"
+                  class="flow-poi-trust"
+                >
+                  <text v-if="poiFullDescription(node.spot)" class="flow-desc">
+                    {{ poiFullDescription(node.spot) }}
+                  </text>
+                  <view v-if="node.spot.checkInPhotoUrls?.length" class="flow-checkin-photos">
+                    <text class="flow-checkin-label">{{ t('routes.poiCheckInPhotos') }}</text>
+                    <scroll-view scroll-x class="flow-checkin-scroll" :show-scrollbar="false">
+                      <image
+                        v-for="(url, pi) in node.spot.checkInPhotoUrls"
+                        :key="`${url}-${pi}`"
+                        class="flow-checkin-thumb"
+                        :src="url"
+                        mode="aspectFill"
+                        @click.stop="previewCheckInPhotos(node.spot!.checkInPhotoUrls!, url)"
+                      />
+                    </scroll-view>
+                  </view>
+                  <text class="flow-poi-comment-link" @click.stop="emitPoiCommentFocus(node.spot)">
+                    {{ t('routes.poiViewComments') }}
+                  </text>
+                </view>
                 <text
                   v-if="node.transit?.bookingUrl"
                   class="flow-booking-link"
@@ -105,6 +145,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { RouteDayPlan, RouteDayAttraction, RouteTransitSegment } from '@douxing/shared';
+import {
+  buildRoutePoiKey,
+  hasPoiTrustContent,
+  resolvePoiDisplayDescription,
+} from '@douxing/shared';
 import type { RouteFlowNode, RouteFlowNodeKind } from '@/utils/route-day-flow';
 import { buildRouteDayFlow } from '@/utils/route-day-flow';
 import { useTf } from '@/i18n/useTf';
@@ -130,11 +175,13 @@ const props = withDefaults(
 const emit = defineEmits<{
   'check-in': [spot: RouteDayAttraction];
   'update:activeDayIndex': [index: number];
+  'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t, tf } = useTf();
 
 const internalActiveDayIndex = ref(props.initialDayIndex);
+const expandedPoiKey = ref<string | null>(null);
 
 const resolvedActiveDayIndex = computed(() =>
   props.activeDayIndex !== undefined ? props.activeDayIndex : internalActiveDayIndex.value,
@@ -147,6 +194,82 @@ function setActiveDayIndex(index: number) {
     return;
   }
   internalActiveDayIndex.value = index;
+}
+
+watch(
+  () => resolvedActiveDayIndex.value,
+  () => {
+    expandedPoiKey.value = null;
+  },
+);
+
+function poiKey(spot: RouteDayAttraction): string {
+  return buildRoutePoiKey(resolvedActiveDayIndex.value, spot);
+}
+
+function isPoiExpanded(spot: RouteDayAttraction): boolean {
+  return expandedPoiKey.value === poiKey(spot);
+}
+
+/**
+ * 切换 POI 信任链详情展开态。
+ *
+ * @param spot - 游玩 POI
+ */
+function togglePoiExpand(spot: RouteDayAttraction) {
+  const key = poiKey(spot);
+  expandedPoiKey.value = expandedPoiKey.value === key ? null : key;
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 折叠态一行预览说明
+ */
+function poiPreviewDescription(spot: RouteDayAttraction): string {
+  const full = resolvePoiDisplayDescription(spot.description, spot.catalogDescription);
+  if (full.length <= 72) return full;
+  return `${full.slice(0, 72)}…`;
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 展开态完整说明
+ */
+function poiFullDescription(spot: RouteDayAttraction): string {
+  return resolvePoiDisplayDescription(spot.description, spot.catalogDescription);
+}
+
+/**
+ * @param spot - 游玩 POI
+ * @returns 展开/收起提示文案
+ */
+function poiExpandHint(spot: RouteDayAttraction): string {
+  if (!hasPoiTrustContent(spot)) return '';
+  return isPoiExpanded(spot) ? t('routes.poiCollapse') : t('routes.poiExpand');
+}
+
+/**
+ * 预览他人打卡实拍图。
+ *
+ * @param urls - 缩略图列表
+ * @param current - 当前点击图片
+ */
+function previewCheckInPhotos(urls: string[], current: string) {
+  if (!urls.length) return;
+  uni.previewImage({ urls, current });
+}
+
+/**
+ * 通知父级聚焦该 POI 相关评论。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiCommentFocus(spot: RouteDayAttraction) {
+  emit('poi-comment-focus', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
+  });
 }
 
 watch(
@@ -487,6 +610,66 @@ function openBookingUrl(url: string) {
 .btn-checkin {
   margin-top: 12rpx;
   background: var(--dx-primary-light);
+  color: var(--dx-primary);
+}
+
+.flow-title-row {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12rpx;
+}
+
+.flow-expand-hint {
+  flex-shrink: 0;
+  font-size: 22rpx;
+  color: var(--dx-primary);
+}
+
+.flow-desc--clamp {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.flow-poi-trust {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx dashed #d1d5db;
+}
+
+.flow-checkin-photos {
+  margin-top: 12rpx;
+}
+
+.flow-checkin-label {
+  display: block;
+  font-size: 22rpx;
+  color: #6b7280;
+  margin-bottom: 8rpx;
+}
+
+.flow-checkin-scroll {
+  display: flex;
+  flex-direction: row;
+  white-space: nowrap;
+}
+
+.flow-checkin-thumb {
+  width: 96rpx;
+  height: 96rpx;
+  border-radius: 12rpx;
+  margin-right: 12rpx;
+  background: #e5e7eb;
+  flex-shrink: 0;
+}
+
+.flow-poi-comment-link {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 24rpx;
   color: var(--dx-primary);
 }
 </style>

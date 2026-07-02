@@ -21,7 +21,7 @@ import {
   incrementRouteViewCount,
 } from './route-interaction.service.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
-import { enrichRouteDetailWithAttractionCovers } from './route-attraction-media.service.js';
+import { enrichRouteDetailWithPoiTrust } from './route-poi-trust.service.js';
 
 export { toRouteInfo };
 
@@ -242,7 +242,8 @@ export async function getRouteById(routeId: number, userId?: number, options?: {
   }
 
   if (route?.routeDetail) {
-    route.routeDetail = (await enrichRouteDetailWithAttractionCovers(route.routeDetail)) ?? route.routeDetail;
+    route.routeDetail =
+      (await enrichRouteDetailWithPoiTrust(route.routeDetail, routeId)) ?? route.routeDetail;
   }
 
   return route ?? null;

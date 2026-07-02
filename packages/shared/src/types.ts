@@ -49,6 +49,10 @@ export interface RouteDayAttraction {
   longitude?: number;
   /** 展示用封面（路线详情 API 注入，不入库 JSON） */
   coverImageUrl?: string;
+  /** 景点库说明（路线详情 API 注入，不入库 JSON） */
+  catalogDescription?: string;
+  /** 他人打卡实拍缩略图（路线详情 API 注入） */
+  checkInPhotoUrls?: string[];
 }
 
 /** H9：交通段类型 */
@@ -395,11 +399,27 @@ export interface RouteCommentInfo {
   userNickname: string;
   userAvatar: string | null;
   content: string;
+  /** H10-a：关联行程天（0-based）；`null` 表示路线级评论 */
+  dayIndex?: number | null;
+  /** H10-a：关联景点库 ID */
+  attractionId?: number | null;
+  /** H10-a：关联 POI 名称 */
+  poiName?: string | null;
   createdAt: string;
 }
 
 export interface CreateRouteCommentRequest {
   content: string;
+  dayIndex?: number;
+  attractionId?: number;
+  poiName?: string;
+}
+
+/** H10-a：拉取路线评论时的筛选参数 */
+export interface FetchRouteCommentsParams {
+  limit?: number;
+  dayIndex?: number;
+  attractionId?: number;
 }
 
 export type LlmProviderChoice = 'auto' | 'douxing' | 'deepseek' | 'lmstudio';

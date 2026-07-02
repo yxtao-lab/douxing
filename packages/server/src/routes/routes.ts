@@ -263,8 +263,17 @@ const sharePublicSchema = z.object({
   isPublic: z.boolean(),
 });
 
+const commentListQuerySchema = z.object({
+  limit: optionalQueryInt(1, 100),
+  dayIndex: optionalQueryInt(0, 29),
+  attractionId: optionalQueryInt(1, 10_000_000),
+});
+
 const commentSchema = z.object({
-  content: z.string().min(1, '请输入评论').max(500),
+  content: z.string().min(1).max(500),
+  dayIndex: z.number().int().min(0).max(29).optional(),
+  attractionId: z.number().int().positive().optional(),
+  poiName: z.string().min(1).max(128).optional(),
 });
 
 router.post('/:id/regenerate', authMiddleware, async (req, res) => {
@@ -324,9 +333,11 @@ router.get('/:id/comments', authMiddleware, async (req, res) => {
     if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
     const route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
     if (!route) return fail(res, '路线不存在或无权查看', 404, 404);
-    const parsed = listQuerySchema.safeParse(req.query);
+    const parsed = commentListQuerySchema.safeParse(req.query);
     const limit = parsed.success ? parsed.data.limit : 50;
-    const comments = await listRouteComments(routeId, limit);
+    const dayIndex = parsed.success ? parsed.data.dayIndex : undefined;
+    const attractionId = parsed.success ? parsed.data.attractionId : undefined;
+    const comments = await listRouteComments(routeId, { limit, dayIndex, attractionId });
     success(res, comments);
   } catch (err) {
     console.error('[routes/comments GET]', err);
@@ -342,7 +353,7 @@ router.post('/:id/comments', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const comment = await createRouteComment(routeId, req.auth!.userId, parsed.data.content);
+    const comment = await createRouteComment(routeId, req.auth!.userId, parsed.data);
     if (!comment) return fail(res, '仅广场公开路线可评论', 404, 404);
     success(res, comment, '评论成功');
   } catch (err) {
