@@ -137,7 +137,50 @@ pnpm build:web
 
 ---
 
-## 9. 相关文档
+## 10. 兜行微调模型（I3 · Step 36）
+
+| 变量 | 说明 | 默认 |
+|------|------|------|
+| `DOUXING_LLM_ENABLED` | 显式 `false` 时关闭；未设置时凭凭证自动启用 | 自动 |
+| `DOUXING_LLM_BASE_URL` | 百炼 OpenAI 兼容地址 | `https://dashscope.aliyuncs.com/compatible-mode/v1` |
+| `DOUXING_LLM_MODEL` | 微调模型 ID（`ft-...`） | — |
+| `DOUXING_LLM_API_KEY` | DashScope API Key | — |
+| `DOUXING_LLM_TIMEOUT_MS` | 请求超时（毫秒） | `90000` |
+| `LLM_DEFAULT_PROVIDER` | 默认提供商 | `auto`（优先 douxing → deepseek → lmstudio） |
+
+验证：`pnpm --filter @douxing/server i3:douxing-llm-cases`（`--live` 含真实调用）。
+
+详见 [阿里云-兜行专属模型训练与部署.md §7](./阿里云-兜行专属模型训练与部署.md#7-阶段五debian-服务端接入)。
+
+---
+
+## 11. 路线视频与 API 日志（H10 / 运维）
+
+| 变量 | 说明 | 默认 |
+|------|------|------|
+| `OSS_VIDEOS_PREFIX` | 路线视频 OSS 前缀 | `videos/` |
+| `ROUTE_MEDIA_AUTO_APPROVE` | 生产联调自动过审 | `false` |
+| `API_LOG_MAX_BODY_CHARS` | 接口日志 body 截断长度 | `8000` |
+| `VITE_PC_BASE_URL` | Web 工作台跳转 PC 用户端地址 | 见 `.env.example` |
+
+高德并发/矩阵缓存（2026-07-02）：
+
+| 变量 | 说明 |
+|------|------|
+| `AMAP_DIRECTION_CONCURRENCY` | direction 并发上限 |
+| `AMAP_DISTANCE_CONCURRENCY` | distance 并发上限 |
+| `AMAP_MATRIX_CACHE_TTL_SEC` | 路网矩阵 Redis 缓存 TTL |
+| `AMAP_MATRIX_ESTIMATE_CACHE_TTL_SEC` | Haversine 估算缓存 TTL |
+| `AMAP_MATRIX_CACHE_COORD_DECIMALS` | 坐标缓存精度（小数位） |
+| `WIKIMEDIA_FETCH_TIMEOUT_MS` | Wikimedia 封面请求超时 |
+| `WIKIMEDIA_MISS_CACHE_TTL_SEC` | 未命中负缓存 TTL |
+| `WIKIMEDIA_ERROR_CACHE_TTL_SEC` | 错误负缓存 TTL |
+
+验收：`pnpm --filter @douxing/server h10-a:trust-cases` · `h10-bc:trust-cases`。
+
+---
+
+## 12. 相关文档
 
 | 文档 | 内容 |
 |------|------|
@@ -147,4 +190,4 @@ pnpm build:web
 
 ---
 
-*最后更新：2026-06-26*
+*最后更新：2026-07-03*

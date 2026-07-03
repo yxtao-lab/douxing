@@ -1,8 +1,8 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
-> **更新日期**：2026-07-01  
-> **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（当前 **Step 35** · **M1～M5 已验收**）  
+> **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
+> **更新日期**：2026-07-03  
+> **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -14,7 +14,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | 全量 **101** 个 REST 接口，含参数、Schema、JWT 鉴权 |
+| **[openapi.yaml](./openapi.yaml)** | OpenAPI **83** 路径 / **100** 操作（Apifox 导入）；人类可读全量 **106** 项见 §2 总览 |
 
 **导入步骤**
 
@@ -239,8 +239,13 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 99 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
 | 100 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
 | 101 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
+| 102 | GET | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
+| 103 | POST | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
+| 104 | DELETE | `/api/routes/:routeId/media/:mediaId` | 登录 | 路线视频 H10 |
+| 105 | GET | `/api/attractions/admin/media/pending` | 管理员 | 视频审核 H10 |
+| 106 | PATCH | `/api/attractions/admin/media/:mediaId/review` | 管理员 | 视频审核 H10 |
 
-> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 **101** 项（C 端 + 数据分析主链）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
+> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 **106** 项（C 端 + 数据分析主链）。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
 
 ---
 
@@ -423,6 +428,16 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 
 审核通过 pending 景点。
 
+#### GET `/admin/media/pending`
+
+待审核路线视频列表（H10-b · 分页）。
+
+#### PATCH `/admin/media/:mediaId/review`
+
+审核路线视频。
+
+**Body**：`{ status: 'approved' | 'rejected', rejectReason?: string }`
+
 ---
 
 ## 7. 路线 routes
@@ -437,7 +452,9 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 
 ### GET `/llm-status`
 
-检测 DeepSeek / LM Studio / ai-service 可用性。
+检测 DeepSeek / LM Studio / **兜行微调（douxing）** / ai-service 可用性。
+
+**响应 `data`** 含 `douxingConfigured`、`douxingEnabled`（百炼 `DOUXING_LLM_*` 是否配置/启用）。
 
 ### POST `/generate`
 
@@ -450,7 +467,7 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | `prompt` | string | 旅行需求，≥ 2 字 |
 | `days` | number | 可选，1～7 |
 | `budget` | string | 可选 |
-| `provider` | string | `auto` \| `deepseek` \| `lmstudio` |
+| `provider` | string | `auto` \| `deepseek` \| `lmstudio` \| `douxing` |
 
 **响应 `data`**：`TravelRouteInfo` + `generationSource`、`llmProvider`
 
@@ -516,13 +533,47 @@ AI 重新生成（仅 AI 草稿/已生成路线，已发布不可）。
 
 ### GET `/:id/comments`
 
-评论列表。**Query**：`limit`（默认 50）
+评论列表。
+
+**Query**：`limit`（默认 50）· `dayIndex`（0-based 天索引，可选）· `attractionId`（POI 景点 ID，可选）
 
 ### POST `/:id/comments`
 
 发表评论（仅广场公开路线）。
 
-**Body**：`{ content: string }` — 1～500 字
+**Body**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `content` | string | 1～500 字 |
+| `dayIndex` | number | 可选，绑定评论上下文天索引 |
+| `attractionId` | number | 可选，绑定 POI |
+| `poiName` | string | 可选，POI 名称（无 attractionId 时） |
+
+### GET `/:routeId/media`
+
+列出路线绑定视频（H10-b）。作者可见全部状态；他人仅已通过审核。
+
+### POST `/:routeId/media`
+
+上传路线或 POI 短视频（multipart · H10-b）。
+
+**Form 字段**
+
+| 字段 | 说明 |
+|------|------|
+| `file` | 视频文件（≤50MB · ≤60s） |
+| `scope` | `route` \| `poi` |
+| `durationSec` | 视频时长（秒） |
+| `dayIndex` | POI 绑定时必填（0-based） |
+| `attractionId` / `poiName` | POI 绑定时二选一或同时 |
+| `coverUrl` | 可选封面 |
+
+dev 环境或 `ROUTE_MEDIA_AUTO_APPROVE=true` 时自动过审。
+
+### DELETE `/:routeId/media/:mediaId`
+
+删除本人上传的视频。
 
 ### GET `/:id/map-path`
 
@@ -1249,6 +1300,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-03 | **H10 + I3**：路线评论 dayIndex/attractionId · `route_media` CRUD · 视频审核 API · llm-status 增 douxing 字段；总览 **106** 接口 |
 | 2026-07-01 | **DT5**：§19 增 `GET /geo/distribution` · `GET /geo/flows`；`AnalyticsGeoDistribution` 含 `scopeDays` / `effectiveScope`；总览 **101** 接口 |
 | 2026-06-26 | **DT2/DT3**：§19 增 `GET /funnel` · `POST /events/batch`；埋点写入改为登录可选；总览 **99** 接口 |
 | 2026-06-18 | **M5 行中**：§7 新增 `replan/preview` · `replan/apply` · `missed-pois/*`；§20 `analyze` 增 `in_plan`/`in_trip`；§21 Agent Tool 增 `replan_segment` · `detect_missed_pois` · `apply_memory_context` · `build_route_variants`；总览 **97** 接口 |

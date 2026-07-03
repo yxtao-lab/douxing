@@ -2,11 +2,11 @@
 
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
-> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **当前 Step 35**  
+> **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **Step 38/39 已交付 · 当前 Step 35→40**  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：2.6  
-**最后更新**：2026-06-26  
+**最后更新**：2026-07-03（**Step 38/39 已交付** · **I3 基础设施** · 当前 **Step 35→40**）  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话 + Agent 灰度」**；M1～M5 已验收，生产默认仍 `AGENT_PLAN_ENABLED=false`。
 
 > **分工**：本文 = **为什么 / 怎么设计**；[AI路径规划路线图.md](./AI路径规划路线图.md) = **现在做什么 / 做到哪算完成**。
@@ -20,7 +20,7 @@
 | **C7-a** | ✅ 完成 | 9 Tool · `/v1/agent/plan` · feature flag · 等价率 · Langfuse | — |
 | **C7-b** | ✅ M1 达成 | patch · SSE · i18n · agent_state · 10 用例 | — |
 | **C7-c** | ✅ M5 达成 | memory Tool · memory_agent · 悬浮层 · 记忆墙 · 行中 analyze | — |
-| **C7-d** | 🔄 部分 | validate_route · warnings 回复 · transit_agent | I3 LoRA → **Step 35～37** |
+| **C7-d** | 🔄 部分 | validate_route · warnings 回复 · transit_agent · **I3 基础设施** | LoRA → plan_agent · **Step 37** |
 
 > **默认行为不变**：`AGENT_PLAN_ENABLED=false` 时，100% 走现有 `generateRoute` 管道。
 
@@ -612,7 +612,7 @@ packages/server/
 |------|------|------|------|
 | d1 | `validate_route` Tool 抽离 | C7-a | ✅ |
 | d2 | 生成后自动 warnings 回复 | C7-b | ✅ |
-| d3 | I3 `douxing-lora` 作为 plan_agent 子模型 | I3 | ⏳ Step 35～37 |
+| d3 | I3 `douxing` 作为 plan_agent 子模型 | I3 | [~] provider 已就绪 · graph 待 Step 37 |
 
 ---
 
@@ -720,5 +720,6 @@ LANGFUSE_SECRET_KEY=
 | 2026-06-11 | 2.0 | 全稿：设计思考、LangChain/Agent 释义、多 Agent 模式、LangGraph、场景流程、C7 执行拆解 |
 | 2026-06-18 | 2.6 | **M5 达成**：H7/H8/H3-d · `replan_segment` · `transit_agent` · `detect_missed_pois` · 指针 → Step 35 |
 | 2026-06-22 | 2.7 | **I2 Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest |
+| 2026-07-03 | 2.8 | **I3 基础设施** · **H10-a/b/c 交付** · `douxing` provider · 路线视频 · POI 信任链 |
 | 2026-06-17 | 2.3 | **M1 达成**：C7-b Step 1～9 验收 · SSE API ✅ · 指针 → Step 10 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |

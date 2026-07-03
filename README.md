@@ -39,7 +39,7 @@
 | Web 管理端表格规范 | [docs/Web管理端表格规范.md](docs/Web管理端表格规范.md) |
 | 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
-| AI 路径规划路线图（Step 35→M6） | [docs/AI路径规划路线图.md](docs/AI路径规划路线图.md) |
+| AI 路径规划路线图（Step 35→40 · H10 已交付） | [docs/AI路径规划路线图.md](docs/AI路径规划路线图.md) |
 | 专属模型训练（I2/I3） | [docs/阿里云-兜行专属模型训练与部署.md](docs/阿里云-兜行专属模型训练与部署.md) · [packages/ml-training/README.md](packages/ml-training/README.md) |
 | AI 规划与 Agent 演进（设计全稿） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
@@ -300,7 +300,7 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 |------|------|------|
 | 用户 | 注册 / 登录 | `POST /api/auth/register`、`/api/auth/login` |
 | AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
-| 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付 |
+| 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付；**POI 信任链**（说明+评论筛选+UGC 视频 · H10-a/b/c） |
 | 景点库 | 城市景点基础数据 | `GET /api/attractions`；AI 生成路线自动同步（pending + 合并）；管理员审核 |
 | 打卡 | 景点打卡 | `POST /api/checkins`，支持 `attractionId`，自动触发成就；**打卡地图**（移动端 / Web / PC） |
 | 成就 | 初行者 / 探索达人 / 路线大师 | 打卡后自动解锁 |
@@ -316,7 +316,8 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 
 | 模式 | 说明 |
 |------|------|
-| `auto` | 优先 DeepSeek，失败再试本地 LM Studio，最后模板 |
+| `auto` | 优先兜行微调模型，失败再试 DeepSeek / LM Studio，最后模板 |
+| `douxing` | 仅使用百炼专属微调模型（需 `DOUXING_LLM_*`） |
 | `deepseek` | 仅使用 [DeepSeek API](https://platform.deepseek.com/) |
 | `lmstudio` | 仅使用本地 [LM Studio](https://lmstudio.ai/) |
 
@@ -340,7 +341,7 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
-> **完整接口文档**（101 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **完整接口文档**（106 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
 > **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）  
 > **系统管理接口**（`/api/system/*`）见 [docs/系统管理.md](./docs/系统管理.md)，未纳入 OpenAPI 主链
 
@@ -355,8 +356,10 @@ LLM_MODEL=你的模型名称
 - `POST /api/routes/:id/like` — 点赞/取消点赞
 - `POST /api/routes/:id/favorite` — 收藏/取消收藏
 - `POST /api/routes/:id/share` — 公开/取消公开到广场（`{ "isPublic": true }`，需已发布）
-- `GET /api/routes/:id/comments` — 评论列表
-- `POST /api/routes/:id/comments` — 发表评论（仅广场公开路线）
+- `GET /api/routes/:id/comments` — 评论列表（`dayIndex` / `attractionId` 筛选）
+- `POST /api/routes/:id/comments` — 发表评论（可绑定 POI 上下文）
+- `GET /api/routes/:routeId/media` — 路线/POI 视频列表（H10-b）
+- `POST /api/routes/:routeId/media` — 上传短视频（≤60s）
 - `POST /api/routes/:id/publish` — 发布路线
 - `GET /api/attractions` — 景点列表（`city` / `cityCode` / `keyword` / `tags`）
 - `GET /api/attractions/cities` — 有景点的城市汇总

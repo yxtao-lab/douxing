@@ -8,7 +8,7 @@ info:
     - 鉴权：Header `Authorization: Bearer <JWT>`
     - 国际化：Header `Accept-Language: zh-CN | en-US`
     - 人类可读说明见 [API接口文档.md](./API接口文档.md)
-  version: 1.0.0
+  version: 1.1.0
   contact:
     name: 兜行项目
 
@@ -691,6 +691,54 @@ paths:
               schema:
                 $ref: '#/components/schemas/ApiResponse'
 
+  /api/attractions/admin/media/pending:
+    get:
+      tags: [景点]
+      summary: 待审核路线视频列表（管理员 · H10-b）
+      operationId: attractionsAdminMediaPending
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+
+  /api/attractions/admin/media/{mediaId}/review:
+    patch:
+      tags: [景点]
+      summary: 审核路线视频（管理员 · H10-b）
+      operationId: attractionsAdminMediaReview
+      parameters:
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [approved, rejected]
+                rejectReason:
+                  type: string
+                  maxLength: 256
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
   /api/routes/llm-providers:
     get:
       tags: [路线]
@@ -1050,6 +1098,14 @@ paths:
         - name: limit
           in: query
           schema: { type: integer, default: 50 }
+        - name: dayIndex
+          in: query
+          schema: { type: integer, minimum: 0, maximum: 29 }
+          description: 按天筛选（0-based）
+        - name: attractionId
+          in: query
+          schema: { type: integer, minimum: 1 }
+          description: 按 POI 景点 ID 筛选
       responses:
         '200':
           description: 成功
@@ -1075,6 +1131,104 @@ paths:
                   type: string
                   minLength: 1
                   maxLength: 500
+                dayIndex:
+                  type: integer
+                  minimum: 0
+                  maximum: 29
+                attractionId:
+                  type: integer
+                  minimum: 1
+                poiName:
+                  type: string
+                  maxLength: 128
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{routeId}/media:
+    get:
+      tags: [路线]
+      summary: 路线绑定视频列表（H10-b）
+      operationId: routesMediaList
+      parameters:
+        - name: routeId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    post:
+      tags: [路线]
+      summary: 上传路线或 POI 短视频（H10-b）
+      operationId: routesMediaUpload
+      parameters:
+        - name: routeId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, scope, durationSec]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: 视频 ≤50MB · ≤60s
+                scope:
+                  type: string
+                  enum: [route, poi]
+                durationSec:
+                  type: integer
+                  minimum: 1
+                  maximum: 60
+                dayIndex:
+                  type: integer
+                  minimum: 0
+                  maximum: 29
+                attractionId:
+                  type: integer
+                  minimum: 1
+                poiName:
+                  type: string
+                  maxLength: 128
+                coverUrl:
+                  type: string
+                  maxLength: 512
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/{routeId}/media/{mediaId}:
+    delete:
+      tags: [路线]
+      summary: 删除本人上传的路线视频
+      operationId: routesMediaDelete
+      parameters:
+        - name: routeId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: mediaId
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
       responses:
         '200':
           description: 成功
