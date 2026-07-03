@@ -21,6 +21,8 @@ import {
   type RouteMissedPoiAnalyzeResponse,
   type RouteMissedPoiRecordInput,
   type RouteMissedPoiRecordResponse,
+  type RouteMediaInfo,
+  ROUTE_VIDEO_MAX_DURATION_SEC,
   type SetRoutePublicShareRequest,
   type TravelRouteInfo,
   type UpdateRouteDraftRequest,
@@ -162,5 +164,65 @@ export async function recordRouteMissedPois(id: number, body: RouteMissedPoiReco
     `/routes/${id}/missed-pois/record`,
     body,
   );
+  return data.data;
+}
+
+export interface UploadRouteMediaParams {
+  scope: 'route' | 'poi';
+  durationSec: number;
+  dayIndex?: number;
+  attractionId?: number;
+  poiName?: string;
+}
+
+/**
+ * 拉取路线绑定短视频列表。
+ *
+ * @param id - 路线 ID
+ * @returns 媒体列表
+ */
+export async function fetchRouteMedia(id: number) {
+  const { data } = await http.get<ApiResponse<RouteMediaInfo[]>>(`/routes/${id}/media`);
+  return data.data;
+}
+
+/**
+ * 删除本人上传的路线短视频。
+ *
+ * @param routeId - 路线 ID
+ * @param mediaId - 媒体 ID
+ */
+export async function deleteRouteMedia(routeId: number, mediaId: number) {
+  const { data } = await http.delete<ApiResponse<{ deleted: boolean }>>(
+    `/routes/${routeId}/media/${mediaId}`,
+  );
+  return data.data;
+}
+
+/**
+ * 上传路线或 POI 绑定短视频（≤60s）。
+ *
+ * @param routeId - 路线 ID
+ * @param file - 视频文件
+ * @param params - 绑定范围与时长
+ * @returns 上传后的媒体记录
+ */
+export async function uploadRouteVideo(
+  routeId: number,
+  file: File,
+  params: UploadRouteMediaParams,
+): Promise<RouteMediaInfo> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('scope', params.scope);
+  form.append('durationSec', String(Math.min(params.durationSec, ROUTE_VIDEO_MAX_DURATION_SEC)));
+  if (params.dayIndex != null) form.append('dayIndex', String(params.dayIndex));
+  if (params.attractionId != null) form.append('attractionId', String(params.attractionId));
+  if (params.poiName) form.append('poiName', params.poiName);
+
+  const { data } = await http.post<ApiResponse<RouteMediaInfo>>(`/routes/${routeId}/media`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  });
   return data.data;
 }

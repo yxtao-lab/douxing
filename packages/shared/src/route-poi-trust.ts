@@ -75,6 +75,7 @@ export function hasPoiTrustContent(spot: RouteDayAttraction): boolean {
   return Boolean(
     spot.catalogDescription?.trim() ||
       (spot.checkInPhotoUrls?.length ?? 0) > 0 ||
-      spot.description?.trim(),
+      spot.description?.trim() ||
+      spot.videoUrl?.trim(),
   );
 }

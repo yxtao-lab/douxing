@@ -28,6 +28,8 @@ export interface PosterPoiItem {
   meta?: string;
   poiType?: string;
   imageUrl?: string;
+  /** H10-c：该 POI 是否有已审核 UGC 短视频 */
+  hasVideo?: boolean;
 }
 
 export interface PosterDayBlock {

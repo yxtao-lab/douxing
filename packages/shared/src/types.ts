@@ -53,6 +53,10 @@ export interface RouteDayAttraction {
   catalogDescription?: string;
   /** 他人打卡实拍缩略图（路线详情 API 注入） */
   checkInPhotoUrls?: string[];
+  /** H10-c：已审核通过的 POI 实拍短视频（API 注入） */
+  videoUrl?: string;
+  videoCoverUrl?: string | null;
+  videoDurationSec?: number;
 }
 
 /** H9：交通段类型 */
@@ -172,6 +176,8 @@ export interface RouteDetailPayload {
   isUnlocked?: boolean;
   matchedCity?: string;
   generationSource?: 'llm' | 'template';
+  /** H10-c：整线 UGC 短视频（API 注入） */
+  routeVideo?: RouteVideoBrief;
   llmProvider?: string;
   sourcePrompt?: string;
   /** C3：RAG 候选数量 */
@@ -390,6 +396,30 @@ export interface RouteFavoriteResult {
 /** 公开分享到广场 */
 export interface SetRoutePublicShareRequest {
   isPublic: boolean;
+}
+
+/** H10-b/c：路线短视频摘要（详情 API 注入） */
+export interface RouteVideoBrief {
+  videoUrl: string;
+  coverUrl?: string | null;
+  durationSec: number;
+}
+
+/** H10-b：路线媒体记录（上传/审核） */
+export interface RouteMediaInfo {
+  id: number;
+  routeId: number;
+  userId: number;
+  scope: 'route' | 'poi';
+  dayIndex: number | null;
+  attractionId: number | null;
+  poiName: string | null;
+  videoUrl: string;
+  coverUrl: string | null;
+  durationSec: number;
+  byteSize: number;
+  status: number;
+  createdAt: string;
 }
 
 export interface RouteCommentInfo {

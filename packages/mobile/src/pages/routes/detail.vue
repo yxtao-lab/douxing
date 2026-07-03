@@ -48,6 +48,31 @@
       </view>
     </view>
 
+    <view v-if="routeVideo || (isOwner && isUnlocked)" class="card media-card">
+      <view class="media-row">
+        <text class="media-label">{{ t('routes.playRouteVideo') }}</text>
+        <view class="media-actions">
+          <button
+            v-if="routeVideo"
+            size="mini"
+            class="btn-media-play"
+            @click="openRouteVideo"
+          >
+            ▶ {{ t('routes.poiPlayVideo') }}
+          </button>
+          <button
+            v-if="isOwner"
+            size="mini"
+            class="btn-media-upload"
+            :disabled="videoUploading"
+            @click="handleUploadRouteVideo"
+          >
+            {{ videoUploading ? t('routes.videoUploading') : t('routes.uploadRouteVideo') }}
+          </button>
+        </view>
+      </view>
+    </view>
+
     <view v-if="isUnlocked && days.length > 0 && showDetailTabs" class="detail-tabs">
       <view
         class="detail-tab"
@@ -86,8 +111,11 @@
         :days="days"
         :show-day-tabs="false"
         show-check-in
+        :allow-media-upload="isOwner"
         @check-in="handleCheckIn"
         @poi-comment-focus="handlePoiCommentFocus"
+        @poi-video-play="handlePoiVideoPlay"
+        @poi-video-upload="handlePoiVideoUpload"
       />
 
       <view v-if="canRefreshDayPlan" class="replan-bar">
@@ -267,6 +295,14 @@
       :celebration="celebrationData"
       @close="celebrationVisible = false"
     />
+
+    <RouteMediaPlayerSheet
+      :visible="mediaPlayerVisible"
+      :video-url="mediaPlayerUrl"
+      :cover-url="mediaPlayerCover"
+      :title="mediaPlayerTitle"
+      @close="mediaPlayerVisible = false"
+    />
   </view>
 </template>
 
@@ -277,6 +313,7 @@ import type {
   RouteDayAttraction,
   RouteDayPlan,
   RouteDetailPayload,
+  ROUTE_VIDEO_MAX_DURATION_SEC,
   TravelRouteInfo,
   RouteCommentInfo,
 } from '@douxing/shared';
@@ -290,6 +327,7 @@ import {
   setRoutePublicShare,
   fetchRouteComments,
   createRouteComment,
+  uploadRouteVideo,
 } from '@/api/routes';
 import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
 import { fetchOrderPaymentConfig } from '@/api/orders';
@@ -302,6 +340,7 @@ import TravelPetFloatingLayer from '@/components/travel-pet-floating-layer/Trave
 import RouteMapByDay from '@/components/route-map/RouteMapByDay.vue';
 import RouteDayTabs from '@/components/route-day-tabs/RouteDayTabs.vue';
 import RouteDayFlowChart from '@/components/route-day-flow/RouteDayFlowChart.vue';
+import RouteMediaPlayerSheet from '@/components/route-media/RouteMediaPlayerSheet.vue';
 import RoutePosterSheet from '@/components/route-poster/RoutePosterSheet.vue';
 import RouteJourneyAlbumPanel from '@/components/route-journey-album/RouteJourneyAlbumPanel.vue';
 import RouteReplanSheet from '@/components/route-replan/RouteReplanSheet.vue';
@@ -353,6 +392,11 @@ const inTripSheetVisible = ref(false);
 const celebrationVisible = ref(false);
 const celebrationData = ref<import('@douxing/shared').PetCheckInCelebration | null>(null);
 const posterShareImagePath = ref('');
+const videoUploading = ref(false);
+const mediaPlayerVisible = ref(false);
+const mediaPlayerUrl = ref('');
+const mediaPlayerCover = ref<string | null>(null);
+const mediaPlayerTitle = ref('');
 let routeId = 0;
 
 const currentUserId = computed(() => getStoredUser()?.id ?? 0);
@@ -467,6 +511,11 @@ const matchedCity = computed(() => {
 const days = computed((): RouteDayPlan[] => {
   const detail = route.value?.routeDetail as RouteDetailPayload | null;
   return detail?.days ?? [];
+});
+
+const routeVideo = computed(() => {
+  const detail = route.value?.routeDetail as RouteDetailPayload | null;
+  return detail?.routeVideo ?? null;
 });
 
 watch(
@@ -614,6 +663,111 @@ async function loadDetail() {
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.loadFailed')), icon: 'none' });
   }
+}
+
+/**
+ * 打开整线路线视频播放器。
+ */
+function openRouteVideo() {
+  const video = routeVideo.value;
+  if (!video?.videoUrl) return;
+  mediaPlayerUrl.value = video.videoUrl;
+  mediaPlayerCover.value = video.coverUrl ?? null;
+  mediaPlayerTitle.value = route.value?.name ?? '';
+  mediaPlayerVisible.value = true;
+}
+
+/**
+ * 播放流程图中 POI 绑定短视频。
+ *
+ * @param payload - 视频地址与标题
+ */
+function handlePoiVideoPlay(payload: {
+  videoUrl: string;
+  coverUrl?: string | null;
+  title: string;
+}) {
+  mediaPlayerUrl.value = payload.videoUrl;
+  mediaPlayerCover.value = payload.coverUrl ?? null;
+  mediaPlayerTitle.value = payload.title;
+  mediaPlayerVisible.value = true;
+}
+
+/**
+ * 选择并上传整线路线短视频。
+ */
+function handleUploadRouteVideo() {
+  uni.chooseVideo({
+    maxDuration: ROUTE_VIDEO_MAX_DURATION_SEC,
+    compressed: true,
+    sourceType: ['album', 'camera'],
+    success: async (res) => {
+      const durationSec = Math.max(1, Math.round(res.duration || 1));
+      if (durationSec > ROUTE_VIDEO_MAX_DURATION_SEC) {
+        uni.showToast({
+          title: tf('routes.videoDurationLimit', { sec: ROUTE_VIDEO_MAX_DURATION_SEC }),
+          icon: 'none',
+        });
+        return;
+      }
+      videoUploading.value = true;
+      try {
+        await uploadRouteVideo(routeId, res.tempFilePath, {
+          scope: 'route',
+          durationSec,
+        });
+        uni.showToast({ title: t('routes.videoUploadSuccess'), icon: 'none' });
+        await loadDetail();
+      } catch (e) {
+        uni.showToast({ title: getAppErrorMessage(e, t('routes.videoUploadFailed')), icon: 'none' });
+      } finally {
+        videoUploading.value = false;
+      }
+    },
+  });
+}
+
+/**
+ * 上传当前 POI 绑定短视频。
+ *
+ * @param payload - 天序与 POI 标识
+ */
+function handlePoiVideoUpload(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  uni.chooseVideo({
+    maxDuration: ROUTE_VIDEO_MAX_DURATION_SEC,
+    compressed: true,
+    sourceType: ['album', 'camera'],
+    success: async (res) => {
+      const durationSec = Math.max(1, Math.round(res.duration || 1));
+      if (durationSec > ROUTE_VIDEO_MAX_DURATION_SEC) {
+        uni.showToast({
+          title: tf('routes.videoDurationLimit', { sec: ROUTE_VIDEO_MAX_DURATION_SEC }),
+          icon: 'none',
+        });
+        return;
+      }
+      videoUploading.value = true;
+      try {
+        await uploadRouteVideo(routeId, res.tempFilePath, {
+          scope: 'poi',
+          durationSec,
+          dayIndex: payload.dayIndex,
+          attractionId: payload.attractionId,
+          poiName: payload.poiName,
+        });
+        uni.showToast({ title: t('routes.videoUploadSuccess'), icon: 'none' });
+        await loadDetail();
+      } catch (e) {
+        uni.showToast({ title: getAppErrorMessage(e, t('routes.videoUploadFailed')), icon: 'none' });
+      } finally {
+        videoUploading.value = false;
+      }
+    },
+  });
 }
 
 async function handleReplanApplied() {
@@ -1063,6 +1217,30 @@ onLoad((query) => {
   color: var(--dx-text-muted);
   margin-top: 8rpx;
   display: block;
+}
+.media-card {
+  margin-top: 0;
+}
+.media-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.media-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.media-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.btn-media-play,
+.btn-media-upload {
+  background: var(--dx-primary-light);
+  color: var(--dx-primary);
 }
 .interact-card {
   display: flex;

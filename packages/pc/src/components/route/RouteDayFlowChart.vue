@@ -74,18 +74,48 @@
             </div>
 
             <div class="flex gap-3">
-              <button
+              <div
                 v-if="node.kind === 'play' && node.spot?.coverImageUrl"
+                class="relative h-16 w-16 shrink-0"
+              >
+                <button
+                  type="button"
+                  class="h-full w-full overflow-hidden rounded-lg border border-dx-border"
+                  :title="t('routes.coverImagePreview')"
+                  @click="previewCoverImage(node.spot.coverImageUrl)"
+                >
+                  <img
+                    :src="node.spot.coverImageUrl"
+                    :alt="node.title"
+                    class="h-full w-full object-cover"
+                  />
+                </button>
+                <button
+                  v-if="node.spot.videoUrl"
+                  type="button"
+                  class="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30 text-white"
+                  :title="t('routes.poiPlayVideo')"
+                  @click.stop="emitPoiVideoPlay(node.spot)"
+                >
+                  ▶
+                </button>
+              </div>
+              <button
+                v-else-if="node.kind === 'play' && node.spot?.videoUrl"
                 type="button"
-                class="h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dx-border"
-                :title="t('routes.coverImagePreview')"
-                @click="previewCoverImage(node.spot.coverImageUrl)"
+                class="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-dx-border bg-gray-900"
+                :title="t('routes.poiPlayVideo')"
+                @click.stop="emitPoiVideoPlay(node.spot)"
               >
                 <img
-                  :src="node.spot.coverImageUrl"
+                  v-if="node.spot.videoCoverUrl"
+                  :src="node.spot.videoCoverUrl"
                   :alt="node.title"
                   class="h-full w-full object-cover"
                 />
+                <span class="absolute inset-0 flex items-center justify-center bg-black/30 text-white">
+                  ▶
+                </span>
               </button>
               <div class="min-w-0 flex-1">
                 <div
@@ -142,6 +172,22 @@
                   >
                     {{ t('routes.poiViewComments') }}
                   </button>
+                  <button
+                    v-if="node.spot.videoUrl"
+                    type="button"
+                    class="mt-2 block text-sm text-dx-primary hover:underline"
+                    @click.stop="emitPoiVideoPlay(node.spot)"
+                  >
+                    {{ t('routes.poiPlayVideo') }}
+                  </button>
+                  <button
+                    v-if="allowMediaUpload && node.spot"
+                    type="button"
+                    class="mt-2 block text-sm text-dx-primary hover:underline"
+                    @click.stop="emitPoiVideoUpload(node.spot)"
+                  >
+                    {{ t('routes.uploadPoiVideo') }}
+                  </button>
                 </div>
                 <a
                   v-if="node.transit?.bookingUrl"
@@ -184,18 +230,22 @@ const props = withDefaults(
     initialDayIndex?: number;
     activeDayIndex?: number;
     showDayTabs?: boolean;
+    allowMediaUpload?: boolean;
   }>(),
   {
     showTitle: true,
     initialDayIndex: 0,
     activeDayIndex: undefined,
     showDayTabs: true,
+    allowMediaUpload: false,
   },
 );
 
 const emit = defineEmits<{
   'update:activeDayIndex': [index: number];
   'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
+  'poi-video-play': [payload: { videoUrl: string; coverUrl?: string | null; title: string }];
+  'poi-video-upload': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t } = useLocale();
@@ -277,6 +327,33 @@ function poiExpandHint(spot: RouteDayAttraction): string {
 function previewCheckInPhotos(urls: string[], url: string) {
   if (!urls.length) return;
   window.open(url, '_blank', 'noopener,noreferrer');
+}
+
+/**
+ * 通知父级上传 POI 绑定短视频。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiVideoUpload(spot: RouteDayAttraction) {
+  emit('poi-video-upload', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
+  });
+}
+
+/**
+ * 通知父级播放 POI 绑定短视频。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiVideoPlay(spot: RouteDayAttraction) {
+  if (!spot.videoUrl?.trim()) return;
+  emit('poi-video-play', {
+    videoUrl: spot.videoUrl,
+    coverUrl: spot.videoCoverUrl,
+    title: spot.name,
+  });
 }
 
 /**

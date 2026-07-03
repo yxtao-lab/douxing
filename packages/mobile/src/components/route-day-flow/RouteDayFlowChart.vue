@@ -72,6 +72,31 @@
                   :src="node.spot.coverImageUrl"
                   mode="aspectFill"
                 />
+                <view
+                  v-if="node.spot.videoUrl"
+                  class="flow-video-badge"
+                  @click.stop="emitPoiVideoPlay(node.spot)"
+                >
+                  <text class="flow-video-icon">▶</text>
+                </view>
+              </view>
+              <view
+                v-else-if="node.kind === 'play' && node.spot?.videoUrl"
+                class="flow-thumb-wrap flow-thumb-wrap--video"
+                role="button"
+                :aria-label="t('routes.poiPlayVideo')"
+                @click.stop="emitPoiVideoPlay(node.spot)"
+              >
+                <image
+                  v-if="node.spot.videoCoverUrl"
+                  class="flow-thumb"
+                  :src="node.spot.videoCoverUrl"
+                  mode="aspectFill"
+                />
+                <view v-else class="flow-thumb flow-thumb--placeholder" />
+                <view class="flow-video-badge">
+                  <text class="flow-video-icon">▶</text>
+                </view>
               </view>
               <view class="flow-card-main">
                 <view
@@ -117,6 +142,20 @@
                   <text class="flow-poi-comment-link" @click.stop="emitPoiCommentFocus(node.spot)">
                     {{ t('routes.poiViewComments') }}
                   </text>
+                  <text
+                    v-if="node.spot.videoUrl"
+                    class="flow-poi-video-link"
+                    @click.stop="emitPoiVideoPlay(node.spot)"
+                  >
+                    {{ t('routes.poiPlayVideo') }}
+                  </text>
+                  <text
+                    v-if="allowMediaUpload && node.spot"
+                    class="flow-poi-video-link"
+                    @click.stop="emitPoiVideoUpload(node.spot)"
+                  >
+                    {{ t('routes.uploadPoiVideo') }}
+                  </text>
                 </view>
                 <text
                   v-if="node.transit?.bookingUrl"
@@ -159,6 +198,7 @@ const props = withDefaults(
     days: RouteDayPlan[];
     showTitle?: boolean;
     showCheckIn?: boolean;
+    allowMediaUpload?: boolean;
     initialDayIndex?: number;
     activeDayIndex?: number;
     showDayTabs?: boolean;
@@ -166,6 +206,7 @@ const props = withDefaults(
   {
     showTitle: true,
     showCheckIn: false,
+    allowMediaUpload: false,
     initialDayIndex: 0,
     activeDayIndex: undefined,
     showDayTabs: true,
@@ -176,6 +217,8 @@ const emit = defineEmits<{
   'check-in': [spot: RouteDayAttraction];
   'update:activeDayIndex': [index: number];
   'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
+  'poi-video-play': [payload: { videoUrl: string; coverUrl?: string | null; title: string }];
+  'poi-video-upload': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t, tf } = useTf();
@@ -257,6 +300,33 @@ function poiExpandHint(spot: RouteDayAttraction): string {
 function previewCheckInPhotos(urls: string[], current: string) {
   if (!urls.length) return;
   uni.previewImage({ urls, current });
+}
+
+/**
+ * 通知父级上传 POI 绑定短视频。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiVideoUpload(spot: RouteDayAttraction) {
+  emit('poi-video-upload', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
+  });
+}
+
+/**
+ * 通知父级播放 POI 绑定短视频。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiVideoPlay(spot: RouteDayAttraction) {
+  if (!spot.videoUrl?.trim()) return;
+  emit('poi-video-play', {
+    videoUrl: spot.videoUrl,
+    coverUrl: spot.videoCoverUrl,
+    title: spot.name,
+  });
 }
 
 /**
@@ -530,6 +600,26 @@ function openBookingUrl(url: string) {
   flex-shrink: 0;
   border-radius: 12rpx;
   overflow: hidden;
+  position: relative;
+}
+
+.flow-thumb--placeholder {
+  background: #1f2937;
+}
+
+.flow-video-badge {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.flow-video-icon {
+  color: #fff;
+  font-size: 28rpx;
+  font-weight: 700;
 }
 
 .flow-thumb-wrap:active {
@@ -669,6 +759,13 @@ function openBookingUrl(url: string) {
 .flow-poi-comment-link {
   display: block;
   margin-top: 12rpx;
+  font-size: 24rpx;
+  color: var(--dx-primary);
+}
+
+.flow-poi-video-link {
+  display: block;
+  margin-top: 8rpx;
   font-size: 24rpx;
   color: var(--dx-primary);
 }

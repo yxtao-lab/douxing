@@ -11,6 +11,13 @@
           <text class="meta">{{ heroMeta }}</text>
           <text v-if="route.description" class="desc">{{ route.description }}</text>
           <text v-if="route.creatorNickname" class="author">{{ authorLine }}</text>
+          <button
+            v-if="routeVideo"
+            class="btn-route-video"
+            @click="openRouteVideo"
+          >
+            ▶ {{ t('routes.playRouteVideo') }}
+          </button>
         </view>
       </view>
 
@@ -41,6 +48,14 @@
       </view>
     </view>
   </view>
+
+  <RouteMediaPlayerSheet
+    :visible="mediaPlayerVisible"
+    :video-url="mediaPlayerUrl"
+    :cover-url="mediaPlayerCover"
+    :title="mediaPlayerTitle"
+    @close="mediaPlayerVisible = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -48,6 +63,7 @@ import { computed, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type { RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
 import { fetchSharedRoute } from '@/api/share';
+import RouteMediaPlayerSheet from '@/components/route-media/RouteMediaPlayerSheet.vue';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
@@ -62,6 +78,10 @@ usePageTitle('shareRoute.pageTitle');
 const route = ref<TravelRouteInfo | null>(null);
 const loading = ref(true);
 const error = ref('');
+const mediaPlayerVisible = ref(false);
+const mediaPlayerUrl = ref('');
+const mediaPlayerCover = ref<string | null>(null);
+const mediaPlayerTitle = ref('');
 let routeId = 0;
 
 const tags = computed(() => joinLabels.value(route.value?.interestTags));
@@ -84,6 +104,23 @@ const previewDays = computed((): RouteDayPlan[] => {
   const detail = route.value?.routeDetail as RouteDetailPayload | null;
   return (detail?.days ?? []).slice(0, 4);
 });
+
+const routeVideo = computed(() => {
+  const detail = route.value?.routeDetail as RouteDetailPayload | null;
+  return detail?.routeVideo ?? null;
+});
+
+/**
+ * 打开分享页路线视频播放器。
+ */
+function openRouteVideo() {
+  const video = routeVideo.value;
+  if (!video?.videoUrl) return;
+  mediaPlayerUrl.value = video.videoUrl;
+  mediaPlayerCover.value = video.coverUrl ?? null;
+  mediaPlayerTitle.value = route.value?.name ?? '';
+  mediaPlayerVisible.value = true;
+}
 
 const hiddenDayCount = computed(() => {
   const detail = route.value?.routeDetail as RouteDetailPayload | null;
@@ -207,6 +244,13 @@ onLoad((query) => {
   margin-top: 12rpx;
   font-size: 24rpx;
   opacity: 0.9;
+}
+.btn-route-video {
+  margin-top: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 26rpx;
+  border-radius: 999rpx;
 }
 .card,
 .cta-card {

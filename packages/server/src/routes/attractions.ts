@@ -18,6 +18,7 @@ import {
   listAttractionsForAdminPaginated,
   updateAttractionCoverImage,
 } from '../services/attraction.service.js';
+import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 import { refreshAttractionCoverFromAmap } from '../services/attraction-image-enricher.service.js';
 import { persistAttractionCoverBuffer } from '../services/attraction-cover-storage.service.js';
 import { isOssEnabled } from '../config/oss.js';
@@ -26,7 +27,10 @@ import {
   parseDateRangeFilter,
   parseOptionalString,
 } from '../utils/admin-list-filter.js';
-import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
+import {
+  listPendingRouteMedia,
+  reviewRouteMedia,
+} from '../services/route-media.service.js';
 
 const router = Router();
 
@@ -261,6 +265,72 @@ router.post('/admin/:id/approve', authMiddleware, async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : '审核失败';
     return fail(res, message);
+  }
+});
+
+const reviewMediaSchema = z.object({
+  status: z.coerce.number().int(),
+});
+
+/**
+ * 列出待审核路线短视频（运营端）。
+ */
+router.get('/admin/media/pending', authMiddleware, async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+    const limit = Number.parseInt(String(req.query.limit ?? '50'), 10);
+    const items = await listPendingRouteMedia(Number.isNaN(limit) ? 50 : limit);
+    const publicBase = resolvePublicBaseFromRequest(req);
+    const resolved = items.map((item) => ({
+      ...item,
+      videoUrl: resolvePublicAssetUrl(item.videoUrl, { publicBase }) ?? item.videoUrl,
+      coverUrl: item.coverUrl
+        ? resolvePublicAssetUrl(item.coverUrl, { publicBase })
+        : item.coverUrl,
+    }));
+    success(res, resolved);
+  } catch (err) {
+    console.error('[attractions/admin/media/pending]', err);
+    return fail(res, ApiMessageKey.ROUTE_MEDIA_LIST_FAILED, 500, 500);
+  }
+});
+
+/**
+ * 审核路线短视频（通过/拒绝）。
+ */
+router.patch('/admin/media/:mediaId/review', authMiddleware, async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+    const mediaId = Number.parseInt(String(req.params.mediaId), 10);
+    if (Number.isNaN(mediaId) || mediaId <= 0) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+    const parsed = reviewMediaSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.VALIDATION_ERROR, 1, 400);
+    }
+    const item = await reviewRouteMedia(mediaId, parsed.data.status);
+    if (!item) {
+      return fail(res, ApiMessageKey.ROUTE_MEDIA_NOT_FOUND, 404, 404);
+    }
+    const publicBase = resolvePublicBaseFromRequest(req);
+    success(
+      res,
+      {
+        ...item,
+        videoUrl: resolvePublicAssetUrl(item.videoUrl, { publicBase }) ?? item.videoUrl,
+        coverUrl: item.coverUrl
+          ? resolvePublicAssetUrl(item.coverUrl, { publicBase })
+          : item.coverUrl,
+      },
+      ApiMessageKey.ROUTE_MEDIA_REVIEW_UPDATED,
+    );
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return fail(res, err.messageKey);
+    }
+    console.error('[attractions/admin/media/review]', err);
+    return fail(res, ApiMessageKey.PARAM_ERROR, 500, 500);
   }
 });
 

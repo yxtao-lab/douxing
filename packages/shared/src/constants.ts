@@ -250,6 +250,18 @@ export const PET_EXP_PER_LEVEL_UNIT = 100;
 /** 旅行照片单张大小上限（J1 默认 10MB） */
 export const TRAVEL_PHOTO_MAX_FILE_BYTES = 10 * 1024 * 1024;
 
+/** H10-b：路线 UGC 短视频时长上限（秒） */
+export const ROUTE_VIDEO_MAX_DURATION_SEC = 60;
+
+/** H10-b：路线 UGC 短视频文件大小上限（50MB） */
+export const ROUTE_VIDEO_MAX_FILE_BYTES = 50 * 1024 * 1024;
+
+/** H10-b：路线媒体绑定范围 */
+export const RouteMediaScope = {
+  ROUTE: 'route',
+  POI: 'poi',
+} as const;
+
 /** J5：EXIF GPS 高置信匹配半径（米） */
 export const PHOTO_EXIF_GPS_HIGH_M = 500;
 /** J5：EXIF GPS 中置信匹配半径（米） */

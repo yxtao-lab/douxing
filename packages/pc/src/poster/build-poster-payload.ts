@@ -51,6 +51,7 @@ function flowNodeToPosterItem(
     meta,
     poiType: node.spot?.poiType,
     imageUrl: poiPhotoUrl ?? node.spot?.coverImageUrl,
+    hasVideo: Boolean(node.spot?.videoUrl?.trim()),
   };
 }
 

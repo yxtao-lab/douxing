@@ -43,6 +43,12 @@ export function getOssPhotosPrefix(): string {
   return raw.endsWith('/') ? raw : `${raw}/`;
 }
 
+/** H10-b：路线 UGC 短视频对象键前缀，默认 videos/ */
+export function getOssVideosPrefix(): string {
+  const raw = trimEnv('OSS_VIDEOS_PREFIX') || 'videos/';
+  return raw.endsWith('/') ? raw : `${raw}/`;
+}
+
 /** ML 训练数据集 OSS 前缀，默认 douxing/datasets/v0.1/ */
 export function getOssMlDatasetsPrefix(): string {
   const raw = trimEnv('OSS_ML_DATASETS_PREFIX') || 'douxing/datasets/v0.1/';

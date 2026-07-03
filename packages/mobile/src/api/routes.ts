@@ -21,8 +21,16 @@ import type {
   RouteMissedPoiAnalyzeResponse,
   RouteMissedPoiRecordInput,
   RouteMissedPoiRecordResponse,
+  RouteMediaInfo,
+  ROUTE_VIDEO_MAX_DURATION_SEC,
 } from '@douxing/shared';
 import { request, requestAiPlan } from '@/utils/request';
+import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
+import { resolveClientRequestErrorMessage } from '@douxing/shared';
+import { getApiAcceptLanguage } from '@/utils/api-locale-header';
+import { mobileT } from '@/i18n/mobileT';
+
+const TOKEN_KEY = 'douxing_token';
 
 export interface GenerateRouteResult extends TravelRouteInfo {
   generationSource?: 'llm' | 'template';
@@ -157,5 +165,90 @@ export function recordRouteMissedPois(id: number, data: RouteMissedPoiRecordInpu
   return request<RouteMissedPoiRecordResponse>(`/routes/${id}/missed-pois/record`, {
     method: 'POST',
     data,
+  });
+}
+
+export interface UploadRouteMediaParams {
+  scope: 'route' | 'poi';
+  durationSec: number;
+  dayIndex?: number;
+  attractionId?: number;
+  poiName?: string;
+}
+
+/**
+ * 拉取路线绑定短视频列表。
+ *
+ * @param id - 路线 ID
+ * @returns 媒体列表；作者可见全部审核状态
+ */
+export function fetchRouteMedia(id: number) {
+  return request<RouteMediaInfo[]>(`/routes/${id}/media`);
+}
+
+/**
+ * 删除本人上传的路线短视频。
+ *
+ * @param routeId - 路线 ID
+ * @param mediaId - 媒体 ID
+ */
+export function deleteRouteMedia(routeId: number, mediaId: number) {
+  return request<{ deleted: boolean }>(`/routes/${routeId}/media/${mediaId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * 上传路线或 POI 绑定短视频（≤60s）。
+ *
+ * @param routeId - 路线 ID
+ * @param filePath - 本地临时视频路径
+ * @param params - 绑定范围与时长
+ * @returns 上传后的媒体记录
+ */
+export function uploadRouteVideo(
+  routeId: number,
+  filePath: string,
+  params: UploadRouteMediaParams,
+): Promise<RouteMediaInfo> {
+  assertRemoteApiBase('上传路线视频');
+  const token = uni.getStorageSync(TOKEN_KEY) as string;
+  const base = getApiBaseUrl();
+  const url = `${base}/routes/${routeId}/media`;
+
+  const formData: Record<string, string> = {
+    scope: params.scope,
+    durationSec: String(Math.min(params.durationSec, ROUTE_VIDEO_MAX_DURATION_SEC)),
+  };
+  if (params.dayIndex != null) formData.dayIndex = String(params.dayIndex);
+  if (params.attractionId != null) formData.attractionId = String(params.attractionId);
+  if (params.poiName) formData.poiName = params.poiName;
+
+  return new Promise((resolve, reject) => {
+    uni.uploadFile({
+      url,
+      filePath,
+      name: 'file',
+      formData,
+      header: token ? { Authorization: `Bearer ${token}` } : {},
+      success: (res) => {
+        try {
+          const body = JSON.parse(res.data as string) as {
+            code: number;
+            message: string;
+            data: RouteMediaInfo;
+          };
+          if (body.code === 0) {
+            resolve(body.data);
+            return;
+          }
+          reject(new Error(body.message || mobileT('common.uploadFailed')));
+        } catch {
+          reject(new Error(mobileT('common.invalidResponse')));
+        }
+      },
+      fail: (err) =>
+        reject(new Error(resolveClientRequestErrorMessage(err.errMsg, getApiAcceptLanguage()))),
+    });
   });
 }

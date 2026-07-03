@@ -77,6 +77,45 @@
             </div>
           </div>
 
+          <div v-if="routeVideo || (isOwner && isUnlocked)" class="dx-card">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <p class="font-medium text-dx-text">{{ t('routes.playRouteVideo') }}</p>
+              <div class="flex flex-wrap gap-2">
+                <button
+                  v-if="routeVideo"
+                  type="button"
+                  class="dx-btn-secondary text-sm"
+                  @click="openRouteVideo"
+                >
+                  ▶ {{ t('routes.poiPlayVideo') }}
+                </button>
+                <button
+                  v-if="isOwner"
+                  type="button"
+                  class="dx-btn-secondary text-sm"
+                  :disabled="videoUploading"
+                  @click="triggerRouteVideoUpload"
+                >
+                  {{ videoUploading ? t('routes.videoUploading') : t('routes.uploadRouteVideo') }}
+                </button>
+              </div>
+            </div>
+            <input
+              ref="routeVideoInputRef"
+              type="file"
+              accept="video/*"
+              class="hidden"
+              @change="handleRouteVideoFileChange"
+            />
+            <input
+              ref="poiVideoInputRef"
+              type="file"
+              accept="video/*"
+              class="hidden"
+              @change="handlePoiVideoFileChange"
+            />
+          </div>
+
           <!-- 行程 / 相册 Tab -->
           <div v-if="showDetailTabs" class="flex gap-2">
             <button
@@ -129,7 +168,10 @@
               v-model:active-day-index="activeDayIndex"
               :days="days"
               :show-day-tabs="false"
+              :allow-media-upload="isOwner"
               @poi-comment-focus="handlePoiCommentFocus"
+              @poi-video-play="handlePoiVideoPlay"
+              @poi-video-upload="queuePoiVideoUpload"
             />
 
             <div v-if="canRefreshDayPlan" class="flex flex-wrap gap-2 pt-2">
@@ -370,6 +412,14 @@
       :route-id="numericRouteId"
       @close="inTripDialogVisible = false"
     />
+
+    <RouteMediaPlayerSheet
+      :visible="mediaPlayerVisible"
+      :video-url="mediaPlayerUrl"
+      :cover-url="mediaPlayerCover"
+      :title="mediaPlayerTitle"
+      @close="mediaPlayerVisible = false"
+    />
   </div>
 </template>
 
@@ -377,6 +427,7 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import RouteDayFlowChart from '@/components/route/RouteDayFlowChart.vue';
+import RouteMediaPlayerSheet from '@/components/route/RouteMediaPlayerSheet.vue';
 import RouteDayTabs from '@/components/route/RouteDayTabs.vue';
 import RouteMapByDay from '@/components/route/RouteMapByDay.vue';
 import RoutePosterSheet from '@/components/route/RoutePosterSheet.vue';
@@ -387,7 +438,10 @@ import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vu
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
-import { RouteStatus, type RouteCommentInfo } from '@douxing/shared';
+import { RouteStatus, type RouteCommentInfo, type RouteDetailPayload, ROUTE_VIDEO_MAX_DURATION_SEC } from '@douxing/shared';
+import { uploadRouteVideo } from '@/api/routes';
+import { appMessage } from '@/composables/useAppMessage';
+import { getAppErrorMessage } from '@/utils/error-message';
 
 const vueRoute = useRoute();
 const { t } = useLocale();
@@ -400,6 +454,18 @@ const inTripDialogVisible = ref(false);
 const detailTab = ref<'itinerary' | 'album'>('itinerary');
 const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);
 const commentsSectionRef = ref<HTMLElement | null>(null);
+const routeVideoInputRef = ref<HTMLInputElement | null>(null);
+const poiVideoInputRef = ref<HTMLInputElement | null>(null);
+const videoUploading = ref(false);
+const mediaPlayerVisible = ref(false);
+const mediaPlayerUrl = ref('');
+const mediaPlayerCover = ref<string | null>(null);
+const mediaPlayerTitle = ref('');
+const pendingPoiVideoUpload = ref<{
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+} | null>(null);
 const publishedStatusForPoster = RouteStatus.PUBLISHED;
 
 const numericRouteId = computed(() => Number(vueRoute.params.id));
@@ -464,6 +530,149 @@ const showAlbumTab = computed(() => showDetailTabs.value);
 const canRefreshDayPlan = computed(
   () => isOwner.value && isUnlocked.value && days.value.length > 0 && detailTab.value === 'itinerary',
 );
+
+const routeVideo = computed(() => {
+  const detail = route.value?.routeDetail as RouteDetailPayload | null;
+  return detail?.routeVideo ?? null;
+});
+
+/**
+ * 打开整线路线视频播放器。
+ */
+function openRouteVideo() {
+  const video = routeVideo.value;
+  if (!video?.videoUrl) return;
+  mediaPlayerUrl.value = video.videoUrl;
+  mediaPlayerCover.value = video.coverUrl ?? null;
+  mediaPlayerTitle.value = route.value?.name ?? '';
+  mediaPlayerVisible.value = true;
+}
+
+/**
+ * 播放流程图中 POI 绑定短视频。
+ *
+ * @param payload - 视频地址与标题
+ */
+function handlePoiVideoPlay(payload: {
+  videoUrl: string;
+  coverUrl?: string | null;
+  title: string;
+}) {
+  mediaPlayerUrl.value = payload.videoUrl;
+  mediaPlayerCover.value = payload.coverUrl ?? null;
+  mediaPlayerTitle.value = payload.title;
+  mediaPlayerVisible.value = true;
+}
+
+/**
+ * 触发整线路线视频文件选择。
+ */
+function triggerRouteVideoUpload() {
+  routeVideoInputRef.value?.click();
+}
+
+/**
+ * 记录待上传 POI 并打开文件选择器。
+ *
+ * @param payload - POI 上下文
+ */
+function queuePoiVideoUpload(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  pendingPoiVideoUpload.value = payload;
+  poiVideoInputRef.value?.click();
+}
+
+/**
+ * 从视频文件元数据估算时长（秒）。
+ *
+ * @param file - 视频文件
+ * @returns 时长；无法读取时返回 1
+ */
+function estimateVideoDurationSec(file: File): Promise<number> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(Math.max(1, Math.round(video.duration || 1)));
+    };
+    video.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(1);
+    };
+    video.src = url;
+  });
+}
+
+/**
+ * 处理整线路线视频上传。
+ *
+ * @param event - 文件选择事件
+ */
+async function handleRouteVideoFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  if (!file) return;
+
+  const durationSec = await estimateVideoDurationSec(file);
+  if (durationSec > ROUTE_VIDEO_MAX_DURATION_SEC) {
+    appMessage.error(t('routes.videoDurationLimit', { sec: ROUTE_VIDEO_MAX_DURATION_SEC }));
+    return;
+  }
+
+  videoUploading.value = true;
+  try {
+    await uploadRouteVideo(numericRouteId.value, file, { scope: 'route', durationSec });
+    appMessage.success(t('routes.videoUploadSuccess'));
+    await loadDetail();
+  } catch (e) {
+    appMessage.error(getAppErrorMessage(e, t('routes.videoUploadFailed')));
+  } finally {
+    videoUploading.value = false;
+  }
+}
+
+/**
+ * 处理 POI 绑定视频上传。
+ *
+ * @param event - 文件选择事件
+ */
+async function handlePoiVideoFileChange(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  input.value = '';
+  const payload = pendingPoiVideoUpload.value;
+  pendingPoiVideoUpload.value = null;
+  if (!file || !payload) return;
+
+  const durationSec = await estimateVideoDurationSec(file);
+  if (durationSec > ROUTE_VIDEO_MAX_DURATION_SEC) {
+    appMessage.error(t('routes.videoDurationLimit', { sec: ROUTE_VIDEO_MAX_DURATION_SEC }));
+    return;
+  }
+
+  videoUploading.value = true;
+  try {
+    await uploadRouteVideo(numericRouteId.value, file, {
+      scope: 'poi',
+      durationSec,
+      dayIndex: payload.dayIndex,
+      attractionId: payload.attractionId,
+      poiName: payload.poiName,
+    });
+    appMessage.success(t('routes.videoUploadSuccess'));
+    await loadDetail();
+  } catch (e) {
+    appMessage.error(getAppErrorMessage(e, t('routes.videoUploadFailed')));
+  } finally {
+    videoUploading.value = false;
+  }
+}
 
 async function handleReplanApplied() {
   await loadDetail();

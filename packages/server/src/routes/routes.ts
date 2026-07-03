@@ -46,6 +46,7 @@ import {
   recordMissedPoiRegrets,
 } from '../services/missed-poi.service.js';
 import planSessionsRouter from './plan-sessions.js';
+import routeMediaRouter from './route-media.js';
 
 const router = Router();
 
@@ -275,6 +276,8 @@ const commentSchema = z.object({
   attractionId: z.number().int().positive().optional(),
   poiName: z.string().min(1).max(128).optional(),
 });
+
+router.use('/:routeId/media', routeMediaRouter);
 
 router.post('/:id/regenerate', authMiddleware, async (req, res) => {
   try {

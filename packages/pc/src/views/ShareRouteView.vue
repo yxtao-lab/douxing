@@ -23,6 +23,14 @@
             <p v-if="route.creatorNickname" class="mt-2 text-sm text-white/75">
               {{ t('routes.authorShare', { name: route.creatorNickname }) }}
             </p>
+            <button
+              v-if="routeVideo"
+              type="button"
+              class="mt-4 rounded-full bg-white/20 px-4 py-2 text-sm hover:bg-white/30"
+              @click="openRouteVideo"
+            >
+              ▶ {{ t('routes.playRouteVideo') }}
+            </button>
           </div>
         </section>
 
@@ -57,6 +65,14 @@
         </section>
       </template>
     </main>
+
+    <RouteMediaPlayerSheet
+      :visible="mediaPlayerVisible"
+      :video-url="mediaPlayerUrl"
+      :cover-url="mediaPlayerCover"
+      :title="mediaPlayerTitle"
+      @close="mediaPlayerVisible = false"
+    />
   </div>
 </template>
 
@@ -65,6 +81,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import type { RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
 import { fetchSharedRoute } from '@/api/share';
+import RouteMediaPlayerSheet from '@/components/route/RouteMediaPlayerSheet.vue';
 import AppLogo from '@/components/AppLogo.vue';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
 import { useLocale } from '@/i18n/useLocale';
@@ -77,6 +94,10 @@ const { joinLabels } = useInterestTagLabels();
 const route = ref<TravelRouteInfo | null>(null);
 const loading = ref(true);
 const error = ref('');
+const mediaPlayerVisible = ref(false);
+const mediaPlayerUrl = ref('');
+const mediaPlayerCover = ref<string | null>(null);
+const mediaPlayerTitle = ref('');
 
 const routeId = computed(() => Number(vueRoute.params.id));
 
@@ -93,6 +114,23 @@ const previewDays = computed((): RouteDayPlan[] => {
   const detail = route.value?.routeDetail as RouteDetailPayload | null;
   return (detail?.days ?? []).slice(0, 4);
 });
+
+const routeVideo = computed(() => {
+  const detail = route.value?.routeDetail as RouteDetailPayload | null;
+  return detail?.routeVideo ?? null;
+});
+
+/**
+ * 打开分享页路线视频播放器。
+ */
+function openRouteVideo() {
+  const video = routeVideo.value;
+  if (!video?.videoUrl) return;
+  mediaPlayerUrl.value = video.videoUrl;
+  mediaPlayerCover.value = video.coverUrl ?? null;
+  mediaPlayerTitle.value = route.value?.name ?? '';
+  mediaPlayerVisible.value = true;
+}
 
 const hiddenDayCount = computed(() => {
   const detail = route.value?.routeDetail as RouteDetailPayload | null;

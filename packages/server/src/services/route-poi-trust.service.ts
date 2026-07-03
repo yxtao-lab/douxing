@@ -1,4 +1,4 @@
-import type { RouteDetailPayload } from '@douxing/shared';
+import type { RouteDetailPayload, RouteDayAttraction } from '@douxing/shared';
 import { CheckInStatus } from '@douxing/shared';
 import { and, desc, eq, inArray, isNotNull } from 'drizzle-orm';
 import { isAmapImageEnrichEnabled } from '../config/amap.js';
@@ -10,6 +10,10 @@ import {
   getAttractionsByIdsForRouteMedia,
 } from './attraction.service.js';
 import { enrichAttractionCoversForIds } from './attraction-image-enricher.service.js';
+import {
+  buildPoiMediaIndexKey,
+  listApprovedRouteMediaBundle,
+} from './route-media.service.js';
 
 const POI_CHECKIN_PHOTO_LIMIT = 6;
 
@@ -67,10 +71,10 @@ export async function listRoutePoiCheckInPhotoUrls(
 }
 
 /**
- * 为路线详情 POI 注入景点库说明、封面与他人打卡缩略图（只读展示，不写回 DB）。
+ * 为路线详情 POI 注入景点库说明、他人打卡图与已审核 UGC 短视频（只读展示，不写回 DB）。
  *
  * @param routeDetail - 路线 `route_detail` JSON
- * @param routeId - 路线 ID；用于聚合打卡图，缺省时跳过社交图注入
+ * @param routeId - 路线 ID；用于聚合社交素材，缺省时跳过
  * @returns 富化后的详情；入参无效时原样返回
  */
 export async function enrichRouteDetailWithPoiTrust(
@@ -79,11 +83,12 @@ export async function enrichRouteDetailWithPoiTrust(
 ): Promise<Record<string, unknown> | null> {
   if (!routeDetail || typeof routeDetail !== 'object') return routeDetail;
 
-  const ids = extractAttractionIdsFromRouteDetail(routeDetail as unknown as RouteDetailPayload);
-  if (ids.length === 0) return routeDetail;
+  const detail = routeDetail as unknown as RouteDetailPayload;
+  if (!Array.isArray(detail.days)) return routeDetail;
 
-  let catalog = await getAttractionsByIdsForRouteMedia(ids);
+  const ids = extractAttractionIdsFromRouteDetail(detail);
 
+  let catalog = ids.length > 0 ? await getAttractionsByIdsForRouteMedia(ids) : [];
   const missingCoverIds = catalog.filter((item) => !item.coverImageUrl).map((item) => item.id);
   if (missingCoverIds.length > 0 && isAmapImageEnrichEnabled()) {
     await enrichAttractionCoversForIds(missingCoverIds, { delayMs: 100, maxCount: 16 });
@@ -93,45 +98,71 @@ export async function enrichRouteDetailWithPoiTrust(
   const coverById = new Map<number, string>();
   const descriptionById = new Map<number, string>();
   for (const item of catalog) {
-    if (item.coverImageUrl) {
-      coverById.set(item.id, item.coverImageUrl);
-    }
-    if (item.description?.trim()) {
-      descriptionById.set(item.id, item.description.trim());
-    }
+    if (item.coverImageUrl) coverById.set(item.id, item.coverImageUrl);
+    if (item.description?.trim()) descriptionById.set(item.id, item.description.trim());
   }
 
   const checkInPhotosById =
-    routeId != null && Number.isFinite(routeId)
+    routeId != null && Number.isFinite(routeId) && ids.length > 0
       ? await listRoutePoiCheckInPhotoUrls(routeId, ids)
       : new Map<number, string[]>();
 
-  if (coverById.size === 0 && descriptionById.size === 0 && checkInPhotosById.size === 0) {
-    return routeDetail;
-  }
+  const mediaBundle =
+    routeId != null && Number.isFinite(routeId)
+      ? await listApprovedRouteMediaBundle(routeId)
+      : { routeVideo: null, poiByAttractionId: new Map(), poiByDayAndName: new Map() };
 
-  const detail = routeDetail as unknown as RouteDetailPayload;
-  if (!Array.isArray(detail.days)) return routeDetail;
-
-  const days = detail.days.map((day) => {
+  const days = detail.days.map((day, dayIndex) => {
     if (!day?.attractions?.length) return day;
-    const attractions = day.attractions.map((spot) => {
-      if (spot.attractionId == null) return spot;
-      const coverImageUrl = coverById.get(spot.attractionId);
-      const catalogDescription = descriptionById.get(spot.attractionId);
-      const checkInPhotoUrls = checkInPhotosById.get(spot.attractionId);
-      if (!coverImageUrl && !catalogDescription && !checkInPhotoUrls?.length) {
-        return spot;
+    const attractions = day.attractions.map((spot): RouteDayAttraction => {
+      const patch: RouteDayAttraction = { ...spot };
+      let touched = false;
+
+      if (spot.attractionId != null) {
+        const coverImageUrl = coverById.get(spot.attractionId);
+        const catalogDescription = descriptionById.get(spot.attractionId);
+        const checkInPhotoUrls = checkInPhotosById.get(spot.attractionId);
+        const poiVideo = mediaBundle.poiByAttractionId.get(spot.attractionId);
+
+        if (coverImageUrl) {
+          patch.coverImageUrl = coverImageUrl;
+          touched = true;
+        }
+        if (catalogDescription) {
+          patch.catalogDescription = catalogDescription;
+          touched = true;
+        }
+        if (checkInPhotoUrls?.length) {
+          patch.checkInPhotoUrls = checkInPhotoUrls;
+          touched = true;
+        }
+        if (poiVideo) {
+          patch.videoUrl = poiVideo.videoUrl;
+          patch.videoCoverUrl = poiVideo.coverUrl ?? null;
+          patch.videoDurationSec = poiVideo.durationSec;
+          touched = true;
+        }
+      } else if (spot.name?.trim()) {
+        const poiVideo = mediaBundle.poiByDayAndName.get(
+          buildPoiMediaIndexKey(dayIndex, spot.name),
+        );
+        if (poiVideo) {
+          patch.videoUrl = poiVideo.videoUrl;
+          patch.videoCoverUrl = poiVideo.coverUrl ?? null;
+          patch.videoDurationSec = poiVideo.durationSec;
+          touched = true;
+        }
       }
-      return {
-        ...spot,
-        ...(coverImageUrl ? { coverImageUrl } : {}),
-        ...(catalogDescription ? { catalogDescription } : {}),
-        ...(checkInPhotoUrls?.length ? { checkInPhotoUrls } : {}),
-      };
+
+      return touched ? patch : spot;
     });
     return { ...day, attractions };
   });
 
-  return { ...detail, days };
+  const nextDetail: RouteDetailPayload = { ...detail, days };
+  if (mediaBundle.routeVideo) {
+    nextDetail.routeVideo = mediaBundle.routeVideo;
+  }
+
+  return nextDetail as unknown as Record<string, unknown>;
 }

@@ -6,6 +6,7 @@ import { uploadsDir } from './routes/users.js';
 import { checkInPhotosDir } from './routes/checkins.js';
 import { attractionCoversDir } from './routes/attractions.js';
 import { getPhotosUploadRoot } from './utils/local-photo-upload.util.js';
+import { getVideosUploadRoot } from './utils/local-video-upload.util.js';
 import { APP_NAME, API_PREFIX } from '@douxing/shared';
 import { startOrderTimeoutJob } from './jobs/order-timeout.job.js';
 import { startAnalyticsRollupJob } from './jobs/analytics-rollup.job.js';
@@ -44,6 +45,7 @@ app.use('/uploads/avatars', express.static(uploadsDir));
 app.use('/uploads/checkins', express.static(checkInPhotosDir));
 app.use('/uploads/attractions', express.static(attractionCoversDir));
 app.use('/uploads/photos', express.static(getPhotosUploadRoot()));
+app.use('/uploads/videos', express.static(getVideosUploadRoot()));
 app.use(routes);
 
 app.get('/', (_req, res) => {
