@@ -604,6 +604,7 @@ pnpm dev
 | 文档 | 用途 |
 |------|------|
 | [AI规划与Agent演进.md](./AI规划与Agent演进.md) | 架构设计 · Tool 映射 · 场景流程 |
+| [AI流程编排路线图.md](./AI流程编排路线图.md) | 流程编排 · LangGraph · 观测/费用 · Phase W0～W5 · **§12 术语表** |
 | [AI旅行宠物.md](./AI旅行宠物.md) | H3 Step 25～30 细节 |
 | [下一步工作.md](./下一步工作.md) | 全站当前 Sprint（非仅规划） |
 | [ROADMAP.md](./ROADMAP.md) | 全站编号与历史 |
@@ -646,4 +647,5 @@ pnpm dev
 | 2026-06-18 | 4.2 | **Step 33 达成**：H7 `detect_missed_pois` · 遗漏分析 API/UI · regret 记忆 · 指针 → Step 34 |
 | 2026-06-18 | 4.3 | **Step 34 / M5 达成**：H3-d 打卡 exp · in_trip analyze · `h5:m5-accept` · 指针 → Step 35 |
 | 2026-06-22 | 4.4 | **Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest · PAI 微调待执行 |
+| 2026-07-06 | 4.6 | 关联 [AI流程编排路线图](./AI流程编排路线图.md) · §10 相关文档 |
 | 2026-07-03 | 4.5 | **Step 36 基础设施**：`douxing` LLM provider · `i3:douxing-llm-cases` · **Step 38/39 交付**：H10-a POI 信任链 · H10-b/c 路线视频 · 全站 API 日志 |

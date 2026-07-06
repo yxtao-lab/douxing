@@ -105,6 +105,7 @@ pnpm build:web
 | 变量 | 说明 | 默认 |
 |------|------|------|
 | `AGENT_PLAN_ENABLED` | `true` 时规划追问可走 Agent（patch 等） | `false` |
+| `WORKFLOW_ENGINE` | 编排运行时：`legacy`（手写 graph）或 `langgraph`（**C7-W W1 起**） | `legacy` |
 | `AGENT_TOOL_SECRET` | ai-service → Node Tool 内网鉴权 | 未配置时 dev 放行 |
 | `AGENT_PLAN_TIMEOUT_MS` | Node 调 `/v1/agent/plan` 超时（毫秒） | `180000` |
 | `VECTOR_RAG_ENABLED` | 启用景点 embedding + MMR 多样性检索 | `false` |
@@ -118,7 +119,7 @@ pnpm build:web
 
 验证：`pnpm --filter @douxing/server langfuse:smoke`（需配置 KEY）；`GET /v1/status` 返回 `observability.langfuse`。
 
-详见 [AI路径规划路线图.md §7](./AI路径规划路线图.md#7-环境与验证) · [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
+详见 [AI路径规划路线图.md §7](./AI路径规划路线图.md#7-环境与验证) · [AI流程编排路线图.md](./AI流程编排路线图.md)（`WORKFLOW_ENGINE` · W1 起） · [AI规划与Agent演进.md §13](./AI规划与Agent演进.md#13-技术选型与环境变量)。
 
 ---
 
