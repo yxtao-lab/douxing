@@ -34,6 +34,8 @@ import {
 
   isAgentPlanEnabled,
 
+  getAgentPlanDefaultProvider,
+
 } from '../config/agent.js';
 
 import type { GeneratedRouteDraft } from './route-generator.service.js';
@@ -798,9 +800,12 @@ export async function runAgentPlan(
 
   if (!isAgentPlanEnabled()) return null;
 
+  const normalized: AgentPlanRequest = {
+    ...request,
+    provider: request.provider ?? getAgentPlanDefaultProvider(),
+  };
 
-
-  const remote = await callRemoteAgentPlan(request);
+  const remote = await callRemoteAgentPlan(normalized);
 
   if (isAgentPlanResultUsable(remote)) {
 
@@ -812,7 +817,7 @@ export async function runAgentPlan(
 
 
 
-  const local = await runLocalAgentPlan(request, hooks);
+  const local = await runLocalAgentPlan(normalized, hooks);
 
   if (isAgentPlanResultUsable(local)) return local;
 

@@ -22,6 +22,18 @@ export function getAgentPlanTimeoutMs(): number {
   return Number.isFinite(raw) && raw > 0 ? raw : 180000;
 }
 
+/**
+ * plan_agent 默认 LLM 提供方（未指定 session provider 时沿用）。
+ * 读取 `AGENT_PLAN_DEFAULT_PROVIDER`，否则与 `LLM_DEFAULT_PROVIDER` 一致，默认 `auto`。
+ *
+ * @returns 提供方标识
+ */
+export function getAgentPlanDefaultProvider(): string {
+  const agentDefault = readEnv('AGENT_PLAN_DEFAULT_PROVIDER');
+  if (agentDefault) return agentDefault;
+  return readEnv('LLM_DEFAULT_PROVIDER') || 'auto';
+}
+
 export function verifyAgentToolAuth(headerValue: string | undefined): boolean {
   const secret = getAgentToolSecret();
   if (!secret) {

@@ -435,7 +435,49 @@ export interface RouteCommentInfo {
   attractionId?: number | null;
   /** H10-a：关联 POI 名称 */
   poiName?: string | null;
+  /** H10-d：点赞数 */
+  likeCount?: number;
+  /** H10-d：运营精选 */
+  isFeatured?: boolean;
+  /** H10-d：当前用户是否已点赞 */
+  isLiked?: boolean;
   createdAt: string;
+}
+
+/** H10-d：评论点赞切换结果 */
+export interface RouteCommentLikeResult {
+  liked: boolean;
+  likeCount: number;
+}
+
+/** H10-d：POI 外链讨论 */
+export interface RoutePoiExternalLinkInfo {
+  id: number;
+  routeId: number;
+  userId: number;
+  userNickname: string;
+  dayIndex?: number | null;
+  attractionId?: number | null;
+  poiName?: string | null;
+  title: string;
+  url: string;
+  platform: 'xiaohongshu' | 'douyin' | 'bilibili' | 'other';
+  createdAt: string;
+}
+
+export interface CreateRoutePoiExternalLinkRequest {
+  title: string;
+  url: string;
+  dayIndex?: number;
+  attractionId?: number;
+  poiName?: string;
+}
+
+export interface FetchRoutePoiExternalLinksParams {
+  limit?: number;
+  dayIndex?: number;
+  attractionId?: number;
+  poiName?: string;
 }
 
 export interface CreateRouteCommentRequest {
@@ -450,6 +492,8 @@ export interface FetchRouteCommentsParams {
   limit?: number;
   dayIndex?: number;
   attractionId?: number;
+  /** H10-d：`hot` 精选+点赞排序；`recent` 按时间倒序（默认） */
+  sort?: 'hot' | 'recent';
 }
 
 export type LlmProviderChoice = 'auto' | 'douxing' | 'deepseek' | 'lmstudio';

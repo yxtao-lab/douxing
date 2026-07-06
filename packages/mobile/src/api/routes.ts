@@ -14,6 +14,10 @@ import type {
   RouteCommentInfo,
   CreateRouteCommentRequest,
   FetchRouteCommentsParams,
+  RouteCommentLikeResult,
+  RoutePoiExternalLinkInfo,
+  CreateRoutePoiExternalLinkRequest,
+  FetchRoutePoiExternalLinksParams,
   RoutePath,
   RouteReplanContextInput,
   RouteReplanPreviewResponse,
@@ -135,12 +139,41 @@ export function fetchRouteComments(id: number, params: FetchRouteCommentsParams 
   if (params.limit != null) qs.set('limit', String(params.limit));
   if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
   if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  if (params.sort) qs.set('sort', params.sort);
   const query = qs.toString();
   return request<RouteCommentInfo[]>(`/routes/${id}/comments${query ? `?${query}` : ''}`);
 }
 
 export function createRouteComment(id: number, data: CreateRouteCommentRequest) {
   return request<RouteCommentInfo>(`/routes/${id}/comments`, { method: 'POST', data });
+}
+
+export function toggleRouteCommentLike(routeId: number, commentId: number) {
+  return request<RouteCommentLikeResult>(`/routes/${routeId}/comments/${commentId}/like`, {
+    method: 'POST',
+  });
+}
+
+export function fetchRoutePoiExternalLinks(
+  id: number,
+  params: FetchRoutePoiExternalLinksParams = {},
+) {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set('limit', String(params.limit));
+  if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
+  if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  if (params.poiName) qs.set('poiName', params.poiName);
+  const query = qs.toString();
+  return request<RoutePoiExternalLinkInfo[]>(
+    `/routes/${id}/poi-external-links${query ? `?${query}` : ''}`,
+  );
+}
+
+export function createRoutePoiExternalLink(id: number, data: CreateRoutePoiExternalLinkRequest) {
+  return request<RoutePoiExternalLinkInfo>(`/routes/${id}/poi-external-links`, {
+    method: 'POST',
+    data,
+  });
 }
 
 export function previewRouteReplan(id: number, data: { context: RouteReplanContextInput }) {

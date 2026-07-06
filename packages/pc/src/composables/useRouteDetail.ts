@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue';
 import type {
   RouteCommentInfo,
+  RoutePoiExternalLinkInfo,
   RouteDayPlan,
   RouteDetailPayload,
   TravelRouteInfo,
@@ -10,6 +11,9 @@ import {
   createRouteComment,
   fetchRouteComments,
   fetchRouteDetail,
+  toggleRouteCommentLike,
+  fetchRoutePoiExternalLinks,
+  createRoutePoiExternalLink,
   publishRoute,
   regenerateRoute,
   setRoutePublicShare,
@@ -44,6 +48,8 @@ export function useRouteDetail(routeId: () => number) {
   const editDesc = ref('');
   const regeneratePrompt = ref('');
   const comments = ref<RouteCommentInfo[]>([]);
+  const commentSort = ref<'hot' | 'recent'>('hot');
+  const poiExternalLinks = ref<RoutePoiExternalLinkInfo[]>([]);
   const commentText = ref('');
   const commentFocus = ref<{
     dayIndex: number;
@@ -131,6 +137,78 @@ export function useRouteDetail(routeId: () => number) {
   });
 
   /**
+   * 加载路线 POI 外链讨论列表（H10-d）。
+   */
+  async function loadPoiExternalLinks() {
+    const id = routeId();
+    if (!id || !showComments.value) {
+      poiExternalLinks.value = [];
+      return;
+    }
+    try {
+      poiExternalLinks.value = await fetchRoutePoiExternalLinks(id, { limit: 50 });
+    } catch {
+      poiExternalLinks.value = [];
+    }
+  }
+
+  /**
+   * 切换评论排序并重新拉取。
+   *
+   * @param sort - `hot` 或 `recent`
+   */
+  async function setCommentSort(sort: 'hot' | 'recent') {
+    commentSort.value = sort;
+    await loadComments();
+  }
+
+  /**
+   * 切换单条评论点赞状态。
+   *
+   * @param commentId - 评论 ID
+   */
+  async function handleCommentLike(commentId: number) {
+    const id = routeId();
+    if (!id) return;
+    try {
+      const result = await toggleRouteCommentLike(id, commentId);
+      const idx = comments.value.findIndex((c) => c.id === commentId);
+      if (idx >= 0) {
+        comments.value[idx] = {
+          ...comments.value[idx]!,
+          isLiked: result.liked,
+          likeCount: result.likeCount,
+        };
+      }
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.commentLikeFailed')), 'error');
+    }
+  }
+
+  /**
+   * 为 POI 提交外链讨论。
+   *
+   * @param payload - 标题、URL 与 POI 上下文
+   */
+  async function handleAddPoiExternalLink(payload: {
+    title: string;
+    url: string;
+    dayIndex: number;
+    attractionId?: number;
+    poiName: string;
+  }) {
+    const id = routeId();
+    if (!id) return;
+    try {
+      const created = await createRoutePoiExternalLink(id, payload);
+      poiExternalLinks.value = [created, ...poiExternalLinks.value];
+      showToast(t('routes.externalLinkAdded'), 'success');
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.externalLinkFailed')), 'error');
+    }
+  }
+
+  /**
    * 按当前筛选条件拉取评论列表。
    */
   async function loadComments() {
@@ -146,6 +224,7 @@ export function useRouteDetail(routeId: () => number) {
       } else if (commentFocus.value != null) {
         params.dayIndex = commentFocus.value.dayIndex;
       }
+      params.sort = commentSort.value;
       comments.value = await fetchRouteComments(id, params);
     } catch {
       comments.value = [];
@@ -200,6 +279,7 @@ export function useRouteDetail(routeId: () => number) {
         regeneratePrompt.value = route.value?.description ?? '';
       }
       await loadComments();
+      await loadPoiExternalLinks();
       trackAnalytics(AnalyticsEventName.ROUTE_VIEW, { routeId: id });
     } catch (err) {
       loadError.value = getAppErrorMessage(err, t('routes.loadFailed'));
@@ -231,6 +311,7 @@ export function useRouteDetail(routeId: () => number) {
       route.value = await setRoutePublicShare(id, { isPublic });
       showToast(isPublic ? t('routes.shareOn') : t('routes.shareOff'), 'success');
       await loadComments();
+      await loadPoiExternalLinks();
     } catch (err) {
       showToast(getAppErrorMessage(err, t('routes.shareSetFailed')), 'error');
       await loadDetail();
@@ -394,6 +475,8 @@ export function useRouteDetail(routeId: () => number) {
     editDesc,
     regeneratePrompt,
     comments,
+    commentSort,
+    poiExternalLinks,
     commentText,
     commentFocus,
     commentFilterLabel,
@@ -418,6 +501,10 @@ export function useRouteDetail(routeId: () => number) {
     closeEditModal,
     handleShareToggle,
     handlePostComment,
+    handleCommentLike,
+    setCommentSort,
+    handleAddPoiExternalLink,
+    loadPoiExternalLinks,
     handleLike,
     handleFavorite,
     handleSaveDraft,

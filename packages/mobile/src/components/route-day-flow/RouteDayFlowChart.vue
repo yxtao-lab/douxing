@@ -149,6 +149,28 @@
                   >
                     {{ t('routes.poiPlayVideo') }}
                   </text>
+                  <view
+                    v-if="poiExternalLinksForSpot(resolvedActiveDayIndex, node.spot).length"
+                    class="flow-external-links"
+                  >
+                    <text class="flow-external-title">{{ t('routes.externalLinksTitle') }}</text>
+                    <text class="flow-external-disclaimer">{{ t('routes.externalLinkDisclaimer') }}</text>
+                    <text
+                      v-for="link in poiExternalLinksForSpot(resolvedActiveDayIndex, node.spot)"
+                      :key="link.id"
+                      class="flow-external-link"
+                      @click.stop="emit('poi-external-link-open', link.url)"
+                    >
+                      ↗ {{ link.title }}
+                    </text>
+                  </view>
+                  <text
+                    v-if="allowExternalLink && node.spot"
+                    class="flow-poi-video-link"
+                    @click.stop="emitPoiExternalLinkAdd(node.spot)"
+                  >
+                    {{ t('routes.addExternalLink') }}
+                  </text>
                   <text
                     v-if="allowMediaUpload && node.spot"
                     class="flow-poi-video-link"
@@ -183,7 +205,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { RouteDayPlan, RouteDayAttraction, RouteTransitSegment } from '@douxing/shared';
+import type { RouteDayPlan, RouteDayAttraction, RouteTransitSegment, RoutePoiExternalLinkInfo } from '@douxing/shared';
 import {
   buildRoutePoiKey,
   hasPoiTrustContent,
@@ -202,6 +224,8 @@ const props = withDefaults(
     initialDayIndex?: number;
     activeDayIndex?: number;
     showDayTabs?: boolean;
+    poiExternalLinks?: RoutePoiExternalLinkInfo[];
+    allowExternalLink?: boolean;
   }>(),
   {
     showTitle: true,
@@ -210,6 +234,8 @@ const props = withDefaults(
     initialDayIndex: 0,
     activeDayIndex: undefined,
     showDayTabs: true,
+    poiExternalLinks: () => [],
+    allowExternalLink: false,
   },
 );
 
@@ -219,6 +245,8 @@ const emit = defineEmits<{
   'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
   'poi-video-play': [payload: { videoUrl: string; coverUrl?: string | null; title: string }];
   'poi-video-upload': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
+  'poi-external-link-open': [url: string];
+  'poi-external-link-add': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t, tf } = useTf();
@@ -326,6 +354,36 @@ function emitPoiVideoPlay(spot: RouteDayAttraction) {
     videoUrl: spot.videoUrl,
     coverUrl: spot.videoCoverUrl,
     title: spot.name,
+  });
+}
+
+/**
+ * 筛选某 POI 下的站外讨论链接。
+ *
+ * @param dayIndex - 行程天索引
+ * @param spot - POI 节点
+ * @returns 匹配的外链列表
+ */
+function poiExternalLinksForSpot(dayIndex: number, spot: RouteDayAttraction) {
+  return (props.poiExternalLinks ?? []).filter((link) => {
+    if (link.dayIndex != null && link.dayIndex !== dayIndex) return false;
+    if (link.attractionId != null && spot.attractionId != null) {
+      return link.attractionId === spot.attractionId;
+    }
+    return link.poiName?.trim() === spot.name.trim();
+  });
+}
+
+/**
+ * 通知父级打开外链提交表单。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiExternalLinkAdd(spot: RouteDayAttraction) {
+  emit('poi-external-link-add', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
   });
 }
 
@@ -766,6 +824,31 @@ function openBookingUrl(url: string) {
 .flow-poi-video-link {
   display: block;
   margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--dx-primary);
+}
+
+.flow-external-links {
+  margin-top: 16rpx;
+}
+
+.flow-external-title {
+  display: block;
+  font-size: 22rpx;
+  color: #9ca3af;
+  margin-bottom: 4rpx;
+}
+
+.flow-external-disclaimer {
+  display: block;
+  font-size: 20rpx;
+  color: #9ca3af;
+  margin-bottom: 8rpx;
+}
+
+.flow-external-link {
+  display: block;
+  margin-top: 6rpx;
   font-size: 24rpx;
   color: var(--dx-primary);
 }

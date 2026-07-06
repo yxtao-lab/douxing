@@ -68,8 +68,24 @@
         <template v-if="column.key === 'status'">
           <a-tag :color="statusColor(record.status)">{{ statusLabel(record.status) }}</a-tag>
         </template>
+        <template v-else-if="column.key === 'action'">
+          <TableActionBar :show-edit="false" :show-delete="false">
+            <TableActionButton
+              v-if="canModerateComments"
+              variant="info"
+              :label="t('routes.moderateComments')"
+              @click="openCommentModeration(record)"
+            />
+          </TableActionBar>
+        </template>
       </template>
     </DouxingAdminTable>
+
+    <RouteCommentsModerationModal
+      :visible="commentModalVisible"
+      :route="commentModalRoute"
+      @close="closeCommentModeration"
+    />
   </PageContainer>
 </template>
 
@@ -86,6 +102,10 @@ import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vu
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
+import RouteCommentsModerationModal from '@/components/route/RouteCommentsModerationModal.vue';
+import { usePermissions } from '@/composables/usePermissions';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
@@ -93,6 +113,10 @@ import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 usePageTitle('web.routes');
 
 const { t } = useI18n();
+const { hasPerm } = usePermissions();
+const canModerateComments = computed(() => hasPerm('content:attractions:pending'));
+const commentModalVisible = ref(false);
+const commentModalRoute = ref<TravelRouteInfo | null>(null);
 const keyword = ref('');
 const statusFilter = ref<number | undefined>();
 const creatorIdFilter = ref<number | undefined>();
@@ -149,7 +173,31 @@ const columns = computed<AdminExportColumn<TravelRouteInfo>[]>(() => [
   { title: t('routes.colLikes'), dataIndex: 'likeCount', width: 90 },
   { title: t('routes.colFavorites'), dataIndex: 'collectCount', width: 90 },
   { title: t('routes.colCreator'), dataIndex: 'creatorId', width: 100 },
+  {
+    title: t('routes.colAction'),
+    key: 'action',
+    width: 140,
+    resizable: false,
+  },
 ]);
+
+/**
+ * 打开路线评论精选弹窗。
+ *
+ * @param record - 路线行
+ */
+function openCommentModeration(record: TravelRouteInfo) {
+  commentModalRoute.value = record;
+  commentModalVisible.value = true;
+}
+
+/**
+ * 关闭评论精选弹窗。
+ */
+function closeCommentModeration() {
+  commentModalVisible.value = false;
+  commentModalRoute.value = null;
+}
 
 async function fetchExportRows(): Promise<Record<string, unknown>[]> {
   const rows = await fetchAllPaginatedRows((page, pageSize) =>

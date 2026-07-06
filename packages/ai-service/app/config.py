@@ -76,7 +76,42 @@ def get_lmstudio_config() -> ProviderConfig:
     )
 
 
+def has_douxing_api_key() -> bool:
+    key = (os.getenv("DOUXING_LLM_API_KEY") or "").strip()
+    model = (os.getenv("DOUXING_LLM_MODEL") or "").strip()
+    return bool(key and model)
+
+
+def is_douxing_enabled() -> bool:
+    if (os.getenv("DOUXING_LLM_ENABLED") or "").strip().lower() == "false":
+        return False
+    return has_douxing_api_key()
+
+
+def get_douxing_config() -> ProviderConfig:
+    api_key = (os.getenv("DOUXING_LLM_API_KEY") or "").strip()
+    return ProviderConfig(
+        id="douxing",
+        label="兜行百炼微调",
+        base_url=_normalize_base_url(
+            os.getenv(
+                "DOUXING_LLM_BASE_URL",
+                "https://dashscope.aliyuncs.com/compatible-mode/v1",
+            )
+        ),
+        model=os.getenv("DOUXING_LLM_MODEL", "douxing-planner"),
+        api_key=api_key,
+        timeout_ms=int(
+            os.getenv("DOUXING_LLM_TIMEOUT_MS")
+            or os.getenv("LLM_TIMEOUT_MS", "120000")
+        ),
+        configured=bool(api_key),
+    )
+
+
 def get_provider_config(provider_id: str) -> ProviderConfig:
+    if provider_id == "douxing":
+        return get_douxing_config()
     if provider_id == "deepseek":
         return get_deepseek_config()
     return get_lmstudio_config()
@@ -84,11 +119,15 @@ def get_provider_config(provider_id: str) -> ProviderConfig:
 
 def resolve_provider_chain(choice: str | None = None) -> list[str]:
     selected = (choice or os.getenv("LLM_DEFAULT_PROVIDER", "auto")).strip().lower()
+    if selected == "douxing":
+        return ["douxing"] if is_douxing_enabled() else []
     if selected == "deepseek":
         return ["deepseek"] if has_deepseek_api_key() else []
     if selected in {"lmstudio", "local", "lm-studio"}:
         return ["lmstudio"]
     chain: list[str] = []
+    if is_douxing_enabled():
+        chain.append("douxing")
     if has_deepseek_api_key():
         chain.append("deepseek")
     chain.append("lmstudio")

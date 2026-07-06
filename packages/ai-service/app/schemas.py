@@ -90,7 +90,7 @@ class GenerateRouteRequest(BaseModel):
     prompt: str
     days: int | None = Field(default=None, ge=1, le=7)
     budget: str | None = None
-    provider: Literal["auto", "deepseek", "lmstudio"] | None = "auto"
+    provider: Literal["auto", "douxing", "deepseek", "lmstudio"] | None = "auto"
     history: list[PlanChatMessage] = Field(default_factory=list)
     intent: TravelIntentSnapshot | None = None
     ragCandidates: list[RagAttractionCandidate] = Field(default_factory=list)
@@ -103,7 +103,7 @@ class GenerateRouteRequest(BaseModel):
 
 class GenerateRouteResponse(BaseModel):
     payload: LlmRoutePayload
-    provider: Literal["deepseek", "lmstudio"]
+    provider: Literal["douxing", "deepseek", "lmstudio"]
 
 
 class ProviderStatus(BaseModel):

@@ -7,6 +7,8 @@ export * from './travel-routes.js';
 export * from './route-likes.js';
 export * from './route-favorites.js';
 export * from './route-comments.js';
+export * from './route-comment-likes.js';
+export * from './route-poi-external-links.js';
 export * from './route-media.js';
 export * from './check-ins.js';
 export * from './orders.js';

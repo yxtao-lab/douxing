@@ -109,6 +109,10 @@
       <RouteDayFlowChart
         v-model:active-day-index="activeDayIndex"
         :days="days"
+        :poi-external-links="poiExternalLinks"
+        :allow-external-link="showComments"
+        @poi-external-link-open="openExternalLinkConfirm"
+        @poi-external-link-add="openExternalLinkForm"
         :show-day-tabs="false"
         show-check-in
         :allow-media-upload="isOwner"
@@ -217,6 +221,22 @@
 
     <view v-if="showComments" id="route-comments-section" class="card comments-card">
       <text class="comments-title">{{ t('routes.commentsTitle') }}</text>
+      <view class="comment-sort-tabs">
+        <text
+          class="comment-sort-chip"
+          :class="{ active: commentSort === 'hot' }"
+          @click="setCommentSort('hot')"
+        >
+          {{ t('routes.commentSortHot') }}
+        </text>
+        <text
+          class="comment-sort-chip"
+          :class="{ active: commentSort === 'recent' }"
+          @click="setCommentSort('recent')"
+        >
+          {{ t('routes.commentSortRecent') }}
+        </text>
+      </view>
       <view class="comment-filters">
         <text
           class="comment-filter-chip"
@@ -244,9 +264,19 @@
       <view v-for="c in comments" :key="c.id" class="comment-item">
         <text class="comment-user">
           {{ c.userNickname }}
+          <text v-if="c.isFeatured" class="comment-featured">{{ t('routes.commentFeatured') }}</text>
           <text v-if="formatCommentScope(c)" class="comment-scope">{{ formatCommentScope(c) }}</text>
         </text>
         <text class="comment-content">{{ c.content }}</text>
+        <view class="comment-like-row">
+          <text
+            class="comment-like-btn"
+            :class="{ active: c.isLiked }"
+            @click="handleCommentLike(c.id)"
+          >
+            {{ t('routes.commentLike') }} {{ c.likeCount ?? 0 }}
+          </text>
+        </view>
       </view>
       <textarea
         v-model="commentText"
@@ -259,6 +289,38 @@
 
     <view class="actions">
       <button v-if="route.status !== publishedStatus" class="btn-outline" @click="handlePublish">{{ t('routes.publishRoute') }}</button>
+    </view>
+
+    <view v-if="externalLinkFormVisible" class="external-link-mask" @click="closeExternalLinkForm">
+      <view class="external-link-sheet" @click.stop>
+        <text class="external-link-title">{{ t('routes.addExternalLink') }}</text>
+        <text v-if="externalLinkFormPoi?.poiName" class="external-link-poi">
+          {{ tf('routes.commentFilterPoi', { name: externalLinkFormPoi.poiName }) }}
+        </text>
+        <text class="external-link-hint">{{ t('routes.externalLinkUrlHint') }}</text>
+        <text class="external-link-label">{{ t('routes.externalLinkTitleLabel') }}</text>
+        <input
+          v-model="externalLinkFormTitle"
+          class="external-link-input"
+          type="text"
+          maxlength="128"
+          :placeholder="t('routes.externalLinkTitlePlaceholder')"
+        />
+        <text class="external-link-label">{{ t('routes.externalLinkUrlLabel') }}</text>
+        <input
+          v-model="externalLinkFormUrl"
+          class="external-link-input"
+          type="text"
+          maxlength="512"
+          :placeholder="t('routes.externalLinkUrlPlaceholder')"
+        />
+        <view class="external-link-actions">
+          <button class="btn-outline" @click="closeExternalLinkForm">{{ t('routes.externalLinkCancel') }}</button>
+          <button class="btn-comment" :loading="externalLinkSubmitting" @click="submitExternalLinkForm">
+            {{ t('routes.externalLinkSubmit') }}
+          </button>
+        </view>
+      </view>
     </view>
 
     <RoutePosterSheet
@@ -316,6 +378,8 @@ import type {
   ROUTE_VIDEO_MAX_DURATION_SEC,
   TravelRouteInfo,
   RouteCommentInfo,
+  RoutePoiExternalLinkInfo,
+  isAllowedExternalDiscussionUrl,
 } from '@douxing/shared';
 import {
   fetchRouteDetail,
@@ -327,6 +391,9 @@ import {
   setRoutePublicShare,
   fetchRouteComments,
   createRouteComment,
+  toggleRouteCommentLike,
+  fetchRoutePoiExternalLinks,
+  createRoutePoiExternalLink,
   uploadRouteVideo,
 } from '@/api/routes';
 import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/order-payment';
@@ -374,6 +441,17 @@ const editModalVisible = ref(false);
 const savingDraft = ref(false);
 const sharing = ref(false);
 const comments = ref<RouteCommentInfo[]>([]);
+const commentSort = ref<'hot' | 'recent'>('hot');
+const poiExternalLinks = ref<RoutePoiExternalLinkInfo[]>([]);
+const externalLinkFormVisible = ref(false);
+const externalLinkFormTitle = ref('');
+const externalLinkFormUrl = ref('');
+const externalLinkSubmitting = ref(false);
+const externalLinkFormPoi = ref<{
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+} | null>(null);
 const commentText = ref('');
 const commentFocus = ref<{
   dayIndex: number;
@@ -568,13 +646,145 @@ const commentFilterLabel = computed(() => {
   return '';
 });
 
+async function loadPoiExternalLinks() {
+  if (!route.value?.isPublic) {
+    poiExternalLinks.value = [];
+    return;
+  }
+  try {
+    poiExternalLinks.value = await fetchRoutePoiExternalLinks(routeId, { limit: 50 });
+  } catch {
+    poiExternalLinks.value = [];
+  }
+}
+
+/**
+ * 切换评论排序并重新加载。
+ *
+ * @param sort - 热门或最新
+ */
+async function setCommentSort(sort: 'hot' | 'recent') {
+  commentSort.value = sort;
+  await loadComments();
+}
+
+/**
+ * 切换评论点赞状态。
+ *
+ * @param commentId - 评论 ID
+ */
+async function handleCommentLike(commentId: number) {
+  try {
+    const result = await toggleRouteCommentLike(routeId, commentId);
+    const idx = comments.value.findIndex((c) => c.id === commentId);
+    if (idx >= 0) {
+      comments.value[idx] = {
+        ...comments.value[idx]!,
+        isLiked: result.liked,
+        likeCount: result.likeCount,
+      };
+    }
+  } catch (err) {
+    uni.showToast({ title: getAppErrorMessage(err, t('routes.commentLikeFailed')), icon: 'none' });
+  }
+}
+
+/**
+ * 打开 POI 外链提交表单。
+ *
+ * @param payload - POI 上下文
+ */
+function openExternalLinkForm(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  externalLinkFormPoi.value = payload;
+  externalLinkFormTitle.value = '';
+  externalLinkFormUrl.value = '';
+  externalLinkFormVisible.value = true;
+}
+
+/**
+ * 关闭外链提交表单并重置字段。
+ */
+function closeExternalLinkForm() {
+  externalLinkFormVisible.value = false;
+  externalLinkFormPoi.value = null;
+  externalLinkFormTitle.value = '';
+  externalLinkFormUrl.value = '';
+}
+
+/**
+ * 校验并提交 POI 外链讨论。
+ */
+async function submitExternalLinkForm() {
+  const poi = externalLinkFormPoi.value;
+  if (!poi) return;
+  const title = externalLinkFormTitle.value.trim();
+  const url = externalLinkFormUrl.value.trim();
+  if (!title) {
+    uni.showToast({ title: t('routes.externalLinkTitleRequired'), icon: 'none' });
+    return;
+  }
+  if (!isAllowedExternalDiscussionUrl(url)) {
+    uni.showToast({ title: t('routes.externalLinkUrlInvalid'), icon: 'none' });
+    return;
+  }
+  externalLinkSubmitting.value = true;
+  try {
+    const created = await createRoutePoiExternalLink(routeId, {
+      title,
+      url,
+      dayIndex: poi.dayIndex,
+      attractionId: poi.attractionId,
+      poiName: poi.poiName,
+    });
+    poiExternalLinks.value = [created, ...poiExternalLinks.value];
+    closeExternalLinkForm();
+    uni.showToast({ title: t('routes.externalLinkAdded'), icon: 'success' });
+  } catch (err) {
+    uni.showToast({ title: getAppErrorMessage(err, t('routes.externalLinkFailed')), icon: 'none' });
+  } finally {
+    externalLinkSubmitting.value = false;
+  }
+}
+
+/**
+ * 外链跳转前二次确认（H10-d）。
+ *
+ * @param url - 目标 URL
+ */
+function openExternalLinkConfirm(url: string) {
+  uni.showModal({
+    title: t('routes.externalLinkConfirmTitle'),
+    content: `${t('routes.externalLinkConfirmMessage')}\n${t('routes.externalLinkDisclaimer')}`,
+    confirmText: t('routes.externalLinkOpen'),
+    cancelText: t('routes.externalLinkCancel'),
+    success: (res) => {
+      if (res.confirm) {
+        // #ifdef H5
+        window.open(url, '_blank', 'noopener,noreferrer');
+        // #endif
+        // #ifndef H5
+        uni.setClipboardData({ data: url });
+        uni.showToast({ title: t('routes.externalLinkOpen'), icon: 'none' });
+        // #endif
+      }
+    },
+  });
+}
+
 async function loadComments() {
   if (!route.value?.isPublic) {
     comments.value = [];
     return;
   }
   try {
-    const params: { limit?: number; dayIndex?: number; attractionId?: number } = { limit: 50 };
+    const params: { limit?: number; dayIndex?: number; attractionId?: number; sort?: 'hot' | 'recent' } = {
+      limit: 50,
+      sort: commentSort.value,
+    };
     if (commentFocus.value?.attractionId != null) {
       params.attractionId = commentFocus.value.attractionId;
     } else if (commentFocus.value != null) {
@@ -659,6 +869,7 @@ async function loadDetail() {
       regeneratePrompt.value = route.value?.description ?? '';
     }
     await loadComments();
+    await loadPoiExternalLinks();
     trackAnalytics(AnalyticsEventName.ROUTE_VIEW, { routeId });
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.loadFailed')), icon: 'none' });
@@ -792,6 +1003,7 @@ async function handleShareToggle(e: { detail: { value: boolean } }) {
     route.value = await setRoutePublicShare(routeId, { isPublic: next });
     uni.showToast({ title: next ? t('routes.shareOn') : t('routes.shareOff'), icon: 'success' });
     await loadComments();
+    await loadPoiExternalLinks();
   } catch (err) {
     uni.showToast({ title: getAppErrorMessage(err, t('routes.shareSetFailed')), icon: 'none' });
     await loadDetail();
@@ -1395,6 +1607,25 @@ onLoad((query) => {
   margin-bottom: 16rpx;
   color: var(--dx-text);
 }
+.comment-sort-tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+.comment-sort-chip {
+  padding: 8rpx 20rpx;
+  border-radius: 999rpx;
+  font-size: 24rpx;
+  color: #6b7280;
+  background: #f3f4f6;
+  border: 1rpx solid #e5e7eb;
+}
+.comment-sort-chip.active {
+  color: var(--dx-primary);
+  background: var(--dx-primary-light);
+  border-color: rgba(249, 115, 22, 0.35);
+}
 .comment-filters {
   display: flex;
   flex-direction: row;
@@ -1420,6 +1651,80 @@ onLoad((query) => {
   font-size: 22rpx;
   font-weight: 400;
   color: #9ca3af;
+}
+.comment-featured {
+  margin-left: 8rpx;
+  font-size: 20rpx;
+  color: #f97316;
+  border: 1rpx solid rgba(249, 115, 22, 0.4);
+  border-radius: 6rpx;
+  padding: 2rpx 8rpx;
+}
+.comment-like-row {
+  margin-top: 8rpx;
+}
+.comment-like-btn {
+  font-size: 22rpx;
+  color: #6b7280;
+}
+.comment-like-btn.active {
+  color: var(--dx-primary);
+}
+.external-link-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: flex-end;
+}
+.external-link-sheet {
+  width: 100%;
+  background: var(--dx-bg);
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 32rpx 32rpx calc(32rpx + env(safe-area-inset-bottom));
+}
+.external-link-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.external-link-poi {
+  display: block;
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  color: var(--dx-text-muted);
+}
+.external-link-hint {
+  display: block;
+  margin-top: 12rpx;
+  font-size: 22rpx;
+  color: #9ca3af;
+}
+.external-link-label {
+  display: block;
+  margin-top: 20rpx;
+  font-size: 24rpx;
+  color: var(--dx-text);
+}
+.external-link-input {
+  margin-top: 8rpx;
+  width: 100%;
+  padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  border: 1rpx solid var(--dx-border);
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+.external-link-actions {
+  display: flex;
+  gap: 16rpx;
+  margin-top: 28rpx;
+}
+.external-link-actions .btn-outline,
+.external-link-actions .btn-comment {
+  flex: 1;
 }
 .comments-empty {
   color: var(--dx-text-muted);

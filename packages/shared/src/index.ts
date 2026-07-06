@@ -16,6 +16,7 @@ export * from './plan-recent-prompts.js';
 export * from './plan-session-stream.js';
 export * from './plan-pet-focus.js';
 export * from './route-poi-trust.js';
+export * from './route-poi-external-link.js';
 export * from './shooting-params.js';
 export * from './travel-pet.js';
 export * from './travel-pet-floating.js';

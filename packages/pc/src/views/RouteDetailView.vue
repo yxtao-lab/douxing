@@ -169,9 +169,13 @@
               :days="days"
               :show-day-tabs="false"
               :allow-media-upload="isOwner"
+              :allow-external-link="showComments"
+              :poi-external-links="poiExternalLinks"
               @poi-comment-focus="handlePoiCommentFocus"
               @poi-video-play="handlePoiVideoPlay"
               @poi-video-upload="queuePoiVideoUpload"
+              @poi-external-link-open="openExternalLinkConfirm"
+              @poi-external-link-add="openExternalLinkForm"
             />
 
             <div v-if="canRefreshDayPlan" class="flex flex-wrap gap-2 pt-2">
@@ -224,7 +228,35 @@
 
           <!-- 评论 -->
           <div v-if="showComments" ref="commentsSectionRef" class="dx-card">
-            <h3 class="mb-4 font-semibold text-dx-text">{{ t('routes.commentsTitle') }}</h3>
+            <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h3 class="font-semibold text-dx-text">{{ t('routes.hotDiscussionTitle') }}</h3>
+              <div class="flex gap-2">
+                <button
+                  type="button"
+                  class="rounded-full border px-3 py-1 text-xs transition"
+                  :class="
+                    commentSort === 'hot'
+                      ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                      : 'border-dx-border text-dx-muted'
+                  "
+                  @click="setCommentSort('hot')"
+                >
+                  {{ t('routes.commentSortHot') }}
+                </button>
+                <button
+                  type="button"
+                  class="rounded-full border px-3 py-1 text-xs transition"
+                  :class="
+                    commentSort === 'recent'
+                      ? 'border-dx-primary bg-dx-primary-light text-dx-primary'
+                      : 'border-dx-border text-dx-muted'
+                  "
+                  @click="setCommentSort('recent')"
+                >
+                  {{ t('routes.commentSortRecent') }}
+                </button>
+              </div>
+            </div>
             <div class="mb-4 flex flex-wrap gap-2">
               <button
                 type="button"
@@ -263,15 +295,31 @@
               {{ t('routes.commentsEmpty') }}
             </p>
             <div v-for="c in comments" :key="c.id" class="mb-4 border-b border-dx-border pb-4 last:border-0">
-              <p class="text-sm font-medium text-dx-text">
-                {{ c.userNickname }}
-                <span
-                  v-if="c.poiName || c.dayIndex != null"
-                  class="ml-2 text-xs font-normal text-dx-muted"
+              <div class="flex items-start justify-between gap-2">
+                <p class="text-sm font-medium text-dx-text">
+                  {{ c.userNickname }}
+                  <span
+                    v-if="c.isFeatured"
+                    class="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-normal text-amber-800"
+                  >
+                    {{ t('routes.commentFeatured') }}
+                  </span>
+                  <span
+                    v-if="c.poiName || c.dayIndex != null"
+                    class="ml-2 text-xs font-normal text-dx-muted"
+                  >
+                    {{ formatCommentScope(c) }}
+                  </span>
+                </p>
+                <button
+                  type="button"
+                  class="shrink-0 text-xs"
+                  :class="c.isLiked ? 'text-dx-primary' : 'text-dx-muted'"
+                  @click="handleCommentLike(c.id)"
                 >
-                  {{ formatCommentScope(c) }}
-                </span>
-              </p>
+                  ♥ {{ c.likeCount ?? 0 }}
+                </button>
+              </div>
               <p class="mt-1 text-sm text-dx-muted">{{ c.content }}</p>
             </div>
             <textarea
@@ -382,6 +430,77 @@
       </div>
     </Teleport>
 
+    <Teleport to="body">
+      <div
+        v-if="externalLinkConfirmUrl"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+        @click.self="externalLinkConfirmUrl = null"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-dx-text">{{ t('routes.externalLinkConfirmTitle') }}</h3>
+          <p class="mt-2 text-sm text-dx-muted">{{ t('routes.externalLinkConfirmMessage') }}</p>
+          <p class="mt-2 text-xs text-dx-muted">{{ t('routes.externalLinkDisclaimer') }}</p>
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" class="dx-btn-secondary" @click="externalLinkConfirmUrl = null">
+              {{ t('routes.externalLinkCancel') }}
+            </button>
+            <button type="button" class="dx-btn-primary" @click="confirmOpenExternalLink">
+              {{ t('routes.externalLinkOpen') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <Teleport to="body">
+      <div
+        v-if="externalLinkFormVisible"
+        class="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeExternalLinkForm"
+      >
+        <div class="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <h3 class="text-lg font-semibold text-dx-text">{{ t('routes.addExternalLink') }}</h3>
+          <p v-if="externalLinkFormPoi?.poiName" class="mt-1 text-sm text-dx-muted">
+            {{ t('routes.commentFilterPoi', { name: externalLinkFormPoi.poiName }) }}
+          </p>
+          <p class="mt-2 text-xs text-dx-muted">{{ t('routes.externalLinkUrlHint') }}</p>
+          <label class="mt-4 block text-sm font-medium text-dx-text">
+            {{ t('routes.externalLinkTitleLabel') }}
+            <input
+              v-model="externalLinkFormTitle"
+              type="text"
+              maxlength="128"
+              class="mt-1 w-full rounded-xl border border-dx-border px-3 py-2 text-sm outline-none focus:border-dx-primary"
+              :placeholder="t('routes.externalLinkTitlePlaceholder')"
+            />
+          </label>
+          <label class="mt-3 block text-sm font-medium text-dx-text">
+            {{ t('routes.externalLinkUrlLabel') }}
+            <input
+              v-model="externalLinkFormUrl"
+              type="url"
+              maxlength="512"
+              class="mt-1 w-full rounded-xl border border-dx-border px-3 py-2 text-sm outline-none focus:border-dx-primary"
+              :placeholder="t('routes.externalLinkUrlPlaceholder')"
+            />
+          </label>
+          <div class="mt-6 flex justify-end gap-3">
+            <button type="button" class="dx-btn-secondary" @click="closeExternalLinkForm">
+              {{ t('routes.externalLinkCancel') }}
+            </button>
+            <button
+              type="button"
+              class="dx-btn-primary"
+              :disabled="externalLinkSubmitting"
+              @click="submitExternalLinkForm"
+            >
+              {{ t('routes.externalLinkSubmit') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
     <RoutePosterSheet
       :visible="posterSheetVisible"
       :route="route"
@@ -438,7 +557,7 @@ import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vu
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
-import { RouteStatus, type RouteCommentInfo, type RouteDetailPayload, ROUTE_VIDEO_MAX_DURATION_SEC } from '@douxing/shared';
+import { RouteStatus, type RouteCommentInfo, type RouteDetailPayload, ROUTE_VIDEO_MAX_DURATION_SEC, isAllowedExternalDiscussionUrl } from '@douxing/shared';
 import { uploadRouteVideo } from '@/api/routes';
 import { appMessage } from '@/composables/useAppMessage';
 import { getAppErrorMessage } from '@/utils/error-message';
@@ -484,12 +603,17 @@ const {
   editDesc,
   regeneratePrompt,
   comments,
+  commentSort,
+  poiExternalLinks,
   commentText,
   commentFocus,
   commentFilterLabel,
   focusRouteCommentPoi,
   clearCommentFocus,
   filterCommentsByActiveDay,
+  setCommentSort,
+  handleCommentLike,
+  handleAddPoiExternalLink,
   publishedStatus,
   isOwner,
   canEditRouteInfo,
@@ -515,6 +639,93 @@ const {
   handleUnlock,
   handlePublish,
 } = useRouteDetail(() => numericRouteId.value);
+
+const externalLinkConfirmUrl = ref<string | null>(null);
+const externalLinkFormVisible = ref(false);
+const externalLinkFormTitle = ref('');
+const externalLinkFormUrl = ref('');
+const externalLinkSubmitting = ref(false);
+const externalLinkFormPoi = ref<{
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+} | null>(null);
+
+/**
+ * 打开 POI 外链提交表单。
+ *
+ * @param payload - POI 上下文
+ */
+function openExternalLinkForm(payload: {
+  dayIndex: number;
+  attractionId?: number;
+  poiName: string;
+}) {
+  externalLinkFormPoi.value = payload;
+  externalLinkFormTitle.value = '';
+  externalLinkFormUrl.value = '';
+  externalLinkFormVisible.value = true;
+}
+
+/**
+ * 关闭外链提交表单并重置字段。
+ */
+function closeExternalLinkForm() {
+  externalLinkFormVisible.value = false;
+  externalLinkFormPoi.value = null;
+  externalLinkFormTitle.value = '';
+  externalLinkFormUrl.value = '';
+}
+
+/**
+ * 校验并提交 POI 外链讨论。
+ */
+async function submitExternalLinkForm() {
+  const poi = externalLinkFormPoi.value;
+  if (!poi) return;
+  const title = externalLinkFormTitle.value.trim();
+  const url = externalLinkFormUrl.value.trim();
+  if (!title) {
+    appMessage.error(t('routes.externalLinkTitleRequired'));
+    return;
+  }
+  if (!isAllowedExternalDiscussionUrl(url)) {
+    appMessage.error(t('routes.externalLinkUrlInvalid'));
+    return;
+  }
+  externalLinkSubmitting.value = true;
+  try {
+    await handleAddPoiExternalLink({
+      title,
+      url,
+      dayIndex: poi.dayIndex,
+      attractionId: poi.attractionId,
+      poiName: poi.poiName,
+    });
+    closeExternalLinkForm();
+  } finally {
+    externalLinkSubmitting.value = false;
+  }
+}
+
+/**
+ * 打开外链二次确认弹窗。
+ *
+ * @param url - 待跳转 URL
+ */
+function openExternalLinkConfirm(url: string) {
+  externalLinkConfirmUrl.value = url;
+}
+
+/**
+ * 用户确认后在新标签页打开外链。
+ */
+function confirmOpenExternalLink() {
+  if (externalLinkConfirmUrl.value) {
+    window.open(externalLinkConfirmUrl.value, '_blank', 'noopener,noreferrer');
+  }
+  externalLinkConfirmUrl.value = null;
+}
 
 const canGeneratePoster = computed(
   () =>

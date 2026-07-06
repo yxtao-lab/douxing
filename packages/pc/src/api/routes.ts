@@ -5,6 +5,10 @@ import {
   type ApiResponse,
   type CreateRouteCommentRequest,
   type FetchRouteCommentsParams,
+  type RouteCommentLikeResult,
+  type RoutePoiExternalLinkInfo,
+  type CreateRoutePoiExternalLinkRequest,
+  type FetchRoutePoiExternalLinksParams,
   type LlmProviderOption,
   type LlmStatusInfo,
   type PaginatedResult,
@@ -126,6 +130,7 @@ export async function fetchRouteComments(id: number, params: FetchRouteCommentsP
   if (params.limit != null) qs.set('limit', String(params.limit));
   if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
   if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  if (params.sort) qs.set('sort', params.sort);
   const query = qs.toString();
   const { data } = await http.get<ApiResponse<RouteCommentInfo[]>>(
     `/routes/${id}/comments${query ? `?${query}` : ''}`,
@@ -135,6 +140,40 @@ export async function fetchRouteComments(id: number, params: FetchRouteCommentsP
 
 export async function createRouteComment(id: number, body: CreateRouteCommentRequest) {
   const { data } = await http.post<ApiResponse<RouteCommentInfo>>(`/routes/${id}/comments`, body);
+  return data.data;
+}
+
+export async function toggleRouteCommentLike(routeId: number, commentId: number) {
+  const { data } = await http.post<ApiResponse<RouteCommentLikeResult>>(
+    `/routes/${routeId}/comments/${commentId}/like`,
+  );
+  return data.data;
+}
+
+export async function fetchRoutePoiExternalLinks(
+  id: number,
+  params: FetchRoutePoiExternalLinksParams = {},
+) {
+  const qs = new URLSearchParams();
+  if (params.limit != null) qs.set('limit', String(params.limit));
+  if (params.dayIndex != null) qs.set('dayIndex', String(params.dayIndex));
+  if (params.attractionId != null) qs.set('attractionId', String(params.attractionId));
+  if (params.poiName) qs.set('poiName', params.poiName);
+  const query = qs.toString();
+  const { data } = await http.get<ApiResponse<RoutePoiExternalLinkInfo[]>>(
+    `/routes/${id}/poi-external-links${query ? `?${query}` : ''}`,
+  );
+  return data.data;
+}
+
+export async function createRoutePoiExternalLink(
+  id: number,
+  body: CreateRoutePoiExternalLinkRequest,
+) {
+  const { data } = await http.post<ApiResponse<RoutePoiExternalLinkInfo>>(
+    `/routes/${id}/poi-external-links`,
+    body,
+  );
   return data.data;
 }
 

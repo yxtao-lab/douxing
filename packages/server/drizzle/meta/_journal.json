@@ -239,6 +239,13 @@
       "when": 1750492800000,
       "tag": "0034_route_media",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "5",
+      "when": 1750579200000,
+      "tag": "0035_h10d_hot_discussion",
+      "breakpoints": true
     }
   ]
 }

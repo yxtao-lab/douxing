@@ -180,6 +180,30 @@
                   >
                     {{ t('routes.poiPlayVideo') }}
                   </button>
+                  <div
+                    v-if="poiExternalLinksForSpot(resolvedActiveDayIndex, node.spot).length"
+                    class="mt-3"
+                  >
+                    <p class="mb-1 text-xs text-dx-muted">{{ t('routes.externalLinksTitle') }}</p>
+                    <p class="mb-2 text-xs text-dx-muted">{{ t('routes.externalLinkDisclaimer') }}</p>
+                    <button
+                      v-for="link in poiExternalLinksForSpot(resolvedActiveDayIndex, node.spot)"
+                      :key="link.id"
+                      type="button"
+                      class="mb-1 block text-left text-sm text-dx-primary hover:underline"
+                      @click.stop="emit('poi-external-link-open', link.url)"
+                    >
+                      ↗ {{ link.title }}
+                    </button>
+                  </div>
+                  <button
+                    v-if="allowExternalLink && node.spot"
+                    type="button"
+                    class="mt-2 block text-sm text-dx-primary hover:underline"
+                    @click.stop="emitPoiExternalLinkAdd(node.spot)"
+                  >
+                    {{ t('routes.addExternalLink') }}
+                  </button>
                   <button
                     v-if="allowMediaUpload && node.spot"
                     type="button"
@@ -210,6 +234,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { RouteDayAttraction, RouteDayPlan, RouteTransitSegment } from '@douxing/shared';
+import type { RoutePoiExternalLinkInfo } from '@douxing/shared';
 import {
   buildRoutePoiKey,
   hasPoiTrustContent,
@@ -231,6 +256,8 @@ const props = withDefaults(
     activeDayIndex?: number;
     showDayTabs?: boolean;
     allowMediaUpload?: boolean;
+    poiExternalLinks?: RoutePoiExternalLinkInfo[];
+    allowExternalLink?: boolean;
   }>(),
   {
     showTitle: true,
@@ -238,6 +265,8 @@ const props = withDefaults(
     activeDayIndex: undefined,
     showDayTabs: true,
     allowMediaUpload: false,
+    poiExternalLinks: () => [],
+    allowExternalLink: false,
   },
 );
 
@@ -246,6 +275,8 @@ const emit = defineEmits<{
   'poi-comment-focus': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
   'poi-video-play': [payload: { videoUrl: string; coverUrl?: string | null; title: string }];
   'poi-video-upload': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
+  'poi-external-link-open': [url: string];
+  'poi-external-link-add': [payload: { dayIndex: number; attractionId?: number; poiName: string }];
 }>();
 
 const { t } = useLocale();
@@ -336,6 +367,36 @@ function previewCheckInPhotos(urls: string[], url: string) {
  */
 function emitPoiVideoUpload(spot: RouteDayAttraction) {
   emit('poi-video-upload', {
+    dayIndex: resolvedActiveDayIndex.value,
+    attractionId: spot.attractionId,
+    poiName: spot.name,
+  });
+}
+
+/**
+ * 筛选某 POI 下的站外讨论链接。
+ *
+ * @param dayIndex - 行程天索引
+ * @param spot - POI 节点
+ * @returns 匹配的外链列表
+ */
+function poiExternalLinksForSpot(dayIndex: number, spot: RouteDayAttraction) {
+  return (props.poiExternalLinks ?? []).filter((link) => {
+    if (link.dayIndex != null && link.dayIndex !== dayIndex) return false;
+    if (link.attractionId != null && spot.attractionId != null) {
+      return link.attractionId === spot.attractionId;
+    }
+    return link.poiName?.trim() === spot.name.trim();
+  });
+}
+
+/**
+ * 通知父级打开外链提交表单。
+ *
+ * @param spot - 游玩 POI
+ */
+function emitPoiExternalLinkAdd(spot: RouteDayAttraction) {
+  emit('poi-external-link-add', {
     dayIndex: resolvedActiveDayIndex.value,
     attractionId: spot.attractionId,
     poiName: spot.name,

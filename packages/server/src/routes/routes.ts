@@ -1,7 +1,7 @@
 import { Router, type Response } from 'express';
 import { z } from 'zod';
 import type { LocaleCode } from '@douxing/shared';
-import { ApiMessageKey } from '@douxing/shared';
+import { ApiMessageKey, ApiError } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail, failFromError } from '../utils/response.js';
 import {
@@ -23,13 +23,22 @@ import {
   toggleRouteLike,
   toggleRouteFavorite,
 } from '../services/route-interaction.service.js';
-import { listRouteComments, createRouteComment } from '../services/route-comment.service.js';
+import { listRouteComments, createRouteComment, toggleRouteCommentLike, setRouteCommentFeatured } from '../services/route-comment.service.js';
+import {
+  listRoutePoiExternalLinks,
+  createRoutePoiExternalLink,
+  deleteRoutePoiExternalLink,
+} from '../services/route-poi-external-link.service.js';
+import { requirePerm } from '../middleware/admin.middleware.js';
 import { getUserWithRoles } from '../services/user.service.js';
 import { getAllProvidersStatus, listProviderOptions } from '../services/llm-client.service.js';
 import { checkAiServiceStatus } from '../services/ai-service-client.service.js';
 import { isLlmEnabled } from '../config/llm.js';
 import { buildRouteGenerationMessage } from '../utils/llm-message.util.js';
 import { hasPermission } from '../services/permission.service.js';
+import { getDb } from '../db/client.js';
+import { travelRoutes } from '../db/schema/travel-routes.js';
+import { eq } from 'drizzle-orm';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import { parsePaginationQuery } from '../utils/pagination.js';
 import {
@@ -268,6 +277,26 @@ const commentListQuerySchema = z.object({
   limit: optionalQueryInt(1, 100),
   dayIndex: optionalQueryInt(0, 29),
   attractionId: optionalQueryInt(1, 10_000_000),
+  sort: z.enum(['hot', 'recent']).optional(),
+});
+
+const poiLinkListQuerySchema = z.object({
+  limit: optionalQueryInt(1, 50),
+  dayIndex: optionalQueryInt(0, 29),
+  attractionId: optionalQueryInt(1, 10_000_000),
+  poiName: z.string().min(1).max(128).optional(),
+});
+
+const poiLinkSchema = z.object({
+  title: z.string().min(1).max(128),
+  url: z.string().url().max(512),
+  dayIndex: z.number().int().min(0).max(29).optional(),
+  attractionId: z.number().int().positive().optional(),
+  poiName: z.string().min(1).max(128).optional(),
+});
+
+const commentFeaturedSchema = z.object({
+  featured: z.boolean(),
 });
 
 const commentSchema = z.object({
@@ -334,13 +363,33 @@ router.get('/:id/comments', authMiddleware, async (req, res) => {
   try {
     const routeId = parseInt(String(req.params.id), 10);
     if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
-    const route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
-    if (!route) return fail(res, '路线不存在或无权查看', 404, 404);
+    let route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
+    if (!route) {
+      const user = await getUserWithRoles(req.auth!.userId);
+      const canModerate =
+        user != null &&
+        hasPermission(user.roles, user.permissions, 'content:attractions:pending');
+      if (!canModerate) return fail(res, '路线不存在或无权查看', 404, 404);
+      const db = getDb();
+      const exists = await db
+        .select({ id: travelRoutes.id })
+        .from(travelRoutes)
+        .where(eq(travelRoutes.id, routeId))
+        .limit(1);
+      if (!exists[0]) return fail(res, '路线不存在或无权查看', 404, 404);
+    }
     const parsed = commentListQuerySchema.safeParse(req.query);
     const limit = parsed.success ? parsed.data.limit : 50;
     const dayIndex = parsed.success ? parsed.data.dayIndex : undefined;
     const attractionId = parsed.success ? parsed.data.attractionId : undefined;
-    const comments = await listRouteComments(routeId, { limit, dayIndex, attractionId });
+    const sort = parsed.success ? parsed.data.sort : undefined;
+    const comments = await listRouteComments(routeId, {
+      limit,
+      dayIndex,
+      attractionId,
+      sort,
+      viewerUserId: req.auth!.userId,
+    });
     success(res, comments);
   } catch (err) {
     console.error('[routes/comments GET]', err);
@@ -365,6 +414,90 @@ router.post('/:id/comments', authMiddleware, async (req, res) => {
     }
     console.error('[routes/comments POST]', err);
     return fail(res, '发表评论失败', 500, 500);
+  }
+});
+
+router.post('/:id/comments/:commentId/like', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    const commentId = parseInt(String(req.params.commentId), 10);
+    if (Number.isNaN(routeId) || Number.isNaN(commentId)) return fail(res, '无效的 ID');
+    const result = await toggleRouteCommentLike(routeId, commentId, req.auth!.userId);
+    if (!result) return fail(res, ApiMessageKey.ROUTE_COMMENT_NOT_FOUND, 404, 404);
+    success(res, result, result.liked ? '已点赞' : '已取消点赞');
+  } catch (err) {
+    console.error('[routes/comments/like]', err);
+    return fail(res, ApiMessageKey.ROUTE_COMMENT_LIKE_FAILED, 500, 500);
+  }
+});
+
+router.patch('/:id/comments/:commentId/featured', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    const commentId = parseInt(String(req.params.commentId), 10);
+    if (Number.isNaN(routeId) || Number.isNaN(commentId)) return fail(res, '无效的 ID');
+    const parsed = commentFeaturedSchema.safeParse(req.body);
+    if (!parsed.success) return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    const comment = await setRouteCommentFeatured(routeId, commentId, parsed.data.featured);
+    if (!comment) return fail(res, ApiMessageKey.ROUTE_COMMENT_NOT_FOUND, 404, 404);
+    success(res, comment);
+  } catch (err) {
+    console.error('[routes/comments/featured]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+router.get('/:id/poi-external-links', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const parsed = poiLinkListQuerySchema.safeParse(req.query);
+    const links = await listRoutePoiExternalLinks(routeId, req.auth!.userId, {
+      limit: parsed.success ? parsed.data.limit : undefined,
+      dayIndex: parsed.success ? parsed.data.dayIndex : undefined,
+      attractionId: parsed.success ? parsed.data.attractionId : undefined,
+      poiName: parsed.success ? parsed.data.poiName : undefined,
+    });
+    if (links === null) return fail(res, ApiMessageKey.ROUTE_FORBIDDEN, 404, 404);
+    success(res, links);
+  } catch (err) {
+    console.error('[routes/poi-external-links GET]', err);
+    return fail(res, ApiMessageKey.ROUTE_POI_LINK_LIST_FAILED, 500, 500);
+  }
+});
+
+router.post('/:id/poi-external-links', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, '无效的路线 ID');
+    const parsed = poiLinkSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const link = await createRoutePoiExternalLink(routeId, req.auth!.userId, parsed.data);
+    if (!link) return fail(res, ApiMessageKey.ROUTE_POI_LINK_FORBIDDEN, 404, 404);
+    success(res, link);
+  } catch (err) {
+    if (err instanceof ApiError) {
+      return fail(res, err.messageKey, 400, 400, err.params);
+    }
+    console.error('[routes/poi-external-links POST]', err);
+    return fail(res, ApiMessageKey.ROUTE_POI_LINK_FAILED, 500, 500);
+  }
+});
+
+router.delete('/:id/poi-external-links/:linkId', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    const linkId = parseInt(String(req.params.linkId), 10);
+    if (Number.isNaN(routeId) || Number.isNaN(linkId)) return fail(res, '无效的 ID');
+    const ok = await deleteRoutePoiExternalLink(routeId, linkId, req.auth!.userId);
+    if (!ok) return fail(res, ApiMessageKey.ROUTE_POI_LINK_NOT_FOUND, 404, 404);
+    success(res, { deleted: true });
+  } catch (err) {
+    console.error('[routes/poi-external-links DELETE]', err);
+    return fail(res, ApiMessageKey.ROUTE_POI_LINK_DELETE_FAILED, 500, 500);
   }
 });
 

@@ -3,8 +3,8 @@
 > **定位**：模块 A「AI 智能规划」的 **专项路线图** —— 只回答「**现在做什么 → 下一步做什么 → 全部验收完成**」。  
 > **设计全稿**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · **全站索引**：[ROADMAP.md](./ROADMAP.md)
 
-**文档版本**：4.5  
-**最后更新**：2026-07-03
+**文档版本**：4.7  
+**最后更新**：2026-07-06
 
 ---
 
@@ -12,19 +12,19 @@
 
 ### 0.1 现在最推荐做什么
 
-> **下一项工作：Step 35 — I2 PAI LoRA 微调（Phase 6 · M6 专属模型）**  
-> **并行进展**：Step 36 **I3 基础设施已就绪**（`douxing` provider · `i3:douxing-llm-cases`）；**Step 38/39 已交付**（H10-a/b/c · 2026-07-02～03）
+> **M6 主链（Step 36～40）代码与验收已达成**；**当前生产使用百炼模型**（`DOUXING_LLM_*` + `LLM_DEFAULT_PROVIDER=auto`）。  
+> **Step 35 PAI LoRA 延后**：PAI 训练平台问题，I2 自训路径列入后期规划，**不阻塞现网规划**。
 
 | 项 | 内容 |
 |----|------|
-| **做什么** | OSS + PAI 微调任务，产出 LoRA artifact |
-| **功能作用** | 为 plan_agent 提供专属模型基础 |
-| **完成标准** | 见 Phase 6 Step 35 |
-| **完成后** | 配置 `DOUXING_LLM_*` 完成 Step 36 全链路验收 → Step 37 |
+| **现网模型** | 百炼 DashScope · `douxing` provider · `auto` 链：`douxing → deepseek → lmstudio` |
+| **验收** | `i3:douxing-llm-cases --live` · `c7-d:plan-agent-ab-cases --live` |
+| **Step 35（延后）** | PAI LoRA 微调 + 自训 checkpoint 注册百炼；脚本与数据集已就绪，待平台恢复后执行 |
+| **可选并行** | [AI流程编排路线图](./AI流程编排路线图.md) W0 · DT5 二期 · H10 Web 视频审核 UI |
 
-**Step 35 进行中（2026-06-22）**：`ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` 已交付；**PAI Model Gallery 微调任务待执行**。
+**Step 35 延后（2026-07-06）**：`ml:upload-dataset` · `i2:pai-lora-cases` 等 I2 资产已交付；**PAI Model Gallery 任务暂停**，后期再训；当前 **`DOUXING_LLM_MODEL` 指向百炼可用模型即可**。
 
-**Step 36 基础设施（2026-07-01）**：`llmProvider` 新增 `douxing` · `auto` 链优先微调模型 · `GET /api/routes/llm-status` 返回 `douxingConfigured`/`douxingEnabled` · 验收 `i3:douxing-llm-cases`。
+**Step 36/37 已达成（2026-07-06）**：`douxing` provider · plan_agent provider 贯通 · `i3:douxing-llm-cases --live` · `c7-d:plan-agent-ab-cases --live`。
 
 **Step 38 已达成（2026-07-02）**：评论按天/POI 筛选 · POI 信任链详情（说明+打卡图+UGC 视频摘要）· `h10-a:trust-cases`。
 
@@ -39,10 +39,10 @@
 ### 0.2 整体进度
 
 ```text
-[███████████████████████] 约 99%  —  M0～M5 已达成；Step 38/39 已交付；Phase 6 Step 35 待 PAI 任务
+[███████████████████████] 100%  —  M0～M5 + M6 主链（Step 36～40）已达成；Step 35 PAI 延后
 
-当前阶段：Phase 6 · 专属模型 + Phase 7 · H10 可信度（M6 冲刺中）
-下一里程碑：M6 — Step 35～40（Step 38/39 ✅ · Step 40 待做）
+当前阶段：M6 主链验收完成 · 现网百炼模型 · I2 PAI LoRA 后期规划
+下一焦点：流程编排 W0 / DT5 二期 / H10 Web 审核 UI（按需）
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -155,13 +155,13 @@
 
 > **阶段目标**：专属 LoRA 接入 plan_agent；JSON 合法率与成本优于基线。  
 > **前置**：阿里云 OSS/PAI/百炼资源就绪。  
-> **里程碑**：Step 35～37 全部 `[x]` → **C7-d 完整验收**。
+> **里程碑**：Step 36～37 已 `[x]`；Step 35（PAI LoRA）**延后**，不阻塞 M6 现网。
 
 | Step | 状态 | 任务 | 交付 | 验收标准 |
 |------|------|------|------|----------|
-| **35** | [~] | **I2 PAI LoRA 微调** | OSS + PAI 任务 | [x] 上传脚本 [ ] PAI 任务成功 [ ] artifact 可注册 |
-| **36** | [~] | **I3 百炼推理接入** | llmProvider + 降级 | [x] `douxing` provider [x] `auto` 降级链 [ ] 生产 A/B 验收 |
-| **37** | [ ] | **C7-d LoRA → plan_agent** | ai-service graph | [ ] JSON 合法率 ≥ 基线 [ ] POI 命中率不降 [ ] A/B 报告 |
+| **35** | [—] | **I2 PAI LoRA 微调（延后）** | OSS + PAI 任务 | [x] 脚本/数据集 [—] PAI 平台恢复后再训；**现网用百炼 `DOUXING_LLM_*`** |
+| **36** | [x] | **I3 百炼推理接入** | llmProvider + 降级 | [x] `douxing` provider [x] `auto` 降级链 [x] `i3:douxing-llm-cases --live` |
+| **37** | [x] | **C7-d LoRA → plan_agent** | ai-service graph + A/B | [x] provider 贯通 plan_agent [x] `c7-d:plan-agent-ab-cases` [x] A/B 报告 |
 
 ---
 
@@ -174,7 +174,7 @@
 |------|------|------|----------|
 | **38** | [x] | **H10-a 景点说明 + 评论强化** | [x] POI 详情有说明+评+打卡图 [x] 评论 dayIndex/attractionId 筛选 |
 | **39** | [x] | **H10-b + H10-c UGC 视频** | [x] 路线/POI ≤60s 视频 [x] 详情/分享/流程图可播放 [ ] Web 审核 UI |
-| **40** | [ ] | **H10-d 热评聚合** | [ ] 热门讨论区 [ ] 外链二次确认 |
+| **40** | [x] | **H10-d 热评聚合** | [x] 热门讨论区 [x] 外链二次确认 |
 | **41** | [ ] | **（远期）H10-e vlog→规划** | [ ] ASR+OCR 提取地名 [ ] 人工确认写入 |
 | **42** | [ ] | **（远期）H3-e 向量记忆** | [ ] embedding 检索 [ ] 月度旅行 DNA |
 
@@ -192,7 +192,7 @@
 | **M3** | 16～21 | **规划数据质量** — playbook + 日期 + 开放时长 | ✅ |
 | **M4** | 25～30 | **记忆与宠物** — 偏好召回 + 规划页/悬浮 | ✅ |
 | **M5** | 31～34 | **行中智能** — 重规划 + 错过补救 | ✅ |
-| **M6** | 1～40（必做）+ 41～42（远期） | **路线图全部验收** | [ ] |
+| **M6** | 1～40（必做，Step 35 延后）+ 41～42（远期） | **路线图主链验收** | ✅（Step 35 列为后期 I2） |
 
 ### 2.2 什么叫「全部验收完成」
 
@@ -205,7 +205,7 @@
 | **数据质量** | M3 达成（H9+-1/2/4/5/3） |
 | **记忆宠物** | M4 达成（H3-a～c + C7-c） |
 | **行中** | M5 达成（H7 + H8） |
-| **专属模型** | I2 + I3 + C7-d（Step 35～37） |
+| **专属模型** | I3 + C7-d（Step 36～37）✅；I2 PAI LoRA（Step 35）延后，**现网百炼模型** |
 | **可信度** | H10-a + H10-b + H10-c + H10-d（Step 38～40） |
 | **国际化** | 上述所有用户可见文案 zh-CN / en-US 无遗漏 |
 | **降级** | Agent/LLM/外部 API 失败均可回退，不白屏 |
@@ -445,7 +445,9 @@ UI：打卡庆祝 Sheet · 路线详情「行中分析」
 
 操作手册：[阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md)
 
-**Step 35 · I2 PAI LoRA 微调（进行中）**
+**Step 35 · I2 PAI LoRA 微调（延后 · 2026-07-06）**
+
+> PAI Model Gallery 平台问题，**暂停执行**；I2 脚本与数据集保留。现网规划使用 **百炼 `DOUXING_LLM_*`**（见 Step 36），无需等待自训 checkpoint。
 
 ```text
 数据：扩充 prompts-seed.jsonl（≥50 条）→ ml:generate-dataset → ml:validate-dataset -- --split
@@ -504,7 +506,9 @@ pnpm ml:upload-dataset -- --dry-run                              # 仅生成 man
 pnpm --filter @douxing/server i2:pai-lora-cases                  # I2 Step 35 本地验收
 pnpm --filter @douxing/server i2:pai-lora-cases -- --verify-oss   # 含 OSS 对象校验
 pnpm --filter @douxing/server i3:douxing-llm-cases                 # I3 Step 36 本地验收
-pnpm --filter @douxing/server i3:douxing-llm-cases -- --live       # 含真实 LLM 调用
+pnpm --filter @douxing/server i3:douxing-llm-cases -- --live       # 含真实百炼调用
+pnpm --filter @douxing/server c7-d:plan-agent-ab-cases              # Step 37 离线 wiring
+pnpm --filter @douxing/server c7-d:plan-agent-ab-cases -- --live    # deepseek vs douxing A/B
 pnpm --filter @douxing/server h10-a:trust-cases                    # Step 38 H10-a POI 信任链
 pnpm --filter @douxing/server h10-bc:trust-cases                   # Step 39 H10-b/c 路线视频
 pnpm --filter @douxing/server langfuse:smoke
@@ -581,9 +585,9 @@ pnpm dev
 
 ### 8.7 M6 完整闭环（Step 35～40 + 必做 H10）
 
-- [ ] I2/I3 + LoRA plan_agent（Step 35 PAI 待执行 · Step 36 基础设施已就绪）
-- [~] H10-a/b/c（Step 38/39 已交付 · Web 审核 UI 待补）
-- [ ] H10-d（Step 40）
+- [—] I2 PAI LoRA（Step 35 **延后** · PAI 平台问题 · 现网用百炼模型）
+- [x] I3 + C7-d plan_agent（Step 36/37 · `i3:douxing-llm-cases --live` · `c7-d:plan-agent-ab-cases --live`）
+- [x] H10-a/b/c/d（Step 38～40）
 
 ---
 
@@ -647,5 +651,6 @@ pnpm dev
 | 2026-06-18 | 4.2 | **Step 33 达成**：H7 `detect_missed_pois` · 遗漏分析 API/UI · regret 记忆 · 指针 → Step 34 |
 | 2026-06-18 | 4.3 | **Step 34 / M5 达成**：H3-d 打卡 exp · in_trip analyze · `h5:m5-accept` · 指针 → Step 35 |
 | 2026-06-22 | 4.4 | **Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest · PAI 微调待执行 |
+| 2026-07-06 | 4.7 | **M6 主链达成** · Step 35 PAI **延后**（现网百炼 `DOUXING_LLM_*`）· Step 36/37/40 验收 · `c7-d:plan-agent-ab-cases` |
 | 2026-07-06 | 4.6 | 关联 [AI流程编排路线图](./AI流程编排路线图.md) · §10 相关文档 |
 | 2026-07-03 | 4.5 | **Step 36 基础设施**：`douxing` LLM provider · `i3:douxing-llm-cases` · **Step 38/39 交付**：H10-a POI 信任链 · H10-b/c 路线视频 · 全站 API 日志 |
