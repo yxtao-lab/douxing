@@ -7,11 +7,13 @@ import {
   ROUTE_VIDEO_MAX_FILE_BYTES,
   RouteMediaScope,
   type RouteMediaInfo,
+  type RouteMediaPendingInfo,
   type RouteVideoBrief,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { routeMedia } from '../db/schema/route-media.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
+import { users } from '../db/schema/users.js';
 import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 import {
   deleteStoredRouteVideo,
@@ -316,21 +318,31 @@ export async function deleteRouteMedia(
 }
 
 /**
- * 列出待审核路线媒体（运营端）。
+ * 列出待审核路线媒体（运营端），附带路线名与上传者昵称。
  *
- * @param limit - 最大条数
- * @returns 待审列表
+ * @param limit - 最大条数（1～100）
+ * @returns 待审列表；无数据时为空数组
  */
-export async function listPendingRouteMedia(limit = 50): Promise<RouteMediaInfo[]> {
+export async function listPendingRouteMedia(limit = 50): Promise<RouteMediaPendingInfo[]> {
   const db = getDb();
   const safeLimit = Math.min(Math.max(limit, 1), 100);
   const rows = await db
-    .select()
+    .select({
+      media: routeMedia,
+      routeName: travelRoutes.name,
+      userNickname: users.nickname,
+    })
     .from(routeMedia)
+    .innerJoin(travelRoutes, eq(routeMedia.routeId, travelRoutes.id))
+    .innerJoin(users, eq(routeMedia.userId, users.id))
     .where(eq(routeMedia.status, CheckInStatus.PENDING))
     .orderBy(desc(routeMedia.createdAt))
     .limit(safeLimit);
-  return rows.map(toRouteMediaInfo);
+  return rows.map(({ media, routeName, userNickname }) => ({
+    ...toRouteMediaInfo(media),
+    routeName,
+    userNickname: userNickname?.trim() || '',
+  }));
 }
 
 /**

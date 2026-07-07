@@ -453,8 +453,9 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'checkins-map', menuName: '打卡地图', parentKey: 'biz', menuType: MenuType.MENU, path: '/checkins/map', perms: 'biz:checkins:map', icon: 'GlobalOutlined', sortOrder: 15 },
   { menuKey: 'content', menuName: '内容运营', menuType: MenuType.DIRECTORY, icon: 'AuditOutlined', sortOrder: 20 },
   { menuKey: 'attractions-pending', menuName: '景点审核', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/pending', perms: 'content:attractions:pending', icon: 'AuditOutlined', sortOrder: 21 },
-  { menuKey: 'attractions-manage', menuName: '景点封面', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/manage', perms: 'content:attractions:manage', icon: 'PictureOutlined', sortOrder: 22 },
-  { menuKey: 'playbooks', menuName: '玩法动线', parentKey: 'content', menuType: MenuType.MENU, path: '/playbooks/manage', perms: 'content:playbooks:list', icon: 'BookOutlined', sortOrder: 23 },
+  { menuKey: 'route-media-pending', menuName: '路线视频审核', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/media/pending', perms: 'content:attractions:pending', icon: 'VideoCameraOutlined', sortOrder: 22 },
+  { menuKey: 'attractions-manage', menuName: '景点封面', parentKey: 'content', menuType: MenuType.MENU, path: '/attractions/manage', perms: 'content:attractions:manage', icon: 'PictureOutlined', sortOrder: 23 },
+  { menuKey: 'playbooks', menuName: '玩法动线', parentKey: 'content', menuType: MenuType.MENU, path: '/playbooks/manage', perms: 'content:playbooks:list', icon: 'BookOutlined', sortOrder: 24 },
   { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
   { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
   { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
@@ -501,7 +502,7 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'login-log',
     'api-log',
   ],
-  [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'playbooks'],
+  [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'route-media-pending', 'playbooks'],
 };
 
 export async function listAdminUsersPaginated(

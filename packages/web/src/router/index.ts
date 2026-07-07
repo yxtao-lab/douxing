@@ -157,6 +157,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'attractions/media/pending',
+          name: 'route-media-pending',
+          component: () => import('@/views/RouteMediaPendingView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.routeMediaPending',
+            menuGroupKey: 'web.menu.content',
+            icon: 'VideoCameraOutlined',
+            perm: 'content:attractions:pending',
+          },
+        },
+        {
           path: 'attractions/manage',
           name: 'attractions-manage',
           component: () => import('@/views/AttractionsManageView.vue'),

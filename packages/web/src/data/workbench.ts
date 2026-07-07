@@ -120,6 +120,13 @@ export const WORKBENCH_QUICK_ACTIONS: WorkbenchQuickAction[] = [
     perm: 'content:attractions:pending',
   },
   {
+    id: 'routeMediaPending',
+    labelKey: 'web.routeMediaPending',
+    to: '/attractions/media/pending',
+    icon: 'attractions',
+    perm: 'content:attractions:pending',
+  },
+  {
     id: 'attractionsManage',
     labelKey: 'web.attractionsManage',
     to: '/attractions/manage',

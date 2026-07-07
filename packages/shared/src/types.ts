@@ -422,6 +422,12 @@ export interface RouteMediaInfo {
   createdAt: string;
 }
 
+/** H10-b：待审路线媒体（Web 运营端列表项） */
+export interface RouteMediaPendingInfo extends RouteMediaInfo {
+  routeName: string;
+  userNickname: string;
+}
+
 export interface RouteCommentInfo {
   id: number;
   routeId: number;

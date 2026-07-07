@@ -130,6 +130,7 @@ export const sharedEnUS = {
     checkins: 'Check-ins',
     checkinMap: 'Map',
     attractionsPending: 'Attraction Review',
+    routeMediaPending: 'Route Video Review',
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
     analytics: 'Analytics',

@@ -14,6 +14,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   'checkins-map': 'web.checkinMap',
   content: 'web.menu.content',
   'attractions-pending': 'web.attractionsPending',
+  'route-media-pending': 'web.routeMediaPending',
   'attractions-manage': 'web.attractionsManage',
   playbooks: 'web.playbooksManage',
   system: 'web.menu.system',

@@ -130,6 +130,7 @@ export const sharedZhCN = {
     checkins: '打卡',
     checkinMap: '打卡地图',
     attractionsPending: '景点审核',
+    routeMediaPending: '路线视频审核',
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
     analytics: '数据分析',

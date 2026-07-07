@@ -15,6 +15,7 @@ import { getCheckinConfigSummary } from './config/checkin.js';
 import { getRouteUnlockConfigSummary } from './config/route-unlock.js';
 import { getConfiguredPublicBase } from './utils/public-asset-url.util.js';
 import { syncPcSiteOfflineFlagFromDb, isMaintenanceMode } from './services/site-status.service.js';
+import { syncMissingMenusFromSeed } from './services/sys-admin.service.js';
 import { localeMiddleware } from './middleware/locale.js';
 import { optionalAuthMiddleware } from './middleware/auth.js';
 import { siteOfflineMiddleware } from './middleware/site-offline.middleware.js';
@@ -73,5 +74,10 @@ app.listen(port, () => {
     console.log(
       `[site-status] PC 静态站 ${offline ? '已下线' : '已上线'}（${process.env.STATIC_ROOT ?? 'static'}/.pc-site-offline）`,
     );
+  });
+  void syncMissingMenusFromSeed().then(() => {
+    console.log('[seed] sys_menu 缺失项已同步（如有新增菜单）');
+  }).catch((err) => {
+    console.error('[seed] syncMissingMenusFromSeed 失败:', err);
   });
 });
