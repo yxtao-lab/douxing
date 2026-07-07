@@ -5,6 +5,8 @@ export const API_LEGACY_MESSAGE_MAP: Record<string, ApiMessageKeyType> = {
   参数错误: ApiMessageKey.PARAM_ERROR,
   未登录: ApiMessageKey.UNAUTHORIZED,
   登录已过期: ApiMessageKey.TOKEN_EXPIRED,
+  登录状态无效: ApiMessageKey.REFRESH_TOKEN_INVALID,
+  登录已失效: ApiMessageKey.REFRESH_TOKEN_EXPIRED,
   服务配置错误: ApiMessageKey.SERVER_CONFIG_ERROR,
   需要管理员权限: ApiMessageKey.ADMIN_REQUIRED,
   用户不存在: ApiMessageKey.USER_NOT_FOUND,

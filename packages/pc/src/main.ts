@@ -15,8 +15,8 @@ async function bootstrap() {
   app.use(i18n);
   app.use(router);
 
-  await bootstrapSession();
   setupHttpAuthHandlers(router);
+  await bootstrapSession();
   initAnalytics();
   trackAnalytics(AnalyticsEventName.APP_LAUNCH);
   app.mount('#app');

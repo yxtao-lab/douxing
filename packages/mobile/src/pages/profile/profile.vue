@@ -93,6 +93,8 @@ import {
 import MemberLevelIcon from '@/components/member-level-icon/MemberLevelIcon.vue';
 import { fetchCurrentUser } from '@/api/user';
 import { getStoredUser, setAuth } from '@/utils/request';
+import { clearAuth } from '@/utils/auth-storage';
+import { logoutRemote } from '@/utils/auth-refresh';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import { useLocale } from '@/i18n/useLocale';
@@ -268,11 +270,12 @@ function goOrders() {
 }
 
 function handleLogout() {
-  uni.removeStorageSync('douxing_token');
-  uni.removeStorageSync('douxing_user');
-  user.value = null;
-  uni.showToast({ title: t('common.logoutDone'), icon: 'none' });
-  void syncPageLayout();
+  void logoutRemote().finally(() => {
+    clearAuth();
+    user.value = null;
+    uni.showToast({ title: t('common.logoutDone'), icon: 'none' });
+    void syncPageLayout();
+  });
 }
 
 function syncPageLayout() {

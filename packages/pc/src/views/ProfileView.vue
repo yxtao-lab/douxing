@@ -117,6 +117,7 @@ import {
   getPlanCandidateCountByMemberLevel,
 } from '@douxing/shared';
 import { fetchUserProfile } from '@/api/user';
+import { logoutSession } from '@/api/auth';
 import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';
 
@@ -165,8 +166,10 @@ function handleGridTap(item: (typeof gridItems.value)[number]) {
   router.push(item.to);
 }
 
-function handleLogout() {
+async function handleLogout() {
+  await logoutSession(userStore.refreshToken);
   userStore.logout();
+  user.value = null;
   router.push({ name: 'home' });
 }
 

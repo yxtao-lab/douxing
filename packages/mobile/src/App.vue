@@ -4,8 +4,12 @@ import { APP_NAME, AnalyticsEventName } from '@douxing/shared';
 import { initAppTheme } from '@/i18n/useTheme';
 import { guardSiteOnlineRoute } from '@/utils/site-status-guard';
 import { initAnalytics, trackAnalytics } from '@/utils/analytics';
+import { setUnauthorizedHandler } from '@/utils/request';
 
 onLaunch(async () => {
+  setUnauthorizedHandler(() => {
+    uni.reLaunch({ url: '/pages/login/login' });
+  });
   initAppTheme();
   initAnalytics();
   trackAnalytics(AnalyticsEventName.APP_LAUNCH);

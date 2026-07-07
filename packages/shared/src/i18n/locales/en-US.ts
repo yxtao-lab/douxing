@@ -210,6 +210,8 @@ export const sharedEnUS = {
       'auth.register': 'Register account',
       'auth.smsSend': 'Send SMS verification code',
       'auth.smsLogin': 'Sign in with SMS code',
+      'auth.refresh': 'Refresh access token',
+      'auth.logout': 'Sign out',
       'auth.me': 'Get current user profile',
       'status.get': 'Get site availability status',
       'health.get': 'Service health check',

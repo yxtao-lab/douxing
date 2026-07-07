@@ -58,6 +58,7 @@ import { RouterLink, useRoute, useRouter } from 'vue-router';
 import AppLogo from '@/components/AppLogo.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';
+import { logoutSession } from '@/api/auth';
 import type { LocaleCode } from '@douxing/shared';
 
 const navItems = [
@@ -79,7 +80,8 @@ function onLocaleChange(event: Event) {
   setLocale(value as LocaleCode);
 }
 
-function handleLogout() {
+async function handleLogout() {
+  await logoutSession(userStore.refreshToken);
   userStore.logout();
   router.push({ name: 'home' });
 }

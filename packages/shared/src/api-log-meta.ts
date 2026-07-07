@@ -21,6 +21,8 @@ const API_LOG_ROUTE_RULES: readonly ApiLogRouteRule[] = [
   { methods: ['POST'], path: '/api/auth/register', moduleKey: 'auth', descKey: 'auth.register' },
   { methods: ['POST'], path: '/api/auth/sms/send', moduleKey: 'auth', descKey: 'auth.smsSend' },
   { methods: ['POST'], path: '/api/auth/sms/login', moduleKey: 'auth', descKey: 'auth.smsLogin' },
+  { methods: ['POST'], path: '/api/auth/refresh', moduleKey: 'auth', descKey: 'auth.refresh' },
+  { methods: ['POST'], path: '/api/auth/logout', moduleKey: 'auth', descKey: 'auth.logout' },
   { methods: ['GET'], path: '/api/auth/me', moduleKey: 'auth', descKey: 'auth.me' },
   // 站点状态
   { methods: ['GET'], path: '/api/status', moduleKey: 'status', descKey: 'status.get' },

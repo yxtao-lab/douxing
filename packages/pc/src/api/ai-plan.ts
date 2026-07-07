@@ -8,6 +8,7 @@ import type {
 } from '@douxing/shared';
 import {
   applyPlanSessionToolCallStep,
+  AUTH_TOKEN_KEY,
   DEFAULT_LOCALE,
   LOCALE_STORAGE_KEY,
   mapAgentToolTraceToSteps,
@@ -46,7 +47,7 @@ function getApiBaseUrl(): string {
 
 function getStoredToken(): string {
   try {
-    return localStorage.getItem('douxing_token') ?? '';
+    return localStorage.getItem(AUTH_TOKEN_KEY) ?? '';
   } catch {
     return '';
   }

@@ -1,10 +1,23 @@
 import type { Router } from 'vue-router';
-import { fetchCurrentUser } from '@/api/auth';
-import { setUnauthorizedHandler } from '@/api/http';
+import { AUTH_TOKEN_KEY } from '@douxing/shared';
+import { fetchCurrentUser, tryRefreshSession } from '@/api/auth';
+import { setUnauthorizedHandler, setTokensRefreshedHandler } from '@/api/http';
 import { isStaffUser } from '@/composables/usePermissions';
 import { useLayoutStore } from '@/stores/layout';
 import { useMenuStore } from '@/stores/menu';
 import { useUserStore } from '@/stores/user';
+
+let bootstrapPromise: Promise<void> | null = null;
+let authBootstrapping = false;
+
+/**
+ * 是否处于应用启动时的会话恢复阶段（此阶段勿触发 router 跳转，避免导航被 abort）。
+ *
+ * @returns 正在 bootstrap 时为 `true`
+ */
+export function isAuthBootstrapping(): boolean {
+  return authBootstrapping;
+}
 
 /**
  * 校验员工身份并加载侧栏菜单；认证/权限失败时清会话。
@@ -36,7 +49,7 @@ async function finalizeStaffSession(): Promise<boolean> {
  *
  * @returns 无返回值；失败时会清本地凭证并将 `sessionStatus` 置为 `unauthenticated`
  */
-export async function bootstrapSession(): Promise<void> {
+async function bootstrapSession(): Promise<void> {
   const userStore = useUserStore();
   const menuStore = useMenuStore();
 
@@ -48,8 +61,17 @@ export async function bootstrapSession(): Promise<void> {
   }
 
   try {
-    const user = await fetchCurrentUser();
-    userStore.setAuth(userStore.token, user);
+    let user;
+    try {
+      user = await fetchCurrentUser();
+    } catch {
+      const newToken = await tryRefreshSession();
+      if (!newToken) throw new Error('session expired');
+      user = await fetchCurrentUser();
+    }
+
+    const accessToken = localStorage.getItem(AUTH_TOKEN_KEY) ?? userStore.token!;
+    userStore.setAuth(accessToken, user);
 
     const ok = await finalizeStaffSession();
     userStore.setSessionStatus(ok ? 'authenticated' : 'unauthenticated');
@@ -58,6 +80,21 @@ export async function bootstrapSession(): Promise<void> {
     menuStore.clearNavTree();
     userStore.setSessionStatus('unauthenticated');
   }
+}
+
+/**
+ * 单例执行 bootstrap；路由守卫与 main 均可 await，避免重复请求 /me。
+ *
+ * @returns bootstrap 完成后的 Promise
+ */
+export function ensureSessionBootstrapped(): Promise<void> {
+  if (!bootstrapPromise) {
+    authBootstrapping = true;
+    bootstrapPromise = bootstrapSession().finally(() => {
+      authBootstrapping = false;
+    });
+  }
+  return bootstrapPromise;
 }
 
 /**
@@ -86,7 +123,17 @@ export async function establishSessionAfterLogin(): Promise<boolean> {
  * @param router - Vue Router 实例
  */
 export function setupHttpAuthHandlers(router: Router): void {
+  const userStore = useUserStore();
+
+  setTokensRefreshedHandler((accessToken, refreshToken) => {
+    userStore.updateTokens(accessToken, refreshToken);
+  });
+
   setUnauthorizedHandler(() => {
+    if (isAuthBootstrapping()) {
+      return;
+    }
+
     const userStore = useUserStore();
     const layoutStore = useLayoutStore();
     const menuStore = useMenuStore();

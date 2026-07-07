@@ -154,7 +154,7 @@ async function handleSmsSubmit() {
       return;
     }
     const result = await smsLogin(smsForm.phone, smsForm.code);
-    userStore.setAuth(result.token, result.user);
+    userStore.setAuth(result.token, result.user, result.refreshToken);
     const sessionOk = await establishSessionAfterLogin();
     if (!sessionOk) {
       error.value = t('login.notStaff');
@@ -176,7 +176,7 @@ async function handlePasswordSubmit() {
     const result = isRegister.value
       ? await register(form.username, form.password)
       : await login(form.username, form.password);
-    userStore.setAuth(result.token, result.user);
+    userStore.setAuth(result.token, result.user, result.refreshToken);
     const sessionOk = await establishSessionAfterLogin();
     if (!sessionOk) {
       error.value = t('login.notStaff');

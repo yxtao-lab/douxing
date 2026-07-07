@@ -143,7 +143,7 @@ async function handlePasswordSubmit() {
     const result = isRegister.value
       ? await register(form.username, form.password)
       : await login(form.username, form.password);
-    userStore.setAuth(result.token, result.user);
+    userStore.setAuth(result.token, result.user, result.refreshToken);
     redirectAfterLogin();
   } catch (err) {
     error.value = getAppErrorMessage(err, t('login.loginFailed'));
@@ -190,7 +190,7 @@ async function handleSmsSubmit() {
   loading.value = true;
   try {
     const result = await smsLogin(smsForm.phone, smsForm.code);
-    userStore.setAuth(result.token, result.user);
+    userStore.setAuth(result.token, result.user, result.refreshToken);
     redirectAfterLogin();
   } catch (err) {
     error.value = getAppErrorMessage(err, t('login.loginFailed'));

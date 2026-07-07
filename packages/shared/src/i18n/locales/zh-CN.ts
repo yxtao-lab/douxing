@@ -210,6 +210,8 @@ export const sharedZhCN = {
       'auth.register': '用户注册',
       'auth.smsSend': '发送短信验证码',
       'auth.smsLogin': '短信验证码登录',
+      'auth.refresh': '刷新 Access Token',
+      'auth.logout': '退出登录',
       'auth.me': '获取当前登录用户信息',
       'status.get': '查询站点可用状态',
       'health.get': '服务健康检查',

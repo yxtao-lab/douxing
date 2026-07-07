@@ -1,4 +1,5 @@
 import type { PosterPayload } from './types';
+import { AUTH_TOKEN_KEY } from '@douxing/shared';
 
 export type PosterImageMap = Map<string, CanvasImageSource>;
 
@@ -62,7 +63,7 @@ export async function loadPosterWxacode(
   imageMap: PosterImageMap,
 ): Promise<void> {
   try {
-    const token = localStorage.getItem('douxing_token');
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
     const res = await fetch(`${API_BASE}/share/routes/${routeId}/wxacode`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });

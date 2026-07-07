@@ -32,8 +32,20 @@ export interface UpdateUserProfileRequest {
 }
 
 export interface LoginResult {
+  /** Access Token（JWT，短效） */
   token: string;
+  /** Refresh Token（opaque，长效，用于无感续期） */
+  refreshToken: string;
+  /** Access Token 有效期（秒） */
+  expiresIn: number;
   user: UserInfo;
+}
+
+/** POST /auth/refresh 成功响应 */
+export interface RefreshTokenResult {
+  token: string;
+  refreshToken: string;
+  expiresIn: number;
 }
 
 /** 路线日程中的 POI 节点（含景点、具体餐厅/酒店；笼统「午餐」等不入库） */

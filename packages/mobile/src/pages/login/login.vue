@@ -244,7 +244,7 @@ async function handleSmsLogin() {
       method: 'POST',
       data: { phone: phone.value, code: smsCode.value },
     });
-    setAuth(data.token, data.user);
+    setAuth(data.token, data.user, data.refreshToken);
     uni.showToast({ title: t('login.loginSuccess'), icon: 'success' });
     setTimeout(() => {
       uni.reLaunch({ url: '/pages/index/index' });
@@ -265,7 +265,7 @@ async function handlePasswordSubmit() {
       method: 'POST',
       data: { username: username.value, password: password.value },
     });
-    setAuth(data.token, data.user);
+    setAuth(data.token, data.user, data.refreshToken);
     uni.showToast({
       title: isRegister.value ? t('login.registerSuccess') : t('login.loginSuccess'),
       icon: 'success',

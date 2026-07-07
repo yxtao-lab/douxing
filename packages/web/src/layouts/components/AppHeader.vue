@@ -54,6 +54,7 @@ import { useLocale } from '@/i18n/useLocale';
 import { useLayoutStore } from '@/stores/layout';
 import { useMenuStore } from '@/stores/menu';
 import { useUserStore } from '@/stores/user';
+import { logoutSession } from '@/api/auth';
 
 const router = useRouter();
 const layoutStore = useLayoutStore();
@@ -78,7 +79,8 @@ function onLocaleChange(value: unknown) {
   }
 }
 
-function handleLogout() {
+async function handleLogout() {
+  await logoutSession(userStore.refreshToken);
   userStore.logout();
   menuStore.clearNavTree();
   layoutStore.clearViews();

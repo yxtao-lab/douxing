@@ -3,6 +3,7 @@ import { i18n } from '@/i18n';
 import { useLayoutStore } from '@/stores/layout';
 import { useUserStore } from '@/stores/user';
 import { usePermissions } from '@/composables/usePermissions';
+import { ensureSessionBootstrapped } from '@/utils/session';
 import BasicLayout from '@/layouts/BasicLayout.vue';
 import UserLayout from '@/layouts/UserLayout.vue';
 
@@ -413,12 +414,12 @@ const router = createRouter({
   ],
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const userStore = useUserStore();
   const { hasPerm, isStaff } = usePermissions();
 
-  if (userStore.sessionStatus === 'checking') {
-    return false;
+  if (userStore.sessionStatus === 'idle' || userStore.sessionStatus === 'checking') {
+    await ensureSessionBootstrapped();
   }
 
   if (to.meta.requiresAuth) {

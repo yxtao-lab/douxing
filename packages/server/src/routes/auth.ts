@@ -13,12 +13,18 @@ import {
 } from '../services/user.service.js';
 import { sendSmsCode, verifySmsCode } from '../services/sms.service.js';
 import { ApiMessageKey, RoleCode, UserStatus, UserType } from '@douxing/shared';
-import type { LoginResult } from '@douxing/shared';
+import type { LoginResult, RefreshTokenResult } from '@douxing/shared';
 import { success, fail, failFromError } from '../utils/response.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { recordFailedLoginAttempt } from '../middleware/login-rate-limit.middleware.js';
 import { getClientIp, parseUserAgent, recordLoginLog } from '../services/sys-log.service.js';
 import { touchOnlineSession } from '../services/online-session.service.js';
+import {
+  getAccessTokenExpiresInSeconds,
+  issueRefreshToken,
+  revokeRefreshToken,
+  rotateRefreshToken,
+} from '../services/refresh-token.service.js';
 
 const router = Router();
 
@@ -42,17 +48,51 @@ const smsLoginSchema = z.object({
   code: z.string().length(6, ApiMessageKey.INVALID_SMS_CODE_LENGTH),
 });
 
-function signToken(userId: number, username: string): string {
+const refreshSchema = z.object({
+  refreshToken: z.string().min(1),
+});
+
+const logoutSchema = z.object({
+  refreshToken: z.string().min(1).optional(),
+});
+
+/**
+ * 签发 Access Token（JWT）。
+ *
+ * @param userId - 用户 ID
+ * @param username - 用户名
+ * @returns JWT 字符串
+ */
+function signAccessToken(userId: number, username: string): string {
   const secret = process.env.JWT_SECRET!;
+  const expiresInSeconds = getAccessTokenExpiresInSeconds();
   const signOptions: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'],
+    expiresIn: expiresInSeconds,
   };
   return jwt.sign({ userId, username }, secret, signOptions);
 }
 
-async function buildLoginResult(userId: number, req?: import('express').Request): Promise<LoginResult | null> {
+/**
+ * 组装登录/注册成功响应（双 token + 用户信息）。
+ *
+ * @param userId - 用户 ID
+ * @param req - 可选 Express 请求，用于在线会话与 refresh 元数据
+ * @returns 登录结果；用户不存在时为 `null`
+ */
+async function buildLoginResult(
+  userId: number,
+  req?: import('express').Request,
+): Promise<LoginResult | null> {
   const userInfo = await getUserWithRoles(userId);
   if (!userInfo) return null;
+
+  const ua = req?.headers['user-agent'];
+  const ip = req ? getClientIp(req) : undefined;
+  const refreshToken = await issueRefreshToken(userId, {
+    userAgent: typeof ua === 'string' ? ua : undefined,
+    ip,
+  });
+
   if (req) {
     touchOnlineSession({
       userId,
@@ -62,7 +102,13 @@ async function buildLoginResult(userId: number, req?: import('express').Request)
       isLogin: true,
     });
   }
-  return { token: signToken(userId, userInfo.username), user: userInfo };
+
+  return {
+    token: signAccessToken(userId, userInfo.username),
+    refreshToken,
+    expiresIn: getAccessTokenExpiresInSeconds(),
+    user: userInfo,
+  };
 }
 
 async function assignDefaultRole(userId: number) {
@@ -239,6 +285,55 @@ router.post('/login', async (req, res) => {
   });
 
   success(res, loginResult, ApiMessageKey.LOGIN_SUCCESS);
+});
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const parsed = refreshSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+
+    const rotated = await rotateRefreshToken(parsed.data.refreshToken);
+    if (!rotated) {
+      return fail(res, ApiMessageKey.REFRESH_TOKEN_INVALID, 401, 401);
+    }
+
+    const userInfo = await getUserWithRoles(rotated.userId);
+    if (!userInfo || userInfo.status !== UserStatus.ACTIVE) {
+      await revokeRefreshToken(rotated.newRawToken);
+      return fail(res, ApiMessageKey.REFRESH_TOKEN_EXPIRED, 401, 401);
+    }
+
+    const payload: RefreshTokenResult = {
+      token: signAccessToken(rotated.userId, userInfo.username),
+      refreshToken: rotated.newRawToken,
+      expiresIn: getAccessTokenExpiresInSeconds(),
+    };
+
+    success(res, payload, ApiMessageKey.OK);
+  } catch (err) {
+    console.error('[auth/refresh]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+router.post('/logout', async (req, res) => {
+  try {
+    const parsed = logoutSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
+
+    if (parsed.data.refreshToken) {
+      await revokeRefreshToken(parsed.data.refreshToken);
+    }
+
+    success(res, null, ApiMessageKey.LOGOUT_SUCCESS);
+  } catch (err) {
+    console.error('[auth/logout]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
