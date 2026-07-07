@@ -365,7 +365,9 @@ curl -I https://web.yxtao.site/
 | `WEBHOOK_DEPLOY_MODE` | `auto` / `full` | `auto` |
 | `WEBHOOK_DEPLOY_ALLOW` | 允许自动发的 target | `server,pc,web` |
 | `DATABASE_URL` | MySQL 连接 | `mysql://...@127.0.0.1:3307/douxing` |
-| `JWT_SECRET` | 鉴权 | 必填 |
+| `JWT_SECRET` | 鉴权签名 | 必填 |
+| `JWT_ACCESS_EXPIRES_IN` | Access Token 有效期 | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh Token 有效期 | `30d` |
 
 完整模板：`deploy/env.production.example`
 

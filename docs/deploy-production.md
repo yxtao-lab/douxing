@@ -157,6 +157,8 @@ MYSQL_PASSWORD=强密码
 DATABASE_URL=mysql://douxing:同上密码@127.0.0.1:3307/douxing
 
 JWT_SECRET=至少32位随机字符串
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=30d
 
 LLM_DEFAULT_PROVIDER=deepseek
 DEEPSEEK_API_KEY=sk-xxx
@@ -650,7 +652,7 @@ git checkout -- pnpm-lock.yaml && git pull && pnpm install
 
 ## 12. 安全清单
 
-- [ ] 强密码：`JWT_SECRET`、`MYSQL_*`
+- [ ] 强密码：`JWT_SECRET`、`MYSQL_*`；已配置 `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN`；已执行 `db:migrate`（`refresh_tokens`）
 - [ ] 关闭 `SMS_DEV_EXPOSE_CODE`
 - [ ] SSH 密钥登录（可选）
 - [ ] 定期 `sudo apt update && sudo apt upgrade -y`

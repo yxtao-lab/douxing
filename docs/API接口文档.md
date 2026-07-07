@@ -1,7 +1,7 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
-> **更新日期**：2026-07-03  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
+> **更新日期**：2026-07-07  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — W2 起新增管理端诊断/费用 API（见该文档 W0-5、W2-4、W2-6）  
 > **服务包**：`packages/server`（Express + MySQL）  
@@ -24,14 +24,18 @@
 3. 格式选 **OpenAPI** / **Swagger**  
 4. 选择本仓库 `docs/openapi.yaml`（或拖入文件）  
 5. 导入后检查 **环境变量**：将 `servers` 中的 `http://localhost:3000` 设为当前环境  
-6. 在 **Auth / 鉴权** 中配置：`Bearer Token`，值来自 `POST /api/auth/login` 返回的 `data.token`
+6. 在 **Auth / 鉴权** 中配置：`Bearer Token`，值来自 `POST /api/auth/login` 返回的 `data.token`（Access Token）  
+7. 可选：环境变量 `refreshToken` 存 `data.refreshToken`，用于手动调 `POST /api/auth/refresh`；日常业务由客户端拦截器自动 refresh
+
+> 双 Token 机制详见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)
 
 **Apifox 环境建议**
 
 | 变量名 | 示例值 | 用途 |
 |--------|--------|------|
 | `baseUrl` | `http://localhost:3000` | 与 OpenAPI `servers.url` 一致 |
-| `token` | `eyJhbG...` | 登录后 JWT，用于 `Authorization: Bearer {{token}}` |
+| `token` | `eyJhbG...` | Access Token（JWT），用于 `Authorization: Bearer {{token}}` |
+| `refreshToken` | `xYz...` | Refresh Token，用于 `POST /api/auth/refresh`（Apifox 手动续期时可配） |
 
 > 修改 `packages/server/src/routes/**` 后，请同步更新 `docs/openapi.yaml`，再于 Apifox 中 **重新导入** 或 **合并更新**。
 
@@ -80,7 +84,7 @@
 
 | Header | 说明 |
 |--------|------|
-| `Authorization` | 需登录接口：`Bearer <JWT>` |
+| `Authorization` | 需登录接口：`Bearer <Access Token JWT>` |
 | `Content-Type` | JSON 体：`application/json`；上传：`multipart/form-data` |
 | `Accept-Language` | 可选，`zh-CN`（默认）或 `en-US`；影响 `message` 文案 |
 
@@ -125,8 +129,8 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 标记 | 含义 |
 |------|------|
 | 公开 | 无需 Token |
-| 登录 | 需有效 JWT |
-| 管理员 | 需 JWT 且角色含 `admin` |
+| 登录 | 需有效 Access Token（JWT） |
+| 管理员 | 需 Access Token 且角色含 `admin` |
 
 ### 1.6 静态资源 URL
 
@@ -145,8 +149,10 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 4 | POST | `/api/auth/login` | 公开 | 认证 |
 | 5 | POST | `/api/auth/sms/send` | 公开 | 认证 |
 | 6 | POST | `/api/auth/sms/login` | 公开 | 认证 |
-| 7 | GET | `/api/auth/me` | 登录 | 认证 |
-| 8 | GET | `/api/users/me` | 登录 | 用户 |
+| 7 | POST | `/api/auth/refresh` | 公开 | 认证 |
+| 8 | POST | `/api/auth/logout` | 公开 | 认证 |
+| 9 | GET | `/api/auth/me` | 登录 | 认证 |
+| 10 | GET | `/api/users/me` | 登录 | 用户 |
 | 9 | PUT | `/api/users/me` | 登录 | 用户 |
 | 10 | GET | `/api/users/me/membership` | 登录 | 用户 |
 | 11 | GET | `/api/users/me/storage` | 登录 | 用户 |
@@ -275,6 +281,8 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 
 前缀：`/api/auth`
 
+> 双 Token 流程、客户端拦截与验收见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
+
 ### POST `/register`
 
 用户名密码注册。
@@ -287,7 +295,7 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | `password` | string | 是 | 6～64 字符 |
 | `nickname` | string | 否 | 昵称 |
 
-**响应 `data`**：`LoginResult` — `{ token, user: UserInfo }`
+**响应 `data`**：`LoginResult`（见下）
 
 ### POST `/login`
 
@@ -311,11 +319,54 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 
 **响应 `data`**：`LoginResult`
 
+### POST `/refresh`
+
+使用 Refresh Token 换取新的 Access Token 与 Refresh Token（**轮换**：旧 refresh 立即吊销）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `refreshToken` | string | 是 | 登录时下发的 refresh 明文 |
+
+**响应 `data`**：`RefreshTokenResult` — `{ token, refreshToken, expiresIn }`
+
+**错误**：无效/已吊销 → `401` + `api.refreshTokenInvalid`；用户禁用 → `401` + `api.refreshTokenExpired`
+
+### POST `/logout`
+
+吊销 Refresh Token（Access Token 仍自然过期，客户端须清本地凭证）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `refreshToken` | string | 否 | 有则服务端吊销；无则仅返回成功 |
+
+**响应 `data`**：`null`，`messageKey`: `api.logoutSuccess`
+
 ### GET `/me`
 
 当前登录用户（含角色）。
 
 **响应 `data`**：`UserInfo`
+
+#### LoginResult / RefreshTokenResult
+
+```typescript
+interface LoginResult {
+  token: string;        // Access Token（JWT）
+  refreshToken: string;
+  expiresIn: number;    // Access 有效期（秒）
+  user: UserInfo;
+}
+
+interface RefreshTokenResult {
+  token: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+```
 
 ---
 
@@ -1301,6 +1352,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-07 | **双 Token**：§4 增 `POST /refresh` · `POST /logout`；`LoginResult` 增 `refreshToken` · `expiresIn`；总览认证项 +2（见 §2）；专题 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
 | 2026-07-03 | **H10 + I3**：路线评论 dayIndex/attractionId · `route_media` CRUD · 视频审核 API · llm-status 增 douxing 字段；总览 **106** 接口 |
 | 2026-07-01 | **DT5**：§19 增 `GET /geo/distribution` · `GET /geo/flows`；`AnalyticsGeoDistribution` 含 `scopeDays` / `effectiveScope`；总览 **101** 接口 |
 | 2026-06-26 | **DT2/DT3**：§19 增 `GET /funnel` · `POST /events/batch`；埋点写入改为登录可选；总览 **99** 接口 |

@@ -163,7 +163,7 @@ packages/server/src/
 │   ├── env.ts               # dotenv 加载（override: true）
 │   ├── *.ts                 # 按领域拆分配置（payment, oss, amap…）
 ├── middleware/
-│   ├── auth.ts              # JWT Bearer → req.auth
+│   ├── auth.ts              # Access JWT Bearer → req.auth；过期 401 + api.tokenExpired
 │   └── locale.ts            # Accept-Language → res.locals.locale
 ├── routes/
 │   ├── index.ts             # Router 聚合，前缀 ${API_PREFIX}
@@ -295,7 +295,7 @@ packages/mobile/src/
 
 | 文件 | 读取方 | 内容 |
 |------|--------|------|
-| `.env` | server、deploy 脚本 | 数据库、JWT、第三方密钥、SERVER_PORT（**禁止 VITE_***） |
+| `.env` | server、deploy 脚本 | 数据库、JWT（`JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN`）、第三方密钥、SERVER_PORT（**禁止 VITE_***） |
 | `.env.local` | Vite / UniApp dev（gitignore） | 本机 dev API、微信 CLI |
 | `.env.development` | Vite / UniApp dev | dev 共享项（如 `VITE_H5_BASE_URL`） |
 | `.env.staging` | staging 构建 | 测试 API 域名 |

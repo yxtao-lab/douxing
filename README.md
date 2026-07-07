@@ -299,7 +299,7 @@ pnpm bootstrap:dev    # 初始化 + 启动全部开发服务
 
 | 模块 | 功能 | 说明 |
 |------|------|------|
-| 用户 | 注册 / 登录 | `POST /api/auth/register`、`/api/auth/login` |
+| 用户 | 注册 / 登录 / **无感续期** | 双 Token（Access 15m + Refresh 30d）；`POST /api/auth/*`、`/api/auth/refresh`；详见 [docs/双Token认证与无感刷新.md](docs/双Token认证与无感刷新.md) |
 | AI 规划 | 一句话生成路线 | **DeepSeek 云端** / **LM Studio 本地** 可选，`POST /api/routes/generate` |
 | 路线 | 列表 / 详情 / 发布 / 解锁 | 解锁需模拟支付；**POI 信任链**（说明+评论筛选+UGC 视频 · H10-a/b/c） |
 | 景点库 | 城市景点基础数据 | `GET /api/attractions`；AI 生成路线自动同步（pending + 合并）；管理员审核 |
@@ -407,8 +407,10 @@ LLM_MODEL=你的模型名称
 ## API 示例
 
 - `GET /api/health` — 健康检查
-- `POST /api/auth/login` — 登录
-- `GET /api/auth/me` — 当前用户（需 Bearer Token）
+- `POST /api/auth/login` — 登录（返回 `token` + `refreshToken` + `expiresIn`）
+- `POST /api/auth/refresh` — 刷新 Access Token
+- `POST /api/auth/logout` — 登出（吊销 Refresh Token）
+- `GET /api/auth/me` — 当前用户（需 Bearer Access Token）
 
 ## 构建产物目录
 

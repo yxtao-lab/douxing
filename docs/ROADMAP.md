@@ -108,6 +108,7 @@ gantt
 | v0.3.0 | 2026-05-20 | 工程 | 单平台 dev/build、原生 App 一键部署脚本 |
 | v0.3.1 | 2026-05-20 | 移动端 | iconfont TabBar；修复 H5 底部栏与高亮同步 |
 | v0.3.2 | 2026-05-20 | 认证 | 手机验证码登录/注册；腾讯云短信；密码/验证码双模式登录页 |
+| v1.1.0 | 2026-07-07 | 认证 | **双 Token 无感刷新**：Access 15m + Refresh 30d · `/auth/refresh` · `/auth/logout` · 三端拦截器；见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
 | v0.4.0 | 2026-05-20 | 内容库 | `attractions` 表、28 条种子、景点 API、路线关联 `attractionId` |
 | v0.4.1 | 2026-05-21 | 路线互动 | 点赞/收藏、热门列表、草稿编辑、浏览量统计 |
 | v0.4.5 | 2026-05-22 | 排行榜 | 周榜/月榜、打卡数/积分排行、移动端排行榜页 |
@@ -306,7 +307,7 @@ gantt
 | 能力 | 完成日 | 说明 |
 |------|--------|------|
 | 工程脚手架 | 2026-05-19 | pnpm Monorepo、Web / UniApp / Express、MySQL + Drizzle |
-| 用户认证 | 2026-05-20 | 注册、登录、JWT、`/auth/me`、RBAC；**手机验证码登录/注册**（`/auth/sms/send`、`/auth/sms/login`）；密码/验证码双模式登录页（Web + 移动端） |
+| 用户认证 | 2026-07-07 | 注册、登录、**双 Token 无感 refresh**、JWT、`/auth/me`、RBAC；手机验证码登录；详见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
 | AI 路线生成 | 2026-05-22 | **DeepSeek** / **LM Studio** / `auto` 模板降级；**多轮对话**；**意图解析**；**RAG 内容库检索** |
 | 路线管理 | 2026-06-01 | 生成、列表、详情、发布；解锁可选；**详情页地图预览**（服务端 polyline，打卡点**常驻名称气泡**）+ **行程流程图**；规划对话区仅消息与候选卡片；草稿 **hero 编辑弹窗**；**手帐分享海报**（双模板、动态画布、多天多图）+ **H5 只读分享页** |
 | 景点封面 | 2026-06-01 | Phase 0 运营上传；**Phase 1** 高德 POI 自动拉图（本地盘、覆盖式存储）；路线/手帐/行程路径展示；CLI `pnpm enrich:attraction-images` |
@@ -334,6 +335,8 @@ POST /api/auth/register
 POST /api/auth/login
 POST /api/auth/sms/send
 POST /api/auth/sms/login
+POST /api/auth/refresh
+POST /api/auth/logout
 GET  /api/auth/me
 GET  /api/users/me
 PUT  /api/users/me
@@ -440,7 +443,7 @@ POST /api/analytics/events
 | §5.7 | 数字商品 | — | 手绘地图、藏品等 |
 | §6 · §17.5 | AR/VR · 数字孪生 | 2D 地图与路线动画（§4.3） | **F0～F6**：3D 路线预览、全景、glTF、足迹孪生、AR 导航；见 [数字孪生与三维建模.md](./数字孪生与三维建模.md) |
 | §7 | 数据存储 | MySQL | Redis、ES、Milvus、Neo4j、OSS |
-| §8 | 安全合规 | JWT、RBAC；短信验证码登录 | 脱敏、审计、OAuth、等保；**实名身份认证**（H6）；验证码 Redis 持久化（G1） |
+| §8 | 安全合规 | **双 Token**（Access 15m + Refresh 30d）、RBAC；短信验证码登录 | 脱敏、审计、OAuth、等保；**实名身份认证**（H6）；验证码 Redis 持久化（G1） |
 | §9 | 部署运维 | Docker MySQL+Redis、PM2、Nginx HTTPS、deploy-server、Debian 12 指南 | K8s、Prometheus、ELK |
 | §11 | 测试 | — | 单元 / 集成 / E2E、压测 |
 | §12 | 接口规范 | REST + **`Accept-Language` / `messageKey`**（G9 已落地，高频业务错误已 `ApiError`） | WebSocket、完整 v1 清单、配置类内部错误 i18n |
@@ -802,7 +805,7 @@ generateRoute 管道
 ### 阶段 P：PC 用户端（C 端桌面网页，2026-06-08 录入）
 
 > **定位**：面向 **普通用户** 的桌面浏览器产品（非 `packages/web` 管理端）。**与 Web 管理端分工**见 [PC双平台分工.md](./PC双平台分工.md)。  
-> **技术栈**：Vue 3 + Vite + Tailwind CSS + Pinia + vue-i18n；复用 `@douxing/shared` 类型与 API 契约；与移动端 **共用 JWT**（`douxing_token`）。  
+> **技术栈**：Vue 3 + Vite + Tailwind CSS + Pinia + vue-i18n；复用 `@douxing/shared` 类型与 API 契约；与移动端 **共用双 Token**（`douxing_token` · `douxing_refresh_token`），见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。  
 > **与 H5 关系**：UniApp H5（`:5174`）偏移动视口；PC 端独立包（`:5176`）做大屏布局，功能对齐移动端主 Tab，不强行做 H5 响应式。
 
 | 步 | 状态 | 计划完成 | 名称 | 依赖 | 交付内容 | 验收标准 |

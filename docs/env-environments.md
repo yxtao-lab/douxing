@@ -100,6 +100,21 @@ pnpm build:web
 
 ---
 
+## 6.1 JWT 与双 Token（鉴权）
+
+| 变量 | 说明 | 建议值 |
+|------|------|--------|
+| `JWT_SECRET` | 签名密钥 | 生产 ≥32 位随机字符串 |
+| `JWT_ACCESS_EXPIRES_IN` | Access Token（JWT）有效期 | `15m` |
+| `JWT_REFRESH_EXPIRES_IN` | Refresh Token 有效期 | `30d` |
+| `JWT_EXPIRES_IN` | **兼容**：未设 `JWT_ACCESS_EXPIRES_IN` 时作为 Access 有效期 | `7d`（旧单 Token 默认） |
+
+首次启用双 Token 后须执行：`pnpm --filter @douxing/server db:migrate`（表 `refresh_tokens`）。
+
+客户端行为、拦截器与验收见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
+
+---
+
 ## 7. Agent 与向量 RAG（C7 / C3 扩展）
 
 | 变量 | 说明 | 默认 |

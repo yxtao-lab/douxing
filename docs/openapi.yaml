@@ -5,10 +5,10 @@ info:
     兜行平台 REST API（`packages/server`）。
 
     - 统一响应：`{ code, message, messageKey?, data }`，`code === 0` 为成功
-    - 鉴权：Header `Authorization: Bearer <JWT>`
+    - 鉴权：Header `Authorization: Bearer <Access Token JWT>`；过期后客户端用 Refresh Token 调 `POST /api/auth/refresh`（见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)）
     - 国际化：Header `Accept-Language: zh-CN | en-US`
     - 人类可读说明见 [API接口文档.md](./API接口文档.md)
-  version: 1.1.0
+  version: 1.2.0
   contact:
     name: 兜行项目
 
@@ -22,7 +22,7 @@ tags:
   - name: 系统
     description: 健康检查
   - name: 认证
-    description: 注册、登录、验证码
+    description: 注册、登录、验证码、Refresh Token 轮换与登出
   - name: 用户
     description: 资料、头像、会员
   - name: 景点
@@ -200,6 +200,52 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/LoginResult'
+
+  /api/auth/refresh:
+    post:
+      tags: [认证]
+      summary: 刷新 Access Token（Refresh Token 轮换）
+      security: []
+      operationId: authRefresh
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RefreshTokenResult'
+        '401':
+          description: Refresh Token 无效或已过期
+
+  /api/auth/logout:
+    post:
+      tags: [认证]
+      summary: 登出（吊销 Refresh Token）
+      security: []
+      operationId: authLogout
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
 
   /api/auth/me:
     get:
@@ -2297,7 +2343,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
-      description: "登录后获得的 JWT，填入 Authorization: Bearer <token>"
+      description: "登录后获得的 Access Token（JWT），填入 Authorization: Bearer <token>"
 
   parameters:
     AcceptLanguage:
@@ -2476,11 +2522,40 @@ components:
           type: array
           items: { type: string }
 
-    LoginResult:
+    RefreshTokenRequest:
       type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+
+    RefreshTokenResult:
+      type: object
+      required: [token, refreshToken, expiresIn]
       properties:
         token:
           type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
+
+    LoginResult:
+      type: object
+      required: [token, refreshToken, expiresIn, user]
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+        expiresIn:
+          type: integer
         user:
           $ref: '#/components/schemas/UserInfo'
 

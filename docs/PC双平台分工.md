@@ -1,9 +1,9 @@
 # PC 双平台分工（用户端 vs 管理端）
 
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
-> **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)。
+> **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)；**双 Token 鉴权**见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
 
-**最后更新：** 2026-07-03（**H10 POI 信任链 + 路线视频** · J5++ PC 相册 · **S1/S2 RBAC 已验收** · **DT5 一期已验收**）
+**最后更新：** 2026-07-07（**双 Token 无感刷新** · Web/PC 拦截器对齐 · **H10 POI 信任链** · S1/S2 · DT5）
 
 ---
 
@@ -27,6 +27,17 @@ PC 用户端是 **桌面版 C 端**，不是第三套业务逻辑：
 - **能力对齐、布局独立**：大屏规划双栏、路线详情、手帐 PNG 下载等
 - 移动端独有：语音输入、小程序登录、部分原生能力
 - PC 独有（规划/已定稿）：手帐浏览器下载、**F 线 3D/孪生**（mobile 不做 3D）
+
+### 1.3 鉴权（双 Token，2026-07-07）
+
+Web 与 PC **共用**同一套后端会话与本地存储键（`douxing_token` · `douxing_refresh_token` · `douxing_user`），详见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
+
+| 端 | 拦截实现 | 会话恢复 |
+|----|----------|----------|
+| **Web 管理端** | `api/http.ts` axios 拦截器 | 路由守卫 `ensureSessionBootstrapped()` + 员工/菜单校验 |
+| **PC 用户端** | 同 Web | `bootstrapSession` + 路由 `requiresAuth` |
+
+差异：**Web** 登出后须 `admin` 角色才能进工作台；**PC** 为普通用户 JWT。两端 Access 过期时均由拦截器 **无感 refresh**，无需用户重新输入密码（Refresh 未过期前提下）。
 
 ### 1.2 架构关系
 
@@ -63,7 +74,7 @@ Web 管理端 (:5173)     ──┘
 | 我的订单 | `/orders` | ✅ | 本人订单；待支付可 **继续支付** |
 | 分享与手帐 | `/share/routes/:id` | ✅ | 路线只读分享页；Canvas 手帐 **下载 PNG** |
 | 旅程相册分享 | `/share/journey-albums/:token` | ✅ | 相册 token 只读 H5（J5） |
-| 登录 | `/login` | ✅ | 密码/短信；普通用户 JWT |
+| 登录 | `/login` | ✅ | 密码/短信；双 Token（Access + Refresh） |
 
 ### 2.1 规划中的用户端专属
 
