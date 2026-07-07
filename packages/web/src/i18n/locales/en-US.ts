@@ -33,6 +33,7 @@ export const webEnUS = {
     invalidPhone: 'Enter a valid phone number',
     sendFailed: 'Failed to send code',
     loginFailed: 'Sign-in failed',
+    notStaff: 'This account cannot access the admin console. Please sign in with an admin account.',
   },
   home: {
     welcome: 'Welcome back, {name}',

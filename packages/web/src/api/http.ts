@@ -17,6 +17,26 @@ const http = axios.create({
 
 let unauthorizedHandler: (() => void) | null = null;
 
+/** HTTP 请求错误，保留响应状态码供业务层区分 401/403 等场景。 */
+export class ApiRequestError extends Error {
+  readonly status?: number;
+
+  /**
+   * @param message - 面向用户的错误摘要
+   * @param status - HTTP 状态码；网络错误或未响应时为 `undefined`
+   */
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'ApiRequestError';
+    this.status = status;
+  }
+}
+
+/**
+ * 注册全局 401 未授权回调（清会话并跳转登录）。
+ *
+ * @param handler - 收到带 Authorization 的 401 响应时执行
+ */
 export function setUnauthorizedHandler(handler: () => void) {
   unauthorizedHandler = handler;
 }
@@ -74,15 +94,18 @@ http.interceptors.response.use(
 
     const locale = getApiAcceptLanguage();
     if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
       const body = error.response?.data as ApiResponse | undefined;
       if (body && typeof body === 'object' && 'code' in body && body.code !== 0) {
-        return Promise.reject(new Error(resolveApiErrorMessage(body)));
+        return Promise.reject(new ApiRequestError(resolveApiErrorMessage(body), status));
       }
       const raw = error.message || error.code || '';
-      return Promise.reject(new Error(resolveClientRequestErrorMessage(raw, locale)));
+      return Promise.reject(
+        new ApiRequestError(resolveClientRequestErrorMessage(raw, locale), status),
+      );
     }
     const raw = error instanceof Error ? error.message : String(error);
-    return Promise.reject(new Error(resolveClientRequestErrorMessage(raw, locale)));
+    return Promise.reject(new ApiRequestError(resolveClientRequestErrorMessage(raw, locale)));
   },
 );
 

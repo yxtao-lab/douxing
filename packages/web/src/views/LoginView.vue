@@ -69,6 +69,7 @@ import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
+import { establishSessionAfterLogin } from '@/utils/session';
 
 type LoginMode = 'sms' | 'password';
 
@@ -154,6 +155,11 @@ async function handleSmsSubmit() {
     }
     const result = await smsLogin(smsForm.phone, smsForm.code);
     userStore.setAuth(result.token, result.user);
+    const sessionOk = await establishSessionAfterLogin();
+    if (!sessionOk) {
+      error.value = t('login.notStaff');
+      return;
+    }
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {
@@ -171,6 +177,11 @@ async function handlePasswordSubmit() {
       ? await register(form.username, form.password)
       : await login(form.username, form.password);
     userStore.setAuth(result.token, result.user);
+    const sessionOk = await establishSessionAfterLogin();
+    if (!sessionOk) {
+      error.value = t('login.notStaff');
+      return;
+    }
     const redirect = (route.query.redirect as string) || '/';
     router.push(redirect);
   } catch (e) {

@@ -167,6 +167,7 @@ export const sharedZhCN = {
     layout: {
       breadcrumbHome: '首页',
       userFallback: '管理员',
+      menuRetry: '菜单加载失败，点击重试',
     },
     tabs: {
       close: '关闭',

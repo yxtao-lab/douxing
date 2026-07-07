@@ -10,7 +10,16 @@
   >
     <AppLogo :collapsed="layoutStore.collapsed" />
     <div class="sider-menu">
+      <div v-if="menuStore.loading" class="sider-menu-state">
+        <a-spin size="small" />
+      </div>
+      <div v-else-if="menuStore.loadError" class="sider-menu-state">
+        <a-button type="link" size="small" class="menu-retry-btn" @click="retryMenu">
+          {{ t('web.layout.menuRetry') }}
+        </a-button>
+      </div>
       <a-menu
+        v-else
         theme="dark"
         mode="inline"
         :items="menuItems"
@@ -28,10 +37,14 @@ import { useRouter } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import { useAppMenu } from '@/composables/useAppMenu';
 import { useLayoutStore } from '@/stores/layout';
+import { useMenuStore } from '@/stores/menu';
+import { useLocale } from '@/i18n/useLocale';
 import AppLogo from './AppLogo.vue';
 
 const router = useRouter();
 const layoutStore = useLayoutStore();
+const menuStore = useMenuStore();
+const { t } = useLocale();
 const { menuItems, selectedKeys, openKeys: defaultOpenKeys } = useAppMenu();
 const openKeys = ref<string[]>([]);
 
@@ -48,6 +61,11 @@ function onMenuClick(info: Parameters<NonNullable<MenuProps['onClick']>>[0]) {
   if (typeof key === 'string' && key.startsWith('/')) {
     router.push(key);
   }
+}
+
+/** 菜单加载失败后手动重试。 */
+function retryMenu() {
+  void menuStore.loadNavTree(true);
 }
 </script>
 
@@ -78,5 +96,16 @@ function onMenuClick(info: Parameters<NonNullable<MenuProps['onClick']>>[0]) {
 
 .sider-menu :deep(.ant-menu) {
   border-inline-end: none;
+}
+
+.sider-menu-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+}
+
+.menu-retry-btn {
+  color: rgba(255, 255, 255, 0.65);
 }
 </style>

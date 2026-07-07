@@ -167,6 +167,7 @@ export const sharedEnUS = {
     layout: {
       breadcrumbHome: 'Home',
       userFallback: 'Admin',
+      menuRetry: 'Menu failed to load. Tap to retry',
     },
     tabs: {
       close: 'Close',

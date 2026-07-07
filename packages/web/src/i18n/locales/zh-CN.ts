@@ -33,6 +33,7 @@ export const webZhCN = {
     invalidPhone: '请输入正确的手机号',
     sendFailed: '发送失败',
     loginFailed: '登录失败',
+    notStaff: '该账号无管理端访问权限，请使用管理员账号登录',
   },
   home: {
     welcome: '欢迎回来，{name}',

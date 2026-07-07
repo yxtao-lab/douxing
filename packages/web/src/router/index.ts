@@ -416,19 +416,34 @@ const router = createRouter({
 router.beforeEach((to) => {
   const userStore = useUserStore();
   const { hasPerm, isStaff } = usePermissions();
-  if (to.meta.requiresAuth && !userStore.token) {
-    return { name: 'login', query: { redirect: to.fullPath } };
+
+  if (userStore.sessionStatus === 'checking') {
+    return false;
   }
-  if (to.name === 'login' && userStore.token) {
+
+  if (to.meta.requiresAuth) {
+    if (
+      userStore.sessionStatus !== 'authenticated' ||
+      !userStore.token ||
+      !isStaff.value
+    ) {
+      return { name: 'login', query: { redirect: to.fullPath } };
+    }
+  }
+
+  if (
+    to.name === 'login' &&
+    userStore.sessionStatus === 'authenticated' &&
+    userStore.token &&
+    isStaff.value
+  ) {
     return { name: 'home' };
   }
-  if (to.meta.requiresAuth && userStore.token && to.name !== 'home') {
+
+  if (to.meta.requiresAuth && to.name !== 'home') {
     const perm = to.meta.perm as string | undefined;
     if (perm && !hasPerm(perm)) {
       return { name: 'home' };
-    }
-    if (!isStaff.value && to.path !== '/') {
-      return { name: 'login' };
     }
   }
 });
