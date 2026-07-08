@@ -135,6 +135,7 @@ export const sharedEnUS = {
     playbooksManage: 'Route Playbooks',
     analytics: 'Analytics',
     planDiagnostics: 'Plan Diagnostics',
+    workflowTemplates: 'Workflow Templates',
     sysUsers: 'Users',
     sysRoles: 'Roles',
     sysMenus: 'Menus',

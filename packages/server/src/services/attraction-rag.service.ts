@@ -50,6 +50,8 @@ export interface RagRetrievalInput {
   prompt?: string;
   days?: number | null;
   limit?: number;
+  /** W3-4：模板覆盖 MMR λ；未设时读 env */
+  mmrLambda?: number;
   /** Phase 2/H4：排除已去或重复 POI */
   excludeIds?: number[];
   excludeNames?: string[];
@@ -206,6 +208,7 @@ export async function retrieveAttractionsForPlanning(
       excludeIds: input.excludeIds,
       excludeNames: input.excludeNames,
       boostNames: input.boostNames,
+      mmrLambda: input.mmrLambda,
     });
   }
 
@@ -214,6 +217,7 @@ export async function retrieveAttractionsForPlanning(
     excludeIds: input.excludeIds,
     excludeNames: input.excludeNames,
     boostNames: input.boostNames,
+    mmrLambda: input.mmrLambda,
   });
 }
 
@@ -283,6 +287,7 @@ function rankCandidates(
     excludeIds?: number[];
     excludeNames?: string[];
     boostNames?: string[];
+    mmrLambda?: number;
   },
 ): RagAttractionCandidate[] {
   const excludeIdSet = new Set(options?.excludeIds ?? []);
@@ -343,7 +348,7 @@ function rankCandidates(
     },
   }));
 
-  return mmrRerank(mmrItems, limit, getMmrLambda());
+  return mmrRerank(mmrItems, limit, options?.mmrLambda ?? getMmrLambda());
 }
 
 /** 格式化为 LLM 可读的候选 POI 块 */

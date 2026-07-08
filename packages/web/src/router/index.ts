@@ -218,6 +218,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'workflow-templates',
+          name: 'workflow-templates',
+          component: () => import('@/views/WorkflowTemplatesManageView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.workflowTemplates',
+            menuGroupKey: 'web.menu.data',
+            icon: 'ApartmentOutlined',
+            perm: 'data:analytics:view',
+          },
+        },
+        {
           path: 'system/users',
           name: 'sys-users',
           component: () => import('@/views/system/SystemUsersView.vue'),

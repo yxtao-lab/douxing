@@ -16,6 +16,8 @@ import type {
 
   MemoryRecallExplainItem,
 
+  WorkflowTemplateNodeConfig,
+
 } from '@douxing/shared';
 
 import {
@@ -67,6 +69,7 @@ import { runRetrievePlaybooksTool } from '../agent/tools/retrieve-playbooks.tool
 import { runEnrichRouteTool } from '../agent/tools/enrich-route.tool.js';
 import { runValidateRouteTool } from '../agent/tools/validate-route.tool.js';
 import { runRetrieveAttractionsTool } from '../agent/tools/retrieve-attractions.tool.js';
+import { runSelectWorkflowTemplateTool } from '../agent/tools/select-workflow-template.tool.js';
 
 
 
@@ -161,6 +164,7 @@ async function finalizeDraftWithEnrich(
   locale: LocaleCode | undefined,
   trace: AgentToolTraceEntry[],
   hooks?: AgentPlanStreamHooks,
+  templateNodeConfig?: WorkflowTemplateNodeConfig,
 ): Promise<GeneratedRouteDraft> {
   const spanRecorder = new WorkflowNodeSpanRecorder(trace);
   const city = resolvePlanningCity(intent) ?? draft.matchedCity;
@@ -171,6 +175,7 @@ async function finalizeDraftWithEnrich(
     city,
     themes: intent.themes,
     prompt: intent.city ?? draft.name,
+    limit: templateNodeConfig?.playbookLimit,
   });
   const pbMs = Date.now() - pbStart;
   if (!playbookResult.ok) {
@@ -271,6 +276,34 @@ async function generatePlanNewCandidates(
   const context = await loadPlanUserContext(request.userId);
   const spanRecorder = new WorkflowNodeSpanRecorder(trace);
 
+  const selStart = Date.now();
+  hooks?.onToolStart?.('select_workflow_template');
+  const selResult = await runSelectWorkflowTemplateTool({
+    userId: request.userId,
+    intent,
+    routedIntent,
+  });
+  const selMs = Date.now() - selStart;
+  if (!selResult.ok) {
+    spanRecorder.push({
+      tool: 'select_workflow_template',
+      ok: false,
+      ms: selMs,
+      errorCode: selResult.error.code,
+    });
+    hooks?.onToolEnd?.('select_workflow_template', false, selMs);
+    throw new Error(selResult.error.message);
+  }
+  const templateNodeConfig = selResult.data.nodeConfig;
+  spanRecorder.push({
+    tool: 'select_workflow_template',
+    ok: true,
+    ms: selMs,
+    inputDigest: selResult.data.inputDigest,
+    outputDigest: selResult.data.outputDigest,
+  });
+  hooks?.onToolEnd?.('select_workflow_template', true, selMs);
+
   const ragStart = Date.now();
   hooks?.onToolStart?.('retrieve_attractions');
   const ragResult = await runRetrieveAttractionsTool({
@@ -280,6 +313,8 @@ async function generatePlanNewCandidates(
     days: intent.days ?? request.days,
     excludeNames: context.excludePoiNames,
     boostNames: context.boostPoiNames,
+    limit: templateNodeConfig.topK,
+    mmrLambda: templateNodeConfig.mmrLambda,
   });
   const ragMs = Date.now() - ragStart;
   if (!ragResult.ok) {
@@ -313,6 +348,7 @@ async function generatePlanNewCandidates(
     intent,
     locale,
     userId: request.userId,
+    candidateCount: templateNodeConfig.skipVariants ? 1 : templateNodeConfig.variantCount,
   });
   const variantMs = Date.now() - variantStart;
   if (!variantResult.ok) {
@@ -364,7 +400,14 @@ async function generatePlanNewCandidates(
     });
     hooks?.onToolEnd?.('generate_route_draft', true, genMs);
 
-    const finalized = await finalizeDraftWithEnrich(result, intent, locale, trace, hooks);
+    const finalized = await finalizeDraftWithEnrich(
+      result,
+      intent,
+      locale,
+      trace,
+      hooks,
+      templateNodeConfig,
+    );
     candidates.push({
       draft: { ...finalized, generationSource: 'llm', intent: result.intent ?? intent },
       variantKey: variant.key,

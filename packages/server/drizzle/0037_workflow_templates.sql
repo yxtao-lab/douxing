@@ -1,0 +1,20 @@
+CREATE TABLE `workflow_templates` (
+  `id` varchar(64) NOT NULL,
+  `name_zh` varchar(128) NOT NULL,
+  `name_en` varchar(128) NOT NULL,
+  `description_zh` text,
+  `description_en` text,
+  `version` int NOT NULL DEFAULT 1,
+  `enabled` tinyint NOT NULL DEFAULT 1,
+  `priority` int NOT NULL DEFAULT 0,
+  `selection_rules` json NOT NULL,
+  `node_config` json NOT NULL,
+  `ab_variant_b_id` varchar(64) DEFAULT NULL,
+  `ab_split_percent` int NOT NULL DEFAULT 0,
+  `sort_order` int NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_workflow_templates_enabled` (`enabled`),
+  KEY `idx_workflow_templates_priority` (`priority`)
+);

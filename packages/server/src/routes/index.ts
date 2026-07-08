@@ -23,6 +23,7 @@ import agentToolsRouter from './agent-tools.js';
 import agentRouteIntentRouter from './agent-route-intent.js';
 import petsRouter from './pets.js';
 import adminPlanSessionsRouter from './admin-plan-sessions.js';
+import adminWorkflowTemplatesRouter from './admin-workflow-templates.js';
 
 const router = Router();
 
@@ -47,6 +48,7 @@ router.use(`${API_PREFIX}/agent/tools`, agentToolsRouter);
 router.use(`${API_PREFIX}/agent/route-intent`, agentRouteIntentRouter);
 router.use(`${API_PREFIX}/pets`, petsRouter);
 router.use(`${API_PREFIX}/admin/plan-sessions`, adminPlanSessionsRouter);
+router.use(`${API_PREFIX}/admin/workflow-templates`, adminWorkflowTemplatesRouter);
 router.use(`${API_PREFIX}/system`, systemAdminRouter);
 
 export default router;

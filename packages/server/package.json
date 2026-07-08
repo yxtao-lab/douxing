@@ -59,6 +59,8 @@
     "dt2:analytics-cases": "tsx src/scripts/dt2-analytics-cases.ts",
     "dt5:analytics-cases": "tsx src/scripts/dt5-analytics-cases.ts",
     "w2:workflow-cost-cases": "tsx src/scripts/w2-workflow-cost-cases.ts",
+    "w3:workflow-template-cases": "tsx src/scripts/w3-workflow-template-cases.ts",
+    "w4:plan-golden-cases": "tsx src/scripts/plan-golden-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

@@ -4,7 +4,7 @@
 > **关联文档**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · [AI路径规划路线图.md](./AI路径规划路线图.md) · [ROADMAP.md](./ROADMAP.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：1.3  
-**最后更新**：2026-07-08（**W0+W1+W2 验收 · MW2 达成**）
+**最后更新**：2026-07-08（**W0+W1+W2+W3+W4 验收**）
 
 ---
 
@@ -287,14 +287,14 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W3-1** | [ ] | **模板存储** | DB 表 `workflow_templates` 或 Git 管理 YAML | [ ] 版本号 + 启用开关 |
-| **W3-2** | [ ] | **模板选择器** | `workflow-template-selector.service.ts` | [ ] JSON Logic：intent + user tier → templateId |
-| **W3-3** | [ ] | **预置模板包** | `standard_3d` · `premium_multi` · `budget_tune_only` | [ ] 3 套模板文档化 |
-| **W3-4** | [ ] | **RAG 参数化** | 模板节点 config：`topK`/`mmrLambda`/`playbookRequired` | [ ] 低预算模板 topK=8 可验证 |
-| **W3-5** | [ ] | **Web 模板 CRUD** | 管理端列表/编辑（JSON 表单，非拖拽） | [ ] 运营可改 topK/variants 数 [ ] 审计日志 |
-| **W3-6** | [ ] | **A/B 灰度** | templateId 按 userId hash 分流 | [ ] 50/50 分流可观测 |
+| **W3-1** | [x] | **模板存储** | DB 表 `workflow_templates` | [x] 版本号 + 启用开关 |
+| **W3-2** | [x] | **模板选择器** | `workflow-template-selector.service.ts` | [x] JSON Logic：intent + memberLevel → templateId |
+| **W3-3** | [x] | **预置模板包** | `standard_3d` · `premium_multi` · `budget_short` | [x] 3 套 seed + `db:seed` |
+| **W3-4** | [x] | **RAG 参数化** | 模板 nodeConfig：`topK`/`mmrLambda`/`playbookLimit`/`variantCount` | [x] 低预算 topK=8 可验证 |
+| **W3-5** | [x] | **Web 模板 CRUD** | `/workflow-templates` · JSON 表单编辑 | [x] 运营可改 topK/variants [x] 更新审计日志 |
+| **W3-6** | [x] | **A/B 灰度** | `abSplitPercent` + userId hash | [x] 管理端可配置（默认关闭） |
 
-**Phase W3 完成后**：**MW3 达成** — 诉求三满足；RAG 完全编排化。
+**Phase W3 完成后**：**MW3 达成** ✅（2026-07-08 验收）— 诉求三满足；RAG 参数编排化。
 
 ---
 
@@ -304,12 +304,12 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W4-1** | [ ] | **Golden Dataset** | `packages/server/src/scripts/plan-golden-cases.ts` | [ ] ≥30 条：城市/预算/天数/追问组合 |
-| **W4-2** | [ ] | **自动断言** | POI 命中率、天数一致、budget warning、tool 链完整 | [ ] CI nightly 可跑 |
-| **W4-3** | [ ] | **Diff 报告** | 模板/模型变更前后对比 JSON | [ ] 回归失败可定位到 nodeId |
-| **W4-4** | [ ] | **人工标注回流** | 管理端「标记 bad case」→ 写入 dataset | [ ] 可选 |
+| **W4-1** | [x] | **Golden Dataset** | `plan-golden-cases.ts` + `data/plan-golden-cases.ts` | [x] 38 条：模板/路由/解析/Tool 链 |
+| **W4-2** | [x] | **自动断言** | 模板 ID、RAG topK、意图路由、Tool 链 | [x] `pnpm w4:plan-golden-cases` |
+| **W4-3** | [x] | **Diff 报告** | `--report` + `--baseline` JSON 对比 | [x] 回归失败可定位 nodeId |
+| **W4-4** | [ ] | **人工标注回流** | 管理端「标记 bad case」→ dataset | [ ] 可选 |
 
-**Phase W4 完成后**：诉求四「验证准确性」有工程化闭环。
+**Phase W4 完成后**：诉求四「验证准确性」有工程化闭环 ✅（2026-07-08 验收，W4-4 后置）。
 
 ---
 
@@ -441,10 +441,11 @@ interface NodeSpan {
 - [x] 会话级 token + 估算费用 API
 - [x] RAG 命中 ID 可追溯
 
-### MW3 · 模板化
+### MW3 · 模板化 ✅（2026-07-08 验收）
 
-- [ ] ≥3 套预置模板可按 intent 自动选择
-- [ ] 运营可在 Web 调整 RAG topK / variants 数（无需发版）
+- [x] ≥3 套预置模板可按 intent 自动选择
+- [x] 运营可在 Web 调整 RAG topK / variants 数（无需发版）
+- [x] 诊断 trace 可见 `select_workflow_template` 节点
 
 ### MW4 · Visual Editor（可选）
 

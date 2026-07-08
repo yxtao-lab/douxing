@@ -32,6 +32,8 @@ class WorkflowContext(TypedDict, total=False):
     recall_explain: list[dict[str, Any]]
     # Node 预填 intent（追问会话）
     request_intent: dict[str, Any] | None
+    template_id: str | None
+    template_config: dict[str, Any] | None
 
 
 # legacy 别名，与 graph.PlanAgentState 一致

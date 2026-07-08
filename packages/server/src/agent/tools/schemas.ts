@@ -28,6 +28,7 @@ export const retrieveAttractionsInputSchema = z.object({
   prompt: z.string().optional(),
   days: z.number().int().positive().nullish(),
   limit: z.number().int().positive().nullish(),
+  mmrLambda: z.number().min(0).max(1).nullish(),
   excludeIds: z.array(z.number()).optional(),
   excludeNames: z.array(z.string()).optional(),
   boostNames: z.array(z.string()).optional(),
@@ -155,8 +156,16 @@ export const detectMissedPoisInputSchema = z.object({
   autoRecordRegrets: z.boolean().optional(),
 });
 
+export const selectWorkflowTemplateInputSchema = z.object({
+  userId: z.number().int().positive(),
+  intent: z.record(z.unknown()).optional(),
+  routedIntent: z.string().optional(),
+  memberLevel: z.number().int().min(0).optional(),
+});
+
 export type ToolName =
   | 'parse_intent'
+  | 'select_workflow_template'
   | 'retrieve_attractions'
   | 'retrieve_playbooks'
   | 'generate_route_draft'

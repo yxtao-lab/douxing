@@ -11,6 +11,16 @@ from app.workflow.nodes.spans import append_node_span
 from app.workflow.state import WorkflowContext
 
 
+def _template_config(state: WorkflowContext) -> dict[str, Any]:
+    """
+    读取当前会话已选工作流模板的 nodeConfig。
+
+    @param state - 工作流上下文
+    @returns nodeConfig 字典；无模板时为空 dict
+    """
+    return state.get("template_config") or {}
+
+
 async def enrich_and_validate_draft(
     state: WorkflowContext,
     draft: dict[str, Any] | None,
@@ -31,12 +41,14 @@ async def enrich_and_validate_draft(
     city = resolve_planning_city(intent) or draft.get("matchedCity")
 
     t_playbooks = time.time()
+    tpl = _template_config(state)
     pb_data = await call_node_tool(
         "retrieve_playbooks",
         {
             "city": city,
             "themes": intent.get("themes"),
             "prompt": state.get("prompt"),
+            "limit": tpl.get("playbookLimit"),
         },
     )
     playbooks = pb_data.get("playbooks") or []
@@ -178,18 +190,43 @@ async def run_select_variant_branch(state: WorkflowContext) -> None:
 
 
 async def run_plan_new_branch(state: WorkflowContext) -> None:
-    """plan_new / 默认：RAG → variants → generate → enrich → validate。"""
-    t_rag = time.time()
-    rag_data = await call_node_tool(
-        "retrieve_attractions",
+    """plan_new / 默认：选模板 → RAG → variants → generate → enrich → validate。"""
+    t_sel = time.time()
+    sel_data = await call_node_tool(
+        "select_workflow_template",
         {
-            "city": resolve_planning_city(state["intent"] or {}),
-            "themes": (state["intent"] or {}).get("themes"),
-            "prompt": state["prompt"],
-            "days": (state["intent"] or {}).get("days"),
             "userId": state["user_id"],
+            "intent": state.get("intent") or {},
+            "routedIntent": state.get("routed_intent"),
         },
     )
+    state["template_id"] = sel_data.get("templateId")
+    state["template_config"] = sel_data.get("nodeConfig") or {}
+    sel_ms = int((time.time() - t_sel) * 1000)
+    append_node_span(
+        state,
+        "select_workflow_template",
+        True,
+        sel_ms,
+        inputDigest=sel_data.get("inputDigest"),
+        outputDigest=sel_data.get("outputDigest"),
+    )
+
+    tpl = _template_config(state)
+    rag_payload: dict[str, Any] = {
+        "city": resolve_planning_city(state["intent"] or {}),
+        "themes": (state["intent"] or {}).get("themes"),
+        "prompt": state["prompt"],
+        "days": (state["intent"] or {}).get("days"),
+        "userId": state["user_id"],
+    }
+    if tpl.get("topK") is not None:
+        rag_payload["limit"] = tpl.get("topK")
+    if tpl.get("mmrLambda") is not None:
+        rag_payload["mmrLambda"] = tpl.get("mmrLambda")
+
+    t_rag = time.time()
+    rag_data = await call_node_tool("retrieve_attractions", rag_payload)
     rag_candidates = rag_data.get("candidates") or []
     rag_ms = int((time.time() - t_rag) * 1000)
     append_node_span(
@@ -203,16 +240,17 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
     )
 
     is_first_plan = not state.get("current_draft")
-    if is_first_plan:
+    skip_variants = bool(tpl.get("skipVariants"))
+    if is_first_plan and not skip_variants:
         t_var = time.time()
-        variants_data = await call_node_tool(
-            "build_route_variants",
-            {
-                "intent": state["intent"],
-                "locale": state["locale"],
-                "userId": state["user_id"],
-            },
-        )
+        variant_payload: dict[str, Any] = {
+            "intent": state["intent"],
+            "locale": state["locale"],
+            "userId": state["user_id"],
+        }
+        if tpl.get("variantCount") is not None:
+            variant_payload["candidateCount"] = tpl.get("variantCount")
+        variants_data = await call_node_tool("build_route_variants", variant_payload)
         variants = variants_data.get("variants") or []
         append_node_span(state, "build_route_variants", True, int((time.time() - t_var) * 1000))
 

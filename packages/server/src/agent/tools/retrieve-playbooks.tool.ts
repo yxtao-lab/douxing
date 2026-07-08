@@ -17,6 +17,7 @@ export async function runRetrievePlaybooksTool(raw: unknown) {
     city: parsed.data.city,
     themes: parsed.data.themes,
     prompt: parsed.data.prompt,
+    limit: parsed.data.limit ?? undefined,
   });
   const matchedPlaybookIds = playbooks.map((item) => item.playbook.id);
 

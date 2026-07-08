@@ -8,6 +8,7 @@ import { seedAttractions, seedMissingAttractionSeeds, syncAttractionsFromRouteDe
 import { seedBadges } from '../services/badge.service.js';
 import { seedAchievementDefinitions } from '../services/achievement.service.js';
 import { seedRoutePlaybooks } from '../services/playbook.service.js';
+import { seedWorkflowTemplates } from '../services/workflow-template.service.js';
 import { sysDept, sysPost, sysDictType, sysDictData, sysNotice, sysMenu } from '../db/schema/sys-admin.js';
 import { DEFAULT_MENU_SEED, seedDefaultRoleMenus, syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
 import { RouteStatus } from '@douxing/shared';
@@ -308,6 +309,10 @@ async function main() {
   await seedBadges();
   await seedAchievementDefinitions();
   await seedRoutePlaybooks();
+  const wfInserted = await seedWorkflowTemplates();
+  if (wfInserted > 0) {
+    console.log(`[seed] Inserted ${wfInserted} workflow templates`);
+  }
   await seedSampleRoutes(demoUserId);
   await seedSystemConfig();
   await seedSystemAdmin();

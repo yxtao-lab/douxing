@@ -17,6 +17,7 @@ export async function runRetrieveAttractionsTool(raw: unknown) {
     ...parsed.data,
     days: parsed.data.days ?? undefined,
     limit: parsed.data.limit ?? undefined,
+    mmrLambda: parsed.data.mmrLambda ?? undefined,
   });
   const matchedIds = candidates.map((item) => item.id);
   const ragScoreSummary = candidates.slice(0, 20).map((item) => ({

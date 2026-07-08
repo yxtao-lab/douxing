@@ -253,6 +253,13 @@
       "when": 1750665600000,
       "tag": "0036_refresh_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "5",
+      "when": 1750752000000,
+      "tag": "0037_workflow_templates",
+      "breakpoints": true
     }
   ]
 }

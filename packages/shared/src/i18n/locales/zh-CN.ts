@@ -135,6 +135,7 @@ export const sharedZhCN = {
     playbooksManage: '玩法动线',
     analytics: '数据分析',
     planDiagnostics: '规划诊断',
+    workflowTemplates: '工作流模板',
     sysUsers: '用户管理',
     sysRoles: '角色管理',
     sysMenus: '菜单管理',

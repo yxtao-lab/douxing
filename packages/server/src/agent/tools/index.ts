@@ -17,11 +17,13 @@ import {
 import { runApplyMemoryContextTool } from './apply-memory-context.tool.js';
 import { runReplanSegmentTool } from './replan-segment.tool.js';
 import { runDetectMissedPoisTool } from './detect-missed-pois.tool.js';
+import { runSelectWorkflowTemplateTool } from './select-workflow-template.tool.js';
 
 export type { ToolName } from './schemas.js';
 
 export const AGENT_TOOL_NAMES: ToolName[] = [
   'parse_intent',
+  'select_workflow_template',
   'retrieve_attractions',
   'retrieve_playbooks',
   'generate_route_draft',
@@ -43,6 +45,8 @@ export async function executeAgentTool(name: ToolName, input: unknown) {
   switch (name) {
     case 'parse_intent':
       return runParseIntentTool(input);
+    case 'select_workflow_template':
+      return runSelectWorkflowTemplateTool(input);
     case 'retrieve_attractions':
       return runRetrieveAttractionsTool(input);
     case 'retrieve_playbooks':
