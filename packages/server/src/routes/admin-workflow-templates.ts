@@ -3,14 +3,22 @@ import { z } from 'zod';
 import { authMiddleware } from '../middleware/auth.js';
 import { requirePerm } from '../middleware/admin.middleware.js';
 import { success, fail, failFromError } from '../utils/response.js';
-import { ApiError, ApiMessageKey } from '@douxing/shared';
+import {
+  ApiError,
+  ApiMessageKey,
+  WORKFLOW_GRAPH_SCHEMA_VERSION,
+  buildDefaultPlanDefaultGraph,
+  type WorkflowGraphDefinition,
+} from '@douxing/shared';
 import { parsePaginationQuery } from '../utils/pagination.js';
 import {
   createWorkflowTemplate,
   deleteWorkflowTemplate,
   getWorkflowTemplateById,
   listWorkflowTemplatesForAdmin,
+  publishWorkflowTemplateGraph,
   updateWorkflowTemplate,
+  validateWorkflowTemplateGraph,
 } from '../services/workflow-template.service.js';
 
 const router = Router();
@@ -22,6 +30,17 @@ const nodeConfigSchema = z.object({
   mmrLambda: z.number().min(0).max(1).optional(),
   playbookLimit: z.number().int().positive().max(10).optional(),
   skipVariants: z.boolean().optional(),
+});
+
+/** W5 · DAG 图 JSON 校验 schema */
+const workflowGraphDefSchema = z.custom<WorkflowGraphDefinition>((value) => {
+  if (!value || typeof value !== 'object') return false;
+  const graph = value as WorkflowGraphDefinition;
+  return (
+    graph.schemaVersion === WORKFLOW_GRAPH_SCHEMA_VERSION &&
+    Array.isArray(graph.nodes) &&
+    Array.isArray(graph.edges)
+  );
 });
 
 const templateBodySchema = z.object({
@@ -41,6 +60,8 @@ const templateBodySchema = z.object({
   abVariantBId: z.string().max(64).nullable().optional(),
   abSplitPercent: z.number().int().min(0).max(99).optional(),
   sortOrder: z.number().int().min(0).max(9999).optional(),
+  graphDef: workflowGraphDefSchema.nullable().optional(),
+  graphPublishStatus: z.enum(['draft', 'published']).optional(),
 });
 
 const templateUpdateSchema = templateBodySchema
@@ -49,6 +70,46 @@ const templateUpdateSchema = templateBodySchema
   .refine((body) => Object.keys(body).length > 0, { message: 'empty update' });
 
 router.use(authMiddleware);
+
+const graphBodySchema = z.object({
+  graphDef: workflowGraphDefSchema,
+});
+
+/**
+ * W5 · 获取 plan_default 参考图（与 LangGraph 主图等价）。
+ * GET /api/admin/workflow-templates/default-graph
+ */
+router.get('/default-graph', async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, TemplatePerm))) return;
+    success(res, buildDefaultPlanDefaultGraph());
+  } catch (err) {
+    console.error('[admin/workflow-templates/default-graph]', err);
+    fail(res, ApiMessageKey.WORKFLOW_TEMPLATE_DETAIL_FAILED);
+  }
+});
+
+/**
+ * W5-3 · 校验 DAG 图（不落库）。
+ * POST /api/admin/workflow-templates/validate-graph
+ */
+router.post('/validate-graph', async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, TemplatePerm))) return;
+
+    const parsed = graphBodySchema.safeParse(req.body);
+    if (!parsed.success) {
+      fail(res, ApiMessageKey.PARAM_ERROR);
+      return;
+    }
+
+    const result = validateWorkflowTemplateGraph(parsed.data.graphDef);
+    success(res, result);
+  } catch (err) {
+    console.error('[admin/workflow-templates/validate-graph]', err);
+    fail(res, ApiMessageKey.WORKFLOW_GRAPH_VALIDATION_FAILED);
+  }
+});
 
 /**
  * W3-5 · 工作流模板分页列表。
@@ -152,6 +213,33 @@ router.put('/:id', async (req, res) => {
       return;
     }
     fail(res, ApiMessageKey.WORKFLOW_TEMPLATE_UPDATE_FAILED);
+  }
+});
+
+/**
+ * W5-5 · 发布工作流图（校验通过后 status → published）。
+ * POST /api/admin/workflow-templates/:id/publish-graph
+ */
+router.post('/:id/publish-graph', async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, TemplatePerm))) return;
+
+    const staffId = req.auth?.userId;
+    const updated = await publishWorkflowTemplateGraph(req.params.id);
+    console.info('[admin/workflow-templates/publish-graph]', {
+      staffId,
+      templateId: updated.id,
+      version: updated.version,
+      graphPublishStatus: updated.graphPublishStatus,
+    });
+    success(res, updated);
+  } catch (err) {
+    console.error('[admin/workflow-templates/publish-graph]', err);
+    if (err instanceof ApiError) {
+      failFromError(res, err, ApiMessageKey.WORKFLOW_GRAPH_PUBLISH_FAILED);
+      return;
+    }
+    fail(res, ApiMessageKey.WORKFLOW_GRAPH_PUBLISH_FAILED);
   }
 });
 

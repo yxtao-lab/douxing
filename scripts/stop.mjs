@@ -34,7 +34,7 @@ function getDevPorts() {
   const serverPort = Number(process.env.SERVER_PORT) || 3000;
   const dockerMysqlPort = Number(process.env.DOCKER_MYSQL_HOST_PORT) || 3307;
   return {
-    dev: [serverPort, 5173, 5174, 5176],
+    dev: [serverPort, 5173, 5174, 5175, 5176, 8100],
     docker: [dockerMysqlPort],
   };
 }

@@ -136,6 +136,7 @@ export const sharedEnUS = {
     analytics: 'Analytics',
     planDiagnostics: 'Plan Diagnostics',
     workflowTemplates: 'Workflow Templates',
+    workflowEditor: 'Workflow Visual Editor',
     sysUsers: 'Users',
     sysRoles: 'Roles',
     sysMenus: 'Menus',

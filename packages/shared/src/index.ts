@@ -17,6 +17,8 @@ export * from './plan-recent-prompts.js';
 export * from './plan-session-stream.js';
 export * from './workflow-node-span.js';
 export * from './workflow-template.js';
+export * from './workflow-graph.js';
+export * from './agent-tool-json-schema.js';
 export * from './plan-pet-focus.js';
 export * from './route-poi-trust.js';
 export * from './route-poi-external-link.js';

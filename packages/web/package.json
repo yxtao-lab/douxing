@@ -13,6 +13,10 @@
   "dependencies": {
     "@ant-design/icons-vue": "^7",
     "@douxing/shared": "workspace:*",
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.3",
+    "@vue-flow/core": "^1.48.2",
+    "@vue-flow/minimap": "^1.5.4",
     "ant-design-vue": "^4",
     "axios": "^1.7.9",
     "echarts": "^6.1.0",

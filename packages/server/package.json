@@ -61,6 +61,7 @@
     "w2:workflow-cost-cases": "tsx src/scripts/w2-workflow-cost-cases.ts",
     "w3:workflow-template-cases": "tsx src/scripts/w3-workflow-template-cases.ts",
     "w4:plan-golden-cases": "tsx src/scripts/plan-golden-cases.ts",
+    "w5:workflow-graph-cases": "tsx src/scripts/w5-workflow-graph-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"
@@ -82,7 +83,8 @@
     "tencentcloud-sdk-nodejs": "^4.1.235",
     "tsx": "^4.19.2",
     "wechatpay-node-v3": "^2.2.1",
-    "zod": "^3.24.1"
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.25.2"
   },
   "devDependencies": {
     "@types/ali-oss": "^6.23.3",

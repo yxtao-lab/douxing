@@ -53,7 +53,7 @@ app.get('/', (_req, res) => {
   success(res, { name: APP_NAME, status: 'ok' }, ApiMessageKey.SERVER_RUNNING);
 });
 
-app.listen(port, () => {
+const server = app.listen(port, () => {
   startOrderTimeoutJob();
   startAnalyticsRollupJob();
   const checkinConfig = getCheckinConfigSummary();
@@ -80,4 +80,14 @@ app.listen(port, () => {
   }).catch((err) => {
     console.error('[seed] syncMissingMenusFromSeed 失败:', err);
   });
+});
+
+server.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(
+      `[server] 端口 ${port} 已被占用。请先关闭其它 pnpm dev 终端，或执行: pnpm stop --skip-docker`,
+    );
+    process.exit(1);
+  }
+  throw err;
 });

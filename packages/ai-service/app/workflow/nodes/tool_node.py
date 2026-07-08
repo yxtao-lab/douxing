@@ -47,6 +47,7 @@ def make_tool_node(
     payload_builder: Callable[[dict[str, Any]], dict[str, Any]],
     *,
     span_extra_from_result: Callable[[dict[str, Any]], dict[str, Any]] | None = None,
+    state_reducer: Callable[[dict[str, Any], dict[str, Any], dict[str, Any]], Any] | None = None,
 ) -> Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]:
     """
     生成 LangGraph 节点：按 state 构造 payload 并调用 Tool。
@@ -54,6 +55,7 @@ def make_tool_node(
     @param tool_name - Tool 名
     @param payload_builder - 从 state 生成 Tool 入参
     @param span_extra_from_result - 从 Tool 结果提取 span 扩展字段
+    @param state_reducer - Tool 结果写回 state（sync 或 async）
     @returns 可注册到 StateGraph 的 async 节点函数
     """
 
@@ -65,6 +67,10 @@ def make_tool_node(
             trace = state.get("tool_trace") or []
             if trace and trace[-1].get("tool") == tool_name:
                 trace[-1].update(span_extra_from_result(data))
+        if state_reducer:
+            result = state_reducer(state, data, payload)
+            if hasattr(result, "__await__"):
+                await result
         return state
 
     node.__name__ = f"tool_{tool_name}"

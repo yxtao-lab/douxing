@@ -9,7 +9,7 @@ from app.config import get_workflow_engine
 
 logger = logging.getLogger(__name__)
 
-WorkflowEngineMode = Literal["legacy", "langgraph"]
+WorkflowEngineMode = Literal["legacy", "langgraph", "template"]
 
 
 async def run_plan_with_engine(
@@ -19,7 +19,7 @@ async def run_plan_with_engine(
     engine_override: str | None = None,
 ) -> dict[str, Any]:
     """
-    按 WORKFLOW_ENGINE 运行规划 Agent；langgraph 失败时降级 legacy。
+    按 WORKFLOW_ENGINE 运行规划 Agent；langgraph/template 失败时降级。
 
     @param request - AgentPlanRequest 字典
     @param prompt - 用户 prompt
@@ -27,6 +27,18 @@ async def run_plan_with_engine(
     @returns Agent 规划结果
     """
     engine = get_workflow_engine(engine_override)
+    if engine == "template":
+        try:
+            from app.workflow.graphs.plan_template import run_plan_template_langgraph
+
+            return await run_plan_template_langgraph(request, prompt)
+        except Exception as exc:
+            logger.warning(
+                "[workflow] template 失败，降级 langgraph: %s",
+                exc,
+                exc_info=True,
+            )
+            engine = "langgraph"
     if engine == "langgraph":
         try:
             from app.workflow.graphs.plan_default import run_plan_default_langgraph

@@ -260,6 +260,13 @@
       "when": 1750752000000,
       "tag": "0037_workflow_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "5",
+      "when": 1750838400000,
+      "tag": "0038_workflow_template_graph",
+      "breakpoints": true
     }
   ]
 }

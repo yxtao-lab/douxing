@@ -230,6 +230,17 @@ const router = createRouter({
           },
         },
         {
+          path: 'workflow-templates/:id/editor',
+          name: 'workflow-template-editor',
+          component: () => import('@/views/WorkflowVisualEditorView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.workflowEditor',
+            hideInMenu: true,
+            perm: 'data:analytics:view',
+          },
+        },
+        {
           path: 'system/users',
           name: 'sys-users',
           component: () => import('@/views/system/SystemUsersView.vue'),

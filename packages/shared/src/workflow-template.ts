@@ -2,6 +2,8 @@
  * W3 · 工作流模板：按 intent 选择 DAG 参数（RAG topK、方案数等）。
  */
 
+import type { WorkflowGraphDefinition, WorkflowGraphPublishStatus } from './workflow-graph.js';
+
 /** 模板节点级可调参数（plan_new 主链） */
 export interface WorkflowTemplateNodeConfig {
   /** RAG 检索上限；未设时由 days×6 推算 */
@@ -37,6 +39,10 @@ export interface WorkflowTemplateInfo {
   sortOrder: number;
   createdAt?: string;
   updatedAt?: string;
+  /** W5 · 可视化 DAG 定义；null 表示沿用运行时默认硬编码图 */
+  graphDef?: WorkflowGraphDefinition | null;
+  /** W5 · 图定义发布状态 */
+  graphPublishStatus?: WorkflowGraphPublishStatus;
 }
 
 /** 模板选择器输出（写入 agent_state / NodeSpan） */
@@ -44,6 +50,10 @@ export interface WorkflowTemplateSelectionResult {
   templateId: string;
   templateVersion: number;
   nodeConfig: WorkflowTemplateNodeConfig;
+  /** 已发布 DAG；未发布或无图时为 null/undefined */
+  graphDef?: WorkflowGraphDefinition | null;
+  /** 图发布状态 */
+  graphPublishStatus?: WorkflowGraphPublishStatus;
   /** A/B 分桶；未开启时为 undefined */
   abBucket?: 'A' | 'B';
   /** 命中模板的 priority，便于诊断 */

@@ -191,26 +191,31 @@ async def run_select_variant_branch(state: WorkflowContext) -> None:
 
 async def run_plan_new_branch(state: WorkflowContext) -> None:
     """plan_new / 默认：选模板 → RAG → variants → generate → enrich → validate。"""
-    t_sel = time.time()
-    sel_data = await call_node_tool(
-        "select_workflow_template",
-        {
-            "userId": state["user_id"],
-            "intent": state.get("intent") or {},
-            "routedIntent": state.get("routed_intent"),
-        },
-    )
-    state["template_id"] = sel_data.get("templateId")
-    state["template_config"] = sel_data.get("nodeConfig") or {}
-    sel_ms = int((time.time() - t_sel) * 1000)
-    append_node_span(
-        state,
-        "select_workflow_template",
-        True,
-        sel_ms,
-        inputDigest=sel_data.get("inputDigest"),
-        outputDigest=sel_data.get("outputDigest"),
-    )
+    preselected = bool(state.get("_template_preselected") or state.get("template_id"))
+
+    if not preselected:
+        t_sel = time.time()
+        sel_data = await call_node_tool(
+            "select_workflow_template",
+            {
+                "userId": state["user_id"],
+                "intent": state.get("intent") or {},
+                "routedIntent": state.get("routed_intent"),
+            },
+        )
+        state["template_id"] = sel_data.get("templateId")
+        state["template_config"] = sel_data.get("nodeConfig") or {}
+        sel_ms = int((time.time() - t_sel) * 1000)
+        append_node_span(
+            state,
+            "select_workflow_template",
+            True,
+            sel_ms,
+            inputDigest=sel_data.get("inputDigest"),
+            outputDigest=sel_data.get("outputDigest"),
+        )
+    else:
+        append_node_span(state, "select_workflow_template", True, 0, source="preselected")
 
     tpl = _template_config(state)
     rag_payload: dict[str, Any] = {

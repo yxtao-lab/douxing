@@ -44,9 +44,12 @@ export async function runSelectWorkflowTemplateTool(raw: unknown) {
     }),
     outputDigest: digestWorkflowPayload({
       templateId: selection.templateId,
+      templateVersion: selection.templateVersion,
       topK: selection.nodeConfig.topK,
       variantCount: selection.nodeConfig.variantCount,
       abBucket: selection.abBucket,
+      graphPublishStatus: selection.graphPublishStatus,
+      hasGraphDef: Boolean(selection.graphDef),
     }),
   });
 }

@@ -80,11 +80,16 @@ export async function selectWorkflowTemplate(
       templateId: DEFAULT_WORKFLOW_TEMPLATE_ID,
       templateVersion: 1,
       nodeConfig: { topK: 12, variantCount: 2, playbookLimit: 3 },
+      graphDef: null,
+      graphPublishStatus: 'draft',
     };
   }
 
   let templateId = matched.id;
+  let templateVersion = matched.version;
   let nodeConfig = mergeWorkflowTemplateNodeConfig(matched.nodeConfig);
+  let graphDef = matched.graphDef ?? null;
+  let graphPublishStatus = matched.graphPublishStatus ?? 'draft';
   let abBucket: 'A' | 'B' | undefined;
   const split = matched.abSplitPercent ?? 0;
   const variantBId = matched.abVariantBId?.trim();
@@ -95,7 +100,10 @@ export async function selectWorkflowTemplate(
       const variantB = await getWorkflowTemplateById(variantBId);
       if (variantB?.enabled) {
         templateId = variantB.id;
+        templateVersion = variantB.version;
         nodeConfig = mergeWorkflowTemplateNodeConfig(variantB.nodeConfig);
+        graphDef = variantB.graphDef ?? null;
+        graphPublishStatus = variantB.graphPublishStatus ?? 'draft';
         abBucket = 'B';
       } else {
         abBucket = 'A';
@@ -107,8 +115,10 @@ export async function selectWorkflowTemplate(
 
   return {
     templateId,
-    templateVersion: matched.version,
+    templateVersion,
     nodeConfig,
+    graphDef: graphPublishStatus === 'published' ? graphDef : null,
+    graphPublishStatus,
     abBucket,
     matchedPriority: matched.priority,
   };

@@ -139,7 +139,7 @@ def get_workflow_engine(override: str | None = None) -> str:
     读取工作流引擎模式；非法值回退 legacy。
 
     @param override - 请求级覆盖（Header 等）
-    @returns `legacy` 或 `langgraph`
+    @returns `legacy`、`langgraph` 或 `template`
     """
     raw = (override or os.getenv("WORKFLOW_ENGINE") or "legacy").strip().lower()
-    return raw if raw in ("legacy", "langgraph") else "legacy"
+    return raw if raw in ("legacy", "langgraph", "template") else "legacy"

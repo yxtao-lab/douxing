@@ -16,7 +16,7 @@
       :columns="columns"
       :data-source="list"
       :loading="loading"
-      :error="error"
+      :error="error ?? undefined"
       :empty-text="t('workflowTemplates.empty')"
       row-key="id"
       :pagination="pagination"
@@ -47,10 +47,24 @@
               : t('workflowTemplates.abOff')
           }}
         </template>
+        <template v-else-if="column.key === 'graphStatus'">
+          <a-tag v-if="record.graphPublishStatus === 'published'" color="success">
+            {{ t('workflowTemplates.graphPublished') }}
+          </a-tag>
+          <a-tag v-else-if="record.graphDef" color="processing">
+            {{ t('workflowTemplates.graphDraft') }}
+          </a-tag>
+          <span v-else>{{ t('workflowTemplates.graphNone') }}</span>
+        </template>
         <template v-else-if="column.key === 'action'">
-          <a-button type="link" size="small" @click="openEdit(record)">
-            {{ t('workflowTemplates.edit') }}
-          </a-button>
+          <TableActionBar :show-edit="false" :show-delete="false">
+            <TableActionButton variant="edit" :label="t('workflowTemplates.edit')" @click="openEdit(record)" />
+            <TableActionButton
+              variant="primary"
+              :label="t('workflowTemplates.openEditor')"
+              @click="openEditor(record.id)"
+            />
+          </TableActionBar>
         </template>
       </template>
     </DouxingAdminTable>
@@ -103,7 +117,7 @@
           </a-col>
           <a-col :span="24">
             <a-form-item :label="t('workflowTemplates.formAbVariant')">
-              <a-input v-model:value="editForm.abVariantBId" allow-clear />
+              <a-input :value="editForm.abVariantBId ?? ''" allow-clear @update:value="onAbVariantChange" />
             </a-form-item>
           </a-col>
           <a-col :span="24">
@@ -119,6 +133,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { ReloadOutlined } from '@ant-design/icons-vue';
 import type { TablePaginationConfig } from 'ant-design-vue';
@@ -126,9 +141,13 @@ import type { WorkflowTemplateInfo } from '@douxing/shared';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
+import TableActionBar from '@/components/admin/TableActionBar.vue';
+import TableActionButton from '@/components/admin/TableActionButton.vue';
 import { useI18n } from 'vue-i18n';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { fetchWorkflowTemplates, updateWorkflowTemplate } from '@/api/workflow-templates';
+
+const router = useRouter();
 
 const { t, locale } = useI18n();
 usePageTitle('web.workflowTemplates');
@@ -159,9 +178,10 @@ const columns = computed(() => [
   { title: t('workflowTemplates.colTopK'), key: 'topK', width: 72 },
   { title: t('workflowTemplates.colVariants'), key: 'variants', width: 88 },
   { title: t('workflowTemplates.colVersion'), dataIndex: 'version', key: 'version', width: 72 },
+  { title: t('workflowTemplates.colGraphStatus'), key: 'graphStatus', width: 96 },
   { title: t('workflowTemplates.colEnabled'), key: 'enabled', width: 88 },
   { title: t('workflowTemplates.colAb'), key: 'ab', width: 160 },
-  { title: t('workflowTemplates.colAction'), key: 'action', width: 88, resizable: false },
+  { title: t('workflowTemplates.colAction'), key: 'action', width: 180, resizable: false },
 ]);
 
 /**
@@ -207,6 +227,25 @@ function openEdit(record: WorkflowTemplateInfo) {
   };
   selectionRulesText.value = JSON.stringify(record.selectionRules, null, 2);
   editOpen.value = true;
+}
+
+/**
+ * 同步 A/B 对照模板 ID 输入。
+ *
+ * @param value - 输入值
+ */
+function onAbVariantChange(value: string): void {
+  if (!editForm.value) return;
+  editForm.value.abVariantBId = value.trim() ? value : null;
+}
+
+/**
+ * 打开可视化编排编辑器。
+ *
+ * @param id - 模板 ID
+ */
+function openEditor(id: string): void {
+  router.push({ name: 'workflow-template-editor', params: { id } });
 }
 
 /**

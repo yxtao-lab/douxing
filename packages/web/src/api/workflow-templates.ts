@@ -1,5 +1,11 @@
 import http from './http';
-import type { ApiResponse, PaginatedResult, WorkflowTemplateInfo } from '@douxing/shared';
+import type {
+  ApiResponse,
+  PaginatedResult,
+  WorkflowGraphDefinition,
+  WorkflowGraphValidationResult,
+  WorkflowTemplateInfo,
+} from '@douxing/shared';
 
 export interface WorkflowTemplateListQuery {
   page?: number;
@@ -17,6 +23,8 @@ export interface WorkflowTemplateUpsertPayload {
   priority?: number;
   selectionRules: Record<string, unknown> | boolean;
   nodeConfig: WorkflowTemplateInfo['nodeConfig'];
+  graphDef?: WorkflowTemplateInfo['graphDef'];
+  graphPublishStatus?: WorkflowTemplateInfo['graphPublishStatus'];
   abVariantBId?: string | null;
   abSplitPercent?: number;
   sortOrder?: number;
@@ -37,6 +45,45 @@ export async function fetchWorkflowTemplates(query: WorkflowTemplateListQuery = 
 }
 
 /**
+ * 获取单个工作流模板详情。
+ *
+ * @param id - 模板 ID
+ * @returns 模板详情
+ */
+export async function fetchWorkflowTemplateById(id: string) {
+  const { data } = await http.get<ApiResponse<WorkflowTemplateInfo>>(
+    `/admin/workflow-templates/${id}`,
+  );
+  return data.data;
+}
+
+/**
+ * 获取 plan_default 参考 DAG。
+ *
+ * @returns 默认图定义
+ */
+export async function fetchDefaultWorkflowGraph() {
+  const { data } = await http.get<ApiResponse<WorkflowGraphDefinition>>(
+    '/admin/workflow-templates/default-graph',
+  );
+  return data.data;
+}
+
+/**
+ * 校验 DAG 图（不落库）。
+ *
+ * @param graphDef - 待校验图
+ * @returns 校验结果
+ */
+export async function validateWorkflowGraphApi(graphDef: WorkflowGraphDefinition) {
+  const { data } = await http.post<ApiResponse<WorkflowGraphValidationResult>>(
+    '/admin/workflow-templates/validate-graph',
+    { graphDef },
+  );
+  return data.data;
+}
+
+/**
  * 更新工作流模板。
  *
  * @param id - 模板 ID
@@ -50,6 +97,19 @@ export async function updateWorkflowTemplate(
   const { data } = await http.put<ApiResponse<WorkflowTemplateInfo>>(
     `/admin/workflow-templates/${id}`,
     payload,
+  );
+  return data.data;
+}
+
+/**
+ * W5-5 · 发布工作流图。
+ *
+ * @param id - 模板 ID
+ * @returns 发布后的模板
+ */
+export async function publishWorkflowTemplateGraph(id: string) {
+  const { data } = await http.post<ApiResponse<WorkflowTemplateInfo>>(
+    `/admin/workflow-templates/${id}/publish-graph`,
   );
   return data.data;
 }

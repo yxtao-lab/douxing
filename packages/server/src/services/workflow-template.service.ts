@@ -2,10 +2,13 @@ import { and, asc, desc, eq, sql, count } from 'drizzle-orm';
 import type {
   PaginatedResult,
   TravelIntentSnapshot,
+  WorkflowGraphDefinition,
+  WorkflowGraphPublishStatus,
+  WorkflowGraphValidationResult,
   WorkflowTemplateInfo,
   WorkflowTemplateNodeConfig,
 } from '@douxing/shared';
-import { ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
+import { ApiError, ApiMessageKey, buildPaginatedResult, validateWorkflowGraph } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { workflowTemplates } from '../db/schema/workflow-templates.js';
 import {
@@ -36,6 +39,8 @@ function rowToTemplate(row: typeof workflowTemplates.$inferSelect): WorkflowTemp
     priority: row.priority,
     selectionRules: row.selectionRules ?? true,
     nodeConfig: row.nodeConfig ?? {},
+    graphDef: row.graphDef ?? null,
+    graphPublishStatus: (row.graphPublishStatus ?? 'draft') as WorkflowGraphPublishStatus,
     abVariantBId: row.abVariantBId ?? null,
     abSplitPercent: row.abSplitPercent,
     sortOrder: row.sortOrder,
@@ -151,6 +156,8 @@ export interface UpsertWorkflowTemplateInput {
   priority?: number;
   selectionRules: Record<string, unknown> | boolean;
   nodeConfig: WorkflowTemplateNodeConfig;
+  graphDef?: WorkflowTemplateInfo['graphDef'];
+  graphPublishStatus?: WorkflowGraphPublishStatus;
   abVariantBId?: string | null;
   abSplitPercent?: number;
   sortOrder?: number;
@@ -187,6 +194,8 @@ export async function createWorkflowTemplate(
     priority: input.priority ?? 0,
     selectionRules: input.selectionRules,
     nodeConfig: input.nodeConfig,
+    graphDef: input.graphDef ?? null,
+    graphPublishStatus: input.graphPublishStatus ?? 'draft',
     abVariantBId: input.abVariantBId ?? null,
     abSplitPercent: Math.min(Math.max(input.abSplitPercent ?? 0, 0), 99),
     sortOrder: input.sortOrder ?? 0,
@@ -220,6 +229,14 @@ export async function updateWorkflowTemplate(
 
   const current = rows[0]!;
   const nextVersion = current.version + 1;
+  const graphDefChanged =
+    patch.graphDef !== undefined && JSON.stringify(patch.graphDef) !== JSON.stringify(current.graphDef);
+  const nextGraphPublishStatus =
+    patch.graphPublishStatus !== undefined
+      ? patch.graphPublishStatus
+      : graphDefChanged
+        ? 'draft'
+        : (current.graphPublishStatus ?? 'draft');
 
   await db
     .update(workflowTemplates)
@@ -233,6 +250,8 @@ export async function updateWorkflowTemplate(
       priority: patch.priority ?? current.priority,
       selectionRules: patch.selectionRules ?? current.selectionRules,
       nodeConfig: patch.nodeConfig ?? current.nodeConfig,
+      graphDef: patch.graphDef !== undefined ? patch.graphDef : current.graphDef,
+      graphPublishStatus: nextGraphPublishStatus,
       abVariantBId:
         patch.abVariantBId !== undefined ? patch.abVariantBId : current.abVariantBId,
       abSplitPercent:
@@ -250,6 +269,39 @@ export async function updateWorkflowTemplate(
     throw new ApiError(ApiMessageKey.WORKFLOW_TEMPLATE_NOT_FOUND);
   }
   return updated;
+}
+
+/**
+ * W5-3 · 校验工作流图定义（纯函数封装，供 API 与发布前复用）。
+ *
+ * @param graphDef - 待校验 DAG
+ * @returns 校验结果
+ */
+export function validateWorkflowTemplateGraph(
+  graphDef: WorkflowGraphDefinition | null | undefined,
+): WorkflowGraphValidationResult {
+  return validateWorkflowGraph(graphDef);
+}
+
+/**
+ * W5-5 · 发布工作流图（校验通过后 graph_publish_status → published，版本 +1）。
+ *
+ * @param id - 模板 ID
+ * @returns 更新后的模板
+ * @throws {ApiError} 模板不存在或图校验失败
+ */
+export async function publishWorkflowTemplateGraph(id: string): Promise<WorkflowTemplateInfo> {
+  const current = await getWorkflowTemplateById(id);
+  if (!current) {
+    throw new ApiError(ApiMessageKey.WORKFLOW_TEMPLATE_NOT_FOUND);
+  }
+
+  const validation = validateWorkflowGraph(current.graphDef);
+  if (!validation.valid) {
+    throw new ApiError(ApiMessageKey.WORKFLOW_GRAPH_VALIDATION_FAILED);
+  }
+
+  return updateWorkflowTemplate(id, { graphPublishStatus: 'published' });
 }
 
 /**
