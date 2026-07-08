@@ -95,6 +95,7 @@ const API_LOG_ROUTE_RULES: readonly ApiLogRouteRule[] = [
   { methods: ['GET'], path: '/api/plan-sessions', moduleKey: 'planSessions', descKey: 'planSessions.list' },
   { methods: ['POST'], path: '/api/plan-sessions', moduleKey: 'planSessions', descKey: 'planSessions.create' },
   { methods: ['GET'], path: '/api/plan-sessions/:id/stream', moduleKey: 'planSessions', descKey: 'planSessions.stream' },
+  { methods: ['GET'], path: '/api/admin/plan-sessions/:id/workflow-trace', moduleKey: 'planSessions', descKey: 'planSessions.workflowTrace' },
 ];
 
 const MODULE_SEGMENT_MAP: Record<string, string> = {

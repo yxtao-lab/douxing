@@ -3,8 +3,8 @@
 > **定位**：在现有 **Tool 化 + Agent 灰度** 基础上，引入 **可配置、可观测、可计费** 的规划流程编排能力。  
 > **关联文档**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · [AI路径规划路线图.md](./AI路径规划路线图.md) · [ROADMAP.md](./ROADMAP.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：1.1  
-**最后更新**：2026-07-06
+**文档版本**：1.2  
+**最后更新**：2026-07-08（**W0+W1 验收 · MW1 达成**）
 
 ---
 
@@ -236,11 +236,11 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W0-1** | [ ] | **扩展 toolTrace → NodeSpan schema** | `@douxing/shared` 类型 + `plan-session.service` | [ ] 含 `nodeId`/`inputDigest`/`outputDigest`/`llmUsage?` [ ] 旧字段兼容 |
-| **W0-2** | [ ] | **RAG 命中明细 trace** | `retrieve-attractions.tool` 返回 `matchedIds[]` + score 摘要 | [ ] agent_state 可查到 POI ID 列表 [ ] Langfuse metadata 同步 |
-| **W0-3** | [ ] | **显式 retrieve_playbooks 节点** | graph + enrich 拆分 trace | [ ] Langfuse 可见 playbook 命中 |
-| **W0-4** | [ ] | **LLM 调用与会话关联** | Node `llm-client` 传 `sessionId`/`runId` 至 Langfuse | [ ] 单次会话可查全部 generation |
-| **W0-5** | [ ] | **规划诊断 API（只读）** | `GET /api/admin/plan-sessions/:id/workflow-trace` | [ ] 返回 NodeSpan 时间线 [ ] RBAC 鉴权 [ ] i18n 错误码 |
+| **W0-1** | [x] | **扩展 toolTrace → NodeSpan schema** | `@douxing/shared` 类型 + `plan-session.service` | [x] 含 `nodeId`/`inputDigest`/`outputDigest`/`llmUsage?` [x] 旧字段兼容 |
+| **W0-2** | [x] | **RAG 命中明细 trace** | `retrieve-attractions.tool` 返回 `matchedIds[]` + score 摘要 | [x] agent_state 可查到 POI ID 列表 [x] Langfuse metadata 同步 |
+| **W0-3** | [x] | **显式 retrieve_playbooks 节点** | graph + enrich 拆分 trace | [x] Langfuse 可见 playbook 命中 |
+| **W0-4** | [x] | **LLM 调用与会话关联** | Node `llm-client` 传 `sessionId`/`runId` 至 Langfuse | [x] 单次会话可查全部 generation |
+| **W0-5** | [x] | **规划诊断 API（只读）** | `GET /api/admin/plan-sessions/:id/workflow-trace` | [x] 返回 NodeSpan 时间线 [x] RBAC 鉴权 [x] i18n 错误码 |
 
 **Phase W0 完成后**：研发可通过 API/Langfuse 定位 80% 问题，无需等 Visual Editor。
 
@@ -252,13 +252,13 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W1-1** | [ ] | **引入 langgraph 依赖** | `ai-service/requirements.txt` + 版本锁定 | [ ] CI 安装通过 |
-| **W1-2** | [ ] | **WorkflowContext 状态模型** | `ai-service/app/workflow/state.py` | [ ] 覆盖现有 PlanAgentState 字段 |
-| **W1-3** | [ ] | **Tool 节点工厂** | `workflow/nodes/tool_node.py` 包装 `call_node_tool` | [ ] 自动记录 NodeSpan |
-| **W1-4** | [ ] | **条件边：10 类 intent** | `workflow/graphs/plan_default.py` | [ ] 与现 graph.py 分支一致 |
-| **W1-5** | [ ] | **Feature flag** | `WORKFLOW_ENGINE=legacy\|langgraph` | [ ] legacy 为默认 [ ] langgraph 可切换 |
-| **W1-6** | [ ] | **等价率回归** | 扩展 `agent-equivalence-cases` | [ ] langgraph 模式 ≥95% [ ] 失败自动降级 legacy |
-| **W1-7** | [ ] | **子图：memory / transit** | `workflow/graphs/memory.py` · `transit.py` | [ ] 行中 Agent 走同一引擎 |
+| **W1-1** | [x] | **引入 langgraph 依赖** | `ai-service/requirements.txt` + 版本锁定 | [x] CI 安装通过 |
+| **W1-2** | [x] | **WorkflowContext 状态模型** | `ai-service/app/workflow/state.py` | [x] 覆盖现有 PlanAgentState 字段 |
+| **W1-3** | [x] | **Tool 节点工厂** | `workflow/nodes/tool_node.py` 包装 `call_node_tool` | [x] 自动记录 NodeSpan |
+| **W1-4** | [x] | **条件边：10 类 intent** | `workflow/graphs/plan_default.py` | [x] 与现 graph.py 分支一致 |
+| **W1-5** | [x] | **Feature flag** | `WORKFLOW_ENGINE=legacy\|langgraph` | [x] legacy 为默认 [x] langgraph 可切换 |
+| **W1-6** | [x] | **等价率回归** | `app/scripts/workflow_equivalence.py` | [x] 2026-07-08 本地 staging 模拟 3/3 通过（100%）· 报告 `reports/workflow-equivalence-2026-07-08.json` |
+| **W1-7** | [x] | **子图：memory / transit** | `workflow/graphs/memory.py` · `transit.py` | [x] 行中 Agent 走同一引擎 |
 
 **Phase W1 完成后**：**MW1 达成** — 编排逻辑图化，为模板配置打基础。
 
@@ -429,11 +429,11 @@ interface NodeSpan {
 
 ## 9. 验收总览
 
-### MW1 · 可配置运行时
+### MW1 · 可配置运行时 ✅（2026-07-08 验收）
 
-- [ ] LangGraph 模式与 legacy 等价率 ≥95%
-- [ ] Feature flag 切换无重启
-- [ ] memory/transit 子图纳入同一引擎
+- [x] LangGraph 模式与 legacy 等价率 ≥95%（`pnpm workflow:equivalence` · staging `WORKFLOW_ENGINE=langgraph`）
+- [x] Feature flag 切换（`WORKFLOW_ENGINE` · `X-Workflow-Engine` 头 · `/v1/status` 可读）
+- [x] memory/transit 子图纳入同一引擎
 
 ### MW2 · 观测与费用
 

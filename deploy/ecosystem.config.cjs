@@ -94,6 +94,7 @@ if (aiEnabled) {
     exec_mode: 'fork',
     autorestart: true,
     max_memory_restart: '768M',
+    env: { ...fileEnv, NODE_ENV: 'production' },
     error_file: path.join(root, 'logs/pm2-ai-error.log'),
     out_file: path.join(root, 'logs/pm2-ai-out.log'),
     merge_logs: true,

@@ -269,6 +269,7 @@ export const sharedZhCN = {
       'planSessions.list': '规划会话列表',
       'planSessions.create': '创建规划会话',
       'planSessions.stream': '规划会话流式输出',
+      'planSessions.workflowTrace': '规划诊断 trace',
     },
   },
 } as const;

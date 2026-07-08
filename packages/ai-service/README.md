@@ -2,6 +2,35 @@
 
 FastAPI + LangChain，负责路线规划 LLM 调用与 **Agent 编排**（C7）。Node 后端通过 HTTP 调用，失败时自动回退到 Node 内置 LLM 或模板。
 
+## W1 · LangGraph 等价率（需 Node API 运行）
+
+**推荐（自动使用 `.venv`，Windows / Git Bash 均可）：**
+
+```bash
+# 项目根目录；需 Node API 已启动（pnpm dev:server）
+pnpm workflow:equivalence
+```
+
+**手动（务必用 venv 里的 Python，不要用 Anaconda 全局 `python`）：**
+
+```bash
+cd packages/ai-service
+# Windows Git Bash / CMD
+.venv/Scripts/python.exe -m app.scripts.workflow_equivalence
+# Linux / macOS
+.venv/bin/python -m app.scripts.workflow_equivalence
+```
+
+若报 `No module named 'langgraph'`：
+
+```bash
+cd packages/ai-service
+.venv/Scripts/pip install -r requirements.txt   # Windows
+# .venv/bin/pip install -r requirements.txt     # Linux
+```
+
+对比 legacy 与 LangGraph 的 `routedIntent`、Tool 链与是否有 draft；阈值 95%。
+
 ## 环境要求
 
 - Python 3.12+
@@ -36,9 +65,13 @@ AGENT_TOOL_SECRET=与 Node 一致的随机密钥
 # LANGFUSE_PUBLIC_KEY=
 # LANGFUSE_SECRET_KEY=
 # LANGFUSE_HOST=https://cloud.langfuse.com
+
+# W1 · 编排运行时：legacy（默认）| langgraph
+# WORKFLOW_ENGINE=legacy
+# 请求头 X-Workflow-Engine: langgraph 可单次覆盖；langgraph 异常时自动降级 legacy
 ```
 
-`GET /v1/status` 返回 `observability.langfuse` 表示是否已配置 Langfuse。
+`GET /v1/status` 返回 `observability.langfuse` 与 `workflowEngine`（`legacy` / `langgraph`）。
 
 Node 调用 Python Agent 时，Python 通过 `node_client.py` 回调 Node 内网 API：
 

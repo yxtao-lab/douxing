@@ -122,6 +122,7 @@ export const ApiMessageKey = {
   PLAN_SESSION_ENDED: 'api.planSessionEnded',
   PLAN_INVALID_CANDIDATE: 'api.planInvalidCandidate',
   PLAN_SESSION_NO_ROUTE: 'api.planSessionNoRoute',
+  PLAN_SESSION_WORKFLOW_TRACE_FAILED: 'api.planSessionWorkflowTraceFailed',
   ATTRACTION_APPROVE_PENDING_ONLY: 'api.attractionApprovePendingOnly',
   TENCENT_SMS_NOT_CONFIGURED: 'api.tencentSmsNotConfigured',
   TENCENT_ASR_NOT_CONFIGURED: 'api.tencentAsrNotConfigured',

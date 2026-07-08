@@ -481,6 +481,20 @@ def record_tool_observation(
 
 ) -> None:
 
+    metadata: dict[str, Any] = {"durationMs": duration_ms, "ok": ok, "feature": "agent-plan"}
+    if ok and result:
+        if tool_name == "retrieve_attractions":
+            matched_ids = result.get("matchedIds")
+            if matched_ids is not None:
+                metadata["ragMatchedIds"] = matched_ids
+            score_summary = result.get("ragScoreSummary")
+            if score_summary is not None:
+                metadata["ragScoreSummary"] = _truncate(score_summary, max_len=1200)
+        elif tool_name == "retrieve_playbooks":
+            playbook_ids = result.get("matchedPlaybookIds")
+            if playbook_ids is not None:
+                metadata["matchedPlaybookIds"] = playbook_ids
+
     _record_child_observation(
 
         name=f"tool:{tool_name}",
@@ -491,7 +505,7 @@ def record_tool_observation(
 
         output_data=_truncate(result or {}),
 
-        metadata={"durationMs": duration_ms, "ok": ok, "feature": "agent-plan"},
+        metadata=metadata,
 
         level="ERROR" if not ok else "DEFAULT",
 

@@ -51,6 +51,8 @@ export const enrichRouteInputSchema = z.object({
   draft: z.record(z.unknown()),
   intent: z.record(z.unknown()),
   locale: z.enum(['zh-CN', 'en-US']).optional(),
+  /** W0-3：上游 retrieve_playbooks 已检索时可传入，避免重复 RAG */
+  playbooks: z.array(z.record(z.unknown())).optional(),
 });
 
 export const validateRouteInputSchema = z.object({

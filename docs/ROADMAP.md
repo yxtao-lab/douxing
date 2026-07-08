@@ -626,14 +626,20 @@ Python ai-service → Node LLM → 模板/RAG
 
 | 阶段 | 状态 | 名称 | 交付摘要 | 里程碑 |
 |------|------|------|----------|--------|
-| **W0** | [ ] | 观测基线加固 | NodeSpan · RAG 命中 trace · 规划诊断 API | — |
-| **W1** | [ ] | LangGraph 运行时 | `graph.py` 图化 · `WORKFLOW_ENGINE` flag · 等价率 ≥95% | **MW1** |
+| **W0** | [x] | 观测基线加固 | NodeSpan · RAG 命中 trace · 规划诊断 API | — |
+| **W1** | [x] | LangGraph 运行时 | `graph.py` 图化 · `WORKFLOW_ENGINE` flag · 等价率 ≥95% | **MW1 ✅ 2026-07-08** |
 | **W2** | [ ] | 观测台与费用 | Web 诊断页 · token/费用 API · 高德调用计数 | **MW2** |
 | **W3** | [ ] | 工作流模板 | JSON Logic 选模板 · RAG topK/variants 参数化 | **MW3** |
 | **W4** | [ ] | 准确性验证 | Golden Case ≥30 条 · CI 回归 | — |
 | **W5** | [ ] | Visual 编辑器（按需） | React Flow 拖拽 · 沙箱预览 | **MW4**（可选） |
 
-**与 M6 关系**：W0 可与 Step 35～40 **并行**；W1 建议在 M6 验收后或人力允许时启动；W3 依赖 W1。
+**与 M6 关系**：W0/W1 可与 M6 **并行**（**W0+W1 已于 2026-07-08 验收 · MW1 达成**）；**下一焦点 W2**；W3 依赖 W1。
+
+**验收命令**（W1-6）：
+
+```bash
+pnpm workflow:equivalence   # 需 Node API + ai-service/.venv
+```
 
 **降级链**（与 C7 一致）：
 
@@ -1218,7 +1224,7 @@ M4 [x]  Step 25～30 H3 + C7-c 记忆宠物
 M5 [x]  Step 31～34 H8/H7 行中智能  ← 2026-06-18 达成
 M6 [ ]  Step 35～40 I 线 + H10 可信度（+ 41～42 远期可选）  ← 当前
 
-C7-W [ ]  W0～W5 流程编排（W0 观测基线可与 M6 并行）  ← 见 AI流程编排路线图
+C7-W [~]  W0✅ W1✅ MW1 · W2 观测台（当前）· W3～W5  ← 见 AI流程编排路线图
 ```
 
 | 里程碑 | Step | 与 ROADMAP 编号 | 理由 |

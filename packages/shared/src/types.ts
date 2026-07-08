@@ -1,3 +1,7 @@
+import type { AgentToolTraceEntry } from './workflow-node-span.js';
+
+export type { AgentToolTraceEntry, NodeSpan, NodeSpanLlmUsage, RagScoreSummaryItem } from './workflow-node-span.js';
+
 export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
@@ -626,13 +630,6 @@ export interface PlanSessionMessageInfo {
   createdAt: string;
 }
 
-/** C7-b：Agent Tool 调用轨迹（写入 plan_sessions.agent_state） */
-export interface AgentToolTraceEntry {
-  tool: string;
-  ok: boolean;
-  ms: number;
-}
-
 /** C7-b Step 7：规划会话 SSE 事件类型 */
 export type PlanSessionStreamEventName = 'tool_call' | 'assistant' | 'done' | 'error';
 
@@ -669,6 +666,19 @@ export interface PlanSessionAgentState {
   assistantHint?: string;
   /** C7-c / H3-a：规划页 Focus 宠物与记忆摘要 */
   petMeta?: PlanPetMeta | null;
+}
+
+/** W0-5：管理端规划诊断 API 返回体 */
+export interface PlanSessionWorkflowTrace {
+  sessionId: number;
+  userId: number;
+  title: string;
+  generationPath: PlanSessionAgentState['generationPath'];
+  lastRoutedIntent: string;
+  spans: AgentToolTraceEntry[];
+  totalDurationMs: number;
+  /** Langfuse sessionId（与 planSessionId 字符串一致） */
+  langfuseSessionId: string;
 }
 
 /** H3-a：规划页宠物 Focus 态展示数据 */

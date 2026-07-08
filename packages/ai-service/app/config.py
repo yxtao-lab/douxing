@@ -132,3 +132,14 @@ def resolve_provider_chain(choice: str | None = None) -> list[str]:
         chain.append("deepseek")
     chain.append("lmstudio")
     return chain
+
+
+def get_workflow_engine(override: str | None = None) -> str:
+    """
+    读取工作流引擎模式；非法值回退 legacy。
+
+    @param override - 请求级覆盖（Header 等）
+    @returns `legacy` 或 `langgraph`
+    """
+    raw = (override or os.getenv("WORKFLOW_ENGINE") or "legacy").strip().lower()
+    return raw if raw in ("legacy", "langgraph") else "legacy"

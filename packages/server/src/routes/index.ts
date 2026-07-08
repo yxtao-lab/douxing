@@ -22,6 +22,7 @@ import membershipRouter from './membership.js';
 import agentToolsRouter from './agent-tools.js';
 import agentRouteIntentRouter from './agent-route-intent.js';
 import petsRouter from './pets.js';
+import adminPlanSessionsRouter from './admin-plan-sessions.js';
 
 const router = Router();
 
@@ -45,6 +46,7 @@ router.use(`${API_PREFIX}/membership`, membershipRouter);
 router.use(`${API_PREFIX}/agent/tools`, agentToolsRouter);
 router.use(`${API_PREFIX}/agent/route-intent`, agentRouteIntentRouter);
 router.use(`${API_PREFIX}/pets`, petsRouter);
+router.use(`${API_PREFIX}/admin/plan-sessions`, adminPlanSessionsRouter);
 router.use(`${API_PREFIX}/system`, systemAdminRouter);
 
 export default router;

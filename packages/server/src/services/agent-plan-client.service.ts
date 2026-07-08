@@ -24,6 +24,10 @@ import {
 
   buildLodgingTunedAssistantHint,
 
+  WorkflowNodeSpanRecorder,
+
+  digestWorkflowPayload,
+
 } from '@douxing/shared';
 
 import {
@@ -50,12 +54,6 @@ import { answerFoodQa } from './answer-food-qa.service.js';
 
 import { resolvePlanVariantSelection } from './select-plan-variant.service.js';
 
-import { enrichRouteDraft } from './route-enricher.service.js';
-
-import { validateRouteDraft } from './validate-route.service.js';
-
-import { retrievePlaybooksForPlanning } from './playbook-rag.service.js';
-
 import { generateRoute } from './route-generator.service.js';
 
 import { loadPlanUserContext } from './plan-user-context.service.js';
@@ -65,6 +63,10 @@ import { resolvePlanningCity } from './travel-intent.service.js';
 import { runBuildRouteVariantsTool } from '../agent/tools/build-route-variants.tool.js';
 import { runRecallUserMemoryTool } from '../agent/tools/memory.tools.js';
 import { runApplyMemoryContextTool } from '../agent/tools/apply-memory-context.tool.js';
+import { runRetrievePlaybooksTool } from '../agent/tools/retrieve-playbooks.tool.js';
+import { runEnrichRouteTool } from '../agent/tools/enrich-route.tool.js';
+import { runValidateRouteTool } from '../agent/tools/validate-route.tool.js';
+import { runRetrieveAttractionsTool } from '../agent/tools/retrieve-attractions.tool.js';
 
 
 
@@ -154,51 +156,102 @@ function isAgentPlanResultUsable(result: AgentPlanResult | null | undefined): re
 
 
 async function finalizeDraftWithEnrich(
-
   draft: GeneratedRouteDraft,
-
   intent: TravelIntentSnapshot,
-
   locale: LocaleCode | undefined,
-
   trace: AgentToolTraceEntry[],
-
   hooks?: AgentPlanStreamHooks,
-
 ): Promise<GeneratedRouteDraft> {
+  const spanRecorder = new WorkflowNodeSpanRecorder(trace);
+  const city = resolvePlanningCity(intent) ?? draft.matchedCity;
 
-  const t0 = Date.now();
-
-  hooks?.onToolStart?.('enrich_route');
-
-  const playbooks = await retrievePlaybooksForPlanning({
-
-    city: resolvePlanningCity(intent) ?? draft.matchedCity,
-
+  const pbStart = Date.now();
+  hooks?.onToolStart?.('retrieve_playbooks');
+  const playbookResult = await runRetrievePlaybooksTool({
+    city,
     themes: intent.themes,
-
+    prompt: intent.city ?? draft.name,
   });
+  const pbMs = Date.now() - pbStart;
+  if (!playbookResult.ok) {
+    spanRecorder.push({
+      tool: 'retrieve_playbooks',
+      ok: false,
+      ms: pbMs,
+      errorCode: playbookResult.error.code,
+      outputDigest: digestWorkflowPayload(playbookResult.error.message),
+    });
+    hooks?.onToolEnd?.('retrieve_playbooks', false, pbMs);
+    throw new Error(playbookResult.error.message);
+  }
+  const playbooks = playbookResult.data.playbooks;
+  spanRecorder.push({
+    tool: 'retrieve_playbooks',
+    ok: true,
+    ms: pbMs,
+    matchedPlaybookIds: playbookResult.data.matchedPlaybookIds,
+    inputDigest: digestWorkflowPayload({ city, themes: intent.themes }),
+    outputDigest: digestWorkflowPayload({
+      count: playbooks.length,
+      ids: playbookResult.data.matchedPlaybookIds.slice(0, 5),
+    }),
+  });
+  hooks?.onToolEnd?.('retrieve_playbooks', true, pbMs);
 
-  const enriched = await enrichRouteDraft(draft, { intent, locale, playbooks });
+  const enrichStart = Date.now();
+  hooks?.onToolStart?.('enrich_route');
+  const enrichResult = await runEnrichRouteTool({
+    draft,
+    intent,
+    locale,
+    playbooks,
+  });
+  const enrichMs = Date.now() - enrichStart;
+  if (!enrichResult.ok) {
+    spanRecorder.push({
+      tool: 'enrich_route',
+      ok: false,
+      ms: enrichMs,
+      errorCode: enrichResult.error.code,
+    });
+    hooks?.onToolEnd?.('enrich_route', false, enrichMs);
+    throw new Error(enrichResult.error.message);
+  }
+  const enriched = enrichResult.data.draft as GeneratedRouteDraft;
+  spanRecorder.push({
+    tool: 'enrich_route',
+    ok: true,
+    ms: enrichMs,
+    inputDigest: digestWorkflowPayload({ city: draft.matchedCity, days: draft.days }),
+  });
+  hooks?.onToolEnd?.('enrich_route', true, enrichMs);
 
-  trace.push({ tool: 'enrich_route', ok: true, ms: Date.now() - t0 });
-
-  hooks?.onToolEnd?.('enrich_route', true, Date.now() - t0);
-
-
-
-  const t1 = Date.now();
-
+  const validateStart = Date.now();
   hooks?.onToolStart?.('validate_route');
+  const validateResult = await runValidateRouteTool({
+    draft: enriched,
+    locale,
+    autoFix: true,
+  });
+  const validateMs = Date.now() - validateStart;
+  if (!validateResult.ok) {
+    spanRecorder.push({
+      tool: 'validate_route',
+      ok: false,
+      ms: validateMs,
+      errorCode: validateResult.error.code,
+    });
+    hooks?.onToolEnd?.('validate_route', false, validateMs);
+    throw new Error(validateResult.error.message);
+  }
+  spanRecorder.push({
+    tool: 'validate_route',
+    ok: true,
+    ms: validateMs,
+  });
+  hooks?.onToolEnd?.('validate_route', true, validateMs);
 
-  const validated = validateRouteDraft(enriched, { locale, autoFix: true });
-
-  trace.push({ tool: 'validate_route', ok: true, ms: Date.now() - t1 });
-
-  hooks?.onToolEnd?.('validate_route', true, Date.now() - t1);
-
-  return validated.draft;
-
+  return validateResult.data.draft as GeneratedRouteDraft;
 }
 
 
@@ -212,6 +265,43 @@ async function generatePlanNewCandidates(
 ): Promise<AgentPlanResult> {
   const locale = request.locale ?? 'zh-CN';
   const context = await loadPlanUserContext(request.userId);
+  const spanRecorder = new WorkflowNodeSpanRecorder(trace);
+
+  const ragStart = Date.now();
+  hooks?.onToolStart?.('retrieve_attractions');
+  const ragResult = await runRetrieveAttractionsTool({
+    city: resolvePlanningCity(intent) ?? undefined,
+    themes: intent.themes,
+    prompt: request.prompt,
+    days: intent.days ?? request.days,
+    excludeNames: context.excludePoiNames,
+    boostNames: context.boostPoiNames,
+  });
+  const ragMs = Date.now() - ragStart;
+  if (!ragResult.ok) {
+    spanRecorder.push({
+      tool: 'retrieve_attractions',
+      ok: false,
+      ms: ragMs,
+      errorCode: ragResult.error.code,
+    });
+    hooks?.onToolEnd?.('retrieve_attractions', false, ragMs);
+    throw new Error(ragResult.error.message);
+  }
+  const ragCandidates = ragResult.data.candidates;
+  spanRecorder.push({
+    tool: 'retrieve_attractions',
+    ok: true,
+    ms: ragMs,
+    ragMatchedIds: ragResult.data.matchedIds,
+    ragScoreSummary: ragResult.data.ragScoreSummary,
+    inputDigest: digestWorkflowPayload({
+      city: resolvePlanningCity(intent),
+      themes: intent.themes,
+    }),
+    outputDigest: digestWorkflowPayload({ count: ragCandidates.length }),
+  });
+  hooks?.onToolEnd?.('retrieve_attractions', true, ragMs);
 
   hooks?.onToolStart?.('build_route_variants');
   const variantStart = Date.now();
@@ -250,6 +340,8 @@ async function generatePlanNewCandidates(
         locale,
         intent,
         userId: request.userId,
+        sessionId: request.sessionId,
+        ragCandidates,
         variantKey: variant.key,
         variantHint: variant.hint,
         ragVariantIndex: variant.sortOrder,

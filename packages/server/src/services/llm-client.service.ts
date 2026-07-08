@@ -23,7 +23,7 @@ import {
 import { formatIntentConstraintsForLlm } from './travel-intent.service.js';
 import { formatRagContextForLlm } from './attraction-rag.service.js';
 import { formatPlaybookContextForLlm, type MatchedRoutePlaybook } from './playbook-rag.service.js';
-import { traceNodeRouteGeneration } from '../observability/langfuse-client.service.js';
+import { traceNodeRouteGeneration, buildLlmWorkflowRunId } from '../observability/langfuse-client.service.js';
 
 const poiTypeEnum = z.enum([
   PoiCategory.ATTRACTION,
@@ -395,6 +395,7 @@ export interface RoutePlannerMessageOptions {
   locale?: LocaleCode;
   userId?: number;
   sessionId?: number;
+  runId?: string;
 }
 
 /** 与线上 LLM 调用一致的 messages（用于 SFT 数据集构造） */
@@ -523,6 +524,9 @@ async function chatCompletionWithProvider(
   }));
 
   try {
+    const runId =
+      options?.runId
+      ?? (options?.sessionId != null ? buildLlmWorkflowRunId(options.sessionId) : undefined);
     await traceNodeRouteGeneration({
       prompt: userPrompt,
       provider,
@@ -537,6 +541,7 @@ async function chatCompletionWithProvider(
       durationMs: Date.now() - startedAt,
       userId: options?.userId,
       sessionId: options?.sessionId,
+      runId,
       locale: options?.locale,
     });
   } catch (err) {
@@ -561,6 +566,7 @@ export async function chatCompletionForRoute(
     locale?: LocaleCode;
     userId?: number;
     sessionId?: number;
+    runId?: string;
   },
 ): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
   const chain = resolveProviderChain(options?.provider);

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.config import get_workflow_engine
 from app.route_generator import check_provider_status, generate_route
 from app.agent.graph import run_plan_agent
-from app.agent.transit_agent import run_transit_agent
+from app.workflow.engine import run_transit_with_engine
 from app.observability.langfuse_client import flush_langfuse, is_langfuse_enabled, get_langfuse_host
 from app.schemas import (
     AgentPlanRequest,
@@ -54,6 +55,7 @@ async def service_status() -> ServiceStatusResponse:
             langfuse=is_langfuse_enabled(),
             langfuseHost=get_langfuse_host() if is_langfuse_enabled() else None,
         ),
+        workflowEngine=get_workflow_engine(),
     )
 
 
@@ -70,9 +72,15 @@ async def route_generate(request: GenerateRouteRequest) -> GenerateRouteResponse
 
 
 @app.post("/v1/agent/plan", response_model=AgentPlanResponse)
-async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
+async def agent_plan(
+    request: AgentPlanRequest,
+    x_workflow_engine: str | None = Header(default=None, alias="X-Workflow-Engine"),
+) -> AgentPlanResponse:
     try:
-        result = await run_plan_agent(request.model_dump())
+        result = await run_plan_agent(
+            request.model_dump(),
+            engine_override=x_workflow_engine,
+        )
         return AgentPlanResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
@@ -83,9 +91,15 @@ async def agent_plan(request: AgentPlanRequest) -> AgentPlanResponse:
 
 
 @app.post("/v1/agent/transit", response_model=AgentTransitResponse)
-async def agent_transit(request: AgentTransitRequest) -> AgentTransitResponse:
+async def agent_transit(
+    request: AgentTransitRequest,
+    x_workflow_engine: str | None = Header(default=None, alias="X-Workflow-Engine"),
+) -> AgentTransitResponse:
     try:
-        result = await run_transit_agent(request.model_dump())
+        result = await run_transit_with_engine(
+            request.model_dump(),
+            engine_override=x_workflow_engine,
+        )
         return AgentTransitResponse(**result)
     except ValueError as exc:
         raise HTTPException(status_code=502, detail=str(exc)) from exc

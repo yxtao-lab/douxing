@@ -62,6 +62,16 @@ export async function flushLangfuse(): Promise<void> {
   }
 }
 
+/**
+ * 生成单次 LLM 调用的 runId，用于 Langfuse 关联同一会话内的多次 generation。
+ *
+ * @param sessionId - 规划会话 ID
+ * @returns `{sessionId}-{timestamp}` 格式的 runId
+ */
+export function buildLlmWorkflowRunId(sessionId: number): string {
+  return `${sessionId}-${Date.now()}`;
+}
+
 export async function traceNodeRouteGeneration(input: {
   prompt: string;
   provider: string;
@@ -71,6 +81,7 @@ export async function traceNodeRouteGeneration(input: {
   durationMs: number;
   userId?: number;
   sessionId?: number;
+  runId?: string;
   locale?: string;
 }): Promise<void> {
   const lf = getLangfuseClient();
@@ -79,13 +90,16 @@ export async function traceNodeRouteGeneration(input: {
   try {
     const locale = input.locale ?? 'zh-CN';
     const tags = ['c5', 'node-llm', 'feature:route-generate', `locale:${locale}`, `provider:${input.provider}`];
+    const runId = input.runId ?? (input.sessionId != null ? buildLlmWorkflowRunId(input.sessionId) : undefined);
 
     const trace = lf.trace({
       name: 'node-route-generate',
+      id: runId,
       userId: input.userId != null ? String(input.userId) : undefined,
       sessionId: input.sessionId != null ? String(input.sessionId) : undefined,
       input: sanitizeTraceInput({ prompt: input.prompt }),
       tags,
+      metadata: runId ? { runId } : undefined,
     });
 
     trace.generation({
@@ -98,6 +112,7 @@ export async function traceNodeRouteGeneration(input: {
         durationMs: input.durationMs,
         provider: input.provider,
         feature: 'route-generate',
+        ...(runId ? { runId } : {}),
       },
     });
 
@@ -106,6 +121,7 @@ export async function traceNodeRouteGeneration(input: {
         provider: input.provider,
         durationMs: input.durationMs,
         model: input.model,
+        ...(runId ? { runId } : {}),
       }),
     });
 

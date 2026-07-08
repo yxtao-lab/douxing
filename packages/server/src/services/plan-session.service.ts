@@ -19,6 +19,7 @@ import {
   appendPlanAssistantWarnings,
   formatPlanVariantHint,
   formatPlanVariantLabel,
+  normalizeAgentToolTrace,
   type LocaleCode,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
@@ -72,22 +73,8 @@ const SESSION_TITLE_MAX = 40;
 function parsePlanSessionAgentState(raw: unknown): PlanSessionAgentState | null {
   if (!raw || typeof raw !== 'object') return null;
   const record = raw as Record<string, unknown>;
-  const toolTrace = record.toolTrace;
-  if (!Array.isArray(toolTrace)) return null;
-  const normalizedTrace = toolTrace
-    .filter(
-      (entry): entry is PlanSessionAgentState['toolTrace'][number] =>
-        !!entry
-        && typeof entry === 'object'
-        && typeof (entry as { tool?: unknown }).tool === 'string'
-        && typeof (entry as { ok?: unknown }).ok === 'boolean'
-        && typeof (entry as { ms?: unknown }).ms === 'number',
-    )
-    .map((entry) => ({
-      tool: entry.tool,
-      ok: entry.ok,
-      ms: entry.ms,
-    }));
+  const normalizedTrace = normalizeAgentToolTrace(record.toolTrace);
+  if (!Array.isArray(record.toolTrace)) return null;
   const generationPath = record.generationPath === 'agent' ? 'agent' : 'pipeline';
   const lastRoutedIntent =
     typeof record.lastRoutedIntent === 'string' ? record.lastRoutedIntent : 'unknown';

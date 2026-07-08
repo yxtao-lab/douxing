@@ -269,6 +269,7 @@ export const sharedEnUS = {
       'planSessions.list': 'Plan session list',
       'planSessions.create': 'Create plan session',
       'planSessions.stream': 'Plan session stream',
+      'planSessions.workflowTrace': 'Plan workflow trace',
     },
   },
 } as const;

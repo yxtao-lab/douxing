@@ -125,6 +125,7 @@ class ServiceStatusResponse(BaseModel):
     version: str
     providers: list[ProviderStatus]
     observability: ObservabilityStatus | None = None
+    workflowEngine: str = "legacy"
 
 
 class AgentPlanRequest(BaseModel):
