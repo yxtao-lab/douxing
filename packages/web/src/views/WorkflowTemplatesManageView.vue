@@ -2,6 +2,12 @@
   <PageContainer admin>
     <template #toolbar>
       <AdminToolbar>
+        <template #left>
+          <a-button type="primary" @click="openCreate">
+            <template #icon><PlusOutlined /></template>
+            {{ t('workflowTemplates.create') }}
+          </a-button>
+        </template>
         <template #right>
           <a-tooltip :title="t('common.refresh')">
             <a-button :loading="loading" @click="reload">
@@ -128,14 +134,67 @@
         </a-row>
       </a-form>
     </a-modal>
+
+    <a-modal
+      v-model:open="createOpen"
+      :title="t('workflowTemplates.create')"
+      :confirm-loading="creating"
+      width="640px"
+      @ok="submitCreate"
+    >
+      <a-form layout="vertical">
+        <a-alert type="info" :message="t('workflowTemplates.createHint')" show-icon class="mb-4" />
+        <a-row :gutter="16">
+          <a-col :span="24">
+            <a-form-item :label="t('workflowTemplates.formId')" required>
+              <a-input
+                v-model:value="createForm.id"
+                :placeholder="t('workflowTemplates.formIdPlaceholder')"
+                allow-clear
+              />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formNameZh')" required>
+              <a-input v-model:value="createForm.nameZh" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formNameEn')" required>
+              <a-input v-model:value="createForm.nameEn" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formDescriptionZh')">
+              <a-input v-model:value="createForm.descriptionZh" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formDescriptionEn')">
+              <a-input v-model:value="createForm.descriptionEn" allow-clear />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formPriority')">
+              <a-input-number v-model:value="createForm.priority" :min="0" :max="999" class="w-full" />
+            </a-form-item>
+          </a-col>
+          <a-col :span="12">
+            <a-form-item :label="t('workflowTemplates.formEnabled')">
+              <a-switch v-model:checked="createForm.enabled" />
+            </a-form-item>
+          </a-col>
+        </a-row>
+      </a-form>
+    </a-modal>
   </PageContainer>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
-import { ReloadOutlined } from '@ant-design/icons-vue';
+import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import type { TablePaginationConfig } from 'ant-design-vue';
 import type { WorkflowTemplateInfo } from '@douxing/shared';
 import PageContainer from '@/layouts/components/PageContainer.vue';
@@ -145,7 +204,10 @@ import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import { useI18n } from 'vue-i18n';
 import { usePageTitle } from '@/i18n/usePageTitle';
-import { fetchWorkflowTemplates, updateWorkflowTemplate } from '@/api/workflow-templates';
+import { createWorkflowTemplate, fetchWorkflowTemplates, updateWorkflowTemplate } from '@/api/workflow-templates';
+
+/** 模板 ID slug 格式 */
+const TEMPLATE_ID_PATTERN = /^[a-z0-9_]+$/;
 
 const router = useRouter();
 
@@ -154,6 +216,7 @@ usePageTitle('web.workflowTemplates');
 
 const loading = ref(false);
 const saving = ref(false);
+const creating = ref(false);
 const error = ref<string | null>(null);
 const list = ref<WorkflowTemplateInfo[]>([]);
 const page = ref(1);
@@ -161,8 +224,19 @@ const pageSize = ref(20);
 const total = ref(0);
 
 const editOpen = ref(false);
+const createOpen = ref(false);
 const editForm = ref<WorkflowTemplateInfo | null>(null);
 const selectionRulesText = ref('');
+
+const createForm = reactive({
+  id: '',
+  nameZh: '',
+  nameEn: '',
+  descriptionZh: '',
+  descriptionEn: '',
+  priority: 10,
+  enabled: true,
+});
 
 const pagination = computed(() => ({
   current: page.value,
@@ -213,6 +287,84 @@ function handleTableChange(pag: TablePaginationConfig) {
   page.value = pag.current ?? 1;
   pageSize.value = pag.pageSize ?? 20;
   void reload();
+}
+
+/**
+ * 打开新建模板弹窗并重置表单。
+ */
+function openCreate(): void {
+  createForm.id = '';
+  createForm.nameZh = '';
+  createForm.nameEn = '';
+  createForm.descriptionZh = '';
+  createForm.descriptionEn = '';
+  createForm.priority = 10;
+  createForm.enabled = true;
+  createOpen.value = true;
+}
+
+/**
+ * 校验新建表单基础字段。
+ *
+ * @returns 是否通过
+ */
+function validateCreateForm(): boolean {
+  const id = createForm.id.trim();
+  if (!id || id.length < 2) {
+    message.warning(t('workflowTemplates.invalidId'));
+    return false;
+  }
+  if (!TEMPLATE_ID_PATTERN.test(id)) {
+    message.warning(t('workflowTemplates.invalidId'));
+    return false;
+  }
+  if (!createForm.nameZh.trim() || !createForm.nameEn.trim()) {
+    message.warning(t('workflowTemplates.createNameRequired'));
+    return false;
+  }
+  return true;
+}
+
+/**
+ * 提交新建模板并跳转可视化编排（带首次引导）。
+ *
+ * @returns Promise<void>
+ */
+async function submitCreate(): Promise<void> {
+  if (!validateCreateForm()) return;
+
+  creating.value = true;
+  try {
+    const created = await createWorkflowTemplate({
+      id: createForm.id.trim(),
+      nameZh: createForm.nameZh.trim(),
+      nameEn: createForm.nameEn.trim(),
+      descriptionZh: createForm.descriptionZh.trim() || null,
+      descriptionEn: createForm.descriptionEn.trim() || null,
+      enabled: createForm.enabled,
+      priority: createForm.priority,
+      selectionRules: true,
+      nodeConfig: {
+        topK: 12,
+        variantCount: 2,
+        playbookLimit: 3,
+      },
+      abSplitPercent: 0,
+      abVariantBId: null,
+      sortOrder: 0,
+    });
+    message.success(t('workflowTemplates.createSuccess'));
+    createOpen.value = false;
+    router.push({
+      name: 'workflow-template-editor',
+      params: { id: created.id },
+      query: { onboarding: '1' },
+    });
+  } catch {
+    message.error(t('workflowTemplates.createFailed'));
+  } finally {
+    creating.value = false;
+  }
 }
 
 /**

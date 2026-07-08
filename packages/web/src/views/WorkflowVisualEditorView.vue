@@ -6,7 +6,8 @@
       @back="goBack"
     >
       <template #extra>
-        <a-space wrap>
+        <div ref="toolbarRef" class="workflow-visual-editor__toolbar">
+          <a-space wrap>
           <a-tag :color="publishStatusColor">{{ publishStatusLabel }}</a-tag>
           <a-tag>{{ t('workflowEditor.versionTag', { version: template?.version ?? '-' }) }}</a-tag>
           <a-button @click="loadDefaultGraph">{{ t('workflowEditor.loadDefault') }}</a-button>
@@ -21,17 +22,21 @@
           >
             {{ t('workflowEditor.publish') }}
           </a-button>
-        </a-space>
+          </a-space>
+        </div>
       </template>
     </a-page-header>
 
     <a-spin :spinning="loading" wrapper-class-name="workflow-visual-editor__spin">
       <div class="workflow-visual-editor__layout">
-        <aside class="workflow-visual-editor__palette">
-          <WorkflowNodePalette />
+        <aside ref="paletteRef" class="workflow-visual-editor__palette">
+          <WorkflowNodePalette
+            :selected-key="selectedPaletteKey"
+            @select="onPaletteSelect"
+          />
         </aside>
 
-        <main class="workflow-visual-editor__canvas-wrap">
+        <main ref="canvasWrapRef" class="workflow-visual-editor__canvas-wrap">
           <WorkflowGraphCanvas
             v-if="currentGraph"
             ref="canvasRef"
@@ -41,14 +46,19 @@
           />
         </main>
 
-        <aside class="workflow-visual-editor__side">
+        <aside ref="sidePanelRef" class="workflow-visual-editor__side">
           <a-collapse
             v-model:active-key="sideActiveKeys"
             :bordered="false"
             class="workflow-visual-editor__side-collapse"
           >
-            <a-collapse-panel key="config" :header="t('workflowEditor.toolConfig.title')">
+            <a-collapse-panel key="config" :header="t('workflowEditor.sidePanelTitle')">
+              <WorkflowPaletteNodeDocPanel
+                v-if="paletteSelection && !selectedNode"
+                :selection="paletteSelection"
+              />
               <WorkflowToolNodeConfigPanel
+                v-else
                 bare
                 :selected-node="selectedNode"
                 @update-overrides="onNodeOverridesUpdate"
@@ -107,11 +117,20 @@
         </aside>
       </div>
     </a-spin>
+
+    <WorkflowEditorOnboardingTour
+      :open="onboardingOpen"
+      :palette-target="paletteRef"
+      :canvas-target="canvasWrapRef"
+      :toolbar-target="toolbarRef"
+      :side-target="sidePanelRef"
+      @complete="completeOnboarding"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
@@ -123,10 +142,20 @@ import type {
 import { buildDefaultPlanDefaultGraph, validateWorkflowGraph } from '@douxing/shared';
 import WorkflowNodePalette from '@/components/workflow-editor/WorkflowNodePalette.vue';
 import WorkflowGraphCanvas from '@/components/workflow-editor/WorkflowGraphCanvas.vue';
+import WorkflowPaletteNodeDocPanel from '@/components/workflow-editor/WorkflowPaletteNodeDocPanel.vue';
 import WorkflowToolNodeConfigPanel, {
   type WorkflowSelectedNodeSnapshot,
 } from '@/components/workflow-editor/WorkflowToolNodeConfigPanel.vue';
+import WorkflowEditorOnboardingTour from '@/components/workflow-editor/WorkflowEditorOnboardingTour.vue';
 import { readFlowNodeData } from '@/utils/workflow-graph-flow';
+import {
+  buildWorkflowPaletteSelectionKey,
+  type WorkflowPaletteSelection,
+} from '@/utils/workflow-palette-selection';
+import {
+  markWorkflowEditorOnboardingComplete,
+  shouldShowWorkflowEditorOnboarding,
+} from '@/utils/workflow-editor-onboarding';
 import {
   fetchDefaultWorkflowGraph,
   fetchWorkflowTemplateById,
@@ -154,7 +183,18 @@ const currentGraph = ref<WorkflowGraphDefinition | null>(null);
 const validationResult = ref<WorkflowGraphValidationResult | null>(null);
 const canvasRef = ref<InstanceType<typeof WorkflowGraphCanvas> | null>(null);
 
+const paletteRef = ref<HTMLElement | null>(null);
+const canvasWrapRef = ref<HTMLElement | null>(null);
+const toolbarRef = ref<HTMLElement | null>(null);
+const sidePanelRef = ref<HTMLElement | null>(null);
+
+const onboardingOpen = ref(false);
+
 const selectedNode = ref<WorkflowSelectedNodeSnapshot | null>(null);
+/** 左侧面板选中项（展示目录说明） */
+const paletteSelection = ref<WorkflowPaletteSelection | null>(null);
+/** 左侧面板选中键（高亮用） */
+const selectedPaletteKey = ref<string | null>(null);
 
 /** 右侧栏折叠面板默认展开项 */
 const sideActiveKeys = ref(['config', 'validation']);
@@ -178,6 +218,29 @@ const publishStatusLabel = computed(() => {
 const publishStatusColor = computed(() =>
   template.value?.graphPublishStatus === 'published' ? 'success' : 'default',
 );
+
+/**
+ * 新建模板首次进入时尝试启动操作引导。
+ */
+async function tryOpenOnboarding(): Promise<void> {
+  if (loading.value || !currentGraph.value) return;
+  if (!shouldShowWorkflowEditorOnboarding(templateId.value, route.query.onboarding)) return;
+  await nextTick();
+  onboardingOpen.value = true;
+}
+
+/**
+ * 完成或跳过引导：写入 localStorage 并清理 URL 参数。
+ */
+function completeOnboarding(): void {
+  markWorkflowEditorOnboardingComplete(templateId.value);
+  onboardingOpen.value = false;
+  if (route.query.onboarding) {
+    const nextQuery = { ...route.query };
+    delete nextQuery.onboarding;
+    void router.replace({ query: nextQuery });
+  }
+}
 
 /**
  * 返回模板列表页。
@@ -205,11 +268,24 @@ async function loadTemplate(): Promise<void> {
     goBack();
   } finally {
     loading.value = false;
+    void tryOpenOnboarding();
   }
 }
 
 /**
- * 画布节点选中：同步属性面板。
+ * 左侧面板选中：展示节点目录说明并取消画布选中。
+ *
+ * @param selection - 面板选中项
+ */
+function onPaletteSelect(selection: WorkflowPaletteSelection): void {
+  paletteSelection.value = selection;
+  selectedPaletteKey.value = buildWorkflowPaletteSelectionKey(selection);
+  selectedNode.value = null;
+  canvasRef.value?.clearNodeSelection();
+}
+
+/**
+ * 画布节点选中：同步属性面板并清除面板目录选中。
  *
  * @param snapshot - 选中节点快照；null 表示取消选中
  */
@@ -218,6 +294,8 @@ function onNodeSelect(snapshot: { id: string; position: { x: number; y: number }
     selectedNode.value = null;
     return;
   }
+  paletteSelection.value = null;
+  selectedPaletteKey.value = null;
   const data = readFlowNodeData(snapshot);
   const config = data.config as { overrides?: Record<string, unknown> } | undefined;
   selectedNode.value = {
@@ -364,6 +442,13 @@ function openDiagnostics(sessionId: number): void {
 onMounted(() => {
   void loadTemplate();
 });
+
+watch(
+  () => route.query.onboarding,
+  () => {
+    void tryOpenOnboarding();
+  },
+);
 </script>
 
 <style scoped>

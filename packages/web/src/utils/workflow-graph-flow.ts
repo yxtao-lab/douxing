@@ -9,6 +9,9 @@ import { WORKFLOW_GRAPH_SCHEMA_VERSION } from '@douxing/shared';
 /** Vue Flow 拖拽 MIME 类型（面板 → 画布） */
 export const WORKFLOW_EDITOR_DRAG_MIME = 'application/vueflow';
 
+/** 拖拽数据 text/plain 兜底键（部分浏览器 drop 时读不到自定义 MIME） */
+export const WORKFLOW_EDITOR_DRAG_PLAIN_KEY = 'text/plain';
+
 /** Vue Flow 节点 data 载荷 */
 export interface WorkflowFlowNodeData {
   kind: WorkflowGraphNodeKind;
@@ -157,4 +160,34 @@ export function createUniqueWorkflowEdgeId(
     index += 1;
   }
   return candidate;
+}
+
+/** 面板拖拽到画布的载荷结构 */
+export interface WorkflowEditorDragPayload {
+  kind: WorkflowGraphNodeKind;
+  toolName?: string;
+  id?: string;
+  labelKey?: string;
+}
+
+/**
+ * 从 DragEvent 读取左侧面板写入的节点载荷。
+ *
+ * @param event - drop 或 dragstart 事件
+ * @returns 解析成功返回载荷；无数据或 JSON 非法时返回 null
+ */
+export function readWorkflowEditorDragPayload(event: DragEvent): WorkflowEditorDragPayload | null {
+  const transfer = event.dataTransfer;
+  if (!transfer) return null;
+
+  const raw =
+    transfer.getData(WORKFLOW_EDITOR_DRAG_MIME) ||
+    transfer.getData(WORKFLOW_EDITOR_DRAG_PLAIN_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as WorkflowEditorDragPayload;
+  } catch {
+    return null;
+  }
 }

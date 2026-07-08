@@ -84,6 +84,20 @@ export async function validateWorkflowGraphApi(graphDef: WorkflowGraphDefinition
 }
 
 /**
+ * 创建工作流模板。
+ *
+ * @param payload - 完整模板字段
+ * @returns 新建模板
+ */
+export async function createWorkflowTemplate(payload: WorkflowTemplateUpsertPayload) {
+  const { data } = await http.post<ApiResponse<WorkflowTemplateInfo>>(
+    '/admin/workflow-templates',
+    payload,
+  );
+  return data.data;
+}
+
+/**
  * 更新工作流模板。
  *
  * @param id - 模板 ID

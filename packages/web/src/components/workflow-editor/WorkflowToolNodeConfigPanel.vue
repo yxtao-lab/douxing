@@ -1,7 +1,7 @@
 <template>
   <component :is="bare ? 'div' : 'a-card'" v-bind="wrapperProps">
     <a-spin :spinning="schemasLoading">
-      <a-empty v-if="!selectedNode" :description="t('workflowEditor.toolConfig.empty')" />
+      <a-empty v-if="!selectedNode" :description="t('workflowEditor.paletteDoc.empty')" />
       <a-empty
         v-else-if="selectedNode.kind !== 'tool'"
         :description="t('workflowEditor.toolConfig.notToolNode')"
@@ -11,6 +11,9 @@
         :description="t('workflowEditor.toolConfig.noSchema')"
       />
       <template v-else>
+        <a-tag class="tool-config-panel__badge" color="green">
+          {{ t('workflowEditor.paletteDoc.canvasBadge') }}
+        </a-tag>
         <p class="tool-config-panel__node-id">{{ selectedNode.id }}</p>
         <p class="tool-config-panel__tool-name">{{ toolTitle }}</p>
         <a-form layout="vertical" class="tool-config-panel__form">
@@ -234,6 +237,10 @@ function resetOverrides(): void {
 <style scoped>
 .tool-config-panel--bare {
   width: 100%;
+}
+
+.tool-config-panel__badge {
+  margin-bottom: 8px;
 }
 
 .tool-config-panel__node-id {

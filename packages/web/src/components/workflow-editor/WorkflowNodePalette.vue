@@ -14,9 +14,14 @@
             block
             draggable="true"
             class="workflow-node-palette__item"
+            :class="{ 'workflow-node-palette__item--selected': isItemSelected('tool', tool) }"
+            @click="onItemClick('tool', { toolName: tool })"
             @dragstart="(e: DragEvent) => onDragStart(e, 'tool', { toolName: tool })"
           >
-            {{ toolLabel(tool) }}
+            <span class="workflow-node-palette__item-inner">
+              <component :is="resolveWorkflowPaletteToolIcon(tool)" class="workflow-node-palette__icon" />
+              <span class="workflow-node-palette__label">{{ toolLabel(tool) }}</span>
+            </span>
           </a-button>
         </div>
       </a-collapse-panel>
@@ -30,27 +35,42 @@
             block
             draggable="true"
             class="workflow-node-palette__item"
+            :class="{ 'workflow-node-palette__item--selected': isItemSelected('node', item.id) }"
+            @click="onItemClick(item.kind, { id: item.id, labelKey: item.labelKey })"
             @dragstart="(e: DragEvent) => onDragStart(e, item.kind, { id: item.id, labelKey: item.labelKey })"
           >
-            {{ t(item.labelKey) }}
+            <span class="workflow-node-palette__item-inner">
+              <component :is="resolveWorkflowPaletteNodeIcon(item.id)" class="workflow-node-palette__icon" />
+              <span class="workflow-node-palette__label">{{ t(item.labelKey) }}</span>
+            </span>
           </a-button>
           <a-button
             size="small"
             block
             draggable="true"
             class="workflow-node-palette__item"
+            :class="{ 'workflow-node-palette__item--selected': isItemSelected('node', 'start') }"
+            @click="onItemClick('start', { id: 'start', labelKey: 'workflowEditor.node.start' })"
             @dragstart="(e: DragEvent) => onDragStart(e, 'start', { id: 'start', labelKey: 'workflowEditor.node.start' })"
           >
-            {{ t('workflowEditor.node.start') }}
+            <span class="workflow-node-palette__item-inner">
+              <component :is="resolveWorkflowPaletteNodeIcon('start')" class="workflow-node-palette__icon" />
+              <span class="workflow-node-palette__label">{{ t('workflowEditor.node.start') }}</span>
+            </span>
           </a-button>
           <a-button
             size="small"
             block
             draggable="true"
             class="workflow-node-palette__item"
+            :class="{ 'workflow-node-palette__item--selected': isItemSelected('node', 'end') }"
+            @click="onItemClick('end', { id: 'end', labelKey: 'workflowEditor.node.end' })"
             @dragstart="(e: DragEvent) => onDragStart(e, 'end', { id: 'end', labelKey: 'workflowEditor.node.end' })"
           >
-            {{ t('workflowEditor.node.end') }}
+            <span class="workflow-node-palette__item-inner">
+              <component :is="resolveWorkflowPaletteNodeIcon('end')" class="workflow-node-palette__icon" />
+              <span class="workflow-node-palette__label">{{ t('workflowEditor.node.end') }}</span>
+            </span>
           </a-button>
         </div>
       </a-collapse-panel>
@@ -66,7 +86,24 @@ import {
   WORKFLOW_ORCHESTRATION_NODE_DEFS,
   type WorkflowGraphNodeKind,
 } from '@douxing/shared';
-import { WORKFLOW_EDITOR_DRAG_MIME } from '@/utils/workflow-graph-flow';
+import {
+  WORKFLOW_EDITOR_DRAG_MIME,
+  WORKFLOW_EDITOR_DRAG_PLAIN_KEY,
+} from '@/utils/workflow-graph-flow';
+import type { WorkflowPaletteSelection } from '@/utils/workflow-palette-selection';
+import {
+  resolveWorkflowPaletteNodeIcon,
+  resolveWorkflowPaletteToolIcon,
+} from '@/utils/workflow-palette-icons';
+
+const props = defineProps<{
+  /** 当前选中的面板项键 */
+  selectedKey?: string | null;
+}>();
+
+const emit = defineEmits<{
+  select: [selection: WorkflowPaletteSelection];
+}>();
 
 const { t } = useI18n();
 
@@ -86,6 +123,37 @@ function toolLabel(tool: string): string {
 }
 
 /**
+ * 判断面板项是否处于选中态。
+ *
+ * @param mode - tool 或 node 目录项
+ * @param id - tool 名或 nodeId
+ * @returns 是否选中
+ */
+function isItemSelected(mode: 'tool' | 'node', id: string): boolean {
+  if (!props.selectedKey) return false;
+  const key = mode === 'tool' ? `tool:${id}` : `node:${id}`;
+  return props.selectedKey === key;
+}
+
+/**
+ * 点击面板项：选中并通知父组件展示说明。
+ *
+ * @param kind - 节点种类
+ * @param payload - 节点标识
+ */
+function onItemClick(
+  kind: WorkflowGraphNodeKind,
+  payload: { toolName?: string; id?: string; labelKey?: string },
+): void {
+  emit('select', {
+    kind,
+    toolName: payload.toolName,
+    nodeId: payload.id,
+    labelKey: payload.labelKey,
+  });
+}
+
+/**
  * 开始从面板拖拽节点。
  *
  * @param event - 拖拽事件
@@ -98,16 +166,16 @@ function onDragStart(
   payload: { toolName?: string; id?: string; labelKey?: string },
 ): void {
   if (!event.dataTransfer) return;
-  event.dataTransfer.setData(
-    WORKFLOW_EDITOR_DRAG_MIME,
-    JSON.stringify({
-      kind,
-      toolName: payload.toolName,
-      id: payload.id,
-      labelKey: payload.labelKey,
-    }),
-  );
+  const json = JSON.stringify({
+    kind,
+    toolName: payload.toolName,
+    id: payload.id,
+    labelKey: payload.labelKey,
+  });
+  event.dataTransfer.setData(WORKFLOW_EDITOR_DRAG_MIME, json);
+  event.dataTransfer.setData(WORKFLOW_EDITOR_DRAG_PLAIN_KEY, json);
   event.dataTransfer.effectAllowed = 'move';
+  onItemClick(kind, payload);
 }
 </script>
 
@@ -155,9 +223,50 @@ function onDragStart(
   text-align: left;
   white-space: normal;
   height: auto;
-  min-height: 28px;
+  min-height: 32px;
   line-height: 1.3;
-  padding-top: 4px;
-  padding-bottom: 4px;
+  padding: 6px 10px;
+  cursor: grab;
+  -webkit-user-drag: element;
+  border-color: #d9d9d9;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.workflow-node-palette__item-inner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+}
+
+.workflow-node-palette__icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.workflow-node-palette__label {
+  flex: 1;
+  min-width: 0;
+  word-break: break-word;
+}
+
+.workflow-node-palette__item--selected .workflow-node-palette__icon {
+  opacity: 1;
+}
+
+.workflow-node-palette__item--selected {
+  border-color: #1677ff;
+  background: #e6f4ff;
+  color: #1677ff;
+  font-weight: 600;
+}
+
+.workflow-node-palette__item--selected:hover {
+  border-color: #1677ff;
+  background: #e6f4ff;
+  color: #1677ff;
 }
 </style>
