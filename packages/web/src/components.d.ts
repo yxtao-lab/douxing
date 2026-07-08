@@ -22,6 +22,8 @@ declare module 'vue' {
     ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
     ACheckboxGroup: typeof import('ant-design-vue/es')['CheckboxGroup']
     ACol: typeof import('ant-design-vue/es')['Col']
+    ACollapse: typeof import('ant-design-vue/es')['Collapse']
+    ACollapsePanel: typeof import('ant-design-vue/es')['CollapsePanel']
     AConfigProvider: typeof import('ant-design-vue/es')['ConfigProvider']
     ADatePicker: typeof import('ant-design-vue/es/date-picker/dayjs')['default']
     ADescriptions: typeof import('ant-design-vue/es')['Descriptions']
@@ -87,6 +89,7 @@ declare module 'vue' {
     TravelGeoMap: typeof import('./components/screen/TravelGeoMap.vue')['default']
     WorkbenchChangelog: typeof import('./components/workbench/WorkbenchChangelog.vue')['default']
     WorkbenchPanel: typeof import('./components/workbench/WorkbenchPanel.vue')['default']
+    WorkflowSpanTimeline: typeof import('./components/plan-workflow/WorkflowSpanTimeline.vue')['default']
   }
 }
 
@@ -102,6 +105,8 @@ declare global {
   const ACheckbox: typeof import('ant-design-vue/es')['Checkbox']
   const ACheckboxGroup: typeof import('ant-design-vue/es')['CheckboxGroup']
   const ACol: typeof import('ant-design-vue/es')['Col']
+  const ACollapse: typeof import('ant-design-vue/es')['Collapse']
+  const ACollapsePanel: typeof import('ant-design-vue/es')['CollapsePanel']
   const AConfigProvider: typeof import('ant-design-vue/es')['ConfigProvider']
   const ADatePicker: typeof import('ant-design-vue/es/date-picker/dayjs')['default']
   const ADescriptions: typeof import('ant-design-vue/es')['Descriptions']
@@ -167,4 +172,5 @@ declare global {
   const TravelGeoMap: typeof import('./components/screen/TravelGeoMap.vue')['default']
   const WorkbenchChangelog: typeof import('./components/workbench/WorkbenchChangelog.vue')['default']
   const WorkbenchPanel: typeof import('./components/workbench/WorkbenchPanel.vue')['default']
+  const WorkflowSpanTimeline: typeof import('./components/plan-workflow/WorkflowSpanTimeline.vue')['default']
 }

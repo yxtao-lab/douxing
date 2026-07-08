@@ -1,4 +1,5 @@
 import { isAmapGeocodeEnabled, getAmapWebKey, getAmapGeocodeTimeoutMs } from '../config/amap.js';
+import { recordExternalApiCall } from '../observability/external-api-counter.service.js';
 import { getCachedGeocode, setCachedGeocode } from './geocode-cache.service.js';
 
 const AMAP_PLACE_TEXT_URL = 'https://restapi.amap.com/v3/place/text';
@@ -93,6 +94,7 @@ export async function geocodeByPlaceText(
   });
 
   const timeoutMs = getAmapGeocodeTimeoutMs();
+  recordExternalApiCall();
   const res = await fetchWithTimeout(`${AMAP_PLACE_TEXT_URL}?${params}`, timeoutMs);
   const data = (await res.json()) as AmapPlaceResponse;
 
@@ -130,6 +132,7 @@ export async function geocodeByAddress(
   });
 
   const timeoutMs = getAmapGeocodeTimeoutMs();
+  recordExternalApiCall();
   const res = await fetchWithTimeout(`${AMAP_GEO_URL}?${params}`, timeoutMs);
   const data = (await res.json()) as AmapGeoResponse;
 
@@ -171,6 +174,7 @@ export async function searchPoisByKeyword(
 
   const timeoutMs = getAmapGeocodeTimeoutMs();
   try {
+    recordExternalApiCall();
     const res = await fetchWithTimeout(`${AMAP_PLACE_TEXT_URL}?${params}`, timeoutMs);
     const data = (await res.json()) as AmapPlaceResponse;
 

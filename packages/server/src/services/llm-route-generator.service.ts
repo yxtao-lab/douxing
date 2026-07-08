@@ -1,5 +1,6 @@
 import type { LlmProviderChoice } from '../config/llm.js';
 import type { GenerateRouteInput, GeneratedRouteDraft } from './route-generator.service.js';
+import type { NodeSpanLlmUsage } from '@douxing/shared';
 import { chatCompletionForRoute } from './llm-client.service.js';
 import { enforceRouteConstraints } from './travel-intent.service.js';
 import { isLlmEnabled, resolveProviderChain } from '../config/llm.js';
@@ -10,9 +11,11 @@ export type LlmProviderUsed = 'douxing' | 'deepseek' | 'lmstudio';
 /** 使用大模型生成路线（兜行微调 / DeepSeek / LM Studio，auto 按链降级） */
 export async function generateRouteFromLlm(
   input: GenerateRouteInput,
-): Promise<GeneratedRouteDraft & { llmProvider: LlmProviderUsed }> {
+): Promise<
+  GeneratedRouteDraft & { llmProvider: LlmProviderUsed; llmUsage?: NodeSpanLlmUsage }
+> {
   const intent = input.intent!;
-  const { payload, provider } = await chatCompletionForRoute(input.prompt.trim(), {
+  const { payload, provider, llmUsage } = await chatCompletionForRoute(input.prompt.trim(), {
     days: intent.days ?? input.days,
     budget: intent.budget ?? input.budget,
     provider: input.provider,
@@ -47,6 +50,7 @@ export async function generateRouteFromLlm(
   return {
     ...enforceRouteConstraints(draft, intent),
     llmProvider: provider,
+    llmUsage,
   };
 }
 

@@ -2,6 +2,7 @@ import type { LocaleCode, TravelIntentSnapshot } from '@douxing/shared';
 import { resolvePlanningCity } from '../../services/travel-intent.service.js';
 import type { GeneratedRouteDraft } from '../../services/route-generator.service.js';
 import { enrichRouteDraft } from '../../services/route-enricher.service.js';
+import { runWithExternalApiCounter } from '../../observability/external-api-counter.service.js';
 import {
   retrievePlaybooksForPlanning,
   type MatchedRoutePlaybook,
@@ -28,11 +29,13 @@ export async function runEnrichRouteTool(raw: unknown) {
         city: resolvePlanningCity(intent) ?? draft.matchedCity,
         themes: intent.themes,
       });
-  const enriched = await enrichRouteDraft(draft, {
-    intent,
-    locale: parsed.data.locale as LocaleCode | undefined,
-    playbooks,
-  });
+  const { result: enriched, externalApiCalls } = await runWithExternalApiCounter(() =>
+    enrichRouteDraft(draft, {
+      intent,
+      locale: parsed.data.locale as LocaleCode | undefined,
+      playbooks,
+    }),
+  );
 
-  return toolSuccess({ draft: enriched });
+  return toolSuccess({ draft: enriched, externalApiCalls });
 }

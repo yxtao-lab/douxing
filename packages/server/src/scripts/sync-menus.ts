@@ -3,7 +3,7 @@
  *
  * 用法：pnpm --filter @douxing/server db:sync-menus
  */
-import './config/env.js';
+import '../config/env.js';
 import { syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
 
 async function main() {

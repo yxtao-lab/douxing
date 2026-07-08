@@ -1,4 +1,4 @@
-import type { AgentToolTraceEntry } from './workflow-node-span.js';
+import type { AgentToolTraceEntry, NodeSpanLlmUsage } from './workflow-node-span.js';
 
 export type { AgentToolTraceEntry, NodeSpan, NodeSpanLlmUsage, RagScoreSummaryItem } from './workflow-node-span.js';
 
@@ -679,6 +679,53 @@ export interface PlanSessionWorkflowTrace {
   totalDurationMs: number;
   /** Langfuse sessionId（与 planSessionId 字符串一致） */
   langfuseSessionId: string;
+  /** W2-5：Langfuse 会话深链；未配置 HOST/PROJECT_ID 时为 null */
+  langfuseSessionUrl?: string | null;
+}
+
+/** W2-6：单节点费用明细 */
+export interface PlanSessionCostNodeBreakdown {
+  nodeId: string;
+  tool: string;
+  llmCostCny: number;
+  externalApiCostCny: number;
+  totalCostCny: number;
+  llmUsage?: NodeSpanLlmUsage;
+  externalApiCalls?: number;
+}
+
+/** W2-6：规划会话费用汇总 API 返回体 */
+export interface PlanSessionCostSummary {
+  sessionId: number;
+  totalCostCny: number;
+  totalLlmCostCny: number;
+  totalExternalApiCostCny: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalExternalApiCalls: number;
+  byModel: Array<{
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    costCny: number;
+  }>;
+  byNode: PlanSessionCostNodeBreakdown[];
+  /** 均为估算值，非精确账单 */
+  isEstimate: true;
+  pricingVersion: string;
+}
+
+/** W2+：管理端最近规划会话列表项 */
+export interface PlanSessionAdminSummary {
+  id: number;
+  userId: number;
+  username?: string;
+  title: string | null;
+  generationPath: PlanSessionAgentState['generationPath'];
+  spanCount: number;
+  hasToolTrace: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 /** H3-a：规划页宠物 Focus 态展示数据 */

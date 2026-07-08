@@ -134,6 +134,7 @@ export const sharedEnUS = {
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
     analytics: 'Analytics',
+    planDiagnostics: 'Plan Diagnostics',
     sysUsers: 'Users',
     sysRoles: 'Roles',
     sysMenus: 'Menus',
@@ -270,6 +271,9 @@ export const sharedEnUS = {
       'planSessions.create': 'Create plan session',
       'planSessions.stream': 'Plan session stream',
       'planSessions.workflowTrace': 'Plan workflow trace',
+      'planSessions.costSummary': 'Plan cost summary',
+      'planSessions.adminRecent': 'Recent plan sessions',
+      'planSessions.sandboxRun': 'Admin sandbox plan run',
     },
   },
 } as const;

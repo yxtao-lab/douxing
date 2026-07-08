@@ -3,8 +3,8 @@
 > **定位**：在现有 **Tool 化 + Agent 灰度** 基础上，引入 **可配置、可观测、可计费** 的规划流程编排能力。  
 > **关联文档**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · [AI路径规划路线图.md](./AI路径规划路线图.md) · [ROADMAP.md](./ROADMAP.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：1.2  
-**最后更新**：2026-07-08（**W0+W1 验收 · MW1 达成**）
+**文档版本**：1.3  
+**最后更新**：2026-07-08（**W0+W1+W2 验收 · MW2 达成**）
 
 ---
 
@@ -270,12 +270,12 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W2-1** | [ ] | **模型单价配置** | `packages/server/src/config/llm-pricing.ts` + env | [ ] deepseek/douxing/lmstudio 单价可配 |
-| **W2-2** | [ ] | **费用计算服务** | `workflow-cost.service.ts` | [ ] 输入 token 用量 → `estimatedCostCny` |
-| **W2-3** | [ ] | **外部 API 计数** | Enricher 高德调用 wrapper | [ ] 每次 geocode/matrix 计入 NodeSpan |
-| **W2-4** | [ ] | **Web 规划诊断页** | `packages/web` 新路由 | [ ] 时间线 Gantt 式展示 [ ] 展开 RAG/LLM 摘要 [ ] zh-CN/en-US |
-| **W2-5** | [ ] | **Langfuse 深链** | 诊断页 → Langfuse trace URL | [ ] 配置 `LANGFUSE_HOST` 时可用 |
-| **W2-6** | [ ] | **费用汇总 API** | `GET /api/admin/plan-sessions/:id/cost-summary` | [ ] 分节点/分模型费用 [ ] 仅管理员 |
+| **W2-1** | [x] | **模型单价配置** | `packages/server/src/config/llm-pricing.ts` + env | [x] deepseek/douxing/lmstudio 单价可配 |
+| **W2-2** | [x] | **费用计算服务** | `workflow-cost.service.ts` | [x] 输入 token 用量 → `estimatedCostCny` |
+| **W2-3** | [x] | **外部 API 计数** | Enricher 高德调用 wrapper | [x] 每次 geocode/matrix 计入 NodeSpan |
+| **W2-4** | [x] | **Web 规划诊断页** | `packages/web` 新路由 | [x] 时间线 Gantt 式展示 [x] 展开 RAG/LLM 摘要 [x] zh-CN/en-US |
+| **W2-5** | [x] | **Langfuse 深链** | 诊断页 → Langfuse trace URL | [x] 配置 `LANGFUSE_HOST` + `LANGFUSE_PROJECT_ID` 时可用 |
+| **W2-6** | [x] | **费用汇总 API** | `GET /api/admin/plan-sessions/:id/cost-summary` | [x] 分节点/分模型费用 [x] 仅管理员 |
 
 **Phase W2 完成后**：**MW2 达成** — 诉求四、五基本满足。
 
@@ -435,11 +435,11 @@ interface NodeSpan {
 - [x] Feature flag 切换（`WORKFLOW_ENGINE` · `X-Workflow-Engine` 头 · `/v1/status` 可读）
 - [x] memory/transit 子图纳入同一引擎
 
-### MW2 · 观测与费用
+### MW2 · 观测与费用 ✅（2026-07-08 验收）
 
-- [ ] Web 诊断页展示完整 NodeSpan 时间线
-- [ ] 会话级 token + 估算费用 API
-- [ ] RAG 命中 ID 可追溯
+- [x] Web 诊断页展示完整 NodeSpan 时间线
+- [x] 会话级 token + 估算费用 API
+- [x] RAG 命中 ID 可追溯
 
 ### MW3 · 模板化
 

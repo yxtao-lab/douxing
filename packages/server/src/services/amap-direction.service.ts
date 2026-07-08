@@ -6,6 +6,7 @@ import {
   getAmapDirectionConcurrency,
   isAmapGeocodeEnabled,
 } from '../config/amap.js';
+import { recordExternalApiCall } from '../observability/external-api-counter.service.js';
 import {
   getCachedTravelDuration,
   setCachedTravelDuration,
@@ -270,6 +271,7 @@ async function fetchTravelDurationFromAmapDistance(
 
   try {
     const timeoutMs = getAmapGeocodeTimeoutMs();
+    recordExternalApiCall();
     const res = await fetchWithTimeout(`${AMAP_DISTANCE_URL}?${params}`, timeoutMs);
     const data = (await res.json()) as AmapDistanceResponse;
 
@@ -584,6 +586,7 @@ async function fetchDirectionPolylineFromAmap(
 
   try {
     const timeoutMs = getAmapGeocodeTimeoutMs();
+    recordExternalApiCall();
     const res = await fetchWithTimeout(`${baseUrl}?${params}`, timeoutMs);
     const data = (await res.json()) as AmapDirectionResponse;
 

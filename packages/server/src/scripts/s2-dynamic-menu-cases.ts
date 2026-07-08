@@ -95,6 +95,7 @@ async function main() {
     const operatorKeys = collectMenuKeys(operatorTree);
     assert(operatorKeys.includes('routes'), 'operator 含路线');
     assert(operatorKeys.includes('analytics'), 'operator 含数据分析');
+    assert(operatorKeys.includes('plan-diagnostics'), 'operator 含规划诊断');
     assert(!operatorKeys.includes('sys-users'), 'operator 不含用户管理');
     assert(!operatorKeys.includes('sys-roles'), 'operator 不含角色管理');
   }
@@ -104,6 +105,7 @@ async function main() {
     const auditorKeys = collectMenuKeys(auditorTree);
     assert(auditorKeys.includes('attractions-pending'), 'auditor 含景点审核');
     assert(!auditorKeys.includes('analytics'), 'auditor 不含数据分析');
+    assert(!auditorKeys.includes('plan-diagnostics'), 'auditor 不含规划诊断');
     assert(!auditorKeys.includes('sys-users'), 'auditor 不含用户管理');
   }
 

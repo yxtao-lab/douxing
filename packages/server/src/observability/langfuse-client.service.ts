@@ -72,6 +72,20 @@ export function buildLlmWorkflowRunId(sessionId: number): string {
   return `${sessionId}-${Date.now()}`;
 }
 
+/**
+ * 构建 Langfuse 会话页深链；需配置 LANGFUSE_HOST 与 LANGFUSE_PROJECT_ID。
+ *
+ * @param sessionId - 规划会话 ID（Langfuse sessionId）
+ * @returns 完整 URL；配置不全时返回 null
+ */
+export function buildLangfuseSessionUrl(sessionId: number | string): string | null {
+  if (!isLangfuseEnabled()) return null;
+  const projectId = process.env.LANGFUSE_PROJECT_ID?.trim();
+  if (!projectId) return null;
+  const host = getLangfuseHost();
+  return `${host}/project/${encodeURIComponent(projectId)}/sessions/${encodeURIComponent(String(sessionId))}`;
+}
+
 export async function traceNodeRouteGeneration(input: {
   prompt: string;
   provider: string;
@@ -130,4 +144,4 @@ export async function traceNodeRouteGeneration(input: {
     console.warn('[langfuse] Node LLM trace 失败:', err instanceof Error ? err.message : err);
   }
 }
-
+

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { PoiCategory } from '@douxing/shared';
 import type {
   LocaleCode,
+  NodeSpanLlmUsage,
   PlanChatMessage,
   TravelIntentSnapshot,
   RagAttractionCandidate,
@@ -441,7 +442,7 @@ async function chatCompletionWithProvider(
   provider: LlmProviderId,
   userPrompt: string,
   options?: RoutePlannerMessageOptions,
-): Promise<LlmRoutePayload> {
+): Promise<{ payload: LlmRoutePayload; model: string; llmUsage?: NodeSpanLlmUsage }> {
   const config = getProviderConfig(provider);
   if (!config.configured) {
     throw new Error(`${config.label} 未配置`);
@@ -527,16 +528,20 @@ async function chatCompletionWithProvider(
     const runId =
       options?.runId
       ?? (options?.sessionId != null ? buildLlmWorkflowRunId(options.sessionId) : undefined);
+    const llmUsage: NodeSpanLlmUsage | undefined = data.usage
+      ? {
+          inputTokens: data.usage.prompt_tokens ?? 0,
+          outputTokens: data.usage.completion_tokens ?? 0,
+          model,
+        }
+      : undefined;
     await traceNodeRouteGeneration({
       prompt: userPrompt,
       provider,
       model,
       outputPreview: content,
-      usage: data.usage
-        ? {
-            input: data.usage.prompt_tokens ?? 0,
-            output: data.usage.completion_tokens ?? 0,
-          }
+      usage: llmUsage
+        ? { input: llmUsage.inputTokens, output: llmUsage.outputTokens }
         : undefined,
       durationMs: Date.now() - startedAt,
       userId: options?.userId,
@@ -544,11 +549,19 @@ async function chatCompletionWithProvider(
       runId,
       locale: options?.locale,
     });
+    return { payload: result.data, model, llmUsage };
   } catch (err) {
     console.warn('[llm] Langfuse trace 失败:', err instanceof Error ? err.message : err);
   }
 
-  return result.data;
+  const llmUsage: NodeSpanLlmUsage | undefined = data.usage
+    ? {
+        inputTokens: data.usage.prompt_tokens ?? 0,
+        outputTokens: data.usage.completion_tokens ?? 0,
+        model,
+      }
+    : undefined;
+  return { payload: result.data, model, llmUsage };
 }
 
 /** 按提供商链依次尝试生成路线 */
@@ -568,7 +581,12 @@ export async function chatCompletionForRoute(
     sessionId?: number;
     runId?: string;
   },
-): Promise<{ payload: LlmRoutePayload; provider: LlmProviderId }> {
+): Promise<{
+  payload: LlmRoutePayload;
+  provider: LlmProviderId;
+  model: string;
+  llmUsage?: NodeSpanLlmUsage;
+}> {
   const chain = resolveProviderChain(options?.provider);
   if (chain.length === 0) {
     throw new ApiError(ApiMessageKey.LLM_NO_MODEL);
@@ -577,8 +595,8 @@ export async function chatCompletionForRoute(
   const errors: string[] = [];
   for (const provider of chain) {
     try {
-      const payload = await chatCompletionWithProvider(provider, userPrompt, options);
-      return { payload, provider };
+      const { payload, model, llmUsage } = await chatCompletionWithProvider(provider, userPrompt, options);
+      return { payload, provider, model, llmUsage };
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       errors.push(`${getProviderConfig(provider).label}: ${msg}`);

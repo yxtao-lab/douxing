@@ -2,6 +2,7 @@ import { ROUTE_TEMPLATES, type RouteTemplate } from '../data/route-templates.js'
 import type { LlmProviderChoice } from '../config/llm.js';
 import type {
   LocaleCode,
+  NodeSpanLlmUsage,
   PlanChatMessage,
   TravelIntentSnapshot,
   RagAttractionCandidate,
@@ -202,7 +203,12 @@ export async function generateRoute(
   input: GenerateRouteInput,
   options?: GenerateRouteOptions,
 ): Promise<
-  GeneratedRouteDraft & { generationSource: GenerationSource; llmProvider?: string; intent: TravelIntentSnapshot }
+  GeneratedRouteDraft & {
+    generationSource: GenerationSource;
+    llmProvider?: string;
+    llmUsage?: NodeSpanLlmUsage;
+    intent: TravelIntentSnapshot;
+  }
 > {
   const intent = await resolveIntent(input);
   const ragCandidates = await resolveRagCandidates(input, intent);
@@ -220,6 +226,7 @@ export async function generateRoute(
     draft: GeneratedRouteDraft,
     generationSource: GenerationSource,
     llmProvider?: string,
+    llmUsage?: NodeSpanLlmUsage,
   ) => {
     if (options?.draftOnly) {
       const prepared = await prepareRouteDraftBeforeEnrich(
@@ -232,6 +239,7 @@ export async function generateRoute(
         ...prepared,
         generationSource,
         llmProvider,
+        llmUsage,
         intent,
       };
     }
@@ -246,6 +254,7 @@ export async function generateRoute(
       ...finalized,
       generationSource,
       llmProvider,
+      llmUsage,
       intent,
     };
   };
@@ -258,7 +267,7 @@ export async function generateRoute(
    * @returns 对齐后完成 enrich 的结果，或命中不足时 RAG 组装路线
    */
   const completeLlmDraftWithPoiQualityGate = async (
-    draft: GeneratedRouteDraft,
+    draft: GeneratedRouteDraft & { llmProvider?: string; llmUsage?: NodeSpanLlmUsage },
     llmProvider?: string,
   ) => {
     const aligned = applyRagToRouteDraft(draft, ragCandidates);
@@ -283,7 +292,7 @@ export async function generateRoute(
         return completeDraft(ragDraft, 'template');
       }
     }
-    return completeDraft(aligned, 'llm', llmProvider);
+    return completeDraft(aligned, 'llm', llmProvider ?? draft.llmProvider, draft.llmUsage);
   };
 
   if (canUseAiServiceForRoute(enrichedInput)) {

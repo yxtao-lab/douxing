@@ -206,6 +206,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'plan-sessions/diagnostics/:sessionId?',
+          name: 'plan-diagnostics',
+          component: () => import('@/views/PlanWorkflowDiagnosticsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.planDiagnostics',
+            menuGroupKey: 'web.menu.data',
+            icon: 'NodeIndexOutlined',
+            perm: 'data:analytics:view',
+          },
+        },
+        {
           path: 'system/users',
           name: 'sys-users',
           component: () => import('@/views/system/SystemUsersView.vue'),

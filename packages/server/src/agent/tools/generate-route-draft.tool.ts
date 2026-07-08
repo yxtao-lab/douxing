@@ -49,5 +49,6 @@ export async function runGenerateRouteDraftTool(raw: unknown) {
     draft: result,
     generationSource: result.generationSource,
     intent: result.intent,
+    llmUsage: result.llmUsage,
   });
 }

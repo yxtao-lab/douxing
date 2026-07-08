@@ -134,6 +134,7 @@ export const sharedZhCN = {
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
     analytics: '数据分析',
+    planDiagnostics: '规划诊断',
     sysUsers: '用户管理',
     sysRoles: '角色管理',
     sysMenus: '菜单管理',
@@ -270,6 +271,9 @@ export const sharedZhCN = {
       'planSessions.create': '创建规划会话',
       'planSessions.stream': '规划会话流式输出',
       'planSessions.workflowTrace': '规划诊断 trace',
+      'planSessions.costSummary': '规划费用汇总',
+      'planSessions.adminRecent': '最近规划会话',
+      'planSessions.sandboxRun': '管理端模拟规划',
     },
   },
 } as const;

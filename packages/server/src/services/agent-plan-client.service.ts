@@ -222,6 +222,10 @@ async function finalizeDraftWithEnrich(
     tool: 'enrich_route',
     ok: true,
     ms: enrichMs,
+    externalApiCalls:
+      typeof enrichResult.data.externalApiCalls === 'number'
+        ? enrichResult.data.externalApiCalls
+        : undefined,
     inputDigest: digestWorkflowPayload({ city: draft.matchedCity, days: draft.days }),
   });
   hooks?.onToolEnd?.('enrich_route', true, enrichMs);
@@ -351,7 +355,13 @@ async function generatePlanNewCandidates(
       { draftOnly: true },
     );
     const genMs = Date.now() - genStart;
-    trace.push({ tool: 'generate_route_draft', ok: true, ms: genMs });
+    spanRecorder.push({
+      tool: 'generate_route_draft',
+      ok: true,
+      ms: genMs,
+      llmUsage: result.llmUsage,
+      inputDigest: digestWorkflowPayload({ variantKey: variant.key }),
+    });
     hooks?.onToolEnd?.('generate_route_draft', true, genMs);
 
     const finalized = await finalizeDraftWithEnrich(result, intent, locale, trace, hooks);
@@ -860,7 +870,13 @@ async function runLocalAgentPlan(
 
   const genMs = Date.now() - genStart;
 
-  trace.push({ tool: 'generate_route_draft', ok: true, ms: genMs });
+  const spanRecorder = new WorkflowNodeSpanRecorder(trace);
+  spanRecorder.push({
+    tool: 'generate_route_draft',
+    ok: true,
+    ms: genMs,
+    llmUsage: result.llmUsage,
+  });
 
   hooks?.onToolEnd?.('generate_route_draft', true, genMs);
 
