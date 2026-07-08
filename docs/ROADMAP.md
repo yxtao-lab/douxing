@@ -631,7 +631,7 @@ Python ai-service → Node LLM → 模板/RAG
 | **W2** | [ ] | 观测台与费用 | Web 诊断页 · token/费用 API · 高德调用计数 | **MW2** |
 | **W3** | [ ] | 工作流模板 | JSON Logic 选模板 · RAG topK/variants 参数化 | **MW3** |
 | **W4** | [ ] | 准确性验证 | Golden Case ≥30 条 · CI 回归 | — |
-| **W5** | [ ] | Visual 编辑器（按需） | React Flow 拖拽 · 沙箱预览 | **MW4**（可选） |
+| **W5** | [ ] | Visual 编辑器（按需） | Vue Flow 拖拽 · 沙箱预览 | **MW4**（可选） |
 
 **与 M6 关系**：W0/W1 可与 M6 **并行**（**W0+W1 已于 2026-07-08 验收 · MW1 达成**）；**下一焦点 W2**；W3 依赖 W1。
 

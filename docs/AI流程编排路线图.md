@@ -3,8 +3,8 @@
 > **定位**：在现有 **Tool 化 + Agent 灰度** 基础上，引入 **可配置、可观测、可计费** 的规划流程编排能力。  
 > **关联文档**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · [AI路径规划路线图.md](./AI路径规划路线图.md) · [ROADMAP.md](./ROADMAP.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：1.3  
-**最后更新**：2026-07-08（**W0+W1+W2+W3+W4 验收**）
+**文档版本**：1.4  
+**最后更新**：2026-07-08（**W0+W1+W2+W3+W4 验收** · W5 可视化选型定为 Vue Flow）
 
 ---
 
@@ -319,7 +319,7 @@ flowchart LR
 
 | Step | 状态 | 任务 | 交付 / 落点 | 验收标准 |
 |------|------|------|-------------|----------|
-| **W5-1** | [ ] | **技术选型** | React Flow + JSON Schema 表单 | [ ] ADR 文档 |
+| **W5-1** | [ ] | **技术选型** | Vue Flow（`@vue-flow/core`）+ JSON Schema 表单 | [ ] ADR 文档 |
 | **W5-2** | [ ] | **节点面板** | 16 Tool + 条件 + 子图 节点 | [ ] 拖拽生成 JSON 模板 |
 | **W5-3** | [ ] | **模板校验器** | 发布前静态检查（无环、必填边） | [ ] 非法图禁止保存 |
 | **W5-4** | [ ] | **预览运行** | 管理端输入 prompt → 沙箱执行 | [ ] 不写生产 routes 表 |
@@ -336,7 +336,7 @@ flowchart LR
 | 运行时 | **LangGraph**（Python） | 与 ai-service 同栈；官方支持 Tool/子图/检查点 | Temporal（过重）、自研 DAG 引擎 |
 | 模板格式 | **JSON + JSON Logic** | 与现有 intent 结构契合；可 Git 管理 | 纯 YAML 无 schema 校验 |
 | 观测 | **Langfuse + 自建 NodeSpan** | 已接入；补 UI 即可 | 仅依赖原始日志 |
-| 可视化 | **React Flow**（W5） | 前端栈一致 | 嵌入 Dify（双栈运维） |
+| 可视化 | **Vue Flow**（`@vue-flow/core`，W5） | 与 Web 管理端 Vue3 同栈；DAG JSON 与 React Flow 概念兼容 | 引入 React Flow（双栈）；嵌入 Dify（双栈运维） |
 | RAG | **现有 MySQL + Step 22 向量** | 不重复建设 | 编排内嵌新向量库 |
 
 ---
@@ -399,7 +399,7 @@ interface NodeSpan {
 | [AI路径规划路线图.md](./AI路径规划路线图.md) | Step 22 VECTOR_RAG 完成后，W3 RAG 节点可设 `retrievalMode=vector` |
 | [AI规划与Agent演进.md](./AI规划与Agent演进.md) | W1 实现文档 §6「第 2 步 协调器 LangGraph」 |
 | [数据中台.md](./数据中台.md) | W2 费用/耗时可汇入 DT 指标（`plan_workflow_cost` 事件） |
-| [外部工具与插件推荐.md](./外部工具与插件推荐.md) | Langfuse 已推荐；W5 可补充 React Flow |
+| [外部工具与插件推荐.md](./外部工具与插件推荐.md) | Langfuse 已推荐；W5 可补充 Vue Flow |
 
 **建议排期**
 
@@ -563,7 +563,7 @@ interface NodeSpan {
 |------|------|
 | **LangGraph** | LangChain 生态的图状态机库，用节点与边定义 Agent 流程，支持子图、检查点、条件分支。路线图 W1 建议用它替代手写 `graph.py`。 |
 | **LangChain** | Python LLM 应用框架；兜行 `ai-service` 用于路线 JSON 生成与 Callback 观测。 |
-| **React Flow** | 前端节点连线画布库；W5 可视化编排编辑器拟采用，用于拖拽生成 DAG 模板 JSON。 |
+| **Vue Flow** | Vue 3 节点连线画布库（`@vue-flow/core`，交互模型源自 React Flow）；W5 可视化编排编辑器拟采用，用于拖拽生成 DAG 模板 JSON。 |
 | **Dify / Coze** | 外部一站式 AI 工作流平台（低代码 + 模型 + 知识库）。本文建议**不整体引入**，避免与 Node Tool 双栈重复。 |
 | **Monorepo** | 单仓库多包结构：`server`、`ai-service`、`mobile`、`pc`、`web`、`shared` 等同仓协作。 |
 
@@ -584,5 +584,7 @@ interface NodeSpan {
 
 | 日期 | 版本 | 说明 |
 |------|------|------|
-| 2026-07-03 | 1.0 | 初版：可行性分析 + Phase W0～W5 + 里程碑 MW1～MW4 |
+| 2026-07-08 | 1.4 | W5 可视化选型由 React Flow 修正为 **Vue Flow**（与 Web 管理端 Vue3 同栈） |
+| 2026-07-08 | 1.3 | W0～W4 验收闭环 |
 | 2026-07-06 | 1.1 | 新增 §12 术语表；全站文档交叉引用同步 |
+| 2026-07-03 | 1.0 | 初版：可行性分析 + Phase W0～W5 + 里程碑 MW1～MW4 |

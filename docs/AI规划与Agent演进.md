@@ -711,7 +711,7 @@ LANGFUSE_SECRET_KEY=
 | [下一步工作.md](./下一步工作.md) | 当前 Sprint 与 C7 / W0 触发时机 |
 | [AI旅行宠物.md](./AI旅行宠物.md) | 记忆 Agent、悬浮层 |
 | [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) | I2/I3 |
-| [外部工具与插件推荐.md](./外部工具与插件推荐.md) | Langfuse · LangGraph · React Flow |
+| [外部工具与插件推荐.md](./外部工具与插件推荐.md) | Langfuse · LangGraph · Vue Flow |
 | [开发记录 § C5/H9](./开发记录-重难点与亮点.md) | 历史决策依据 |
 
 ---
