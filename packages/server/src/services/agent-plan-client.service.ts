@@ -114,10 +114,16 @@ export interface AgentPlanRequest {
 
 
 
-/** Step 7：规划 SSE 回调（Tool 开始/结束） */
+/** Step 7：规划 SSE 回调（Tool 开始/结束、编排节点状态） */
 export interface AgentPlanStreamHooks {
   onToolStart?: (tool: string) => void;
   onToolEnd?: (tool: string, ok: boolean, ms: number, span?: AgentToolTraceEntry) => void;
+  onNodeStatus?: (payload: {
+    nodeId: string;
+    status: 'running' | 'success' | 'failed';
+    routedIntent?: string;
+    ms?: number;
+  }) => void;
 }
 
 
@@ -555,6 +561,34 @@ async function callRemoteAgentPlanStream(
               outputDigest: payload.outputDigest,
             };
             hooks.onToolEnd?.(payload.tool, payload.status === 'done', payload.ms ?? 0, span);
+          }
+          continue;
+        }
+
+        if (event.event === 'node_status') {
+          let payload: {
+            nodeId?: string;
+            status?: 'running' | 'success' | 'failed';
+            routedIntent?: string;
+            ms?: number;
+          } | null = null;
+          try {
+            payload = JSON.parse(event.data) as {
+              nodeId?: string;
+              status?: 'running' | 'success' | 'failed';
+              routedIntent?: string;
+              ms?: number;
+            };
+          } catch {
+            payload = null;
+          }
+          if (payload?.nodeId && payload.status) {
+            hooks.onNodeStatus?.({
+              nodeId: payload.nodeId,
+              status: payload.status,
+              routedIntent: payload.routedIntent,
+              ms: payload.ms,
+            });
           }
           continue;
         }

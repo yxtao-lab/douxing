@@ -171,8 +171,10 @@ import type {
   WorkflowTemplateInfo,
 } from '@douxing/shared';
 import {
+  applyWorkflowGraphExecutionNodeStatus,
+  applyWorkflowGraphExecutionPlanResult,
   applyWorkflowGraphExecutionToolCall,
-  buildWorkflowGraphExecutionFromTrace,
+  finalizeWorkflowGraphExecutionFromTrace,
 } from '@douxing/shared';
 import { buildDefaultPlanDefaultGraph, validateWorkflowGraph } from '@douxing/shared';
 import WorkflowNodePalette from '@/components/workflow-editor/WorkflowNodePalette.vue';
@@ -245,6 +247,63 @@ const graphExecution = ref<WorkflowGraphExecutionSnapshot | null>(null);
 const executionSelectedNodeId = ref<string | null>(null);
 const sandboxAbortController = ref<AbortController | null>(null);
 let stopSandboxStream: (() => void) | null = null;
+
+/** 画布执行事件队列：避免 SSE 缓冲回放时同帧批量跳变 */
+const EXECUTION_EVENT_MIN_GAP_MS = 150;
+let executionEventQueue: Array<() => void> = [];
+let executionEventDraining = false;
+let lastExecutionEventAt = 0;
+
+/**
+ * 将画布执行态更新入队，按最小间隔逐条渲染。
+ *
+ * @param update - 更新 graphExecution 的回调
+ */
+function enqueueGraphExecutionUpdate(update: () => void): void {
+  executionEventQueue.push(update);
+  if (!executionEventDraining) {
+    executionEventDraining = true;
+    void drainGraphExecutionQueue();
+  }
+}
+
+/**
+ * 逐条消费执行事件队列，保证节点状态按阶段可见。
+ */
+async function drainGraphExecutionQueue(): Promise<void> {
+  while (executionEventQueue.length > 0) {
+    const gap = Date.now() - lastExecutionEventAt;
+    if (lastExecutionEventAt > 0 && gap < EXECUTION_EVENT_MIN_GAP_MS) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, EXECUTION_EVENT_MIN_GAP_MS - gap);
+      });
+    }
+    const update = executionEventQueue.shift();
+    update?.();
+    lastExecutionEventAt = Date.now();
+  }
+  executionEventDraining = false;
+}
+
+/**
+ * 等待队列排空（onDone 终态合并前调用）。
+ */
+async function flushGraphExecutionQueue(): Promise<void> {
+  while (executionEventDraining || executionEventQueue.length > 0) {
+    await new Promise((resolve) => {
+      setTimeout(resolve, 32);
+    });
+  }
+}
+
+/**
+ * 重置执行事件队列。
+ */
+function resetGraphExecutionQueue(): void {
+  executionEventQueue = [];
+  executionEventDraining = false;
+  lastExecutionEventAt = 0;
+}
 
 /**
  * 选中节点的 labelKey（非 Tool 节点）。
@@ -486,6 +545,7 @@ function clearExecutionOverlay(): void {
   stopSandboxStream = null;
   sandboxAbortController.value?.abort();
   sandboxAbortController.value = null;
+  resetGraphExecutionQueue();
   graphExecution.value = null;
   executionSelectedNodeId.value = null;
 }
@@ -496,11 +556,12 @@ function clearExecutionOverlay(): void {
  * @param sessionId - 沙箱会话 ID
  */
 async function applyExecutionFromTrace(sessionId: number): Promise<void> {
-  if (!currentGraph.value) return;
+  if (!currentGraph.value || !graphExecution.value) return;
   try {
     const trace = await fetchPlanSessionWorkflowTrace(sessionId);
-    graphExecution.value = buildWorkflowGraphExecutionFromTrace(
+    graphExecution.value = finalizeWorkflowGraphExecutionFromTrace(
       currentGraph.value,
+      graphExecution.value,
       trace.spans,
       { lastRoutedIntent: trace.lastRoutedIntent },
     );
@@ -525,22 +586,45 @@ function subscribeSandboxStream(sessionId: number): void {
     handlers: {
       onToolCall: (payload) => {
         if (!currentGraph.value) return;
-        graphExecution.value = applyWorkflowGraphExecutionToolCall(
-          currentGraph.value,
-          graphExecution.value,
-          payload,
-        );
+        enqueueGraphExecutionUpdate(() => {
+          graphExecution.value = applyWorkflowGraphExecutionToolCall(
+            currentGraph.value!,
+            graphExecution.value,
+            payload,
+          );
+        });
       },
-      onDone: () => {
-        if (!graphExecution.value) return;
-        graphExecution.value = {
-          ...graphExecution.value,
-          completed: true,
-          runningTool: undefined,
-        };
-        void applyExecutionFromTrace(sessionId);
-        sandboxRunning.value = false;
-        message.success(t('workflowEditor.previewSuccess'));
+      onNodeStatus: (payload) => {
+        if (!currentGraph.value) return;
+        enqueueGraphExecutionUpdate(() => {
+          graphExecution.value = applyWorkflowGraphExecutionNodeStatus(
+            currentGraph.value!,
+            graphExecution.value,
+            payload,
+          );
+        });
+      },
+      onDone: (payload) => {
+        void (async () => {
+          await flushGraphExecutionQueue();
+          if (!graphExecution.value || !currentGraph.value) return;
+          if (payload?.result) {
+            graphExecution.value = applyWorkflowGraphExecutionPlanResult(
+              currentGraph.value,
+              graphExecution.value,
+              payload.result,
+            );
+          } else {
+            graphExecution.value = {
+              ...graphExecution.value,
+              completed: true,
+              runningTool: undefined,
+            };
+          }
+          await applyExecutionFromTrace(sessionId);
+          sandboxRunning.value = false;
+          message.success(t('workflowEditor.previewSuccess'));
+        })();
       },
       onError: () => {
         if (graphExecution.value) {

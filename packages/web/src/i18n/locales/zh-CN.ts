@@ -445,6 +445,7 @@ export const webZhCN = {
       durationLabel: '耗时',
       inputDigest: '输入摘要',
       outputDigest: '输出摘要',
+      planResult: '规划结果',
       status: {
         pending: '待运行',
         running: '运行中',

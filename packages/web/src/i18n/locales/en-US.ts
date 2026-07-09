@@ -445,6 +445,7 @@ export const webEnUS = {
       durationLabel: 'Duration',
       inputDigest: 'Input digest',
       outputDigest: 'Output digest',
+      planResult: 'Plan result',
       status: {
         pending: 'Pending',
         running: 'Running',

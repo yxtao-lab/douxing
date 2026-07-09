@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 ToolStartCallback = Callable[[str], None]
 ToolEndCallback = Callable[[dict[str, Any]], None]
+NodeStatusCallback = Callable[[str, str, dict[str, Any] | None], None]
 
 
 class WorkflowStreamCallback:
@@ -26,15 +27,18 @@ class WorkflowStreamCallback:
 
     @param on_tool_start - Tool 开始执行时触发
     @param on_tool_end - Tool 完成并写入 span 后触发
+    @param on_node_status - LangGraph 编排节点开始/完成时触发
     """
 
     def __init__(
         self,
         on_tool_start: ToolStartCallback | None = None,
         on_tool_end: ToolEndCallback | None = None,
+        on_node_status: NodeStatusCallback | None = None,
     ) -> None:
         self.on_tool_start = on_tool_start
         self.on_tool_end = on_tool_end
+        self.on_node_status = on_node_status
 
 
 def attach_stream_callback(
@@ -88,6 +92,46 @@ def emit_tool_end(state: dict[str, Any], span: dict[str, Any]) -> None:
     callback = _get_stream_callback(state)
     if callback and callback.on_tool_end:
         callback.on_tool_end(span)
+
+
+# LangGraph 节点名 → 画布节点 id（plan_default 主图）
+_LANGGRAPH_CANVAS_NODE_MAP: dict[str, str] = {
+    "memory": "memory",
+    "memory_recall": "memory",
+    "parse_intent": "parse_intent",
+    "apply_memory": "apply_memory",
+    "tweak_branch": "tweak_branch",
+    "budget_branch": "budget_branch",
+    "lodging_branch": "lodging_branch",
+    "qa_food_branch": "qa_food_branch",
+    "select_variant_branch": "select_variant_branch",
+    "plan_new_branch": "plan_new_branch",
+    "__graph_end__": "end",
+}
+
+
+def emit_node_status(
+    state: dict[str, Any],
+    langgraph_node: str,
+    status: str,
+    *,
+    extra: dict[str, Any] | None = None,
+) -> None:
+    """
+    推送编排类画布节点状态（无挂载回调时无副作用）。
+
+    @param state - 工作流上下文
+    @param langgraph_node - LangGraph 节点名
+    @param status - running / success / failed
+    @param extra - 附加字段（如 routedIntent、ms）
+    @returns None
+    """
+    canvas_node_id = _LANGGRAPH_CANVAS_NODE_MAP.get(langgraph_node)
+    if not canvas_node_id:
+        return
+    callback = _get_stream_callback(state)
+    if callback and callback.on_node_status:
+        callback.on_node_status(canvas_node_id, status, extra)
 
 
 async def call_node_tool_traced(
@@ -180,6 +224,24 @@ async def run_compiled_graph_streaming(
     try:
         async for event in app.astream_events(state_input, version="v2"):
             event_type = event.get("event")
+            metadata = event.get("metadata") or {}
+            langgraph_node = metadata.get("langgraph_node")
+            if isinstance(langgraph_node, str) and langgraph_node in _LANGGRAPH_CANVAS_NODE_MAP:
+                if event_type == "on_chain_start":
+                    emit_node_status(state_input, langgraph_node, "running")
+                elif event_type == "on_chain_end":
+                    routed_intent = state_input.get("routed_intent")
+                    extra: dict[str, Any] | None = None
+                    if langgraph_node == "apply_memory" and isinstance(routed_intent, str):
+                        extra = {"routedIntent": routed_intent}
+                        emit_node_status(
+                            state_input,
+                            "intent_router",
+                            "success",
+                            extra=extra,
+                        )
+                    emit_node_status(state_input, langgraph_node, "success", extra=extra)
+
             if event_type != "on_chain_end":
                 continue
 
@@ -207,6 +269,11 @@ async def run_compiled_graph_streaming(
     if final_state is None:
         logger.warning("[streaming] astream_events 未产出最终状态，回退 ainvoke")
         final_state = await app.ainvoke(state_input)
+
+    any_failed = any(
+        not span.get("ok", True) for span in (final_state.get("tool_trace") or [])
+    )
+    emit_node_status(state_input, "__graph_end__", "failed" if any_failed else "success")
 
     return final_state
 
@@ -246,7 +313,23 @@ async def iter_plan_agent_sse(
             }
         )
 
-    callback = WorkflowStreamCallback(on_tool_start=on_tool_start, on_tool_end=on_tool_end)
+    def on_node_status(node_id: str, status: str, extra: dict[str, Any] | None) -> None:
+        payload: dict[str, Any] = {"nodeId": node_id, "status": status}
+        if extra:
+            payload.update(extra)
+        queue.put_nowait(
+            {
+                "kind": "sse",
+                "event": "node_status",
+                "data": payload,
+            }
+        )
+
+    callback = WorkflowStreamCallback(
+        on_tool_start=on_tool_start,
+        on_tool_end=on_tool_end,
+        on_node_status=on_node_status,
+    )
 
     async def worker() -> None:
         try:

@@ -86,6 +86,24 @@ export function emitPlanSessionToolCall(
   emitPlanSessionStreamEvent(sessionId, 'tool_call', payload);
 }
 
+/**
+ * 推送画布编排节点状态 SSE 事件。
+ *
+ * @param sessionId - 规划会话 ID
+ * @param payload - nodeId、status 及可选 routedIntent
+ */
+export function emitPlanSessionNodeStatus(
+  sessionId: number,
+  payload: {
+    nodeId: string;
+    status: 'running' | 'success' | 'failed';
+    routedIntent?: string;
+    ms?: number;
+  },
+): void {
+  emitPlanSessionStreamEvent(sessionId, 'node_status', payload);
+}
+
 export function emitPlanSessionAssistantFinal(
   sessionId: number,
   final: string,

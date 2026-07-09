@@ -11,6 +11,7 @@ import {
   runAdminSandboxPlan,
   startAdminSandboxPlanAsync,
   adminPlanSessionExists,
+  kickOffPendingAdminSandboxPlan,
 } from '../services/plan-admin.service.js';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
 import {
@@ -148,14 +149,6 @@ router.get('/:sessionId/stream', sseAuthMiddleware, async (req, res) => {
 
     initSseResponse(res);
 
-    for (const buffered of getPlanSessionStreamBuffer(sessionId)) {
-      writeSseEvent(res, buffered.event, buffered.data);
-      if (buffered.event === 'done' || buffered.event === 'error') {
-        res.end();
-        return;
-      }
-    }
-
     const maxConnMs = getAgentPlanTimeoutMs() + 30_000;
     const connTimer = setTimeout(() => {
       writeSseEvent(res, 'error', { messageKey: ApiMessageKey.REQUEST_TIMEOUT });
@@ -175,6 +168,19 @@ router.get('/:sessionId/stream', sseAuthMiddleware, async (req, res) => {
         res.end();
       }
     });
+
+    kickOffPendingAdminSandboxPlan(sessionId);
+
+    for (const buffered of getPlanSessionStreamBuffer(sessionId)) {
+      writeSseEvent(res, buffered.event, buffered.data);
+      if (buffered.event === 'done' || buffered.event === 'error') {
+        clearTimeout(connTimer);
+        clearInterval(heartbeat);
+        unsubscribe();
+        res.end();
+        return;
+      }
+    }
 
     req.on('close', () => {
       clearTimeout(connTimer);

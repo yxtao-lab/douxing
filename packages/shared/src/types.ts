@@ -632,7 +632,7 @@ export interface PlanSessionMessageInfo {
 }
 
 /** C7-b Step 7：规划会话 SSE 事件类型 */
-export type PlanSessionStreamEventName = 'tool_call' | 'assistant' | 'done' | 'error';
+export type PlanSessionStreamEventName = 'tool_call' | 'node_status' | 'assistant' | 'done' | 'error';
 
 /** SSE `tool_call` 事件 payload */
 export interface PlanSessionStreamToolCallPayload {
@@ -643,6 +643,16 @@ export interface PlanSessionStreamToolCallPayload {
   nodeId?: string;
   inputDigest?: string;
   outputDigest?: string;
+}
+
+/** SSE `node_status` 事件 payload（编排类画布节点：start/subgraph/condition/branch/end） */
+export interface PlanSessionStreamNodeStatusPayload {
+  /** 画布节点 id（与 WorkflowGraphNode.id 对齐） */
+  nodeId: string;
+  status: 'running' | 'success' | 'failed';
+  /** 条件路由意图（condition 节点完成时可携带） */
+  routedIntent?: string;
+  ms?: number;
 }
 
 /** SSE `assistant` 事件 payload */

@@ -58,6 +58,7 @@ import {
   beginPlanSessionGeneration,
   completePlanSessionStream,
   emitPlanSessionAssistantFinal,
+  emitPlanSessionNodeStatus,
   emitPlanSessionToolCall,
   failPlanSessionStream,
   runPlanSessionTrackedTool,
@@ -461,6 +462,7 @@ export function buildPlanSessionAgentStreamHooks(sessionId: number): AgentPlanSt
         inputDigest: span?.inputDigest,
         outputDigest: span?.outputDigest,
       }),
+    onNodeStatus: (payload) => emitPlanSessionNodeStatus(sessionId, payload),
   };
 }
 

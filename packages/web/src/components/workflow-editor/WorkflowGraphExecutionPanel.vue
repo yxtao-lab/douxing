@@ -95,10 +95,10 @@
             <pre class="workflow-graph-execution-panel__digest">{{ selectedState.span.inputDigest }}</pre>
           </a-descriptions-item>
           <a-descriptions-item
-            v-if="selectedState?.span?.outputDigest"
-            :label="t('workflowEditor.execution.outputDigest')"
+            v-if="selectedOutputDigest"
+            :label="outputDigestLabel"
           >
-            <pre class="workflow-graph-execution-panel__digest">{{ selectedState.span.outputDigest }}</pre>
+            <pre class="workflow-graph-execution-panel__digest">{{ formattedOutputDigest }}</pre>
           </a-descriptions-item>
         </a-descriptions>
       </template>
@@ -109,7 +109,11 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { WorkflowGraphExecutionSnapshot, WorkflowNodeExecutionState } from '@douxing/shared';
+import {
+  formatWorkflowTransferJson,
+  type WorkflowGraphExecutionSnapshot,
+  type WorkflowNodeExecutionState,
+} from '@douxing/shared';
 
 const props = defineProps<{
   execution: WorkflowGraphExecutionSnapshot | null;
@@ -205,6 +209,29 @@ const statusLabel = computed(() => {
   const status = selectedState.value?.status ?? 'pending';
   return t(`workflowEditor.execution.status.${status}`);
 });
+
+/**
+ * 选中节点的输出摘要（Tool span 或编排节点 outputDigest）。
+ */
+const selectedOutputDigest = computed(() =>
+  selectedState.value?.outputDigest ?? selectedState.value?.span?.outputDigest ?? '',
+);
+
+/**
+ * 输出区标题：结束节点展示规划结果，其余为输出摘要。
+ */
+const outputDigestLabel = computed(() =>
+  props.selectedNodeId === 'end'
+    ? t('workflowEditor.execution.planResult')
+    : t('workflowEditor.execution.outputDigest'),
+);
+
+/**
+ * 格式化后的输出 JSON。
+ */
+const formattedOutputDigest = computed(() =>
+  formatWorkflowTransferJson(selectedOutputDigest.value),
+);
 </script>
 
 <style scoped>

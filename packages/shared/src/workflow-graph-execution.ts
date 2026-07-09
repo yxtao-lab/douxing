@@ -1,6 +1,10 @@
 import type { WorkflowGraphDefinition } from './workflow-graph.js';
 import type { AgentToolTraceEntry } from './workflow-node-span.js';
-import type { PlanSessionStreamToolCallPayload } from './types.js';
+import type {
+  PlanSessionActionResult,
+  PlanSessionStreamNodeStatusPayload,
+  PlanSessionStreamToolCallPayload,
+} from './types.js';
 
 /** 画布节点执行状态（沙箱预览 / SSE 驱动） */
 export type WorkflowNodeExecutionStatus = 'pending' | 'running' | 'success' | 'failed';
@@ -12,6 +16,8 @@ export interface WorkflowNodeExecutionState {
   span?: AgentToolTraceEntry;
   /** 耗时毫秒 */
   ms?: number;
+  /** 编排/结束节点输出摘要（JSON 字符串） */
+  outputDigest?: string;
 }
 
 /** 整图执行快照 */
@@ -333,8 +339,9 @@ export function markOrchestrationNodesOnExecutedPath(
     const node = graph.nodes.find((item) => item.id === nodeId);
     if (!node || node.kind === 'tool' || node.kind === 'branch' || node.kind === 'end') continue;
 
-    const laterActive = spine.slice(index + 1).some((id) => isActiveNodeState(states[id]));
-    if (!laterActive) continue;
+    const nextSpineId = spine[index + 1];
+    const nextActive = nextSpineId != null && isActiveNodeState(states[nextSpineId]);
+    if (!nextActive) continue;
 
     if (states[nodeId]?.status === 'pending' || states[nodeId]?.status === 'running') {
       states[nodeId] = { status: 'success' };
@@ -711,6 +718,244 @@ export function applyWorkflowGraphExecutionToolCall(
     snapshot.runningTool = runningTool;
     snapshot.completed = current?.completed ?? false;
     snapshot.failed = current?.failed ?? false;
+  }
+
+  return snapshot;
+}
+
+/**
+ * 将路线 detail 压缩为可读摘要（避免结束节点 JSON 过大）。
+ *
+ * @param routeDetail - 路线日程 JSON
+ * @returns 按天 POI 数量摘要；无数据时为 null
+ */
+function summarizeRouteDetailForEndNode(
+  routeDetail: Record<string, unknown> | null | undefined,
+): { dayCount: number; days: Array<{ day: number; title?: string; poiCount: number }> } | null {
+  if (!routeDetail || !Array.isArray(routeDetail.days)) return null;
+  const days = routeDetail.days as Array<Record<string, unknown>>;
+  return {
+    dayCount: days.length,
+    days: days.map((day, index) => ({
+      day: index + 1,
+      title: typeof day.title === 'string' ? day.title : undefined,
+      poiCount: Array.isArray(day.attractions) ? day.attractions.length : 0,
+    })),
+  };
+}
+
+/**
+ * 由规划会话结果生成结束节点 outputDigest（路径规划产出）。
+ *
+ * @param result - SSE done 或会话操作结果
+ * @returns 格式化 JSON 字符串
+ */
+export function buildWorkflowEndNodeOutputDigest(result: PlanSessionActionResult): string {
+  const payload = {
+    routeId: result.id,
+    routeName: result.name,
+    days: result.days,
+    city: result.intentSnapshot?.city ?? null,
+    themes: result.intentSnapshot?.themes ?? null,
+    budgetRange: result.budgetRange,
+    assistantMessage: result.assistantMessage,
+    generationSource: result.generationSource ?? null,
+    llmProvider: result.llmProvider ?? null,
+    ragMatchedCount: result.ragMatchedCount ?? null,
+    routedIntent: result.agentState?.lastRoutedIntent ?? null,
+    candidateCount: result.candidates?.length ?? 0,
+    candidates: result.candidates?.map((item) => ({
+      routeId: item.routeId,
+      variantKey: item.variantKey,
+      label: item.label,
+    })),
+    routeSummary: summarizeRouteDetailForEndNode(result.routeDetail),
+  };
+  return JSON.stringify(payload, null, 2);
+}
+
+/**
+ * 将规划结果挂载到结束节点（沙箱 done 事件驱动）。
+ *
+ * @param graph - 工作流图定义
+ * @param current - 当前执行快照
+ * @param result - 规划会话操作结果
+ * @returns 更新后的快照
+ */
+export function applyWorkflowGraphExecutionPlanResult(
+  graph: WorkflowGraphDefinition,
+  current: WorkflowGraphExecutionSnapshot,
+  result: PlanSessionActionResult,
+): WorkflowGraphExecutionSnapshot {
+  const endNode = graph.nodes.find((node) => node.kind === 'end');
+  if (!endNode) return current;
+
+  const nodeStates = { ...current.nodeStates };
+  const endState = nodeStates[endNode.id] ?? { status: 'pending' as const };
+  nodeStates[endNode.id] = {
+    ...endState,
+    status: endState.status === 'failed' ? 'failed' : 'success',
+    outputDigest: buildWorkflowEndNodeOutputDigest(result),
+  };
+
+  const routedIntent = result.agentState?.lastRoutedIntent ?? current.routedIntent;
+
+  let snapshot: WorkflowGraphExecutionSnapshot = {
+    ...current,
+    nodeStates,
+    routedIntent,
+    completed: true,
+    runningTool: undefined,
+    ...resolveExecutionEdgeSnapshot(graph, nodeStates),
+  };
+
+  if (routedIntent) {
+    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent, {
+      completed: true,
+    });
+    snapshot.completed = true;
+    snapshot.runningTool = undefined;
+    if (nodeStates[endNode.id]) {
+      snapshot.nodeStates[endNode.id] = nodeStates[endNode.id]!;
+    }
+  }
+
+  return snapshot;
+}
+
+/**
+ * 将 SSE `node_status` 合并进画布执行快照（编排类节点实时更新）。
+ *
+ * @param graph - 工作流图定义
+ * @param current - 当前快照
+ * @param payload - SSE node_status 载荷
+ * @returns 更新后的快照
+ */
+export function applyWorkflowGraphExecutionNodeStatus(
+  graph: WorkflowGraphDefinition,
+  current: WorkflowGraphExecutionSnapshot | null,
+  payload: PlanSessionStreamNodeStatusPayload,
+): WorkflowGraphExecutionSnapshot {
+  const baseStates: Record<string, WorkflowNodeExecutionState> = {};
+  for (const node of graph.nodes) {
+    baseStates[node.id] = current?.nodeStates[node.id] ?? { status: 'pending' };
+  }
+
+  const mappedStatus: WorkflowNodeExecutionStatus =
+    payload.status === 'running'
+      ? 'running'
+      : payload.status === 'success'
+        ? 'success'
+        : 'failed';
+
+  if (graph.nodes.some((node) => node.id === payload.nodeId)) {
+    baseStates[payload.nodeId] = {
+      status: mappedStatus,
+      ...(payload.ms != null ? { ms: payload.ms } : {}),
+    };
+  }
+
+  let routedIntent = payload.routedIntent ?? current?.routedIntent;
+  if (payload.nodeId === 'apply_memory' && payload.status === 'success' && !routedIntent) {
+    routedIntent = 'plan_new';
+  }
+
+  markOrchestrationNodesOnExecutedPath(graph, baseStates, {
+    routedIntent,
+    completed: current?.completed ?? false,
+  });
+
+  let snapshot: WorkflowGraphExecutionSnapshot = {
+    nodeStates: baseStates,
+    ...resolveExecutionEdgeSnapshot(graph, baseStates),
+    takenBranchEdgeIds: current?.takenBranchEdgeIds ?? [],
+    skippedBranchEdgeIds: current?.skippedBranchEdgeIds ?? [],
+    takenBranchNodeId: current?.takenBranchNodeId ?? null,
+    routedIntent,
+    runningTool: current?.runningTool,
+    completed: current?.completed ?? false,
+    failed: current?.failed ?? false,
+  };
+
+  if (routedIntent) {
+    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent, {
+      completed: current?.completed ?? false,
+    });
+    snapshot.runningTool = current?.runningTool;
+    snapshot.completed = current?.completed ?? false;
+    snapshot.failed = current?.failed ?? false;
+  }
+
+  return snapshot;
+}
+
+/**
+ * 运行结束后将 trace 合并进 SSE 快照：补充 digest/ms，不重置已展示的渐进状态。
+ *
+ * @param graph - 工作流图定义
+ * @param current - SSE 驱动的当前快照
+ * @param spans - 完整 NodeSpan 时间线
+ * @param options - lastRoutedIntent：服务端持久化的路由意图
+ * @returns 合并后的终态快照
+ */
+export function finalizeWorkflowGraphExecutionFromTrace(
+  graph: WorkflowGraphDefinition,
+  current: WorkflowGraphExecutionSnapshot,
+  spans: AgentToolTraceEntry[],
+  options?: { lastRoutedIntent?: string },
+): WorkflowGraphExecutionSnapshot {
+  const nodeStates: Record<string, WorkflowNodeExecutionState> = {};
+  for (const node of graph.nodes) {
+    nodeStates[node.id] = { ...(current.nodeStates[node.id] ?? { status: 'pending' }) };
+  }
+
+  const traceMapped = mapToolTraceSpansToGraphNodes(graph, spans);
+  for (const [nodeId, traceState] of Object.entries(traceMapped)) {
+    const existing = nodeStates[nodeId];
+    if (!existing || existing.status === 'pending') {
+      if (traceState.status !== 'pending') {
+        nodeStates[nodeId] = traceState;
+      }
+      continue;
+    }
+    if ((existing.status === 'success' || existing.status === 'failed') && traceState.span) {
+      nodeStates[nodeId] = {
+        ...existing,
+        span: existing.span ?? traceState.span,
+        ms: existing.ms ?? traceState.ms,
+      };
+    }
+  }
+
+  const routedIntent =
+    options?.lastRoutedIntent
+    ?? current.routedIntent
+    ?? spans.map((span) => tryExtractRoutedIntentFromDigest(span.outputDigest)).find(Boolean);
+
+  markOrchestrationNodesOnExecutedPath(graph, nodeStates, { routedIntent, completed: true });
+
+  const failed =
+    current.failed
+    || spans.some((span) => !span.ok)
+    || Object.values(nodeStates).some((state) => state.status === 'failed');
+
+  let snapshot: WorkflowGraphExecutionSnapshot = {
+    ...current,
+    nodeStates,
+    ...resolveExecutionEdgeSnapshot(graph, nodeStates),
+    routedIntent,
+    completed: true,
+    failed,
+    runningTool: undefined,
+  };
+
+  if (routedIntent) {
+    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent, {
+      completed: true,
+    });
+    snapshot.completed = true;
+    snapshot.failed = failed;
+    snapshot.runningTool = undefined;
   }
 
   return snapshot;

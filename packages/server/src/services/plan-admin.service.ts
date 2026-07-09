@@ -111,6 +111,68 @@ export interface AdminSandboxPlanStreamStartResult {
   sessionId: number;
 }
 
+interface PendingAdminSandboxRun {
+  userId: number;
+  input: AdminSandboxPlanRequest;
+  locale: LocaleCode;
+}
+
+/** 等待 SSE 订阅后再启动的沙箱任务 */
+const pendingAdminSandboxRuns = new Map<number, PendingAdminSandboxRun>();
+const pendingAdminSandboxTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+/** 无 SSE 订阅时的沙箱启动兜底延迟（毫秒） */
+const SANDBOX_STREAM_START_FALLBACK_MS = 4000;
+
+/**
+ * 在首个 SSE 订阅或超时后启动挂起的沙箱规划。
+ *
+ * @param sessionId - 沙箱会话 ID
+ * @returns 是否成功触发后台规划
+ */
+export function kickOffPendingAdminSandboxPlan(sessionId: number): boolean {
+  const pending = pendingAdminSandboxRuns.get(sessionId);
+  if (!pending) return false;
+
+  pendingAdminSandboxRuns.delete(sessionId);
+  const timer = pendingAdminSandboxTimers.get(sessionId);
+  if (timer) {
+    clearTimeout(timer);
+    pendingAdminSandboxTimers.delete(sessionId);
+  }
+
+  void completeAdminSandboxPlanInBackground(
+    pending.userId,
+    pending.input,
+    pending.locale,
+    sessionId,
+  );
+  return true;
+}
+
+/**
+ * 登记沙箱后台任务，待 SSE 订阅连接后再执行（避免事件缓冲突发回放）。
+ *
+ * @param sessionId - 沙箱会话 ID
+ * @param userId - 用户 ID
+ * @param input - 规划请求
+ * @param locale - 语言
+ */
+function schedulePendingAdminSandboxPlan(
+  sessionId: number,
+  userId: number,
+  input: AdminSandboxPlanRequest,
+  locale: LocaleCode,
+): void {
+  pendingAdminSandboxRuns.set(sessionId, { userId, input, locale });
+  pendingAdminSandboxTimers.set(
+    sessionId,
+    setTimeout(() => {
+      kickOffPendingAdminSandboxPlan(sessionId);
+    }, SANDBOX_STREAM_START_FALLBACK_MS),
+  );
+}
+
 /**
  * 后台完成沙箱规划并推送 SSE 结束事件。
  *
@@ -183,7 +245,7 @@ export async function startAdminSandboxPlanAsync(
   beginPlanSessionGeneration(sessionId);
   emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'running' });
 
-  void completeAdminSandboxPlanInBackground(userId, input, locale, sessionId);
+  schedulePendingAdminSandboxPlan(sessionId, userId, input, locale);
 
   return { sessionId };
 }

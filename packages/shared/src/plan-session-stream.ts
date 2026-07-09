@@ -2,6 +2,7 @@ import type {
   PlanSessionStreamAssistantPayload,
   PlanSessionStreamDonePayload,
   PlanSessionStreamErrorPayload,
+  PlanSessionStreamNodeStatusPayload,
   PlanSessionStreamToolCallPayload,
 } from './types.js';
 import type { AgentToolStepView } from './i18n/agent-status-messages.js';
@@ -73,6 +74,7 @@ export function applyPlanSessionToolCallStep(
 
 export interface PlanSessionStreamHandlers {
   onToolCall?: (payload: PlanSessionStreamToolCallPayload) => void;
+  onNodeStatus?: (payload: PlanSessionStreamNodeStatusPayload) => void;
   onAssistant?: (payload: PlanSessionStreamAssistantPayload) => void;
   onDone?: (payload: PlanSessionStreamDonePayload) => void;
   onError?: (payload: PlanSessionStreamErrorPayload) => void;
@@ -98,6 +100,11 @@ export function dispatchPlanSessionStreamEvent(
     case 'tool_call': {
       const payload = parseJsonData<PlanSessionStreamToolCallPayload>(rawData);
       if (payload?.tool && payload.status) handlers.onToolCall?.(payload);
+      return null;
+    }
+    case 'node_status': {
+      const payload = parseJsonData<PlanSessionStreamNodeStatusPayload>(rawData);
+      if (payload?.nodeId && payload.status) handlers.onNodeStatus?.(payload);
       return null;
     }
     case 'assistant': {
