@@ -37,10 +37,11 @@
 | PC 双平台分工（用户端/管理端） | [docs/PC双平台分工.md](docs/PC双平台分工.md) |
 | 系统管理（Web RBAC） | [docs/系统管理.md](docs/系统管理.md) |
 | Web 管理端表格规范 | [docs/Web管理端表格规范.md](docs/Web管理端表格规范.md) |
-| 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) · [§13 M0 实施清单](docs/发单接单平台.md#13-m0-领域建模实施清单2026-07-09) |
+| 发单接单平台（模块 B） | [docs/发单接单平台.md](docs/发单接单平台.md) · [docs/发单接单路线图.md](docs/发单接单路线图.md) |
 | 数字孪生与三维建模（F 线） | [docs/数字孪生与三维建模.md](docs/数字孪生与三维建模.md) |
 | AI 路径规划路线图（Step 35→40 · H10 已交付） | [docs/AI路径规划路线图.md](docs/AI路径规划路线图.md) |
 | AI 流程编排路线图（W0～W5 · 术语表 §12） | [docs/AI流程编排路线图.md](docs/AI流程编排路线图.md) |
+| 发单接单路线图（M0～M7 · 模块 B） | [docs/发单接单路线图.md](docs/发单接单路线图.md) |
 | 专属模型训练（I2/I3） | [docs/阿里云-兜行专属模型训练与部署.md](docs/阿里云-兜行专属模型训练与部署.md) · [packages/ml-training/README.md](packages/ml-training/README.md) |
 | AI 规划与 Agent 演进（设计全稿） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
