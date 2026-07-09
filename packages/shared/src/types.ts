@@ -1,4 +1,5 @@
 import type { AgentToolTraceEntry, NodeSpanLlmUsage } from './workflow-node-span.js';
+import type { WorkflowGraphDefinition } from './workflow-graph.js';
 
 export type { AgentToolTraceEntry, NodeSpan, NodeSpanLlmUsage, RagScoreSummaryItem } from './workflow-node-span.js';
 
@@ -638,6 +639,10 @@ export interface PlanSessionStreamToolCallPayload {
   tool: string;
   status: 'running' | 'done' | 'failed';
   ms?: number;
+  /** 对应 NodeSpan.nodeId（可选，便于画布对齐） */
+  nodeId?: string;
+  inputDigest?: string;
+  outputDigest?: string;
 }
 
 /** SSE `assistant` 事件 payload */
@@ -765,6 +770,12 @@ export interface CreatePlanSessionRequest {
   days?: number;
   budget?: string;
   provider?: LlmProviderChoice;
+}
+
+/** 管理端沙箱规划（可注入草稿 graphDef 调试） */
+export interface AdminSandboxPlanRequest extends CreatePlanSessionRequest {
+  /** 编辑器当前草稿图；仅沙箱预览时传入，强制 template 引擎编译 */
+  graphDefOverride?: WorkflowGraphDefinition;
 }
 
 /** 追问 / 调整方案 */

@@ -74,7 +74,14 @@ export function emitPlanSessionStreamEvent(
 
 export function emitPlanSessionToolCall(
   sessionId: number,
-  payload: { tool: string; status: 'running' | 'done' | 'failed'; ms?: number },
+  payload: {
+    tool: string;
+    status: 'running' | 'done' | 'failed';
+    ms?: number;
+    nodeId?: string;
+    inputDigest?: string;
+    outputDigest?: string;
+  },
 ): void {
   emitPlanSessionStreamEvent(sessionId, 'tool_call', payload);
 }

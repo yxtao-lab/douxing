@@ -56,13 +56,19 @@ async def run_plan_template_langgraph(request: dict[str, Any], prompt: str) -> d
     initial["template_config"] = sel_data.get("nodeConfig") or {}
     initial["_template_preselected"] = True
 
-    graph_def = sel_data.get("graphDef")
+    graph_def = request.get("graphDefOverride") or sel_data.get("graphDef")
     if graph_def:
-        logger.info(
-            "[plan_template] 使用模板 graph_def templateId=%s version=%s",
-            sel_data.get("templateId"),
-            sel_data.get("templateVersion"),
-        )
+        if request.get("graphDefOverride"):
+            logger.info(
+                "[plan_template] 使用沙箱 graphDefOverride（草稿 debug） templateId=%s",
+                sel_data.get("templateId"),
+            )
+        else:
+            logger.info(
+                "[plan_template] 使用模板 graph_def templateId=%s version=%s",
+                sel_data.get("templateId"),
+                sel_data.get("templateVersion"),
+            )
         app = compile_workflow_graph_cached(graph_def)
     else:
         logger.info(

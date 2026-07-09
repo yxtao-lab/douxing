@@ -7,6 +7,7 @@ import type {
   PlanSessionMessageInfo,
   PlanSessionSummary,
   CreatePlanSessionRequest,
+  AdminSandboxPlanRequest,
   TravelIntentSnapshot,
   PlanPetMeta,
   MemoryRecallExplainItem,
@@ -442,11 +443,35 @@ async function persistAgentResultAsSessionCandidates(
   return { rows: results, candidateCount, memberLevel };
 }
 
+/**
+ * 构建规划 SSE 回调（Tool 开始/结束，含 digest）。
+ *
+ * @param sessionId - 规划会话 ID
+ * @returns Agent 流式回调
+ */
+export function buildPlanSessionAgentStreamHooks(sessionId: number): AgentPlanStreamHooks {
+  return {
+    onToolStart: (tool) => emitPlanSessionToolCall(sessionId, { tool, status: 'running' }),
+    onToolEnd: (tool, ok, ms, span) =>
+      emitPlanSessionToolCall(sessionId, {
+        tool,
+        status: ok ? 'done' : 'failed',
+        ms,
+        nodeId: span?.nodeId,
+        inputDigest: span?.inputDigest,
+        outputDigest: span?.outputDigest,
+      }),
+  };
+}
+
 async function tryGenerateSessionCandidatesViaAgent(
   userId: number,
   baseInput: GenerateRouteInput,
   intent: TravelIntentSnapshot,
   locale: LocaleCode,
+  hooks?: AgentPlanStreamHooks,
+  sessionId?: number,
+  graphDefOverride?: AdminSandboxPlanRequest['graphDefOverride'],
 ): Promise<{
   pack: { rows: GeneratedCandidateRow[]; candidateCount: number; memberLevel: number };
   agentState: PlanSessionAgentState;
@@ -455,15 +480,20 @@ async function tryGenerateSessionCandidatesViaAgent(
   if (!isAgentPlanEnabled()) return null;
 
   try {
-    const agentResult = await runAgentPlan({
-      prompt: baseInput.prompt,
-      userId,
-      days: baseInput.days,
-      budget: baseInput.budget,
-      provider: baseInput.provider ?? 'auto',
-      locale,
-      intent,
-    });
+    const agentResult = await runAgentPlan(
+      {
+        prompt: baseInput.prompt,
+        userId,
+        sessionId,
+        days: baseInput.days,
+        budget: baseInput.budget,
+        provider: baseInput.provider ?? 'auto',
+        locale,
+        intent,
+        graphDefOverride,
+      },
+      hooks,
+    );
     if (!agentResult) return null;
 
     const pack = await persistAgentResultAsSessionCandidates(
@@ -575,15 +605,28 @@ export async function getPlanSessionDetail(
   };
 }
 
+/** 管理端沙箱异步流式：写入已有占位会话而非新建 */
+export interface CreatePlanSessionStreamOptions {
+  existingSessionId: number;
+}
+
 export async function createPlanSession(
   userId: number,
-  input: CreatePlanSessionRequest,
+  input: CreatePlanSessionRequest | AdminSandboxPlanRequest,
   locale: LocaleCode = 'zh-CN',
+  streamOptions?: CreatePlanSessionStreamOptions,
 ): Promise<PlanSessionActionResult> {
   const prompt = input.prompt.trim();
   if (!prompt) {
     throw new ApiError(ApiMessageKey.PLAN_PROMPT_REQUIRED);
   }
+
+  const streamSessionId = streamOptions?.existingSessionId;
+  const agentStreamHooks = streamSessionId
+    ? buildPlanSessionAgentStreamHooks(streamSessionId)
+    : undefined;
+  const graphDefOverride =
+    'graphDefOverride' in input ? input.graphDefOverride : undefined;
 
   const intent = await buildIntentFromHistoryAsync(undefined, prompt, {
     days: input.days,
@@ -611,6 +654,9 @@ export async function createPlanSession(
     generateInput,
     resolvedIntent,
     locale,
+    agentStreamHooks,
+    streamSessionId,
+    graphDefOverride,
   );
   const generatedPack = agentGenerated?.pack
     ?? await generateSessionCandidates(userId, generateInput, resolvedIntent, locale);
@@ -647,16 +693,33 @@ export async function createPlanSession(
   const snapshot = snapshotFromRoute(primary.route);
 
   const db = getDb();
-  const [sessionResult] = await db.insert(planSessions).values({
-    userId,
-    routeId: primary.route.id,
-    provider: input.provider ?? 'auto',
-    status: PlanSessionStatus.ACTIVE,
-    title: truncateTitle(prompt),
-    intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
-    agentState: persistedAgentState,
-  });
-  const sessionId = Number(sessionResult.insertId);
+  let sessionId: number;
+
+  if (streamSessionId != null) {
+    sessionId = streamSessionId;
+    await db
+      .update(planSessions)
+      .set({
+        routeId: primary.route.id,
+        provider: input.provider ?? 'auto',
+        title: truncateTitle(prompt),
+        intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+        agentState: persistedAgentState,
+        updatedAt: new Date(),
+      })
+      .where(eq(planSessions.id, sessionId));
+  } else {
+    const [sessionResult] = await db.insert(planSessions).values({
+      userId,
+      routeId: primary.route.id,
+      provider: input.provider ?? 'auto',
+      status: PlanSessionStatus.ACTIVE,
+      title: truncateTitle(prompt),
+      intentSnapshot: resolvedIntent as unknown as Record<string, unknown>,
+      agentState: persistedAgentState,
+    });
+    sessionId = Number(sessionResult.insertId);
+  }
 
   if (generated.length > 1) {
     await persistSessionCandidates(sessionId, generated, primary.route.id);
@@ -682,7 +745,7 @@ export async function createPlanSession(
   const candidates =
     generated.length > 1 ? await loadSessionCandidates(sessionId, userId, locale) : undefined;
 
-  return buildActionResult(sessionId, primary.route, assistantMessage, {
+  const actionResult = buildActionResult(sessionId, primary.route, assistantMessage, {
     generationSource: primary.generationSource,
     llmProvider: primary.llmProvider,
     intentSnapshot: resolvedIntent,
@@ -694,6 +757,12 @@ export async function createPlanSession(
     agentState: persistedAgentState,
     petMeta,
   });
+
+  if (streamSessionId != null) {
+    completePlanSessionStream(streamSessionId, { result: actionResult });
+  }
+
+  return actionResult;
 }
 
 export async function selectPlanSessionCandidate(

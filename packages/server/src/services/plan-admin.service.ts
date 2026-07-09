@@ -1,15 +1,37 @@
 import { desc, eq } from 'drizzle-orm';
 import type {
-  CreatePlanSessionRequest,
+  AdminSandboxPlanRequest,
   LocaleCode,
   PlanSessionActionResult,
   PlanSessionAdminSummary,
 } from '@douxing/shared';
-import { normalizeAgentToolTrace } from '@douxing/shared';
+import { ApiError, ApiMessageKey, isApiError, normalizeAgentToolTrace, PlanSessionStatus, validateWorkflowGraph } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { planSessions } from '../db/schema/plan-sessions.js';
 import { users } from '../db/schema/users.js';
-import { createPlanSession } from './plan-session.service.js';
+import {
+  createPlanSession,
+  type CreatePlanSessionStreamOptions,
+} from './plan-session.service.js';
+import {
+  beginPlanSessionGeneration,
+  emitPlanSessionToolCall,
+  failPlanSessionStream,
+} from './plan-session-stream.service.js';
+
+const SESSION_TITLE_MAX = 40;
+
+/**
+ * 将 prompt 截断为会话标题。
+ *
+ * @param text - 原始 prompt
+ * @returns 截断后的标题
+ */
+function truncateSessionTitle(text: string): string {
+  const trimmed = text.trim();
+  if (trimmed.length <= SESSION_TITLE_MAX) return trimmed;
+  return `${trimmed.slice(0, SESSION_TITLE_MAX)}…`;
+}
 
 /**
  * 将数据库时间戳格式化为 ISO 字符串。
@@ -78,8 +100,106 @@ export async function listRecentPlanSessionsForAdmin(
  */
 export async function runAdminSandboxPlan(
   userId: number,
-  input: CreatePlanSessionRequest,
+  input: AdminSandboxPlanRequest,
   locale: LocaleCode,
 ): Promise<PlanSessionActionResult> {
   return createPlanSession(userId, input, locale);
+}
+
+/** 管理端沙箱异步启动结果 */
+export interface AdminSandboxPlanStreamStartResult {
+  sessionId: number;
+}
+
+/**
+ * 后台完成沙箱规划并推送 SSE 结束事件。
+ *
+ * @param userId - 用户 ID
+ * @param input - 规划请求
+ * @param locale - 语言
+ * @param existingSessionId - 占位会话 ID
+ */
+async function completeAdminSandboxPlanInBackground(
+  userId: number,
+  input: AdminSandboxPlanRequest,
+  locale: LocaleCode,
+  existingSessionId: number,
+): Promise<void> {
+  const streamOptions: CreatePlanSessionStreamOptions = { existingSessionId };
+  try {
+    emitPlanSessionToolCall(existingSessionId, { tool: 'thinking', status: 'done', ms: 0 });
+    await createPlanSession(userId, input, locale, streamOptions);
+  } catch (err) {
+    console.error('[admin/sandbox-run/async]', err);
+    if (isApiError(err)) {
+      failPlanSessionStream(existingSessionId, err.messageKey, err.params);
+      return;
+    }
+    failPlanSessionStream(existingSessionId, ApiMessageKey.PLAN_SESSION_SANDBOX_RUN_FAILED);
+  }
+}
+
+/**
+ * 管理端沙箱异步启动：立即返回 sessionId，规划在后台执行并通过 SSE 推送进度。
+ *
+ * @param userId - 发起模拟的管理员/运营用户 ID
+ * @param input - 规划 prompt 与可选参数
+ * @param locale - 请求语言
+ * @returns 占位会话 ID，客户端应订阅 SSE
+ * @throws {ApiError} prompt 为空时
+ */
+export async function startAdminSandboxPlanAsync(
+  userId: number,
+  input: AdminSandboxPlanRequest,
+  locale: LocaleCode,
+): Promise<AdminSandboxPlanStreamStartResult> {
+  const prompt = input.prompt.trim();
+  if (!prompt) {
+    throw new ApiError(ApiMessageKey.PLAN_PROMPT_REQUIRED);
+  }
+
+  if (input.graphDefOverride) {
+    const validation = validateWorkflowGraph(input.graphDefOverride);
+    if (!validation.valid) {
+      throw new ApiError(ApiMessageKey.WORKFLOW_GRAPH_VALIDATION_FAILED);
+    }
+  }
+
+  const db = getDb();
+  const [insertResult] = await db.insert(planSessions).values({
+    userId,
+    routeId: null,
+    provider: input.provider ?? 'auto',
+    status: PlanSessionStatus.ACTIVE,
+    title: truncateSessionTitle(prompt),
+    agentState: {
+      lastRoutedIntent: 'plan_new',
+      generationPath: 'agent',
+      toolTrace: [],
+    },
+  });
+  const sessionId = Number(insertResult.insertId);
+
+  beginPlanSessionGeneration(sessionId);
+  emitPlanSessionToolCall(sessionId, { tool: 'thinking', status: 'running' });
+
+  void completeAdminSandboxPlanInBackground(userId, input, locale, sessionId);
+
+  return { sessionId };
+}
+
+/**
+ * 管理端校验规划会话是否存在（不校验归属用户）。
+ *
+ * @param sessionId - 会话 ID
+ * @returns 是否存在
+ */
+export async function adminPlanSessionExists(sessionId: number): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: planSessions.id })
+    .from(planSessions)
+    .where(eq(planSessions.id, sessionId))
+    .limit(1);
+  return rows.length > 0;
 }

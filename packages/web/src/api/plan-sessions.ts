@@ -1,6 +1,7 @@
 import http from './http';
 import type {
   ApiResponse,
+  AdminSandboxPlanRequest,
   CreatePlanSessionRequest,
   PlanSessionAdminSummary,
   PlanSessionCostSummary,
@@ -45,6 +46,20 @@ export async function fetchRecentPlanSessions(limit = 20) {
   const { data } = await http.get<ApiResponse<PlanSessionAdminSummary[]>>(
     '/admin/plan-sessions/recent',
     { params: { limit } },
+  );
+  return data.data;
+}
+
+/**
+ * 管理端沙箱异步启动（立即返回 sessionId，通过 SSE 订阅进度）。
+ *
+ * @param body - prompt / days / budget / provider
+ * @returns 占位会话 ID
+ */
+export async function startAdminSandboxPlanAsync(body: AdminSandboxPlanRequest) {
+  const { data } = await http.post<ApiResponse<{ sessionId: number }>>(
+    '/admin/plan-sessions/sandbox-run/async',
+    body,
   );
   return data.data;
 }

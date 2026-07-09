@@ -17,6 +17,7 @@ import type {
   MemoryRecallExplainItem,
 
   WorkflowTemplateNodeConfig,
+  WorkflowGraphDefinition,
 
 } from '@douxing/shared';
 
@@ -104,6 +105,9 @@ export interface AgentPlanRequest {
 
   intent?: TravelIntentSnapshot;
 
+  /** 管理端沙箱：强制使用草稿 graphDef 编译 template 引擎 */
+  graphDefOverride?: WorkflowGraphDefinition;
+
 }
 
 
@@ -111,7 +115,7 @@ export interface AgentPlanRequest {
 /** Step 7：规划 SSE 回调（Tool 开始/结束） */
 export interface AgentPlanStreamHooks {
   onToolStart?: (tool: string) => void;
-  onToolEnd?: (tool: string, ok: boolean, ms: number) => void;
+  onToolEnd?: (tool: string, ok: boolean, ms: number, span?: AgentToolTraceEntry) => void;
 }
 
 
@@ -447,11 +451,16 @@ async function callRemoteAgentPlan(
 
   try {
 
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (request.graphDefOverride) {
+      headers['X-Workflow-Engine'] = 'template';
+    }
+
     const res = await fetch(`${baseUrl}/v1/agent/plan`, {
 
       method: 'POST',
 
-      headers: { 'Content-Type': 'application/json' },
+      headers,
 
       body: JSON.stringify(request),
 
@@ -497,7 +506,7 @@ function replayAgentToolTrace(
   for (const entry of trace) {
     if (skipTools.has(entry.tool)) continue;
     hooks.onToolStart?.(entry.tool);
-    hooks.onToolEnd?.(entry.tool, entry.ok, entry.ms);
+    hooks.onToolEnd?.(entry.tool, entry.ok, entry.ms, entry);
   }
 }
 

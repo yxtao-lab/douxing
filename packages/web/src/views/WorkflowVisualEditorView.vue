@@ -41,8 +41,13 @@
             v-if="currentGraph"
             ref="canvasRef"
             :graph="currentGraph"
+            :execution="graphExecution"
+            :sandbox-prompt="sandboxPrompt"
+            :sandbox-running="sandboxRunning"
             @change="onGraphChange"
             @node-select="onNodeSelect"
+            @update:sandbox-prompt="sandboxPrompt = $event"
+            @sandbox-run="runSandboxPreview"
           />
         </main>
 
@@ -87,6 +92,12 @@
 
             <a-collapse-panel key="preview" :header="t('workflowEditor.previewTitle')">
               <p class="preview-desc">{{ t('workflowEditor.previewDesc') }}</p>
+              <a-alert
+                type="info"
+                show-icon
+                :message="t('workflowEditor.previewDraftHint')"
+                class="preview-draft-alert"
+              />
               <a-form layout="vertical">
                 <a-form-item :label="t('planDiagnostics.sandboxPrompt')" required>
                   <a-textarea
@@ -97,21 +108,40 @@
                     :disabled="sandboxRunning"
                   />
                 </a-form-item>
-                <a-button
-                  type="primary"
-                  block
-                  :loading="sandboxRunning"
-                  :disabled="!sandboxPrompt.trim()"
-                  @click="runSandboxPreview"
-                >
-                  {{ t('workflowEditor.previewRun') }}
-                </a-button>
+                <a-space direction="vertical" style="width: 100%">
+                  <a-button
+                    type="primary"
+                    block
+                    :loading="sandboxRunning"
+                    :disabled="!sandboxPrompt.trim()"
+                    @click="runSandboxPreview"
+                  >
+                    {{ t('workflowEditor.previewRun') }}
+                  </a-button>
+                  <a-button
+                    v-if="graphExecution"
+                    block
+                    @click="clearExecutionOverlay"
+                  >
+                    {{ t('workflowEditor.execution.clearHighlight') }}
+                  </a-button>
+                </a-space>
               </a-form>
               <div v-if="previewSessionId" class="preview-result">
                 <a-button type="link" @click="openDiagnostics(previewSessionId)">
                   {{ t('workflowEditor.openDiagnostics', { sessionId: previewSessionId }) }}
                 </a-button>
               </div>
+            </a-collapse-panel>
+
+            <a-collapse-panel key="execution" :header="t('workflowEditor.execution.panelTitle')">
+              <WorkflowGraphExecutionPanel
+                :execution="graphExecution"
+                :selected-node-id="executionSelectedNodeId"
+                :selected-tool-name="selectedNode?.toolName"
+                :selected-label-key="selectedNodeLabelKey"
+                :graph-node-label-key-by-id="graphNodeLabelKeyById"
+              />
             </a-collapse-panel>
           </a-collapse>
         </aside>
@@ -130,18 +160,24 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { message } from 'ant-design-vue';
 import { useI18n } from 'vue-i18n';
 import type {
   WorkflowGraphDefinition,
+  WorkflowGraphExecutionSnapshot,
   WorkflowGraphValidationResult,
   WorkflowTemplateInfo,
+} from '@douxing/shared';
+import {
+  applyWorkflowGraphExecutionToolCall,
+  buildWorkflowGraphExecutionFromTrace,
 } from '@douxing/shared';
 import { buildDefaultPlanDefaultGraph, validateWorkflowGraph } from '@douxing/shared';
 import WorkflowNodePalette from '@/components/workflow-editor/WorkflowNodePalette.vue';
 import WorkflowGraphCanvas from '@/components/workflow-editor/WorkflowGraphCanvas.vue';
+import WorkflowGraphExecutionPanel from '@/components/workflow-editor/WorkflowGraphExecutionPanel.vue';
 import WorkflowPaletteNodeDocPanel from '@/components/workflow-editor/WorkflowPaletteNodeDocPanel.vue';
 import WorkflowToolNodeConfigPanel, {
   type WorkflowSelectedNodeSnapshot,
@@ -163,7 +199,11 @@ import {
   updateWorkflowTemplate,
   validateWorkflowGraphApi,
 } from '@/api/workflow-templates';
-import { runAdminSandboxPlan } from '@/api/plan-sessions';
+import {
+  fetchPlanSessionWorkflowTrace,
+  startAdminSandboxPlanAsync,
+} from '@/api/plan-sessions';
+import { startAdminPlanSessionStreamSubscription } from '@/api/plan-session-stream';
 import { usePageTitle } from '@/i18n/usePageTitle';
 
 const route = useRoute();
@@ -197,10 +237,34 @@ const paletteSelection = ref<WorkflowPaletteSelection | null>(null);
 const selectedPaletteKey = ref<string | null>(null);
 
 /** 右侧栏折叠面板默认展开项 */
-const sideActiveKeys = ref(['config', 'validation']);
+const sideActiveKeys = ref(['config', 'validation', 'preview', 'execution']);
 
 const sandboxPrompt = ref('');
 const previewSessionId = ref<number | null>(null);
+const graphExecution = ref<WorkflowGraphExecutionSnapshot | null>(null);
+const executionSelectedNodeId = ref<string | null>(null);
+const sandboxAbortController = ref<AbortController | null>(null);
+let stopSandboxStream: (() => void) | null = null;
+
+/**
+ * 选中节点的 labelKey（非 Tool 节点）。
+ */
+const selectedNodeLabelKey = computed(() => {
+  if (!selectedNode.value) return undefined;
+  const node = currentGraph.value?.nodes.find((item) => item.id === selectedNode.value?.id);
+  return node?.labelKey;
+});
+
+/**
+ * 画布节点 id → labelKey（分支名展示）。
+ */
+const graphNodeLabelKeyById = computed((): Record<string, string> => {
+  const map: Record<string, string> = {};
+  for (const node of currentGraph.value?.nodes ?? []) {
+    if (node.labelKey) map[node.id] = node.labelKey;
+  }
+  return map;
+});
 
 const pageTitle = computed(() => {
   if (!template.value) return t('workflowEditor.title');
@@ -292,8 +356,10 @@ function onPaletteSelect(selection: WorkflowPaletteSelection): void {
 function onNodeSelect(snapshot: { id: string; position: { x: number; y: number }; data?: unknown } | null): void {
   if (!snapshot) {
     selectedNode.value = null;
+    executionSelectedNodeId.value = null;
     return;
   }
+  executionSelectedNodeId.value = snapshot.id;
   paletteSelection.value = null;
   selectedPaletteKey.value = null;
   const data = readFlowNodeData(snapshot);
@@ -413,20 +479,139 @@ async function publishGraph(): Promise<void> {
 }
 
 /**
- * 沙箱预览运行（不写生产 routes）。
+ * 清除画布执行高亮与 SSE 订阅。
+ */
+function clearExecutionOverlay(): void {
+  stopSandboxStream?.();
+  stopSandboxStream = null;
+  sandboxAbortController.value?.abort();
+  sandboxAbortController.value = null;
+  graphExecution.value = null;
+  executionSelectedNodeId.value = null;
+}
+
+/**
+ * 沙箱运行结束后拉取 trace 并静态高亮（M1 兜底 / 完成后校准）。
+ *
+ * @param sessionId - 沙箱会话 ID
+ */
+async function applyExecutionFromTrace(sessionId: number): Promise<void> {
+  if (!currentGraph.value) return;
+  try {
+    const trace = await fetchPlanSessionWorkflowTrace(sessionId);
+    graphExecution.value = buildWorkflowGraphExecutionFromTrace(
+      currentGraph.value,
+      trace.spans,
+      { lastRoutedIntent: trace.lastRoutedIntent },
+    );
+  } catch {
+    /* trace 拉取失败时保留 SSE 快照 */
+  }
+}
+
+/**
+ * 订阅沙箱 SSE 并实时更新画布执行态（M2）。
+ *
+ * @param sessionId - 沙箱会话 ID
+ */
+function subscribeSandboxStream(sessionId: number): void {
+  stopSandboxStream?.();
+  const abortController = new AbortController();
+  sandboxAbortController.value = abortController;
+
+  stopSandboxStream = startAdminPlanSessionStreamSubscription({
+    sessionId,
+    signal: abortController.signal,
+    handlers: {
+      onToolCall: (payload) => {
+        if (!currentGraph.value) return;
+        graphExecution.value = applyWorkflowGraphExecutionToolCall(
+          currentGraph.value,
+          graphExecution.value,
+          payload,
+        );
+      },
+      onDone: () => {
+        if (!graphExecution.value) return;
+        graphExecution.value = {
+          ...graphExecution.value,
+          completed: true,
+          runningTool: undefined,
+        };
+        void applyExecutionFromTrace(sessionId);
+        sandboxRunning.value = false;
+        message.success(t('workflowEditor.previewSuccess'));
+      },
+      onError: () => {
+        if (graphExecution.value) {
+          graphExecution.value = {
+            ...graphExecution.value,
+            completed: true,
+            failed: true,
+            runningTool: undefined,
+          };
+        }
+        sandboxRunning.value = false;
+        message.error(t('workflowEditor.previewFailed'));
+      },
+    },
+  });
+}
+
+/**
+ * 沙箱预览运行：异步启动 + SSE 实时高亮，完成后 M1 静态校准。
  */
 async function runSandboxPreview(): Promise<void> {
   const prompt = sandboxPrompt.value.trim();
-  if (!prompt) return;
+  if (!prompt || !currentGraph.value) return;
+
+  const localValidation = validateWorkflowGraph(currentGraph.value);
+  validationResult.value = localValidation;
+  if (!localValidation.valid) {
+    message.error(t('workflowEditor.previewBlockedInvalidGraph'));
+    sideActiveKeys.value = [...new Set([...sideActiveKeys.value, 'validation'])];
+    return;
+  }
+
+  clearExecutionOverlay();
   sandboxRunning.value = true;
+
+  graphExecution.value = {
+    nodeStates: Object.fromEntries(
+      currentGraph.value.nodes.map((node) => [node.id, { status: 'pending' as const }]),
+    ),
+    activeEdgeIds: [],
+    flowingEdgeIds: [],
+    edgeTransfers: {},
+    edgeTransferPayloads: {},
+    takenBranchEdgeIds: [],
+    skippedBranchEdgeIds: [],
+    takenBranchNodeId: null,
+    completed: false,
+    failed: false,
+  };
+
+  if (currentGraph.value.nodes.some((node) => node.kind === 'start')) {
+    const startNode = currentGraph.value.nodes.find((node) => node.kind === 'start');
+    if (startNode) {
+      graphExecution.value.nodeStates[startNode.id] = { status: 'running' };
+    }
+  }
+
+  sideActiveKeys.value = [...new Set([...sideActiveKeys.value, 'execution', 'preview'])];
+
   try {
-    const result = await runAdminSandboxPlan({ prompt, days: 3 });
-    previewSessionId.value = result.sessionId;
-    message.success(t('workflowEditor.previewSuccess'));
+    const { sessionId } = await startAdminSandboxPlanAsync({
+      prompt,
+      days: 3,
+      graphDefOverride: currentGraph.value,
+    });
+    previewSessionId.value = sessionId;
+    subscribeSandboxStream(sessionId);
   } catch {
-    message.error(t('workflowEditor.previewFailed'));
-  } finally {
     sandboxRunning.value = false;
+    graphExecution.value = null;
+    message.error(t('workflowEditor.previewFailed'));
   }
 }
 
@@ -441,6 +626,10 @@ function openDiagnostics(sessionId: number): void {
 
 onMounted(() => {
   void loadTemplate();
+});
+
+onUnmounted(() => {
+  clearExecutionOverlay();
 });
 
 watch(
@@ -538,6 +727,10 @@ watch(
   margin-bottom: 12px;
   color: #8c8c8c;
   font-size: 12px;
+}
+
+.preview-draft-alert {
+  margin-bottom: 12px;
 }
 
 .preview-result {

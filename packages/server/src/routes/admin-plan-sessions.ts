@@ -1,24 +1,44 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import type { LocaleCode } from '@douxing/shared';
-import { API_PREFIX, ApiMessageKey } from '@douxing/shared';
-import { authMiddleware } from '../middleware/auth.js';
+import { API_PREFIX, ApiMessageKey, WORKFLOW_GRAPH_SCHEMA_VERSION, type WorkflowGraphDefinition } from '@douxing/shared';
+import { authMiddleware, sseAuthMiddleware } from '../middleware/auth.js';
 import { requirePerm } from '../middleware/admin.middleware.js';
 import { success, fail, failFromError } from '../utils/response.js';
 import { getPlanSessionWorkflowTrace, getPlanSessionCostSummary } from '../services/plan-workflow-trace.service.js';
 import {
   listRecentPlanSessionsForAdmin,
   runAdminSandboxPlan,
+  startAdminSandboxPlanAsync,
+  adminPlanSessionExists,
 } from '../services/plan-admin.service.js';
 import { optionalQueryInt } from '../utils/query-coerce.util.js';
+import {
+  getPlanSessionStreamBuffer,
+  subscribePlanSessionStream,
+} from '../services/plan-session-stream.service.js';
+import { getAgentPlanTimeoutMs } from '../config/agent.js';
+import { initSseResponse, writeSseComment, writeSseEvent } from '../utils/sse-response.util.js';
 
 const router = Router();
+
+/** W5 · DAG 图 JSON 校验 schema（沙箱 graphDefOverride） */
+const workflowGraphDefSchema = z.custom<WorkflowGraphDefinition>((value) => {
+  if (!value || typeof value !== 'object') return false;
+  const graph = value as WorkflowGraphDefinition;
+  return (
+    graph.schemaVersion === WORKFLOW_GRAPH_SCHEMA_VERSION &&
+    Array.isArray(graph.nodes) &&
+    Array.isArray(graph.edges)
+  );
+});
 
 const sandboxRunSchema = z.object({
   prompt: z.string().min(2).max(500),
   days: z.number().int().min(1).max(7).optional(),
   budget: z.string().max(64).optional(),
   provider: z.enum(['auto', 'douxing', 'deepseek', 'lmstudio']).optional(),
+  graphDefOverride: workflowGraphDefSchema.optional(),
 });
 
 router.use(authMiddleware);
@@ -75,6 +95,104 @@ router.post('/sandbox-run', async (req, res) => {
   } catch (err) {
     console.error('[admin/plan-sessions/sandbox-run]', err);
     failFromError(res, err, ApiMessageKey.PLAN_SESSION_SANDBOX_RUN_FAILED);
+  }
+});
+
+/**
+ * M2：管理端沙箱异步启动（立即返回 sessionId，后台执行 + SSE 进度）。
+ * POST /api/admin/plan-sessions/sandbox-run/async
+ */
+router.post('/sandbox-run/async', async (req, res) => {
+  try {
+    const staff = await requirePerm(req, res, 'data:analytics:view');
+    if (!staff) return;
+
+    const parsed = sandboxRunSchema.safeParse(req.body);
+    if (!parsed.success) {
+      fail(res, ApiMessageKey.PARAM_ERROR);
+      return;
+    }
+
+    const result = await startAdminSandboxPlanAsync(
+      req.auth!.userId,
+      parsed.data,
+      getRequestLocale(res),
+    );
+    success(res, result);
+  } catch (err) {
+    console.error('[admin/plan-sessions/sandbox-run/async]', err);
+    failFromError(res, err, ApiMessageKey.PLAN_SESSION_SANDBOX_RUN_FAILED);
+  }
+});
+
+/**
+ * M2：管理端规划沙箱 SSE 流（订阅 tool_call / done / error）。
+ * GET /api/admin/plan-sessions/:sessionId/stream
+ */
+router.get('/:sessionId/stream', sseAuthMiddleware, async (req, res) => {
+  try {
+    const staff = await requirePerm(req, res, 'data:analytics:view');
+    if (!staff) return;
+
+    const sessionId = parseInt(String(req.params.sessionId), 10);
+    if (Number.isNaN(sessionId)) {
+      fail(res, ApiMessageKey.PARAM_ERROR);
+      return;
+    }
+
+    const exists = await adminPlanSessionExists(sessionId);
+    if (!exists) {
+      fail(res, ApiMessageKey.PLAN_SESSION_NOT_FOUND, 404, 404);
+      return;
+    }
+
+    initSseResponse(res);
+
+    for (const buffered of getPlanSessionStreamBuffer(sessionId)) {
+      writeSseEvent(res, buffered.event, buffered.data);
+      if (buffered.event === 'done' || buffered.event === 'error') {
+        res.end();
+        return;
+      }
+    }
+
+    const maxConnMs = getAgentPlanTimeoutMs() + 30_000;
+    const connTimer = setTimeout(() => {
+      writeSseEvent(res, 'error', { messageKey: ApiMessageKey.REQUEST_TIMEOUT });
+      res.end();
+    }, maxConnMs);
+
+    const heartbeat = setInterval(() => {
+      writeSseComment(res);
+    }, 15_000);
+
+    const unsubscribe = subscribePlanSessionStream(sessionId, (envelope) => {
+      writeSseEvent(res, envelope.event, envelope.data);
+      if (envelope.event === 'done' || envelope.event === 'error') {
+        clearTimeout(connTimer);
+        clearInterval(heartbeat);
+        unsubscribe();
+        res.end();
+      }
+    });
+
+    req.on('close', () => {
+      clearTimeout(connTimer);
+      clearInterval(heartbeat);
+      unsubscribe();
+    });
+  } catch (err) {
+    console.error('[admin/plan-sessions/stream]', err);
+    if (!res.headersSent) {
+      fail(res, ApiMessageKey.PLAN_SESSION_DETAIL_FAILED, 500, 500);
+      return;
+    }
+    try {
+      writeSseEvent(res, 'error', { messageKey: ApiMessageKey.PLAN_SESSION_DETAIL_FAILED });
+      res.end();
+    } catch {
+      /* 连接可能已断开 */
+    }
   }
 });
 

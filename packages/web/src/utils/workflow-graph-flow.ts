@@ -18,6 +18,14 @@ export interface WorkflowFlowNodeData {
   labelKey?: string;
   toolName?: string;
   config?: Record<string, unknown>;
+  /** 沙箱执行状态（仅画布展示，不持久化） */
+  executionStatus?: 'pending' | 'running' | 'success' | 'failed';
+  /** 路由意图（条件节点展示） */
+  routedIntent?: string;
+  /** 命中分支节点 id */
+  takenBranchNodeId?: string | null;
+  /** 当前节点是否为命中分支 */
+  isTakenBranch?: boolean;
 }
 
 /** 序列化用的轻量节点快照（避免 Vue Flow Node 泛型过深） */

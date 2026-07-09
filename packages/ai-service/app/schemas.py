@@ -139,6 +139,7 @@ class AgentPlanRequest(BaseModel):
     provider: str | None = None
     currentDraft: dict | None = None
     intent: dict | None = None
+    graphDefOverride: dict | None = None
 
 
 class AgentPlanResponse(BaseModel):

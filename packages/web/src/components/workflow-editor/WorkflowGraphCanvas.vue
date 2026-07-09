@@ -8,6 +8,7 @@
       v-model:nodes="nodes"
       v-model:edges="edges"
       :node-types="nodeTypes"
+      :edge-types="edgeTypes"
       :default-edge-options="defaultEdgeOptions"
       :delete-key-code="['Delete', 'Backspace']"
       fit-view-on-init
@@ -36,7 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import { markRaw, nextTick, onMounted, onUnmounted, shallowRef, watch, type Component } from 'vue';
+import { markRaw, nextTick, onMounted, onUnmounted, provide, ref, shallowRef, watch, type Component } from 'vue';
 import {
   VueFlow,
   useVueFlow,
@@ -53,8 +54,9 @@ import '@vue-flow/core/dist/style.css';
 import '@vue-flow/core/dist/theme-default.css';
 import '@vue-flow/controls/dist/style.css';
 import '@vue-flow/minimap/dist/style.css';
-import type { WorkflowGraphDefinition } from '@douxing/shared';
+import type { WorkflowGraphDefinition, WorkflowGraphExecutionSnapshot } from '@douxing/shared';
 import WorkflowGraphNode from './WorkflowGraphNode.vue';
+import WorkflowGraphTransferEdge from './WorkflowGraphTransferEdge.vue';
 import {
   createUniqueWorkflowEdgeId,
   createUniqueWorkflowNodeId,
@@ -71,6 +73,10 @@ import {
   type WorkflowGraphHistoryActionKind,
 } from '@/composables/useWorkflowGraphHistory';
 import WorkflowCanvasToolbar from './WorkflowCanvasToolbar.vue';
+import {
+  WORKFLOW_SANDBOX_INJECT_KEY,
+  type WorkflowSandboxInjectContext,
+} from '@/utils/workflow-sandbox-inject';
 
 /**
  * 将 Vue Flow 节点转为序列化快照。
@@ -105,15 +111,52 @@ function toEdgeSnapshot(edge: Edge): WorkflowFlowEdgeSnapshot {
 
 const props = defineProps<{
   graph: WorkflowGraphDefinition;
+  execution?: WorkflowGraphExecutionSnapshot | null;
+  sandboxPrompt?: string;
+  sandboxRunning?: boolean;
 }>();
 
 const emit = defineEmits<{
   change: [graph: WorkflowGraphDefinition];
   'node-select': [node: WorkflowFlowNodeSnapshot | null];
+  'update:sandboxPrompt': [value: string];
+  'sandbox-run': [];
 }>();
+
+const sandboxPromptLocal = ref(props.sandboxPrompt ?? '');
+const sandboxRunningLocal = ref(props.sandboxRunning ?? false);
+
+watch(
+  () => props.sandboxPrompt,
+  (value) => {
+    sandboxPromptLocal.value = value ?? '';
+  },
+);
+
+watch(
+  () => props.sandboxRunning,
+  (value) => {
+    sandboxRunningLocal.value = value ?? false;
+  },
+);
+
+/** 开始节点沙箱输入上下文 */
+provide(WORKFLOW_SANDBOX_INJECT_KEY, {
+  prompt: sandboxPromptLocal,
+  running: sandboxRunningLocal,
+  setPrompt: (value: string) => {
+    sandboxPromptLocal.value = value;
+    emit('update:sandboxPrompt', value);
+  },
+  run: () => emit('sandbox-run'),
+} satisfies WorkflowSandboxInjectContext);
 
 const nodeTypes: Record<string, Component> = {
   workflowNode: markRaw(WorkflowGraphNode),
+};
+
+const edgeTypes: Record<string, Component> = {
+  workflowTransfer: markRaw(WorkflowGraphTransferEdge),
 };
 
 const defaultEdgeOptions = {
@@ -411,6 +454,91 @@ watch(
 );
 
 /**
+ * 将执行快照合并到画布节点与边样式（沙箱高亮）。
+ *
+ * @param execution - 执行快照；null 时清除高亮
+ */
+function applyExecutionOverlay(execution: WorkflowGraphExecutionSnapshot | null | undefined): void {
+  const activeEdgeSet = new Set(execution?.activeEdgeIds ?? []);
+  const flowingEdgeSet = new Set(execution?.flowingEdgeIds ?? []);
+  const takenBranchEdgeSet = new Set(execution?.takenBranchEdgeIds ?? []);
+  const skippedBranchEdgeSet = new Set(execution?.skippedBranchEdgeIds ?? []);
+  const edgeTransfers = execution?.edgeTransfers ?? {};
+  const edgeTransferPayloads = execution?.edgeTransferPayloads ?? {};
+
+  const nextNodes = getNodes.value.map((node) => {
+    const data = readFlowNodeData(node);
+    const status = execution?.nodeStates[node.id]?.status;
+    return {
+      ...node,
+      data: {
+        ...data,
+        executionStatus: status,
+        routedIntent: execution?.routedIntent,
+        takenBranchNodeId: execution?.takenBranchNodeId,
+        isTakenBranch: execution?.takenBranchNodeId === node.id,
+      },
+    };
+  });
+
+  const nextEdges = getEdges.value.map((edge) => {
+    const isActive = activeEdgeSet.has(edge.id);
+    const isFlowing = flowingEdgeSet.has(edge.id);
+    const isTakenBranch = takenBranchEdgeSet.has(edge.id);
+    const isSkippedBranch = skippedBranchEdgeSet.has(edge.id);
+    const staticLabel = typeof edge.label === 'string' ? edge.label : undefined;
+
+    const branchState = isTakenBranch ? 'taken' as const : isSkippedBranch ? 'skipped' as const : 'none' as const;
+    const executionMode = isFlowing ? 'flowing' as const : isActive ? 'active' as const : 'idle' as const;
+
+    if (!execution) {
+      return {
+        ...edge,
+        type: undefined,
+        animated: true,
+        label: staticLabel,
+        data: undefined,
+        class: undefined,
+        style: undefined,
+        labelStyle: undefined,
+        labelBgStyle: undefined,
+      };
+    }
+
+    return {
+      ...edge,
+      type: 'workflowTransfer',
+      animated: isFlowing || isActive || isTakenBranch,
+      label: undefined,
+      data: {
+        transferPreview: edgeTransfers[edge.id],
+        transferJson: edgeTransferPayloads[edge.id],
+        branchState,
+        executionMode,
+        staticLabel,
+      },
+      class: isFlowing ? 'workflow-edge--flowing' : undefined,
+      style: undefined,
+      labelStyle: undefined,
+      labelBgStyle: undefined,
+    };
+  });
+
+  setNodes(nextNodes);
+  setEdges(nextEdges);
+  nodes.value = nextNodes;
+  edges.value = nextEdges;
+}
+
+watch(
+  () => props.execution,
+  (execution) => {
+    applyExecutionOverlay(execution);
+  },
+  { deep: true },
+);
+
+/**
  * 节点点击：通知父组件展示属性面板。
  *
  * @param event - Vue Flow 节点点击事件
@@ -606,5 +734,20 @@ defineExpose({
 
 .workflow-graph-canvas__flow:focus {
   outline: none;
+}
+
+.workflow-graph-canvas :deep(.workflow-edge--flowing path) {
+  stroke-dasharray: 10 6;
+  animation: workflow-edge-flow 0.8s linear infinite;
+}
+
+@keyframes workflow-edge-flow {
+  from {
+    stroke-dashoffset: 16;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 </style>

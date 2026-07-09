@@ -4,6 +4,7 @@
     :class="[
       `workflow-graph-node--${data.kind}`,
       { 'workflow-graph-node--selected': props.selected },
+      executionClass,
     ]"
   >
     <a-dropdown
@@ -42,14 +43,67 @@
       class="workflow-graph-node__handle workflow-graph-node__handle--target"
     />
     <div class="workflow-graph-node__body">
-      <div class="workflow-graph-node__icon-wrap" aria-hidden="true">
+      <div v-if="data.kind !== 'start'" class="workflow-graph-node__icon-wrap" aria-hidden="true">
         <component :is="nodeIcon" class="workflow-graph-node__icon" />
       </div>
       <div class="workflow-graph-node__content">
         <div class="workflow-graph-node__header">
           <span class="workflow-graph-node__badge">{{ kindLabel }}</span>
         </div>
-        <div class="workflow-graph-node__title">{{ title }}</div>
+        <div v-if="data.kind !== 'start'" class="workflow-graph-node__title">{{ title }}</div>
+        <div
+          v-if="data.kind === 'condition' && data.routedIntent"
+          class="workflow-graph-node__route-badge"
+        >
+          {{ t('workflowEditor.execution.routedIntent', { intent: routedIntentLabel }) }}
+        </div>
+        <div
+          v-if="data.kind === 'branch' && data.isTakenBranch"
+          class="workflow-graph-node__branch-hit"
+        >
+          {{ t('workflowEditor.execution.branchTaken') }}
+        </div>
+        <div
+          v-if="data.kind === 'branch' && data.routedIntent && !data.isTakenBranch && branchSkipped"
+          class="workflow-graph-node__branch-skip"
+        >
+          {{ t('workflowEditor.execution.branchSkipped') }}
+        </div>
+        <div
+          v-if="data.kind === 'start' && sandboxCtx"
+          class="workflow-graph-node__start-form"
+          @click.stop
+          @mousedown.stop
+          @pointerdown.stop
+        >
+          <a-textarea
+            :value="sandboxCtx.prompt.value"
+            :rows="2"
+            :maxlength="500"
+            :placeholder="t('workflowEditor.startNode.promptPlaceholder')"
+            :disabled="sandboxCtx.running.value"
+            class="workflow-graph-node__start-input"
+            @update:value="sandboxCtx.setPrompt"
+          />
+          <a-button
+            type="primary"
+            size="small"
+            block
+            :loading="sandboxCtx.running.value"
+            :disabled="!sandboxCtx.prompt.value.trim()"
+            @click="sandboxCtx.run"
+          >
+            {{ t('workflowEditor.startNode.run') }}
+          </a-button>
+          <p class="workflow-graph-node__start-hint">{{ t('workflowEditor.startNode.draftHint') }}</p>
+        </div>
+        <div
+          v-if="executionStatus && executionStatus !== 'pending'"
+          class="workflow-graph-node__exec-badge"
+          :class="`workflow-graph-node__exec-badge--${executionStatus}`"
+        >
+          {{ executionStatusLabel }}
+        </div>
       </div>
     </div>
     <Handle
@@ -62,18 +116,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { Handle, Position, useVueFlow } from '@vue-flow/core';
 import type { NodeProps } from '@vue-flow/core';
 import { EllipsisOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { MenuProps } from 'ant-design-vue';
+import type { WorkflowNodeExecutionStatus } from '@douxing/shared';
 import {
   createUniqueWorkflowNodeId,
   type WorkflowFlowNodeData,
 } from '@/utils/workflow-graph-flow';
 import { isWorkflowNodeDeletable } from '@/utils/workflow-graph-node-actions';
 import { resolveWorkflowGraphNodeIcon } from '@/utils/workflow-palette-icons';
+import {
+  WORKFLOW_SANDBOX_INJECT_KEY,
+  type WorkflowSandboxInjectContext,
+} from '@/utils/workflow-sandbox-inject';
 
 const props = defineProps<NodeProps<WorkflowFlowNodeData>>();
 
@@ -81,6 +140,51 @@ const { t } = useI18n();
 const { removeNodes, findNode, addNodes, getNodes, updateNode } = useVueFlow();
 
 const data = computed(() => props.data ?? { kind: 'tool' as const });
+
+/** 沙箱运行上下文（开始节点输入用） */
+const sandboxCtx = inject(WORKFLOW_SANDBOX_INJECT_KEY, null) as WorkflowSandboxInjectContext | null;
+
+/** 沙箱执行状态（来自画布 execution 快照） */
+const executionStatus = computed((): WorkflowNodeExecutionStatus | undefined =>
+  data.value.executionStatus,
+);
+
+/**
+ * 路由意图展示名（条件节点）。
+ */
+const routedIntentLabel = computed(() => {
+  const intent = data.value.routedIntent;
+  if (!intent) return '';
+  const key = `workflowEditor.execution.route.${intent}`;
+  const translated = t(key);
+  return translated !== key ? translated : intent;
+});
+
+/** 分支节点是否被跳过（已有 routedIntent 且非命中） */
+const branchSkipped = computed(
+  () =>
+    data.value.kind === 'branch'
+    && !!data.value.routedIntent
+    && !data.value.isTakenBranch
+    && (executionStatus.value === 'pending' || executionStatus.value === undefined),
+);
+
+/**
+ * 执行状态 CSS 类名。
+ */
+const executionClass = computed(() => {
+  const status = executionStatus.value;
+  if (!status || status === 'pending') return null;
+  return `workflow-graph-node--exec-${status}`;
+});
+
+/**
+ * 执行状态徽章文案。
+ */
+const executionStatusLabel = computed(() => {
+  const status = executionStatus.value ?? 'pending';
+  return t(`workflowEditor.execution.status.${status}`);
+});
 
 /** 当前节点是否展示删除/复制菜单 */
 const deletable = computed(() => isWorkflowNodeDeletable(data.value.kind));
@@ -184,6 +288,25 @@ function onMenuClick(info: Parameters<NonNullable<MenuProps['onClick']>>[0]): vo
 .workflow-graph-node--start {
   border-color: #52c41a;
   background: #f6ffed;
+  min-width: 220px;
+}
+
+.workflow-graph-node__start-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.workflow-graph-node__start-input {
+  font-size: 12px;
+}
+
+.workflow-graph-node__start-hint {
+  margin: 0;
+  color: #8c8c8c;
+  font-size: 10px;
+  line-height: 1.4;
 }
 
 .workflow-graph-node--end {
@@ -205,6 +328,100 @@ function onMenuClick(info: Parameters<NonNullable<MenuProps['onClick']>>[0]): vo
 .workflow-graph-node--tool {
   border-color: #1677ff;
   background: #e6f4ff;
+}
+
+.workflow-graph-node--branch {
+  border-color: #722ed1;
+  background: #f9f0ff;
+}
+
+.workflow-graph-node--branch.workflow-graph-node--exec-success,
+.workflow-graph-node--branch:has(.workflow-graph-node__branch-hit) {
+  border-color: #52c41a;
+  background: #f6ffed;
+}
+
+.workflow-graph-node__route-badge {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: #fffbe6;
+  border: 1px solid #ffe58f;
+  color: #d48806;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.workflow-graph-node__branch-hit {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #f6ffed;
+  color: #389e0d;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.workflow-graph-node__branch-skip {
+  margin-top: 6px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: #fafafa;
+  color: #bfbfbf;
+  font-size: 10px;
+  text-decoration: line-through;
+}
+
+.workflow-graph-node--exec-running {
+  border-color: #1677ff;
+  box-shadow: 0 0 0 3px rgb(22 119 255 / 25%);
+  animation: workflow-node-pulse 1.2s ease-in-out infinite;
+}
+
+.workflow-graph-node--exec-success {
+  border-color: #52c41a;
+  box-shadow: 0 0 0 2px rgb(82 196 26 / 20%);
+}
+
+.workflow-graph-node--exec-failed {
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 2px rgb(255 77 79 / 20%);
+}
+
+.workflow-graph-node__exec-badge {
+  margin-top: 6px;
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.workflow-graph-node__exec-badge--running {
+  background: #e6f4ff;
+  color: #0958d9;
+}
+
+.workflow-graph-node__exec-badge--success {
+  background: #f6ffed;
+  color: #389e0d;
+}
+
+.workflow-graph-node__exec-badge--failed {
+  background: #fff2f0;
+  color: #cf1322;
+}
+
+@keyframes workflow-node-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px rgb(22 119 255 / 15%);
+  }
+
+  50% {
+    box-shadow: 0 0 0 5px rgb(22 119 255 / 28%);
+  }
 }
 
 .workflow-graph-node__menu-trigger {
