@@ -1,7 +1,7 @@
 # ADR-W5-1：Visual 编排编辑器技术选型
 
 **状态**：已采纳  
-**日期**：2026-07-08  
+**日期**：2026-07-08（2026-07-09 补充 SSE 执行态）  
 **关联**：[AI流程编排路线图 § Phase W5](../AI流程编排路线图.md)
 
 ## 背景
@@ -17,7 +17,8 @@ Phase W5 需在 Web 管理端提供 DAG 可视化编排（拖拽节点、连线�
 | 节点表单 | Ant Design Vue 表单 + Tool 元数据（后续可接 JSON Schema） |
 | 校验 | `validateWorkflowGraph()`（shared 纯函数）；server 发布前二次校验 |
 | 持久化 | `workflow_templates.graph_def` + `graph_publish_status`（draft / published） |
-| 预览 | 复用 `POST /api/admin/plan-sessions/sandbox-run`（不写生产 routes） |
+| 预览 | `POST /api/admin/plan-sessions/sandbox-run`（同步）或 `sandbox-run/async` + `GET .../stream`（SSE）；不写生产 routes |
+| 画布执行态 | shared `WorkflowGraphExecutionSnapshot`；SSE `node_status` + `tool_call.nodeId` 驱动 Vue Flow 节点/边高亮 |
 
 ## 理由
 

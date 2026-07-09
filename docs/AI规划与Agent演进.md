@@ -3,11 +3,11 @@
 > **定位**：记录从 **固定流水线** 升级为 **真正 AI Agent / 多 Agent** 的完整设计思路、思考过程、概念释义、目标架构与分步执行流程。  
 > **读者**：产品、架构、研发、AI 协作者。  
 > **执行路线图（Step · 里程碑 · 验收）**：[AI路径规划路线图.md](./AI路径规划路线图.md) — **Step 38/39 已交付 · 当前 Step 35→40**  
-> **流程编排（W0～W5 · MW1～MW4）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — **v1.1 · §12 术语表**  
+> **流程编排（W0～W5 · MW1～MW4）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — **v1.6 · §12 术语表**（含画布执行态 · DAG 定义 · SSE `node_status`）  
 > **关联**：[详细设计文档.md §3](./详细设计文档.md) · [ROADMAP § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) · [ROADMAP § C7-W](./ROADMAP.md#阶段-c7-wai-流程编排2026-07-03-录入) · [AI旅行宠物.md](./AI旅行宠物.md) · [开发记录 § C/H9](./开发记录-重难点与亮点.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
 **文档版本**：2.9  
-**最后更新**：2026-07-06（**AI流程编排路线图 v1.1** · 当前 **Step 35→40**）  
+**最后更新**：2026-07-09（**C7-W W0～W5 落地** · SSE `node_status` · 管理端诊断/沙箱 API）  
 **核心结论**：线上已是 **「编排式管道 + 多轮会话 + Agent 灰度」**；M1～M5 已验收，生产默认仍 `AGENT_PLAN_ENABLED=false`。
 
 > **分工**：本文 = **为什么 / 怎么设计**；[AI路径规划路线图.md](./AI路径规划路线图.md) = **M6 主链做什么**；[AI流程编排路线图.md](./AI流程编排路线图.md) = **流程可配置 / 可观测 / 可计费怎么做**。
@@ -480,8 +480,11 @@ packages/server/
 | POST | `/v1/agent/plan` | ✅ | ai-service：Agent 主入口；返回 `draft` · `toolTrace` · `routedIntent` |
 | GET | `/api/agent/tools` | ✅ | Node：列出可用 Tool 名（内网鉴权） |
 | POST | `/api/agent/tools/:toolName` | ✅ | Node：Tool 执行；Header `x-agent-tool-secret` |
-| POST | `/api/plan-sessions/:id/messages` | ✅ | 追问时 `AGENT_PLAN_ENABLED=true` 走 Agent；失败降级管道 |
-| GET | `/api/plan-sessions/:id/stream` | ✅ | C7-b Step 7：SSE 流式 tool 状态 |
+| POST | `/api/routes/plan-sessions/:id/messages` | ✅ | 追问时 `AGENT_PLAN_ENABLED=true` 走 Agent；失败降级管道 |
+| GET | `/api/routes/plan-sessions/:id/stream` | ✅ | C7-b Step 7：SSE 流式 tool 状态；LangGraph 模式增 `node_status` |
+| GET | `/api/admin/plan-sessions/:id/workflow-trace` | ✅ | C7-W W0-5：管理端 NodeSpan 时间线 |
+| GET | `/api/admin/plan-sessions/:id/cost-summary` | ✅ | C7-W W2-6：会话费用估算 |
+| POST | `/api/admin/plan-sessions/sandbox-run` | ✅ | C7-W W5：沙箱预览（可选 `graphDefOverride`） |
 
 **内网鉴权**：`AGENT_TOOL_SECRET` 与请求头 `x-agent-tool-secret` 一致；开发环境未配置 secret 时 Node 放行（`NODE_ENV=development`）。
 
@@ -705,7 +708,7 @@ LANGFUSE_SECRET_KEY=
 | 文档 | 说明 |
 |------|------|
 | [AI路径规划路线图.md](./AI路径规划路线图.md) | M6 主链 Step · 里程碑 · 验收 |
-| [AI流程编排路线图.md](./AI流程编排路线图.md) | 流程编排 W0～W5 · MW1～MW4 · §12 术语表 |
+| [AI流程编排路线图.md](./AI流程编排路线图.md) | 流程编排 W0～W5 · MW1～MW4 · **§12 术语表 v1.6** |
 | [ROADMAP.md § C7](./ROADMAP.md#阶段-c7ai-agent-演进2026-06-11-录入) | 路线图 + 执行流程 |
 | [ROADMAP.md § C7-W](./ROADMAP.md#阶段-c7-wai-流程编排2026-07-03-录入) | 流程编排阶段索引 |
 | [下一步工作.md](./下一步工作.md) | 当前 Sprint 与 C7 / W0 触发时机 |

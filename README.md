@@ -342,8 +342,8 @@ LLM_MODEL=你的模型名称
 
 ### MVP API 清单
 
-> **完整接口文档**（106 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
-> **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0）  
+> **完整接口文档**（120 个 REST 接口 + 参数说明）：见 [docs/API接口文档.md](./docs/API接口文档.md)  
+> **Apifox 导入**：直接导入 [docs/openapi.yaml](./docs/openapi.yaml)（OpenAPI 3.0 · 98 路径 / 117 操作）  
 > **系统管理接口**（`/api/system/*`）见 [docs/系统管理.md](./docs/系统管理.md)，未纳入 OpenAPI 主链
 
 - `POST /api/auth/register` — 注册

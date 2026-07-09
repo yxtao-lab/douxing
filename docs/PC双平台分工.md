@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)；**双 Token 鉴权**见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
 
-**最后更新：** 2026-07-07（**双 Token 无感刷新** · Web/PC 拦截器对齐 · **H10 POI 信任链** · S1/S2 · DT5）
+**最后更新：** 2026-07-09（**C7-W 规划诊断/模板/可视化编辑器** · 双 Token · H10 · S1/S2 · DT5）
 
 ---
 
@@ -103,6 +103,9 @@ Web 管理端 (:5173)     ──┘
 | 景点库管理 | `/attractions/manage` | ✅ | 目录维护、封面上传、高德封面刷新 |
 | 动线 Playbook | `/playbooks/manage` | ✅ | 经典动线 CRUD、`classicOrder`、段间边 |
 | 数据分析 | `/analytics` | ✅ | 概览、30 日趋势、城市 Top10（DT1） |
+| **规划诊断** | `/plan-sessions/diagnostics/:sessionId?` | ✅ | NodeSpan 时间线 · 费用汇总 · Langfuse 深链（C7-W W2） |
+| **工作流模板** | `/workflow-templates` | ✅ | 模板 CRUD · JSON Logic · RAG 参数（C7-W W3） |
+| **可视化编排** | `/workflow-templates/:id/editor` | ✅ | Vue Flow DAG 编辑 · 沙箱预览 · SSE 画布执行态（C7-W W5） |
 
 ### 3.2 系统管理（S 线）
 

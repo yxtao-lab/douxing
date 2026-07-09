@@ -3,8 +3,8 @@
 > **定位**：在现有 **Tool 化 + Agent 灰度** 基础上，引入 **可配置、可观测、可计费** 的规划流程编排能力。  
 > **关联文档**：[AI规划与Agent演进.md](./AI规划与Agent演进.md) · [AI路径规划路线图.md](./AI路径规划路线图.md) · [ROADMAP.md](./ROADMAP.md) · [外部工具与插件推荐.md](./外部工具与插件推荐.md)
 
-**文档版本**：1.4  
-**最后更新**：2026-07-08（**W0+W1+W2+W3+W4 验收** · W5 可视化选型定为 Vue Flow）
+**文档版本**：1.6  
+**最后更新**：2026-07-09（**§12 术语表补全** · W5 画布执行态 · DAG 定义 · SSE `node_status`）
 
 ---
 
@@ -13,7 +13,7 @@
 | 问题 | 结论 |
 |------|------|
 | 能否增加流程编排？ | **可行且合理**，但应 **渐进演进**，而非一次性上 Dify/Coze 级可视化低代码平台 |
-| 与现有 16 个 Tool 的关系 | Tool 已是 **原子节点**；编排层只需 **声明 DAG + 条件边**，无需重写业务逻辑 |
+| 与现有 17 个 Tool 的关系 | Tool 已是 **原子节点**；编排层只需 **声明 DAG + 条件边**，无需重写业务逻辑 |
 | 与多 Agent 协作 | 当前 `graph.py` 为手写 if/elif；**迁移 LangGraph** 即获得图状态机 + 可插拔 Agent 节点 |
 | 个性化路径（城市/预算/人数/天数） | 意图字段已结构化；编排层增加 **Workflow Template + 条件网关** 即可按参数走不同分支 |
 | 流程不可见 / 难定位 | 已有 `toolTrace` + Langfuse **基础**；缺 **时间线 UI、RAG 命中明细、阶段对比验收** |
@@ -32,7 +32,7 @@
 
 **现状**
 
-- Node 侧 **16 个 Agent Tool** 已注册（`packages/server/src/agent/tools/index.ts`）
+- Node 侧 **17 个 Agent Tool** 已注册（`packages/server/src/agent/tools/index.ts`，含 W3 `select_workflow_template`）
 - Python 经 `node_client.call_node_tool` 统一 HTTP 调用
 - 意图路由独立 API：`POST /api/agent/route-intent`
 
@@ -98,7 +98,7 @@ WorkflowTemplate「premium_multi_city」
 
 | 能力 | 落点 |
 |------|------|
-| SSE 实时 Tool 进度 | `GET /api/plan-sessions/:id/stream` → `tool_call` |
+| SSE 实时 Tool 进度 | `GET /api/routes/plan-sessions/:id/stream` → `tool_call` · `node_status` |
 | 会话持久化 trace | `plan_sessions.agent_state.toolTrace` |
 | 分布式 trace | Langfuse（Python + Node，可选） |
 | 路线质量事件 | `plan_route_quality` 分析埋点 |
@@ -322,10 +322,11 @@ flowchart LR
 | **W5-1** | [x] | **技术选型** | Vue Flow（`@vue-flow/core`）+ JSON Schema 表单 | [x] ADR 文档 |
 | **W5-2** | [x] | **节点面板** | 17 Tool + 条件 + 子图 节点 | [x] 拖拽生成 JSON 模板 |
 | **W5-3** | [x] | **模板校验器** | 发布前静态检查（无环、必填边） | [x] 非法图禁止保存 |
-| **W5-4** | [x] | **预览运行** | 管理端输入 prompt → 沙箱执行 | [x] 不写生产 routes 表 |
+| **W5-4** | [x] | **预览运行** | 管理端输入 prompt → 沙箱执行 | [x] 不写生产 routes 表 [x] 同步/异步沙箱 + SSE |
 | **W5-5** | [x] | **版本与发布** | draft → published；回滚 | [x] 与 W3 模板存储打通 |
+| **W5-6** | [x] | **画布执行态联动** | `@douxing/shared` `workflow-graph-execution.ts` + `WorkflowGraphExecutionPanel` | [x] SSE `node_status`/`tool_call` 驱动节点高亮 [x] 分支/边 state 传递可视化 |
 
-**Phase W5 完成后**：**MW4 达成**（可选里程碑）。
+**Phase W5 完成后**：**MW4 达成**（可选里程碑）✅（2026-07-08～09）。
 
 ---
 
@@ -447,10 +448,11 @@ interface NodeSpan {
 - [x] 运营可在 Web 调整 RAG topK / variants 数（无需发版）
 - [x] 诊断 trace 可见 `select_workflow_template` 节点
 
-### MW4 · Visual Editor（可选）✅（2026-07-08 初版）
+### MW4 · Visual Editor（可选）✅（2026-07-08～09）
 
 - [x] 拖拽生成合法模板 JSON
-- [x] 沙箱预览运行通过
+- [x] 沙箱预览运行通过（同步 + 异步 SSE）
+- [x] 画布实时执行态（`WorkflowGraphExecutionSnapshot`）与 LangGraph `node_status` 对齐
 
 ---
 
@@ -474,7 +476,7 @@ interface NodeSpan {
 | [ROADMAP.md § C7-W](./ROADMAP.md#阶段-c7-wai-流程编排2026-07-03-录入) | 全站阶段索引 |
 | [下一步工作.md](./下一步工作.md) | 当前 Sprint · W0 并行排期 |
 | [开发记录 § C7-W](./开发记录-重难点与亮点.md#c7-w--ai-流程编排方案定稿2026-07-06) | 方案定稿思考过程 |
-| [API接口文档.md §20](./API接口文档.md) | Agent Tools API |
+| [API接口文档.md §24](./API接口文档.md#24-管理端-ai-流程编排admin) | 管理端诊断/沙箱/模板 API |
 | [国际化.md](./国际化.md) | 管理端与 API 文案规范 |
 
 ---
@@ -495,6 +497,10 @@ interface NodeSpan {
 | **WorkflowContext（工作流上下文）** | 节点间共享的状态对象，对应现有 `PlanAgentState`：意图、RAG 候选、草稿路线、`toolTrace` 等在其中传递。 |
 | **条件网关 / 条件边** | 根据上游结果决定下一步分支。例如 `intent = tweak_day` → `patch_route_day`；`intent = qa_food` → 仅问答、不生成路线。 |
 | **子图（Subgraph）** | 嵌套在大流程内的小流程。兜行中记忆 Agent、行中 Agent 可各自为子图，再挂到主规划图上。 |
+| **WorkflowGraphDefinition（工作流图定义）** | W5 持久化的 DAG JSON：`schemaVersion: 1` + `nodes[]` + `edges[]`。存于 `workflow_templates.graph_def`；类型与校验在 `@douxing/shared` 的 `workflow-graph.ts`。 |
+| **WorkflowGraphNodeKind（节点种类）** | 画布节点类型：`start` · `end` · `tool` · `condition` · `subgraph` · `branch`。Tool 节点绑定 HTTP Tool 名；condition/subgraph/branch 为编排虚拟节点，对应 LangGraph 路由与子图。 |
+| **graph_def / graphPublishStatus** | 模板关联的 DAG 图 JSON 及其发布状态：`draft`（草稿，可编辑）或 `published`（已发布，运行时可引用）。迁移 `0038_workflow_template_graph.sql`。 |
+| **select_workflow_template** | W3 模板选择 Tool/节点：按 JSON Logic 将 `intent` + 会员等级映射到 `workflow_templates.id`，并在 trace 中可见命中模板与 `nodeConfig`（topK、variantCount 等）。 |
 
 ### 12.2 Agent 与 Tool
 
@@ -502,7 +508,7 @@ interface NodeSpan {
 |------|------|
 | **Agent（智能体）** | 能根据目标多步执行任务并调用外部能力的 AI 系统。在兜行中指：解析意图 → 选路径 → 调 Tool → 汇总结果，而非单次聊天回复。 |
 | **Tool（工具）** | Agent 调用的**确定性能力单元**，封装在 Node 侧（如 `retrieve_attractions`、`enrich_route`）。LLM 负责理解与决策边界，Tool 负责查库、算路、校验等可靠操作。 |
-| **Agent Tool** | 经 `POST /api/agent/tools/:name` 暴露的 16 个工具；Python Agent 通过 HTTP 调用，**Node 为权威实现**（`packages/server/src/agent/tools/`）。 |
+| **Agent Tool** | 经 `POST /api/agent/tools/:name` 暴露的规划 Tool；Python Agent 通过 HTTP 调用，**Node 为权威实现**（`packages/server/src/agent/tools/`）。编辑器面板含 **17** 个 Tool 名（含 `select_workflow_template`），与 `WORKFLOW_EDITOR_TOOL_NAMES` 一致。 |
 | **Supervisor（协调器）** | 多 Agent 架构中的调度中心：判断用户需求后派给规划、记忆、行中等专家。兜行现阶段以**规则路由**为主，避免 LLM 无约束自由派单。 |
 | **多 Agent 协作** | 不同职责的 Agent 分工配合。当前有：规划 Agent（`graph.py`）、记忆 Agent（`memory_agent.py`）、行中 Agent（`transit_agent.py`）。 |
 | **管道 / Pipeline** | 固定顺序的代码流水线（`generateRoute` 等）。`AGENT_PLAN_ENABLED=false` 时默认走管道，保证现网行为稳定。 |
@@ -527,7 +533,7 @@ interface NodeSpan {
 |------|------|
 | **RAG** | Retrieval-Augmented Generation（检索增强生成）。先从内部库检索相关景点/玩法，再交给 LLM 排行程，降低胡编 POI 的概率。 |
 | **retrieve_attractions** | 景点 RAG Tool：按城市、主题、关键词从 MySQL `attractions` 打分检索候选 POI。 |
-| **retrieve_playbooks** | 玩法动线 RAG：从 `route_playbooks` 取经典游览顺序，供 Enricher 排段间交通；当前部分逻辑藏在 `enrich_route` 内，W0 目标为显式节点化。 |
+| **retrieve_playbooks** | 玩法动线 RAG：从 `route_playbooks` 取经典游览顺序；W0 起在 graph 与 trace 中**显式节点化**（不再仅藏在 `enrich_route` 内）。 |
 | **TF-IDF** | 文本相关性打分方法；`VECTOR_RAG_ENABLED=true` 时作轻量语义增强，**非**外部 embedding API。 |
 | **MMR** | Maximal Marginal Relevance（最大边际相关性）：检索重排时在相关性与多样性之间折中，避免结果过于雷同。 |
 | **topK** | 检索返回前 K 条候选；WorkflowTemplate 可配置（如低预算 `topK=8`，高端 `topK=20`）。 |
@@ -537,9 +543,14 @@ interface NodeSpan {
 
 | 名词 | 解释 |
 |------|------|
-| **toolTrace** | 单次规划各 Tool 执行记录：`{ tool, ok, ms }`，写入 `agent_state`，前端经 SSE 推送展示进度。 |
-| **NodeSpan** | 对 `toolTrace` 的扩展结构：增加 `nodeId`、输入/输出摘要、RAG 命中 ID、token 用量、`estimatedCostCny` 等，用于深度排查（W0 交付）。 |
-| **SSE** | Server-Sent Events：服务端向客户端单向推送事件（`tool_call`、`done` 等），规划页实时显示「正在检索景点…」。 |
+| **toolTrace** | 单次规划各 Tool 执行记录：`{ tool, ok, ms }` 及扩展字段，写入 `agent_state`，前端经 SSE 推送展示进度。 |
+| **NodeSpan** | 对 `toolTrace` 的扩展结构：增加 `nodeId`、`inputDigest`/`outputDigest`、RAG 命中 ID、token 用量、`estimatedCostCny` 等，用于深度排查（W0 交付）。 |
+| **inputDigest / outputDigest** | NodeSpan 与 SSE `tool_call` 中的输入/输出**摘要**（非完整 prompt），便于诊断页与画布展开，避免持久化超大 JSON。 |
+| **node_status** | SSE 事件类型（与 `tool_call` 并列）：推送**编排类画布节点**状态（`start`/`subgraph`/`condition`/`branch`/`end`），payload 含 `nodeId`、`status`、`routedIntent?`。由 LangGraph `streaming.py` → Node `plan-session-stream.service` 广播。 |
+| **SSE** | Server-Sent Events：服务端向客户端单向推送事件（`tool_call`、`node_status`、`assistant`、`done`、`error`），C 端规划页与管理端沙箱预览实时展示进度。 |
+| **规划诊断页** | Web 管理端 `/plan-sessions/diagnostics/:sessionId?`：展示 NodeSpan 时间线、费用汇总、Langfuse 深链；数据来自 `GET .../workflow-trace` 与 `.../cost-summary`。 |
+| **沙箱运行（sandbox-run）** | 管理端模拟规划：`POST /api/admin/plan-sessions/sandbox-run`（同步）或 `sandbox-run/async` + `GET .../stream`（SSE）；以当前员工身份建 `plan_sessions`，**不写生产 `routes` 表**；可选 `graphDefOverride` 覆盖 DAG。 |
+| **plan-session-stream** | Node 侧 SSE 广播与缓冲（`plan-session-stream.service.ts`）；shared 侧 `plan-session-stream.ts` 提供 SSE 解析与步骤合并纯函数。 |
 | **Langfuse** | 第三方 LLM 可观测平台，记录 trace、span、token、耗时。项目已在 ai-service 与 Node 接入；未配置 Key 时为 no-op。 |
 | **Trace / Span** | Trace 为一次完整请求的全链路；Span 为其中一步（如某 Tool 或某次 LLM 调用）。 |
 | **Golden Case / Golden Dataset** | 标准测试用例集（固定 prompt + 自动断言），用于回归：改模型或模板后批量跑测，验证规划仍达标（W4 交付）。 |
@@ -561,9 +572,9 @@ interface NodeSpan {
 
 | 名词 | 解释 |
 |------|------|
-| **LangGraph** | LangChain 生态的图状态机库，用节点与边定义 Agent 流程，支持子图、检查点、条件分支。路线图 W1 建议用它替代手写 `graph.py`。 |
+| **LangGraph** | LangChain 生态的图状态机库；**W1 已落地**（`ai-service/app/workflow/`），通过 `WORKFLOW_ENGINE=legacy\|langgraph` 切换；替代手写 `graph.py` 的条件分支与子图。 |
 | **LangChain** | Python LLM 应用框架；兜行 `ai-service` 用于路线 JSON 生成与 Callback 观测。 |
-| **Vue Flow** | Vue 3 节点连线画布库（`@vue-flow/core`，交互模型源自 React Flow）；W5 可视化编排编辑器拟采用，用于拖拽生成 DAG 模板 JSON。 |
+| **Vue Flow** | Vue 3 节点连线画布库（`@vue-flow/core`）；**W5 已落地**于 `WorkflowVisualEditorView.vue`，用于拖拽编辑 `WorkflowGraphDefinition` 并沙箱预览。 |
 | **Dify / Coze** | 外部一站式 AI 工作流平台（低代码 + 模型 + 知识库）。本文建议**不整体引入**，避免与 Node Tool 双栈重复。 |
 | **Monorepo** | 单仓库多包结构：`server`、`ai-service`、`mobile`、`pc`、`web`、`shared` 等同仓协作。 |
 
@@ -578,12 +589,30 @@ interface NodeSpan {
 | **W0～W5** | 本路线图实施阶段编号（§3）。 |
 | **POC** | Proof of Concept（概念验证）：小范围试通后再铺开。 |
 
+### 12.9 可视化编排与画布执行态（W5）
+
+| 名词 | 解释 |
+|------|------|
+| **WorkflowGraphExecutionSnapshot（画布执行快照）** | `@douxing/shared` `workflow-graph-execution.ts` 中的整图运行时状态：各节点 `pending/running/success/failed`、高亮边、分支命中、是否 `completed`。由 SSE 事件增量合并，供 `WorkflowGraphExecutionPanel` 与画布 overlay 渲染。 |
+| **WorkflowNodeExecutionState** | 单个画布节点的执行态：关联 `NodeSpan`（Tool 节点）、`ms`、`outputDigest`；编排节点可无 span 仅状态。 |
+| **validateWorkflowGraph** | shared 纯函数 + `POST .../validate-graph`：发布前静态检查（无环、起止节点、Tool 合法、条件边数量等）；非法图禁止保存/发布。 |
+| **buildDefaultPlanDefaultGraph** | 生成与 `plan_default.py` / LangGraph 主图等价的**参考 DAG**，供编辑器「载入默认图」与 W5 验收对照。 |
+| **graphDefOverride** | 沙箱请求体字段：单次运行临时覆盖 `WorkflowGraphDefinition`，不修改 DB 模板；用于编辑器「预览运行」。 |
+| **activeEdgeIds / flowingEdgeIds** | 执行快照中的边高亮集合：`active` 表示上下游均已执行或正在执行；`flowing` 表示 state 正从已完成源节点流向运行中目标节点。 |
+| **edgeTransfers / edgeTransferPayloads** | 边上展示的 state 传递摘要与完整 JSON 载荷，对应 NodeSpan 的 `outputDigest`，用于可视化「数据沿边流动」。 |
+| **takenBranchNodeId / takenBranchEdgeIds** | 条件路由可视化：记录 `routedIntent` 命中的 branch 节点与出边，以及未命中（`skippedBranchEdgeIds`）的灰显边。 |
+| **WorkflowGraphExecutionPanel** | Web 组件：沙箱运行时展示节点列表、耗时、RAG/LLM 摘要；与 Vue Flow 画布联动滚动/高亮。 |
+| **applyWorkflowGraphExecution\*** | shared 合并函数族：`ToolCall` · `NodeStatus` · `PlanResult` · `finalizeFromTrace`，将 SSE/trace 不可变地 fold 进 `WorkflowGraphExecutionSnapshot`。 |
+| **异步沙箱三件套** | `POST sandbox-run/async` 立即返回 `sessionId` → 客户端 `GET .../stream` 订阅 → 服务端 `kickOffPendingAdminSandboxPlan` 触发执行；缓冲事件在重连时重放。 |
+
 ---
 
 ## 变更记录
 
 | 日期 | 版本 | 说明 |
 |------|------|------|
+| 2026-07-09 | 1.6 | **§12 术语表补全**：WorkflowGraphDefinition · 画布执行快照 · node_status · 沙箱/async · 17 Tool；LangGraph/Vue Flow 标为已落地 |
+| 2026-07-09 | 1.5 | W5-6 画布 SSE 执行态 · 管理端 async 沙箱 · API/openapi 同步 §24 |
 | 2026-07-08 | 1.4 | W5 可视化选型由 React Flow 修正为 **Vue Flow**（与 Web 管理端 Vue3 同栈） |
 | 2026-07-08 | 1.3 | W0～W4 验收闭环 |
 | 2026-07-06 | 1.1 | 新增 §12 术语表；全站文档交叉引用同步 |

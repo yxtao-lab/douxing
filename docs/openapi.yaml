@@ -8,7 +8,7 @@ info:
     - 鉴权：Header `Authorization: Bearer <Access Token JWT>`；过期后客户端用 Refresh Token 调 `POST /api/auth/refresh`（见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)）
     - 国际化：Header `Accept-Language: zh-CN | en-US`
     - 人类可读说明见 [API接口文档.md](./API接口文档.md)
-  version: 1.2.0
+  version: 1.3.0
   contact:
     name: 兜行项目
 
@@ -55,6 +55,10 @@ tags:
     description: 管理端指标与埋点（DT1）
   - name: 旅行宠物
     description: H3-a～c 领养、悬浮、记忆墙与分析
+  - name: 管理端规划
+    description: C7-W 规划诊断、沙箱运行、SSE 进度
+  - name: 工作流模板
+    description: C7-W W3/W5 工作流模板 CRUD 与 DAG 校验
 
 security:
   - bearerAuth: []
@@ -1001,6 +1005,285 @@ paths:
                 routeId:
                   type: integer
                   minimum: 1
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/routes/plan-sessions/{sessionId}/stream:
+    get:
+      tags: [规划会话]
+      summary: 规划会话 SSE 流式进度
+      description: |
+        Server-Sent Events。事件：`tool_call` · `node_status` · `assistant` · `done` · `error`。
+        鉴权支持 Header Bearer 或 query `token`。
+      operationId: planSessionsStream
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: token
+          in: query
+          description: JWT（EventSource 无法自定义 Header 时使用）
+          schema: { type: string }
+      responses:
+        '200':
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/admin/plan-sessions/recent:
+    get:
+      tags: [管理端规划]
+      summary: 最近规划会话（管理端诊断）
+      operationId: adminPlanSessionsRecent
+      parameters:
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/plan-sessions/sandbox-run:
+    post:
+      tags: [管理端规划]
+      summary: 管理端沙箱模拟规划（同步）
+      operationId: adminPlanSessionsSandboxRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminSandboxRunRequest'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/plan-sessions/sandbox-run/async:
+    post:
+      tags: [管理端规划]
+      summary: 管理端沙箱模拟规划（异步）
+      operationId: adminPlanSessionsSandboxRunAsync
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdminSandboxRunRequest'
+      responses:
+        '200':
+          description: 成功（返回 sessionId）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/plan-sessions/{sessionId}/stream:
+    get:
+      tags: [管理端规划]
+      summary: 管理端规划沙箱 SSE 流
+      operationId: adminPlanSessionsStream
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+        - name: token
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /api/admin/plan-sessions/{sessionId}/workflow-trace:
+    get:
+      tags: [管理端规划]
+      summary: 规划会话 NodeSpan 时间线
+      operationId: adminPlanSessionsWorkflowTrace
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/plan-sessions/{sessionId}/cost-summary:
+    get:
+      tags: [管理端规划]
+      summary: 规划会话费用汇总
+      operationId: adminPlanSessionsCostSummary
+      parameters:
+        - $ref: '#/components/parameters/SessionId'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/workflow-templates/default-graph:
+    get:
+      tags: [工作流模板]
+      summary: 默认 plan_default 参考 DAG
+      operationId: adminWorkflowTemplatesDefaultGraph
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/workflow-templates/validate-graph:
+    post:
+      tags: [工作流模板]
+      summary: 校验 WorkflowGraphDefinition
+      operationId: adminWorkflowTemplatesValidateGraph
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [graphDef]
+              properties:
+                graphDef:
+                  type: object
+                  description: WorkflowGraphDefinition
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/workflow-templates:
+    get:
+      tags: [工作流模板]
+      summary: 工作流模板列表
+      operationId: adminWorkflowTemplatesList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedApiResponse'
+    post:
+      tags: [工作流模板]
+      summary: 创建工作流模板
+      operationId: adminWorkflowTemplatesCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/workflow-templates/{id}:
+    get:
+      tags: [工作流模板]
+      summary: 工作流模板详情
+      operationId: adminWorkflowTemplatesDetail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    put:
+      tags: [工作流模板]
+      summary: 更新工作流模板
+      operationId: adminWorkflowTemplatesUpdate
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+    delete:
+      tags: [工作流模板]
+      summary: 删除工作流模板
+      operationId: adminWorkflowTemplatesDelete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/admin/workflow-templates/{id}/publish-graph:
+    post:
+      tags: [工作流模板]
+      summary: 发布模板 DAG 图
+      operationId: adminWorkflowTemplatesPublishGraph
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [graphDef]
+              properties:
+                graphDef:
+                  type: object
       responses:
         '200':
           description: 成功
@@ -2687,6 +2970,28 @@ components:
         provider:
           type: string
           enum: [auto, deepseek, lmstudio]
+
+    AdminSandboxRunRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt:
+          type: string
+          minLength: 2
+          maxLength: 500
+        days:
+          type: integer
+          minimum: 1
+          maximum: 7
+        budget:
+          type: string
+          maxLength: 64
+        provider:
+          type: string
+          enum: [auto, douxing, deepseek, lmstudio]
+        graphDefOverride:
+          type: object
+          description: WorkflowGraphDefinition（W5 沙箱覆盖 DAG）
 
     UpdateRouteDraftRequest:
       type: object

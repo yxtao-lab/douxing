@@ -1,9 +1,9 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
-> **更新日期**：2026-07-07  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
+> **更新日期**：2026-07-09  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
-> **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — W2 起新增管理端诊断/费用 API（见该文档 W0-5、W2-4、W2-6）  
+> **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — 管理端诊断/沙箱/模板 API（§24）· SSE `node_status` 画布联动  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -15,7 +15,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | OpenAPI **83** 路径 / **100** 操作（Apifox 导入）；人类可读全量 **106** 项见 §2 总览 |
+| **[openapi.yaml](./openapi.yaml)** | OpenAPI **98** 路径 / **117** 操作（Apifox 导入）；人类可读全量 **120** 项见 §2 总览 |
 
 **导入步骤**
 
@@ -66,6 +66,7 @@
 21. [Agent Tools（内网）](#21-agent-tools内网)
 22. [静态资源 uploads](#22-静态资源-uploads)
 23. [附录：常用枚举](#23-附录常用枚举)
+24. [管理端 AI 流程编排](#24-管理端-ai-流程编排admin)
 
 ---
 
@@ -251,8 +252,22 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 104 | DELETE | `/api/routes/:routeId/media/:mediaId` | 登录 | 路线视频 H10 |
 | 105 | GET | `/api/attractions/admin/media/pending` | 管理员 | 视频审核 H10 |
 | 106 | PATCH | `/api/attractions/admin/media/:mediaId/review` | 管理员 | 视频审核 H10 |
+| 107 | GET | `/api/admin/plan-sessions/recent` | 管理员 | 规划诊断 · 最近会话 |
+| 108 | POST | `/api/admin/plan-sessions/sandbox-run` | 管理员 | 规划沙箱（同步） |
+| 109 | POST | `/api/admin/plan-sessions/sandbox-run/async` | 管理员 | 规划沙箱（异步 + SSE） |
+| 110 | GET | `/api/admin/plan-sessions/:sessionId/stream` | 管理员 | 规划沙箱 SSE |
+| 111 | GET | `/api/admin/plan-sessions/:sessionId/workflow-trace` | 管理员 | 规划诊断 · NodeSpan 时间线 |
+| 112 | GET | `/api/admin/plan-sessions/:sessionId/cost-summary` | 管理员 | 规划诊断 · 费用汇总 |
+| 113 | GET | `/api/admin/workflow-templates/default-graph` | 管理员 | 工作流模板 · 默认参考图 |
+| 114 | POST | `/api/admin/workflow-templates/validate-graph` | 管理员 | 工作流模板 · 图校验 |
+| 115 | GET | `/api/admin/workflow-templates` | 管理员 | 工作流模板列表 |
+| 116 | POST | `/api/admin/workflow-templates` | 管理员 | 创建工作流模板 |
+| 117 | GET | `/api/admin/workflow-templates/:id` | 管理员 | 工作流模板详情 |
+| 118 | PUT | `/api/admin/workflow-templates/:id` | 管理员 | 更新工作流模板 |
+| 119 | POST | `/api/admin/workflow-templates/:id/publish-graph` | 管理员 | 发布模板 DAG 图 |
+| 120 | DELETE | `/api/admin/workflow-templates/:id` | 管理员 | 删除工作流模板 |
 
-> 注：`/api/system/*` 等管理端接口见 [系统管理.md](./系统管理.md)，未纳入上表 **106** 项（C 端 + 数据分析主链）。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
+> 注：`/api/system/*` 等系统管理接口见 [系统管理.md](./系统管理.md)，未纳入上表 **120** 项主链。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
 
 ---
 
@@ -740,7 +755,8 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 
 | 事件 | payload | 说明 |
 |------|---------|------|
-| `tool_call` | `{ tool, status: 'running'\|'done'\|'failed', ms? }` | Tool 进度；`tool` 对应 shared `agent.status.*` |
+| `tool_call` | `{ tool, status: 'running'\|'done'\|'failed', ms?, nodeId?, inputDigest?, outputDigest? }` | Tool 进度；`tool` 对应 shared `agent.status.*`；`nodeId` 可与画布节点对齐 |
+| `node_status` | `{ nodeId, status: 'running'\|'success'\|'failed', routedIntent?, ms? }` | 编排类节点（start/subgraph/condition/branch/end）状态；LangGraph 模式下由 ai-service 推送 |
 | `assistant` | `{ delta?, final? }` | 助手回复片段或最终文案 |
 | `done` | `{ result: PlanSessionActionResult }` | 规划完成 |
 | `error` | `{ messageKey, params? }` | 失败（ApiMessageKey） |
@@ -1348,10 +1364,127 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ---
 
+## 24. 管理端 AI 流程编排（admin）
+
+> **权限**：均需登录且 `requirePerm('data:analytics:view')`（与数据分析、规划诊断页一致）。  
+> **Web 页面**：`/plan-sessions/diagnostics` · `/workflow-templates` · `/workflow-templates/:id/editor`  
+> **路线图**：[AI流程编排路线图.md](./AI流程编排路线图.md) · ADR：[adr/ADR-W5-1-visual-editor-vue-flow.md](./adr/ADR-W5-1-visual-editor-vue-flow.md)
+
+### 24.1 规划诊断 · plan-sessions
+
+前缀：`/api/admin/plan-sessions`
+
+#### GET `/recent`
+
+最近规划会话列表（诊断页选用）。
+
+**Query**：`limit`（1～50，默认 20）
+
+**响应 `data`**：`PlanSessionSummary[]`（含 `id`、`title`、`createdAt` 等摘要）
+
+#### GET `/:sessionId/workflow-trace`
+
+规划会话 **NodeSpan 时间线**（W0-5）。
+
+**响应 `data`**：`PlanSessionWorkflowTrace`
+
+| 字段 | 说明 |
+|------|------|
+| `sessionId` | 会话 ID |
+| `generationPath` | `'agent'` \| `'pipeline'` |
+| `lastRoutedIntent` | 最近路由意图 |
+| `spans` | `AgentToolTraceEntry[]`（含 `nodeId`、RAG 命中、token、估算费用） |
+| `totalDurationMs` | 各 span 耗时合计 |
+| `langfuseSessionUrl` | 配置 Langfuse 时返回深链 |
+
+#### GET `/:sessionId/cost-summary`
+
+会话级 **token / 估算费用汇总**（W2-6）。
+
+**响应 `data`**：`PlanSessionCostSummary` — 分节点、分模型 `estimatedCostCny` 合计
+
+#### POST `/sandbox-run`
+
+管理端 **沙箱模拟规划**（同步；以当前登录用户身份创建会话，**不写生产 routes 表**）。
+
+**Body**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `prompt` | string | 是 | 2～500 字 |
+| `days` | number | 否 | 1～7 |
+| `budget` | string | 否 | 预算描述 |
+| `provider` | string | 否 | `auto` \| `douxing` \| `deepseek` \| `lmstudio` |
+| `graphDefOverride` | object | 否 | W5：`WorkflowGraphDefinition` 覆盖运行时 DAG |
+
+**响应 `data`**：`{ sessionId, generationSource, llmProvider, agentState }`
+
+#### POST `/sandbox-run/async`
+
+沙箱 **异步启动**：立即返回 `sessionId`，后台执行；客户端订阅 SSE 获取进度。
+
+**Body**：同 `/sandbox-run`
+
+**响应 `data`**：`{ sessionId }`
+
+#### GET `/:sessionId/stream`
+
+管理端规划沙箱 **SSE 流**（与 C 端 §8 事件格式一致，含 `node_status`）。
+
+**鉴权**：`Authorization: Bearer` 或 query `?token=<JWT>`
+
+**说明**：连接建立后会 `kickOffPendingAdminSandboxPlan` 触发挂起的异步沙箱；事件经 `plan-session-stream.service` 广播。
+
+### 24.2 工作流模板 · workflow-templates
+
+前缀：`/api/admin/workflow-templates`  
+图 JSON 类型：`WorkflowGraphDefinition`（`schemaVersion: 1`，nodes + edges），校验见 shared `validateWorkflowGraph()`。
+
+#### GET `/default-graph`
+
+返回与 `plan_default.py` 主拓扑等价的 **参考 DAG**（`buildDefaultPlanDefaultGraph()`）。
+
+#### POST `/validate-graph`
+
+**Body**：`{ graphDef: WorkflowGraphDefinition }`
+
+**响应 `data`**：校验结果（无环、必填边、Tool 节点合法等）
+
+#### GET `/`
+
+工作流模板分页列表。
+
+**Query**：`page`、`pageSize`、可选筛选
+
+#### POST `/`
+
+创建模板。
+
+**Body**：`id`（slug）、`nameZh`/`nameEn`、`selectionRules`（JSON Logic）、`nodeConfig`（topK/variantCount 等）、可选 `graphDef`
+
+#### GET `/:id`
+
+模板详情（含 `graphDef`、`graphPublishStatus`：`draft` \| `published`）
+
+#### PUT `/:id`
+
+更新模板字段（部分更新）
+
+#### POST `/:id/publish-graph`
+
+**Body**：`{ graphDef: WorkflowGraphDefinition }` — 校验通过后写入并标记 `published`
+
+#### DELETE `/:id`
+
+删除模板（预置 seed 模板受保护）
+
+---
+
 ## 变更记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-09 | **C7-W**：§24 管理端 `admin/plan-sessions`（6 项）+ `admin/workflow-templates`（8 项）；§8 SSE 增 `node_status` 与 `tool_call.nodeId`；总览 **120** 项；OpenAPI **98** 路径 / **117** 操作 |
 | 2026-07-07 | **双 Token**：§4 增 `POST /refresh` · `POST /logout`；`LoginResult` 增 `refreshToken` · `expiresIn`；总览认证项 +2（见 §2）；专题 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
 | 2026-07-03 | **H10 + I3**：路线评论 dayIndex/attractionId · `route_media` CRUD · 视频审核 API · llm-status 增 douxing 字段；总览 **106** 接口 |
 | 2026-07-01 | **DT5**：§19 增 `GET /geo/distribution` · `GET /geo/flows`；`AnalyticsGeoDistribution` 含 `scopeDays` / `effectiveScope`；总览 **101** 接口 |
