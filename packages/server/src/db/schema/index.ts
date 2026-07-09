@@ -27,3 +27,7 @@ export * from './analytics-daily-metrics.js';
 export * from './sys-admin.js';
 export * from './refresh-tokens.js';
 export * from './workflow-templates.js';
+export * from './marketplace-biz-org.js';
+export * from './marketplace-provider.js';
+export * from './marketplace-demand.js';
+export * from './marketplace-order.js';

@@ -30,3 +30,4 @@ export * from './pet-memory-wall.js';
 export * from './analytics/index.js';
 export * from './api-log-meta.js';
 export * from './ip-address.js';
+export * from './marketplace/index.js';

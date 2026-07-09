@@ -271,6 +271,11 @@ export const ApiMessageKey = {
   PET_MEMORY_SAVE_FAILED: 'api.petMemorySaveFailed',
   PET_ANALYZE_FAILED: 'api.petAnalyzeFailed',
   PET_ANALYZE_INVALID_SCENE: 'api.petAnalyzeInvalidScene',
+
+  MARKETPLACE_ORG_NOT_FOUND: 'api.marketplaceOrgNotFound',
+  MARKETPLACE_DEMAND_NOT_FOUND: 'api.marketplaceDemandNotFound',
+  MARKETPLACE_DEMAND_FORBIDDEN: 'api.marketplaceDemandForbidden',
+  MARKETPLACE_CATEGORY_INVALID: 'api.marketplaceCategoryInvalid',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

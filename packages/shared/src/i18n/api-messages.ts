@@ -273,6 +273,11 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.PET_MEMORY_SAVE_FAILED]: '保存记忆失败',
   [ApiMessageKey.PET_ANALYZE_FAILED]: '宠物分析失败',
   [ApiMessageKey.PET_ANALYZE_INVALID_SCENE]: '无效的分析场景',
+
+  [ApiMessageKey.MARKETPLACE_ORG_NOT_FOUND]: '商户组织不存在',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_FOUND]: '需求单不存在',
+  [ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN]: '无权查看该需求单',
+  [ApiMessageKey.MARKETPLACE_CATEGORY_INVALID]: '无效的服务类目',
 };
 
 const enUS: Record<string, string> = {
@@ -553,6 +558,11 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.PET_MEMORY_SAVE_FAILED]: 'Failed to save memories',
   [ApiMessageKey.PET_ANALYZE_FAILED]: 'Pet analysis failed',
   [ApiMessageKey.PET_ANALYZE_INVALID_SCENE]: 'Invalid analysis scene',
+
+  [ApiMessageKey.MARKETPLACE_ORG_NOT_FOUND]: 'Business organization not found',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_FOUND]: 'Service demand not found',
+  [ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN]: 'You cannot view this demand',
+  [ApiMessageKey.MARKETPLACE_CATEGORY_INVALID]: 'Invalid service category',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

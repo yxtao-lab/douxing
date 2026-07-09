@@ -62,6 +62,7 @@
     "w3:workflow-template-cases": "tsx src/scripts/w3-workflow-template-cases.ts",
     "w4:plan-golden-cases": "tsx src/scripts/plan-golden-cases.ts",
     "w5:workflow-graph-cases": "tsx src/scripts/w5-workflow-graph-cases.ts",
+    "m0:marketplace-cases": "tsx src/scripts/m0-marketplace-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

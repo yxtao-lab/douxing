@@ -25,6 +25,7 @@ import petsRouter from './pets.js';
 import adminPlanSessionsRouter from './admin-plan-sessions.js';
 import adminWorkflowTemplatesRouter from './admin-workflow-templates.js';
 import adminAgentToolSchemasRouter from './admin-agent-tool-schemas.js';
+import marketplaceRouter from './marketplace/index.js';
 
 const router = Router();
 
@@ -52,5 +53,6 @@ router.use(`${API_PREFIX}/admin/plan-sessions`, adminPlanSessionsRouter);
 router.use(`${API_PREFIX}/admin/workflow-templates`, adminWorkflowTemplatesRouter);
 router.use(`${API_PREFIX}/admin/agent-tool-schemas`, adminAgentToolSchemasRouter);
 router.use(`${API_PREFIX}/system`, systemAdminRouter);
+router.use(`${API_PREFIX}/marketplace`, marketplaceRouter);
 
 export default router;

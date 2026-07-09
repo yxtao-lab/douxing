@@ -11,6 +11,7 @@ import { seedRoutePlaybooks } from '../services/playbook.service.js';
 import { seedWorkflowTemplates } from '../services/workflow-template.service.js';
 import { sysDept, sysPost, sysDictType, sysDictData, sysNotice, sysMenu } from '../db/schema/sys-admin.js';
 import { DEFAULT_MENU_SEED, seedDefaultRoleMenus, syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
+import { seedMarketplaceDemo } from '../services/marketplace/marketplace-seed.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
 import {
@@ -314,6 +315,7 @@ async function main() {
     console.log(`[seed] Inserted ${wfInserted} workflow templates`);
   }
   await seedSampleRoutes(demoUserId);
+  await seedMarketplaceDemo(demoUserId);
   await seedSystemConfig();
   await seedSystemAdmin();
   console.log('[seed] Done');
