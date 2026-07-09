@@ -525,3 +525,54 @@ export async function fetchCacheKeys(pattern = '*', limit = 100) {
 export async function deleteCacheKey(key: string) {
   await http.delete('/system/monitor/cache/keys', { data: { key } });
 }
+
+/** AI 服务日志来源 */
+export type AiServiceLogSourceId = 'app' | 'pm2-out' | 'pm2-error';
+
+/** AI 服务日志行 */
+export interface AiServiceLogLine {
+  lineNo: number;
+  text: string;
+}
+
+/** AI 服务日志来源元信息 */
+export interface AiServiceLogSourceInfo {
+  id: AiServiceLogSourceId;
+  displayPath: string;
+  exists: boolean;
+  sizeBytes: number;
+}
+
+/** AI 服务日志分页结果 */
+export interface AiServiceLogPageResult {
+  source: AiServiceLogSourceId;
+  displayPath: string;
+  exists: boolean;
+  sizeBytes: number;
+  total: number;
+  page: number;
+  pageSize: number;
+  items: AiServiceLogLine[];
+  sources: AiServiceLogSourceInfo[];
+}
+
+/**
+ * 分页查询 AI 服务运行日志。
+ *
+ * @param params - 来源、关键词、分页
+ * @returns 日志分页结果
+ */
+export async function fetchAiServiceLogsPage(params: {
+  source?: AiServiceLogSourceId;
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+}) {
+  const search = new URLSearchParams();
+  if (params.source) search.set('source', params.source);
+  if (params.keyword?.trim()) search.set('keyword', params.keyword.trim());
+  if (params.page) search.set('page', String(params.page));
+  if (params.pageSize) search.set('pageSize', String(params.pageSize));
+  const suffix = search.toString() ? `?${search.toString()}` : '';
+  return getData<AiServiceLogPageResult>(`/system/logs/ai-service${suffix}`);
+}

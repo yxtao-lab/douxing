@@ -247,45 +247,131 @@ export function mapToolTraceSpansToGraphNodes(
 }
 
 /**
- * 将编排类节点（start/end/branch/condition/subgraph）标记为已走过路径。
+ * 从 start 沿唯一出边走到 condition 节点，得到主链节点 id 序列。
+ *
+ * @param graph - 工作流图定义
+ * @returns 主链节点 id 列表（含 start、condition）
+ */
+export function findMainSpineToCondition(graph: WorkflowGraphDefinition): string[] {
+  const startNode = graph.nodes.find((node) => node.kind === 'start');
+  if (!startNode) return [];
+
+  const path: string[] = [startNode.id];
+  let currentId = startNode.id;
+
+  while (true) {
+    const currentNode = graph.nodes.find((node) => node.id === currentId);
+    if (currentNode?.kind === 'condition') break;
+
+    const outEdges = graph.edges.filter((edge) => edge.source === currentId);
+    if (outEdges.length !== 1) break;
+
+    const nextId = outEdges[0]!.target;
+    path.push(nextId);
+    currentId = nextId;
+
+    const nextNode = graph.nodes.find((node) => node.id === nextId);
+    if (nextNode?.kind === 'condition') break;
+  }
+
+  return path;
+}
+
+/**
+ * 判断节点是否处于已执行或执行中状态。
+ *
+ * @param state - 节点执行状态；undefined 视为未激活
+ * @returns 是否 active
+ */
+function isActiveNodeState(state: WorkflowNodeExecutionState | undefined): boolean {
+  return state?.status === 'success' || state?.status === 'failed' || state?.status === 'running';
+}
+
+/** Tool 名 → 画布节点 id 别名（子图等非 tool 节点） */
+const TOOL_GRAPH_NODE_ALIASES: Record<string, string[]> = {
+  memory_agent: ['memory', 'memory_subgraph'],
+  recall_user_memory: ['memory', 'memory_subgraph'],
+};
+
+/** 进入新规划分支后的典型 Tool（用于推断 routedIntent） */
+const PLAN_NEW_BRANCH_ENTRY_TOOL = 'retrieve_attractions';
+
+/**
+ * 按 Tool 名解析应对齐的画布节点 id（含子图别名）。
+ *
+ * @param graph - 工作流图定义
+ * @param toolName - 规范化后的 Tool 名
+ * @returns 节点 id；无匹配时为 undefined
+ */
+export function resolveGraphNodeIdForExecutionTool(
+  graph: WorkflowGraphDefinition,
+  toolName: string,
+): string | undefined {
+  const aliasIds = TOOL_GRAPH_NODE_ALIASES[toolName] ?? [];
+  for (const aliasId of aliasIds) {
+    if (graph.nodes.some((node) => node.id === aliasId)) return aliasId;
+  }
+  return undefined;
+}
+
+/**
+ * 将编排类节点（start/subgraph/condition）按主链进度标记；分支与 end 单独处理。
  *
  * @param graph - 工作流图定义
  * @param states - 可变节点状态表
+ * @param options - routedIntent：已知路由；completed：整次运行是否已结束
  */
 export function markOrchestrationNodesOnExecutedPath(
   graph: WorkflowGraphDefinition,
   states: Record<string, WorkflowNodeExecutionState>,
+  options?: { routedIntent?: string; completed?: boolean },
 ): void {
-  const executedOrRunning = new Set(
-    Object.entries(states)
-      .filter(([, state]) => state.status === 'success' || state.status === 'failed' || state.status === 'running')
-      .map(([id]) => id),
-  );
+  const spine = findMainSpineToCondition(graph);
 
-  for (const node of graph.nodes) {
-    if (node.kind === 'tool') continue;
-    if (states[node.id]?.status !== 'pending') continue;
+  for (let index = 0; index < spine.length; index += 1) {
+    const nodeId = spine[index]!;
+    const node = graph.nodes.find((item) => item.id === nodeId);
+    if (!node || node.kind === 'tool' || node.kind === 'branch' || node.kind === 'end') continue;
 
-    const descendants = collectDescendantNodeIds(graph, node.id);
-    if ([...descendants].some((id) => executedOrRunning.has(id))) {
-      states[node.id] = { status: 'success' };
+    const laterActive = spine.slice(index + 1).some((id) => isActiveNodeState(states[id]));
+    if (!laterActive) continue;
+
+    if (states[nodeId]?.status === 'pending' || states[nodeId]?.status === 'running') {
+      states[nodeId] = { status: 'success' };
     }
   }
 
   const startNode = graph.nodes.find((node) => node.kind === 'start');
-  if (startNode && executedOrRunning.size > 0 && states[startNode.id]?.status === 'pending') {
-    states[startNode.id] = { status: 'success' };
+  if (startNode) {
+    const anyActive = Object.values(states).some((state) => isActiveNodeState(state));
+    if (
+      anyActive
+      && (states[startNode.id]?.status === 'pending' || states[startNode.id]?.status === 'running')
+    ) {
+      states[startNode.id] = { status: 'success' };
+    }
+  }
+
+  const routedIntent = options?.routedIntent;
+  const completed = options?.completed ?? false;
+  const takenBranchNodeId = routedIntent
+    ? resolveBranchNodeIdFromRoutedIntent(routedIntent)
+    : null;
+
+  if (takenBranchNodeId && states[takenBranchNodeId]) {
+    if (completed) {
+      if (states[takenBranchNodeId].status !== 'failed') {
+        states[takenBranchNodeId] = { status: 'success' };
+      }
+    } else if (states[takenBranchNodeId].status === 'pending') {
+      states[takenBranchNodeId] = { status: 'running' };
+    }
   }
 
   const endNode = graph.nodes.find((node) => node.kind === 'end');
-  if (endNode) {
-    const anyExecuted = Object.values(states).some(
-      (state) => state.status === 'success' || state.status === 'failed' || state.status === 'running',
-    );
-    if (anyExecuted && states[endNode.id]?.status === 'pending') {
-      const anyFailed = Object.values(states).some((state) => state.status === 'failed');
-      states[endNode.id] = { status: anyFailed ? 'failed' : 'success' };
-    }
+  if (endNode && completed) {
+    const anyFailed = Object.values(states).some((state) => state.status === 'failed');
+    states[endNode.id] = { status: anyFailed ? 'failed' : 'success' };
   }
 }
 
@@ -401,20 +487,28 @@ export function enrichWorkflowExecutionWithBranchState(
   graph: WorkflowGraphDefinition,
   snapshot: WorkflowGraphExecutionSnapshot,
   routedIntent: string | undefined,
+  options?: { completed?: boolean },
 ): WorkflowGraphExecutionSnapshot {
   const branch = resolveBranchEdgeVisualization(graph, routedIntent);
   const nodeStates = { ...snapshot.nodeStates };
+  const completed = options?.completed ?? snapshot.completed;
 
   if (branch.takenBranchNodeId) {
-    for (const node of graph.nodes) {
-      if (node.kind !== 'branch') continue;
-      if (node.id === branch.takenBranchNodeId) {
-        if (nodeStates[node.id]?.status === 'pending') {
-          nodeStates[node.id] = { status: 'success' };
-        }
+    const takenState = nodeStates[branch.takenBranchNodeId];
+    if (takenState) {
+      if (completed && takenState.status !== 'failed') {
+        nodeStates[branch.takenBranchNodeId] = { status: 'success' };
+      } else if (!completed && takenState.status === 'pending') {
+        nodeStates[branch.takenBranchNodeId] = { status: 'running' };
       }
     }
-    markOrchestrationNodesOnExecutedPath(graph, nodeStates);
+
+    const conditionNode = graph.nodes.find((node) => node.kind === 'condition');
+    if (conditionNode && nodeStates[conditionNode.id]?.status === 'pending') {
+      nodeStates[conditionNode.id] = { status: 'success' };
+    }
+
+    markOrchestrationNodesOnExecutedPath(graph, nodeStates, { routedIntent, completed });
   }
 
   return {
@@ -484,7 +578,7 @@ export function buildWorkflowGraphExecutionFromTrace(
   options?: { lastRoutedIntent?: string },
 ): WorkflowGraphExecutionSnapshot {
   const nodeStates = mapToolTraceSpansToGraphNodes(graph, spans);
-  markOrchestrationNodesOnExecutedPath(graph, nodeStates);
+  markOrchestrationNodesOnExecutedPath(graph, nodeStates, { completed: true });
 
   const failed = spans.some((span) => !span.ok)
     || Object.values(nodeStates).some((state) => state.status === 'failed');
@@ -502,7 +596,9 @@ export function buildWorkflowGraphExecutionFromTrace(
     ?? spans.map((span) => tryExtractRoutedIntentFromDigest(span.outputDigest)).find(Boolean);
 
   if (routedIntent) {
-    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent);
+    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent, {
+      completed: true,
+    });
   }
 
   return snapshot;
@@ -559,16 +655,40 @@ export function applyWorkflowGraphExecutionToolCall(
         },
       };
     }
+  } else {
+    const aliasNodeId = resolveGraphNodeIdForExecutionTool(graph, toolName);
+    if (aliasNodeId) {
+      if (payload.status === 'running') {
+        baseStates[aliasNodeId] = { status: 'running', ms: payload.ms };
+      } else if (baseStates[aliasNodeId]?.status === 'running') {
+        baseStates[aliasNodeId] = {
+          status: payload.status === 'done' ? 'success' : 'failed',
+          ms: payload.ms,
+        };
+      }
+    }
   }
 
-  if (payload.status === 'running' && graph.nodes.some((node) => node.kind === 'start')) {
-    const startNode = graph.nodes.find((node) => node.kind === 'start');
-    if (startNode && baseStates[startNode.id]?.status === 'pending') {
+  const startNode = graph.nodes.find((node) => node.kind === 'start');
+  if (payload.status === 'running' && startNode) {
+    const startStatus = baseStates[startNode.id]?.status;
+    if (startStatus === 'pending' || startStatus === 'running') {
       baseStates[startNode.id] = { status: 'success' };
     }
   }
 
-  markOrchestrationNodesOnExecutedPath(graph, baseStates);
+  let routedIntent = current?.routedIntent;
+  if (payload.tool === 'parse_intent' && payload.status === 'done') {
+    routedIntent = tryExtractRoutedIntentFromDigest(payload.outputDigest) ?? routedIntent;
+  }
+  if (!routedIntent && payload.tool === PLAN_NEW_BRANCH_ENTRY_TOOL && payload.status === 'running') {
+    routedIntent = 'plan_new';
+  }
+
+  markOrchestrationNodesOnExecutedPath(graph, baseStates, {
+    routedIntent,
+    completed: current?.completed ?? false,
+  });
 
   const runningTool = payload.status === 'running' ? payload.tool : undefined;
 
@@ -578,18 +698,16 @@ export function applyWorkflowGraphExecutionToolCall(
     takenBranchEdgeIds: current?.takenBranchEdgeIds ?? [],
     skippedBranchEdgeIds: current?.skippedBranchEdgeIds ?? [],
     takenBranchNodeId: current?.takenBranchNodeId ?? null,
-    routedIntent: current?.routedIntent,
+    routedIntent,
     runningTool,
     completed: current?.completed ?? false,
     failed: current?.failed ?? false,
   };
 
-  let routedIntent = snapshot.routedIntent;
-  if (payload.tool === 'parse_intent' && payload.status === 'done') {
-    routedIntent = tryExtractRoutedIntentFromDigest(payload.outputDigest) ?? routedIntent;
-  }
-  if (routedIntent && routedIntent !== snapshot.routedIntent) {
-    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent);
+  if (routedIntent) {
+    snapshot = enrichWorkflowExecutionWithBranchState(graph, snapshot, routedIntent, {
+      completed: current?.completed ?? false,
+    });
     snapshot.runningTool = runningTool;
     snapshot.completed = current?.completed ?? false;
     snapshot.failed = current?.failed ?? false;

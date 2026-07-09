@@ -29,6 +29,7 @@ const API_LOG_ROUTE_RULES: readonly ApiLogRouteRule[] = [
   { methods: ['GET'], path: '/api/health', moduleKey: 'health', descKey: 'health.get' },
   // 系统管理
   { methods: ['GET'], path: '/api/system/logs/api', moduleKey: 'system', descKey: 'system.logsApi' },
+  { methods: ['GET'], path: '/api/system/logs/ai-service', moduleKey: 'system', descKey: 'system.logsAiService' },
   { methods: ['GET'], path: '/api/system/logs/oper', moduleKey: 'system', descKey: 'system.logsOper' },
   { methods: ['GET'], path: '/api/system/logs/login', moduleKey: 'system', descKey: 'system.logsLogin' },
   { methods: ['GET'], path: '/api/system/menus/tree', moduleKey: 'system', descKey: 'system.menusTree' },

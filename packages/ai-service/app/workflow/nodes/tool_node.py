@@ -8,6 +8,7 @@ from typing import Any
 
 from app.tools.node_client import call_node_tool
 from app.workflow.nodes.spans import append_node_span
+from app.workflow.streaming import emit_tool_start
 
 
 async def call_tool_with_span(
@@ -27,6 +28,7 @@ async def call_tool_with_span(
     @returns Tool 返回的 data 字典
     @raises {ValueError} Node Tool 失败时
     """
+    emit_tool_start(state, tool_name)
     started = time.time()
     ok = True
     data: dict[str, Any] = {}

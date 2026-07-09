@@ -18,6 +18,7 @@ import type {
 
   WorkflowTemplateNodeConfig,
   WorkflowGraphDefinition,
+  PlanSessionStreamToolCallPayload,
 
 } from '@douxing/shared';
 
@@ -30,6 +31,7 @@ import {
   WorkflowNodeSpanRecorder,
 
   digestWorkflowPayload,
+  consumeSseBuffer,
 
 } from '@douxing/shared';
 
@@ -482,6 +484,102 @@ async function callRemoteAgentPlan(
 
   }
 
+}
+
+
+
+/**
+ * 调用 Python Agent SSE 流式规划接口，实时触发 hooks（方案 1：astream_events）。
+ *
+ * @param request - Agent 规划请求
+ * @param hooks - Tool 开始/结束回调
+ * @returns 规划结果；流失败或 error 事件时 null
+ */
+async function callRemoteAgentPlanStream(
+  request: AgentPlanRequest,
+  hooks: AgentPlanStreamHooks,
+): Promise<AgentPlanResult | null> {
+  const baseUrl = getAiServiceBaseUrl().replace(/\/$/, '');
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), getAgentPlanTimeoutMs());
+
+  try {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      Accept: 'text/event-stream',
+    };
+    if (request.graphDefOverride) {
+      headers['X-Workflow-Engine'] = 'template';
+    }
+
+    const res = await fetch(`${baseUrl}/v1/agent/plan/stream`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(request),
+      signal: controller.signal,
+    });
+
+    if (!res.ok || !res.body) return null;
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let result: AgentPlanResult | null = null;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const { events, remaining } = consumeSseBuffer(buffer);
+      buffer = remaining;
+
+      for (const event of events) {
+        if (event.event === 'tool_call') {
+          let payload: PlanSessionStreamToolCallPayload | null = null;
+          try {
+            payload = JSON.parse(event.data) as PlanSessionStreamToolCallPayload;
+          } catch {
+            payload = null;
+          }
+          if (!payload?.tool || !payload.status) continue;
+
+          if (payload.status === 'running') {
+            hooks.onToolStart?.(payload.tool);
+          } else {
+            const span: AgentToolTraceEntry = {
+              tool: payload.tool,
+              ok: payload.status === 'done',
+              ms: payload.ms ?? 0,
+              nodeId: payload.nodeId,
+              inputDigest: payload.inputDigest,
+              outputDigest: payload.outputDigest,
+            };
+            hooks.onToolEnd?.(payload.tool, payload.status === 'done', payload.ms ?? 0, span);
+          }
+          continue;
+        }
+
+        if (event.event === 'done') {
+          try {
+            result = JSON.parse(event.data) as AgentPlanResult;
+          } catch {
+            result = null;
+          }
+          continue;
+        }
+
+        if (event.event === 'error') {
+          return null;
+        }
+      }
+    }
+
+    return result;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 
@@ -964,6 +1062,11 @@ export async function runAgentPlan(
     ...request,
     provider: request.provider ?? getAgentPlanDefaultProvider(),
   };
+
+  if (hooks) {
+    const streamed = await callRemoteAgentPlanStream(normalized, hooks);
+    if (isAgentPlanResultUsable(streamed)) return streamed;
+  }
 
   const remote = await callRemoteAgentPlan(normalized);
 

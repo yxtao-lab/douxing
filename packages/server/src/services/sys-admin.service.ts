@@ -478,6 +478,7 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'oper-log', menuName: '操作日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/oper', perms: 'log:oper:list', icon: 'FileTextOutlined', sortOrder: 61 },
   { menuKey: 'login-log', menuName: '登录日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/login', perms: 'log:login:list', icon: 'BlockOutlined', sortOrder: 62 },
   { menuKey: 'api-log', menuName: '接口日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/api', perms: 'log:api:list', icon: 'ApiOutlined', sortOrder: 63 },
+  { menuKey: 'ai-service-log', menuName: 'AI 服务日志', parentKey: 'log', menuType: MenuType.MENU, path: '/log/ai-service', perms: 'log:ai-service:list', icon: 'RobotOutlined', sortOrder: 64 },
 ];
 
 /** S1 · 预置角色默认菜单（menuKey）；admin 使用全部菜单 */
@@ -505,6 +506,7 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'oper-log',
     'login-log',
     'api-log',
+    'ai-service-log',
   ],
   [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'route-media-pending', 'playbooks'],
 };

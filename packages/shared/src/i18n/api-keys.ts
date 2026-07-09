@@ -136,6 +136,7 @@ export const ApiMessageKey = {
   WORKFLOW_TEMPLATE_BUILTIN_PROTECTED: 'api.workflowTemplateBuiltinProtected',
   WORKFLOW_GRAPH_VALIDATION_FAILED: 'api.workflowGraphValidationFailed',
   WORKFLOW_GRAPH_PUBLISH_FAILED: 'api.workflowGraphPublishFailed',
+  AI_SERVICE_LOG_READ_FAILED: 'api.aiServiceLogReadFailed',
   ATTRACTION_APPROVE_PENDING_ONLY: 'api.attractionApprovePendingOnly',
   TENCENT_SMS_NOT_CONFIGURED: 'api.tencentSmsNotConfigured',
   TENCENT_ASR_NOT_CONFIGURED: 'api.tencentAsrNotConfigured',

@@ -11,26 +11,30 @@ def append_node_span(
     ok: bool,
     ms: int,
     **extra: Any,
-) -> None:
+) -> dict[str, Any]:
     """
-    向 tool_trace 追加 NodeSpan 条目（含 nodeId 序号）。
+    向 tool_trace 追加 NodeSpan 条目（含 nodeId 序号），并触发流式 end 回调。
 
     @param state - 含 tool_trace 列表的工作流状态
     @param tool - Tool 名
     @param ok - 是否成功
     @param ms - 耗时毫秒
     @param extra - ragMatchedIds、matchedPlaybookIds 等扩展字段
-    @returns None
+    @returns 刚写入的 span 条目
     """
     trace = state.setdefault("tool_trace", [])
     seq = sum(1 for entry in trace if entry.get("tool") == tool) + 1
-    trace.append(
-        {
-            "nodeId": f"{tool}-{seq}",
-            "tool": tool,
-            "ok": ok,
-            "ms": ms,
-            "durationMs": ms,
-            **extra,
-        }
-    )
+    entry = {
+        "nodeId": f"{tool}-{seq}",
+        "tool": tool,
+        "ok": ok,
+        "ms": ms,
+        "durationMs": ms,
+        **extra,
+    }
+    trace.append(entry)
+
+    from app.workflow.streaming import emit_tool_end
+
+    emit_tool_end(state, entry)
+    return entry

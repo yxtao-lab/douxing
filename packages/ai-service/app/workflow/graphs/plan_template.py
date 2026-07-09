@@ -5,23 +5,35 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from app.tools.node_client import call_node_tool, call_route_intent
+from app.tools.node_client import call_route_intent
 from app.workflow.graph_compiler import compile_workflow_graph_cached
 from app.workflow.graphs.plan_default import (
     build_plan_default_graph,
     workflow_state_to_response,
 )
 from app.workflow.state import WorkflowContext
+from app.workflow.streaming import (
+    WorkflowStreamCallback,
+    attach_stream_callback,
+    call_node_tool_traced,
+    run_compiled_graph_streaming,
+)
 
 logger = logging.getLogger(__name__)
 
 
-async def run_plan_template_langgraph(request: dict[str, Any], prompt: str) -> dict[str, Any]:
+async def run_plan_template_langgraph(
+    request: dict[str, Any],
+    prompt: str,
+    *,
+    stream_callback: WorkflowStreamCallback | None = None,
+) -> dict[str, Any]:
     """
     template 引擎：预选工作流模板，按已发布 graph_def 编译 LangGraph 执行。
 
     @param request - AgentPlanRequest 字典
     @param prompt - 用户输入
+    @param stream_callback - 可选 Tool 流式回调
     @returns Agent 规划结果
     @raises {Exception} 编译或执行失败时抛出（由 engine 降级）
     """
@@ -43,8 +55,10 @@ async def run_plan_template_langgraph(request: dict[str, Any], prompt: str) -> d
         "routed": routed,
         "routed_intent": route,
     }
+    attach_stream_callback(initial, stream_callback)
 
-    sel_data = await call_node_tool(
+    sel_data = await call_node_tool_traced(
+        initial,
         "select_workflow_template",
         {
             "userId": initial["user_id"],
@@ -52,6 +66,10 @@ async def run_plan_template_langgraph(request: dict[str, Any], prompt: str) -> d
             "routedIntent": route,
         },
     )
+    trace = initial.get("tool_trace") or []
+    if trace and trace[-1].get("tool") == "select_workflow_template":
+        trace[-1]["inputDigest"] = sel_data.get("inputDigest")
+        trace[-1]["outputDigest"] = sel_data.get("outputDigest")
     initial["template_id"] = sel_data.get("templateId")
     initial["template_config"] = sel_data.get("nodeConfig") or {}
     initial["_template_preselected"] = True
@@ -77,5 +95,9 @@ async def run_plan_template_langgraph(request: dict[str, Any], prompt: str) -> d
         )
         app = build_plan_default_graph()
 
-    final_state = await app.ainvoke(initial)
+    final_state = await run_compiled_graph_streaming(
+        app,
+        initial,
+        stream_callback=stream_callback,
+    )
     return workflow_state_to_response(final_state)

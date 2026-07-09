@@ -6,6 +6,7 @@ import logging
 from typing import Any, Literal
 
 from app.config import get_workflow_engine
+from app.workflow.streaming import WorkflowStreamCallback
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ async def run_plan_with_engine(
     prompt: str,
     *,
     engine_override: str | None = None,
+    stream_callback: WorkflowStreamCallback | None = None,
 ) -> dict[str, Any]:
     """
     按 WORKFLOW_ENGINE 运行规划 Agent；langgraph/template 失败时降级。
@@ -24,6 +26,7 @@ async def run_plan_with_engine(
     @param request - AgentPlanRequest 字典
     @param prompt - 用户 prompt
     @param engine_override - 请求级覆盖（如 X-Workflow-Engine 头）
+    @param stream_callback - 可选 Tool 流式回调（astream_events 驱动）
     @returns Agent 规划结果
     """
     engine = get_workflow_engine(engine_override)
@@ -31,7 +34,9 @@ async def run_plan_with_engine(
         try:
             from app.workflow.graphs.plan_template import run_plan_template_langgraph
 
-            return await run_plan_template_langgraph(request, prompt)
+            return await run_plan_template_langgraph(
+                request, prompt, stream_callback=stream_callback
+            )
         except Exception as exc:
             logger.warning(
                 "[workflow] template 失败，降级 langgraph: %s",
@@ -43,7 +48,9 @@ async def run_plan_with_engine(
         try:
             from app.workflow.graphs.plan_default import run_plan_default_langgraph
 
-            return await run_plan_default_langgraph(request, prompt)
+            return await run_plan_default_langgraph(
+                request, prompt, stream_callback=stream_callback
+            )
         except Exception as exc:
             logger.warning(
                 "[workflow] langgraph 失败，降级 legacy: %s",

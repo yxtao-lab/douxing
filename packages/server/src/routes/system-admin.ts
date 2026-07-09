@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { ApiMessageKey } from '@douxing/shared';
+import { ApiMessageKey, ApiError } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { requireAdmin, requirePerm, requireStaff } from '../middleware/admin.middleware.js';
 import { success, fail } from '../utils/response.js';
@@ -62,6 +62,7 @@ import {
   listCacheKeys,
   deleteCacheKey,
 } from '../services/sys-admin.service.js';
+import { listAiServiceLogsPaginated } from '../services/ai-service-log.service.js';
 import {
   getSiteStatusSummary,
   setSiteOnline,
@@ -93,6 +94,7 @@ const AdminPerm = {
   logOper: 'log:oper:list',
   logLogin: 'log:login:list',
   logApi: 'log:api:list',
+  logAiService: 'log:ai-service:list',
   membershipUsers: 'biz:membership:users',
   membershipLogs: 'biz:membership:logs',
   membershipProducts: 'biz:membership:products',
@@ -879,6 +881,30 @@ router.get('/logs/api', async (req, res) => {
   } catch (err) {
     console.error('[system/logs/api]', err);
     fail(res, '获取接口日志失败', 500, 500);
+  }
+});
+
+router.get('/logs/ai-service', async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, AdminPerm.logAiService))) return;
+    const { page, pageSize } = parsePaginationQuery(req.query as Record<string, unknown>);
+    const query = req.query as Record<string, unknown>;
+    success(
+      res,
+      listAiServiceLogsPaginated({
+        source: parseOptionalString(query, 'source'),
+        keyword: parseOptionalString(query, 'keyword'),
+        page,
+        pageSize,
+      }),
+    );
+  } catch (err) {
+    console.error('[system/logs/ai-service]', err);
+    if (err instanceof ApiError) {
+      fail(res, err.messageKey, 500, 500, err.params);
+      return;
+    }
+    fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
   }
 });
 

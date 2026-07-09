@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 
 from app.config import get_workflow_engine
+from app.logging_config import setup_ai_service_logging
 from app.route_generator import check_provider_status, generate_route
 from app.agent.graph import run_plan_agent
 from app.workflow.engine import run_transit_with_engine
@@ -34,6 +36,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+setup_ai_service_logging()
 
 
 @app.get("/health")
@@ -88,6 +92,37 @@ async def agent_plan(
         raise HTTPException(status_code=500, detail=f"Agent 规划失败: {exc}") from exc
     finally:
         flush_langfuse()
+
+
+@app.post("/v1/agent/plan/stream")
+async def agent_plan_stream(
+    request: AgentPlanRequest,
+    x_workflow_engine: str | None = Header(default=None, alias="X-Workflow-Engine"),
+) -> StreamingResponse:
+    """
+    Agent 规划 SSE 流：执行过程中推送 tool_call，结束时推送 done。
+
+    @param request - AgentPlanRequest
+    @param x_workflow_engine - 可选引擎覆盖头
+    @returns text/event-stream 响应
+    """
+    from app.workflow.streaming import iter_plan_agent_sse
+
+    try:
+        return StreamingResponse(
+            iter_plan_agent_sse(
+                request.model_dump(),
+                engine_override=x_workflow_engine,
+            ),
+            media_type="text/event-stream; charset=utf-8",
+            headers={
+                "Cache-Control": "no-cache, no-transform",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Agent 规划流失败: {exc}") from exc
 
 
 @app.post("/v1/agent/transit", response_model=AgentTransitResponse)

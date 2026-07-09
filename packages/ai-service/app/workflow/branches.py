@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import time
 from typing import Any
 
-from app.tools.node_client import call_node_tool
 from app.workflow.helpers import build_generate_route_draft_payload, resolve_planning_city
 from app.workflow.nodes.spans import append_node_span
 from app.workflow.state import WorkflowContext
+from app.workflow.streaming import call_node_tool_traced, emit_tool_start
 
 
 def _template_config(state: WorkflowContext) -> dict[str, Any]:
@@ -40,9 +39,9 @@ async def enrich_and_validate_draft(
     intent = state["intent"] or {}
     city = resolve_planning_city(intent) or draft.get("matchedCity")
 
-    t_playbooks = time.time()
     tpl = _template_config(state)
-    pb_data = await call_node_tool(
+    pb_data = await call_node_tool_traced(
+        state,
         "retrieve_playbooks",
         {
             "city": city,
@@ -52,22 +51,16 @@ async def enrich_and_validate_draft(
         },
     )
     playbooks = pb_data.get("playbooks") or []
-    pb_ms = int((time.time() - t_playbooks) * 1000)
-    append_node_span(
-        state,
-        "retrieve_playbooks",
-        True,
-        pb_ms,
-        matchedPlaybookIds=pb_data.get("matchedPlaybookIds")
-        or [
+    trace = state.get("tool_trace") or []
+    if trace and trace[-1].get("tool") == "retrieve_playbooks":
+        trace[-1]["matchedPlaybookIds"] = pb_data.get("matchedPlaybookIds") or [
             item.get("playbook", {}).get("id")
             for item in playbooks
             if isinstance(item, dict) and item.get("playbook", {}).get("id")
-        ],
-    )
+        ]
 
-    t_enrich = time.time()
-    enriched_data = await call_node_tool(
+    enriched_data = await call_node_tool_traced(
+        state,
         "enrich_route",
         {
             "draft": draft,
@@ -77,11 +70,9 @@ async def enrich_and_validate_draft(
         },
     )
     draft = enriched_data.get("draft", draft)
-    enrich_ms = int((time.time() - t_enrich) * 1000)
-    append_node_span(state, "enrich_route", True, enrich_ms)
 
-    t_validate = time.time()
-    validated_data = await call_node_tool(
+    validated_data = await call_node_tool_traced(
+        state,
         "validate_route",
         {
             "draft": draft,
@@ -90,10 +81,7 @@ async def enrich_and_validate_draft(
             "autoFix": True,
         },
     )
-    draft = validated_data.get("draft", draft)
-    validate_ms = int((time.time() - t_validate) * 1000)
-    append_node_span(state, "validate_route", True, validate_ms)
-    return draft
+    return validated_data.get("draft", draft)
 
 
 async def run_tweak_branch(state: WorkflowContext, routed: dict[str, Any]) -> None:
@@ -115,9 +103,7 @@ async def run_tweak_branch(state: WorkflowContext, routed: dict[str, Any]) -> No
     if exclude_names:
         patch_payload["excludeNames"] = exclude_names
 
-    t_patch = time.time()
-    patch_data = await call_node_tool("patch_route_day", patch_payload)
-    append_node_span(state, "patch_route_day", True, int((time.time() - t_patch) * 1000))
+    patch_data = await call_node_tool_traced(state, "patch_route_day", patch_payload)
     state["draft"] = await enrich_and_validate_draft(state, patch_data.get("draft"))
     state["assistant_hint"] = "已局部调整指定天行程"
 
@@ -127,8 +113,8 @@ async def run_budget_tune_branch(state: WorkflowContext) -> None:
     if not state.get("current_draft"):
         return
 
-    t_tune = time.time()
-    tuned = await call_node_tool(
+    tuned = await call_node_tool_traced(
+        state,
         "tune_route_budget",
         {
             "draft": state["current_draft"],
@@ -136,7 +122,6 @@ async def run_budget_tune_branch(state: WorkflowContext) -> None:
             "locale": state["locale"],
         },
     )
-    append_node_span(state, "tune_route_budget", True, int((time.time() - t_tune) * 1000))
     state["draft"] = await enrich_and_validate_draft(state, tuned.get("draft"))
     state["assistant_hint"] = "已按新预算调整方案"
 
@@ -152,8 +137,8 @@ async def run_lodging_tune_branch(state: WorkflowContext) -> None:
 
 async def run_qa_food_branch(state: WorkflowContext) -> None:
     """qa_food：answer_food_qa。"""
-    t_qa = time.time()
-    qa_data = await call_node_tool(
+    qa_data = await call_node_tool_traced(
+        state,
         "answer_food_qa",
         {
             "intent": state["intent"],
@@ -162,7 +147,6 @@ async def run_qa_food_branch(state: WorkflowContext) -> None:
             "userId": state["user_id"],
         },
     )
-    append_node_span(state, "answer_food_qa", True, int((time.time() - t_qa) * 1000))
     state["assistant_message"] = qa_data.get("assistantMessage")
 
 
@@ -172,8 +156,8 @@ async def run_select_variant_branch(state: WorkflowContext) -> None:
     if not session_id:
         return
 
-    t_select = time.time()
-    select_data = await call_node_tool(
+    select_data = await call_node_tool_traced(
+        state,
         "select_plan_variant",
         {
             "sessionId": session_id,
@@ -182,7 +166,6 @@ async def run_select_variant_branch(state: WorkflowContext) -> None:
             "locale": state["locale"],
         },
     )
-    append_node_span(state, "select_plan_variant", True, int((time.time() - t_select) * 1000))
     route_id = select_data.get("routeId")
     if isinstance(route_id, int):
         state["selected_route_id"] = route_id
@@ -194,8 +177,8 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
     preselected = bool(state.get("_template_preselected") or state.get("template_id"))
 
     if not preselected:
-        t_sel = time.time()
-        sel_data = await call_node_tool(
+        sel_data = await call_node_tool_traced(
+            state,
             "select_workflow_template",
             {
                 "userId": state["user_id"],
@@ -205,16 +188,12 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
         )
         state["template_id"] = sel_data.get("templateId")
         state["template_config"] = sel_data.get("nodeConfig") or {}
-        sel_ms = int((time.time() - t_sel) * 1000)
-        append_node_span(
-            state,
-            "select_workflow_template",
-            True,
-            sel_ms,
-            inputDigest=sel_data.get("inputDigest"),
-            outputDigest=sel_data.get("outputDigest"),
-        )
+        trace = state.get("tool_trace") or []
+        if trace and trace[-1].get("tool") == "select_workflow_template":
+            trace[-1]["inputDigest"] = sel_data.get("inputDigest")
+            trace[-1]["outputDigest"] = sel_data.get("outputDigest")
     else:
+        emit_tool_start(state, "select_workflow_template")
         append_node_span(state, "select_workflow_template", True, 0, source="preselected")
 
     tpl = _template_config(state)
@@ -230,24 +209,18 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
     if tpl.get("mmrLambda") is not None:
         rag_payload["mmrLambda"] = tpl.get("mmrLambda")
 
-    t_rag = time.time()
-    rag_data = await call_node_tool("retrieve_attractions", rag_payload)
+    rag_data = await call_node_tool_traced(state, "retrieve_attractions", rag_payload)
     rag_candidates = rag_data.get("candidates") or []
-    rag_ms = int((time.time() - t_rag) * 1000)
-    append_node_span(
-        state,
-        "retrieve_attractions",
-        True,
-        rag_ms,
-        ragMatchedIds=rag_data.get("matchedIds")
-        or [c.get("id") for c in rag_candidates if isinstance(c.get("id"), int)],
-        ragScoreSummary=rag_data.get("ragScoreSummary"),
-    )
+    trace = state.get("tool_trace") or []
+    if trace and trace[-1].get("tool") == "retrieve_attractions":
+        trace[-1]["ragMatchedIds"] = rag_data.get("matchedIds") or [
+            c.get("id") for c in rag_candidates if isinstance(c.get("id"), int)
+        ]
+        trace[-1]["ragScoreSummary"] = rag_data.get("ragScoreSummary")
 
     is_first_plan = not state.get("current_draft")
     skip_variants = bool(tpl.get("skipVariants"))
     if is_first_plan and not skip_variants:
-        t_var = time.time()
         variant_payload: dict[str, Any] = {
             "intent": state["intent"],
             "locale": state["locale"],
@@ -255,15 +228,14 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
         }
         if tpl.get("variantCount") is not None:
             variant_payload["candidateCount"] = tpl.get("variantCount")
-        variants_data = await call_node_tool("build_route_variants", variant_payload)
+        variants_data = await call_node_tool_traced(state, "build_route_variants", variant_payload)
         variants = variants_data.get("variants") or []
-        append_node_span(state, "build_route_variants", True, int((time.time() - t_var) * 1000))
 
         candidates: list[dict[str, Any]] = []
         for variant in variants:
             sort_order = int(variant.get("sortOrder") or 0)
-            t_gen = time.time()
-            gen_data = await call_node_tool(
+            gen_data = await call_node_tool_traced(
+                state,
                 "generate_route_draft",
                 build_generate_route_draft_payload(
                     state,
@@ -274,7 +246,6 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
                 ),
             )
             draft = gen_data.get("draft")
-            append_node_span(state, "generate_route_draft", True, int((time.time() - t_gen) * 1000))
             finalized = await enrich_and_validate_draft(state, draft, rag_candidates)
             if finalized:
                 candidates.append(
@@ -291,11 +262,10 @@ async def run_plan_new_branch(state: WorkflowContext) -> None:
             state["candidates"] = candidates
         return
 
-    t_gen = time.time()
-    gen_data = await call_node_tool(
+    gen_data = await call_node_tool_traced(
+        state,
         "generate_route_draft",
         build_generate_route_draft_payload(state, rag_candidates),
     )
     draft = gen_data.get("draft")
-    append_node_span(state, "generate_route_draft", True, int((time.time() - t_gen) * 1000))
     state["draft"] = await enrich_and_validate_draft(state, draft, rag_candidates)

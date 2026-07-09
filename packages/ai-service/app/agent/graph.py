@@ -17,6 +17,7 @@ from app.workflow.branches import (
 )
 from app.workflow.graphs.plan_default import workflow_state_to_response
 from app.workflow.state import PlanAgentState, WorkflowContext
+from app.workflow.streaming import WorkflowStreamCallback
 
 
 async def run_plan_agent_legacy_core(request: dict[str, Any], prompt: str) -> dict[str, Any]:
@@ -96,12 +97,14 @@ async def run_plan_agent(
     request: dict[str, Any],
     *,
     engine_override: str | None = None,
+    stream_callback: WorkflowStreamCallback | None = None,
 ) -> dict[str, Any]:
     """
     规划 Agent 入口：WORKFLOW_ENGINE=langgraph 时走 LangGraph，失败降级 legacy。
 
     @param request - AgentPlanRequest 字典
     @param engine_override - 可选引擎覆盖
+    @param stream_callback - 可选 Tool 流式回调
     @returns Agent 规划结果
     """
     from app.observability.langfuse_client import NOOP, agent_plan_trace
@@ -122,6 +125,7 @@ async def run_plan_agent(
             request,
             prompt,
             engine_override=engine_override,
+            stream_callback=stream_callback,
         )
         if trace is not NOOP:
             tool_trace = result.get("toolTrace") or []
@@ -139,5 +143,31 @@ async def run_plan_agent(
         return result
 
 
+async def run_plan_agent_streaming(
+    request: dict[str, Any],
+    *,
+    engine_override: str | None = None,
+    stream_callback: WorkflowStreamCallback | None = None,
+) -> dict[str, Any]:
+    """
+    规划 Agent 流式入口（供 SSE 端点调用）。
+
+    @param request - AgentPlanRequest 字典
+    @param engine_override - 可选引擎覆盖
+    @param stream_callback - Tool 流式回调
+    @returns Agent 规划结果
+    """
+    return await run_plan_agent(
+        request,
+        engine_override=engine_override,
+        stream_callback=stream_callback,
+    )
+
+
 # 向后兼容导出
-__all__ = ["PlanAgentState", "run_plan_agent", "run_plan_agent_legacy_core"]
+__all__ = [
+    "PlanAgentState",
+    "run_plan_agent",
+    "run_plan_agent_streaming",
+    "run_plan_agent_legacy_core",
+]

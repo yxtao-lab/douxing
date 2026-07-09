@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-import time
 from functools import lru_cache
 from typing import Any, Literal
 
 from langgraph.graph import END, START, StateGraph
 
 from app.agent.memory_agent import apply_memory_context_to_intent
-from app.tools.node_client import call_node_tool
 from app.workflow.branches import (
     run_budget_tune_branch,
     run_lodging_tune_branch,
@@ -21,6 +19,12 @@ from app.workflow.branches import (
 from app.workflow.graphs.memory import build_memory_subgraph
 from app.workflow.nodes.spans import append_node_span
 from app.workflow.state import WorkflowContext
+from app.workflow.streaming import (
+    WorkflowStreamCallback,
+    call_node_tool_traced,
+    emit_tool_start,
+    run_compiled_graph_streaming,
+)
 
 BranchName = Literal[
     "tweak_branch",
@@ -68,12 +72,13 @@ def build_plan_default_graph():
         pre_intent = state.get("request_intent")
         if pre_intent:
             state["intent"] = pre_intent
+            emit_tool_start(state, "parse_intent")
             append_node_span(state, "parse_intent", True, 0)
             state["tool_trace"][-1]["source"] = "session"
             return state
 
-        t1 = time.time()
-        intent_data = await call_node_tool(
+        intent_data = await call_node_tool_traced(
+            state,
             "parse_intent",
             {
                 "prompt": state["prompt"],
@@ -84,7 +89,6 @@ def build_plan_default_graph():
             },
         )
         state["intent"] = intent_data.get("intent")
-        append_node_span(state, "parse_intent", True, int((time.time() - t1) * 1000))
         return state
 
     async def apply_memory_node(state: WorkflowContext) -> WorkflowContext:
@@ -163,12 +167,18 @@ def workflow_state_to_response(state: WorkflowContext) -> dict[str, Any]:
     }
 
 
-async def run_plan_default_langgraph(request: dict[str, Any], prompt: str) -> dict[str, Any]:
+async def run_plan_default_langgraph(
+    request: dict[str, Any],
+    prompt: str,
+    *,
+    stream_callback: WorkflowStreamCallback | None = None,
+) -> dict[str, Any]:
     """
     LangGraph 模式执行规划 Agent。
 
     @param request - AgentPlanRequest 字典
     @param prompt - 用户输入
+    @param stream_callback - 可选 Tool 流式回调
     @returns Agent 规划结果
     """
     from app.tools.node_client import call_route_intent
@@ -193,5 +203,9 @@ async def run_plan_default_langgraph(request: dict[str, Any], prompt: str) -> di
     }
 
     app = build_plan_default_graph()
-    final_state = await app.ainvoke(initial)
+    final_state = await run_compiled_graph_streaming(
+        app,
+        initial,
+        stream_callback=stream_callback,
+    )
     return workflow_state_to_response(final_state)

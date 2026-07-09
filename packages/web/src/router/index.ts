@@ -444,6 +444,18 @@ const router = createRouter({
             perm: 'log:api:list',
           },
         },
+        {
+          path: 'log/ai-service',
+          name: 'log-ai-service',
+          component: () => import('@/views/log/LogAiServiceView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.logAiService',
+            menuGroupKey: 'web.menu.log',
+            icon: 'RobotOutlined',
+            perm: 'log:ai-service:list',
+          },
+        },
       ],
     },
   ],
