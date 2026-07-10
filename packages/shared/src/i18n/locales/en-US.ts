@@ -133,6 +133,9 @@ export const sharedEnUS = {
     routeMediaPending: 'Route Video Review',
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
+    marketplaceOrgs: 'Business Orgs',
+    marketplaceOrgsPending: 'Onboarding Review',
+    marketplaceDemands: 'Service Demands',
     analytics: 'Analytics',
     planDiagnostics: 'Plan Diagnostics',
     workflowTemplates: 'Workflow Templates',
@@ -167,6 +170,7 @@ export const sharedEnUS = {
       monitor: 'Monitoring',
       log: 'Logs',
       membership: 'Membership',
+      marketplace: 'Marketplace',
     },
     layout: {
       breadcrumbHome: 'Home',

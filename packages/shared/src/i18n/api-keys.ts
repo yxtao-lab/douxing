@@ -276,6 +276,19 @@ export const ApiMessageKey = {
   MARKETPLACE_DEMAND_NOT_FOUND: 'api.marketplaceDemandNotFound',
   MARKETPLACE_DEMAND_FORBIDDEN: 'api.marketplaceDemandForbidden',
   MARKETPLACE_CATEGORY_INVALID: 'api.marketplaceCategoryInvalid',
+  MARKETPLACE_ORG_ALREADY_APPLIED: 'api.marketplaceOrgAlreadyApplied',
+  MARKETPLACE_ORG_NOT_PENDING: 'api.marketplaceOrgNotPending',
+  MARKETPLACE_ORG_REVIEW_INVALID: 'api.marketplaceOrgReviewInvalid',
+  MARKETPLACE_ORG_APPLY_INVALID: 'api.marketplaceOrgApplyInvalid',
+  MARKETPLACE_PROVIDER_NOT_FOUND: 'api.marketplaceProviderNotFound',
+  MARKETPLACE_PROVIDER_ALREADY_APPLIED: 'api.marketplaceProviderAlreadyApplied',
+  MARKETPLACE_PROVIDER_NOT_PENDING: 'api.marketplaceProviderNotPending',
+  MARKETPLACE_PROVIDER_NOT_APPROVED: 'api.marketplaceProviderNotApproved',
+  MARKETPLACE_PROVIDER_APPLY_INVALID: 'api.marketplaceProviderApplyInvalid',
+  MARKETPLACE_ORG_CONTEXT_REQUIRED: 'api.marketplaceOrgContextRequired',
+  MARKETPLACE_ORG_MEMBER_FORBIDDEN: 'api.marketplaceOrgMemberForbidden',
+  MARKETPLACE_DOCUMENT_INVALID: 'api.marketplaceDocumentInvalid',
+  MARKETPLACE_DOCUMENT_UPLOAD_FAILED: 'api.marketplaceDocumentUploadFailed',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

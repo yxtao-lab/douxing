@@ -43,6 +43,10 @@ function toBizOrgSummary(row: typeof bizOrg.$inferSelect): BizOrgSummary {
     orgType: row.orgType as BizOrgSummary['orgType'],
     licenseNo: row.licenseNo,
     status: row.status as BizOrgSummary['status'],
+    contactPhone: row.contactPhone ?? null,
+    description: row.description ?? null,
+    reviewNote: row.reviewNote ?? null,
+    reviewedAt: row.reviewedAt ? row.reviewedAt.toISOString() : null,
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -2,8 +2,33 @@
 export const BizOrgStatus = {
   PENDING: 'pending',
   ACTIVE: 'active',
+  REJECTED: 'rejected',
   FROZEN: 'frozen',
 } as const;
+
+/** 商户资质附件类型 */
+export const OrgDocumentType = {
+  LICENSE: 'license',
+  PORTFOLIO: 'portfolio',
+} as const;
+
+export type OrgDocumentTypeValue = (typeof OrgDocumentType)[keyof typeof OrgDocumentType];
+
+/** 合法资质附件类型列表 */
+export const ORG_DOCUMENT_TYPES: OrgDocumentTypeValue[] = [
+  OrgDocumentType.LICENSE,
+  OrgDocumentType.PORTFOLIO,
+];
+
+/**
+ * 判断资质附件类型是否合法。
+ *
+ * @param value - 附件类型字符串
+ * @returns 合法为 true
+ */
+export function isValidOrgDocumentType(value: string): value is OrgDocumentTypeValue {
+  return ORG_DOCUMENT_TYPES.includes(value as OrgDocumentTypeValue);
+}
 
 export type BizOrgStatusValue = (typeof BizOrgStatus)[keyof typeof BizOrgStatus];
 

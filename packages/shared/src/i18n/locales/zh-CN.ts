@@ -133,6 +133,9 @@ export const sharedZhCN = {
     routeMediaPending: '路线视频审核',
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
+    marketplaceOrgs: '商户管理',
+    marketplaceOrgsPending: '入驻审核',
+    marketplaceDemands: '需求单',
     analytics: '数据分析',
     planDiagnostics: '规划诊断',
     workflowTemplates: '工作流模板',
@@ -167,6 +170,7 @@ export const sharedZhCN = {
       monitor: '系统监控',
       log: '日志管理',
       membership: '会员',
+      marketplace: '发单接单',
     },
     layout: {
       breadcrumbHome: '首页',

@@ -4,6 +4,8 @@ import type {
   BudgetTypeValue,
   CertStatusValue,
   DemandStatusValue,
+  OrgDocumentTypeValue,
+  OrgRoleValue,
   ProviderTypeValue,
   PublisherTypeValue,
   ServiceCategoryNode,
@@ -17,6 +19,16 @@ export interface BizOrgSettlementConfig {
   bankAccountHint?: string;
 }
 
+/** 商户资质附件摘要 */
+export interface BizOrgDocumentSummary {
+  id: number;
+  orgId: number;
+  docType: OrgDocumentTypeValue;
+  fileUrl: string;
+  fileName: string | null;
+  createdAt: string;
+}
+
 /** 商户组织摘要（列表/详情） */
 export interface BizOrgSummary {
   id: number;
@@ -24,7 +36,36 @@ export interface BizOrgSummary {
   orgType: BizOrgTypeValue;
   licenseNo: string | null;
   status: BizOrgStatusValue;
+  contactPhone: string | null;
+  description: string | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
   createdAt: string;
+}
+
+/** 商户组织详情（含资质附件） */
+export interface BizOrgDetail extends BizOrgSummary {
+  documents: BizOrgDocumentSummary[];
+}
+
+/** 商户入驻申请入参 */
+export interface BizOrgApplyInput {
+  name: string;
+  orgType: BizOrgTypeValue;
+  licenseNo?: string;
+  contactPhone?: string;
+  description?: string;
+  documents: Array<{
+    docType: OrgDocumentTypeValue;
+    fileUrl: string;
+    fileName?: string;
+  }>;
+}
+
+/** 平台审核商户入参 */
+export interface BizOrgReviewInput {
+  action: 'approve' | 'reject';
+  reviewNote?: string;
 }
 
 /** 个人服务者摘要 */
@@ -36,6 +77,51 @@ export interface ServiceProviderSummary {
   certStatus: CertStatusValue;
   creditScore: number;
   categoryCodes: string[];
+  serviceRegions: string[] | null;
+  displayName: string | null;
+  bio: string | null;
+  portfolioUrls: string[] | null;
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+/** 服务者公开主页（仅已通过认证） */
+export interface ServiceProviderPublicProfile {
+  id: number;
+  providerType: ProviderTypeValue;
+  orgId: number | null;
+  orgName: string | null;
+  displayName: string | null;
+  bio: string | null;
+  categoryCodes: string[];
+  serviceRegions: string[] | null;
+  portfolioUrls: string[] | null;
+  creditScore: number;
+}
+
+/** 个人服务者认证申请入参 */
+export interface ServiceProviderApplyInput {
+  providerType: ProviderTypeValue;
+  categoryCodes: string[];
+  serviceRegions?: string[];
+  orgId?: number;
+  displayName?: string;
+  bio?: string;
+  portfolioUrls?: string[];
+}
+
+/** 平台审核服务者入参 */
+export interface ServiceProviderReviewInput {
+  action: 'approve' | 'reject';
+  reviewNote?: string;
+}
+
+/** 当前用户商户成员关系 */
+export interface OrgMembershipSummary {
+  orgId: number;
+  orgRole: OrgRoleValue;
+  org: BizOrgSummary;
 }
 
 /** 需求单列表项 */

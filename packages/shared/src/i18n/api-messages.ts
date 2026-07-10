@@ -278,6 +278,19 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_DEMAND_NOT_FOUND]: '需求单不存在',
   [ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN]: '无权查看该需求单',
   [ApiMessageKey.MARKETPLACE_CATEGORY_INVALID]: '无效的服务类目',
+  [ApiMessageKey.MARKETPLACE_ORG_ALREADY_APPLIED]: '您已有进行中的商户入驻申请',
+  [ApiMessageKey.MARKETPLACE_ORG_NOT_PENDING]: '该商户不在待审核状态',
+  [ApiMessageKey.MARKETPLACE_ORG_REVIEW_INVALID]: '无效的审核操作',
+  [ApiMessageKey.MARKETPLACE_ORG_APPLY_INVALID]: '入驻申请信息不完整或无效',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_FOUND]: '服务者不存在',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_ALREADY_APPLIED]: '您已提交过服务者认证',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_PENDING]: '该服务者不在待审核状态',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_APPROVED]: '服务者尚未通过认证',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_APPLY_INVALID]: '服务者认证信息不完整或无效',
+  [ApiMessageKey.MARKETPLACE_ORG_CONTEXT_REQUIRED]: '请指定商户组织上下文',
+  [ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN]: '您不是该商户成员',
+  [ApiMessageKey.MARKETPLACE_DOCUMENT_INVALID]: '无效的资质附件',
+  [ApiMessageKey.MARKETPLACE_DOCUMENT_UPLOAD_FAILED]: '资质附件上传失败',
 };
 
 const enUS: Record<string, string> = {
@@ -563,6 +576,19 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_DEMAND_NOT_FOUND]: 'Service demand not found',
   [ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN]: 'You cannot view this demand',
   [ApiMessageKey.MARKETPLACE_CATEGORY_INVALID]: 'Invalid service category',
+  [ApiMessageKey.MARKETPLACE_ORG_ALREADY_APPLIED]: 'You already have a pending or active business application',
+  [ApiMessageKey.MARKETPLACE_ORG_NOT_PENDING]: 'This business is not pending review',
+  [ApiMessageKey.MARKETPLACE_ORG_REVIEW_INVALID]: 'Invalid review action',
+  [ApiMessageKey.MARKETPLACE_ORG_APPLY_INVALID]: 'Invalid or incomplete business application',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_FOUND]: 'Service provider not found',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_ALREADY_APPLIED]: 'You have already applied as a service provider',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_PENDING]: 'This provider is not pending review',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_NOT_APPROVED]: 'Provider is not yet approved',
+  [ApiMessageKey.MARKETPLACE_PROVIDER_APPLY_INVALID]: 'Invalid or incomplete provider application',
+  [ApiMessageKey.MARKETPLACE_ORG_CONTEXT_REQUIRED]: 'Business organization context is required',
+  [ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN]: 'You are not a member of this organization',
+  [ApiMessageKey.MARKETPLACE_DOCUMENT_INVALID]: 'Invalid qualification document',
+  [ApiMessageKey.MARKETPLACE_DOCUMENT_UPLOAD_FAILED]: 'Failed to upload qualification document',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {
