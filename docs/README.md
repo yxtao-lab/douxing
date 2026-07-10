@@ -5,7 +5,7 @@
 | [项目概述.md](./项目概述.md) | **工作区说明**：Monorepo 结构、模块 A/B 主链、当前阶段 |
 | [API接口文档.md](./API接口文档.md) | **REST API 全量接口说明**（人类可读；Apifox 请导入 [openapi.yaml](./openapi.yaml)） |
 | [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) | **Access + Refresh 双 Token**：流程、三端拦截、环境变量、验收 |
-| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（**98** 路径 / **117** 操作；人类可读全量见 [API接口文档 §2](./API接口文档.md#2-接口总览)） |
+| [openapi.yaml](./openapi.yaml) | **OpenAPI 3.0 规范**（**103** 路径 / **122** 操作；人类可读全量见 [API接口文档 §2](./API接口文档.md#2-接口总览)） |
 | [下一步工作.md](./下一步工作.md) | **当前建议先做什么**（精简排期，不重复 ROADMAP 全文） |
 | [ROADMAP.md](./ROADMAP.md) | 功能路线图：已实现 / 未实现 / 分步实施计划（含 **S/M/F/K-A/P6** 等专题线） |
 | [详细设计文档.md](./详细设计文档.md) | 平台详细设计 V2.0 + §17 实施补充 |

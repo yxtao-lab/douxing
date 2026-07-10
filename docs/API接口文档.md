@@ -1,9 +1,10 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API**）  
-> **更新日期**：2026-07-09  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0 发单接单 marketplace**）  
+> **更新日期**：2026-07-10  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — 管理端诊断/沙箱/模板 API（§24）· SSE `node_status` 画布联动  
+> **发单接单（模块 B）**：[发单接单路线图.md](./发单接单路线图.md) — M0 已验收 · §25 marketplace GET API  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -15,7 +16,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| **[openapi.yaml](./openapi.yaml)** | OpenAPI **98** 路径 / **117** 操作（Apifox 导入）；人类可读全量 **120** 项见 §2 总览 |
+| **[openapi.yaml](./openapi.yaml)** | OpenAPI **103** 路径 / **122** 操作（Apifox 导入）；人类可读全量 **125** 项见 §2 总览 |
 
 **导入步骤**
 
@@ -67,6 +68,7 @@
 22. [静态资源 uploads](#22-静态资源-uploads)
 23. [附录：常用枚举](#23-附录常用枚举)
 24. [管理端 AI 流程编排](#24-管理端-ai-流程编排admin)
+25. [发单接单 marketplace](#25-发单接单-marketplace)
 
 ---
 
@@ -266,8 +268,13 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 118 | PUT | `/api/admin/workflow-templates/:id` | 管理员 | 更新工作流模板 |
 | 119 | POST | `/api/admin/workflow-templates/:id/publish-graph` | 管理员 | 发布模板 DAG 图 |
 | 120 | DELETE | `/api/admin/workflow-templates/:id` | 管理员 | 删除工作流模板 |
+| 121 | GET | `/api/marketplace/health` | 公开 | 发单接单 M0 |
+| 122 | GET | `/api/marketplace/categories` | 公开 | 发单接单 M0 |
+| 123 | GET | `/api/marketplace/demands/mine` | 登录 | 发单接单 M0 |
+| 124 | GET | `/api/marketplace/demands/:id` | 登录 | 发单接单 M0 |
+| 125 | GET | `/api/marketplace/admin/orgs` | 管理员 | 发单接单 M0 |
 
-> 注：`/api/system/*` 等系统管理接口见 [系统管理.md](./系统管理.md)，未纳入上表 **120** 项主链。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
+> 注：`/api/system/*` 等系统管理接口见 [系统管理.md](./系统管理.md)，未纳入上表 **125** 项主链。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
 
 ---
 
@@ -1361,6 +1368,10 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | `TravelPhotoSource` | upload/checkin/import | 照片来源 |
 | `AnalyticsEventCategory` | business/behavior/system | 埋点分类 |
 | `AnalyticsEventSource` | server/mobile/pc/web | 埋点来源端 |
+| `DemandStatus` | draft/published/quoting/… | 需求单状态（`marketplace/constants`） |
+| `BizOrgStatus` | pending/active/frozen | 商户组织状态 |
+| `CertStatus` | pending/approved/rejected | 服务者认证状态 |
+| `ServiceOrderStatus` | pending_pay/paid/… | 履约订单状态（与模块 A `orders` 分表） |
 
 ---
 
@@ -1480,10 +1491,121 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ---
 
+## 25. 发单接单 marketplace
+
+> **模块 B** · **M0**（2026-07-09 验收）— 领域建模与只读 API 骨架；写操作（发单、报价、审核）在 **M1/M2** 交付。  
+> **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
+> **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
+> **验收**：`pnpm --filter @douxing/server m0:marketplace-cases`
+
+前缀：`/api/marketplace`
+
+与模块 A **分域**：不复用 `/api/routes`、`/api/orders`（路线解锁）；`service_demand.route_id` 为可选弱引用。
+
+### GET `/health`
+
+模块 B 健康检查（**无需登录**）。
+
+**响应 `data`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `ok` | boolean | 固定 `true` |
+| `module` | string | 固定 `marketplace` |
+| `timestamp` | string | ISO 8601 时间 |
+
+### GET `/categories`
+
+返回预置 **服务类目树**（**无需登录**）；展示文案通过 `labelKey` 走 i18n（如 `marketplace.category.travel`）。
+
+**响应 `data`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `categories` | `ServiceCategoryNode[]` | 一级类目及 `children` 叶子节点 |
+
+**`ServiceCategoryNode`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `code` | string | 点分路径，如 `travel.custom_tour` |
+| `labelKey` | string | i18n 键 |
+| `children` | array? | 子类目 |
+
+一级类目示例：`travel`（旅行服务）、`photo`（影像服务）、`talent`（人才服务）。
+
+### GET `/demands/mine`
+
+当前登录用户作为 **发单方** 创建的需求单列表（按 `createdAt` 倒序）。
+
+**鉴权**：登录（`Authorization: Bearer`）
+
+**响应 `data`**：`{ items: ServiceDemandSummary[] }`
+
+**`ServiceDemandSummary` 主要字段**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | number | 主键 |
+| `demandNo` | string | 业务单号（`SD` 前缀） |
+| `publisherType` | string | `user` / `group` |
+| `publisherUserId` | number | 发单方用户 ID |
+| `categoryCode` | string | 类目 code |
+| `title` | string | 标题 |
+| `destination` | string? | 目的地 |
+| `startDate` / `endDate` | string? | `YYYY-MM-DD` |
+| `budgetMin` / `budgetMax` | string? | 金额字符串 |
+| `budgetType` | string? | `fixed` / `range` / `negotiable` |
+| `status` | string | 见 §23 `DemandStatus` |
+| `routeId` | number? | 可选关联模块 A 路线 |
+| `createdAt` / `updatedAt` | string | ISO 时间 |
+
+### GET `/demands/:id`
+
+需求单详情；**仅发单方本人**可查看。
+
+**鉴权**：登录
+
+**路径参数**：`id` — 需求单主键（正整数）
+
+**响应 `data`**：`ServiceDemandDetail`（在 Summary 基础上增加 `description`、`publisherGroupId`）
+
+**错误**
+
+| 场景 | messageKey |
+|------|------------|
+| 不存在 | `api.marketplaceDemandNotFound` |
+| 非本人 | `api.marketplaceDemandForbidden` |
+| 非法 ID | `api.paramError` |
+
+### GET `/admin/orgs`
+
+管理端 **商户组织列表**（M0 占位：返回库内全部 `biz_org`，含 seed 演示旅行社）。
+
+**鉴权**：登录 + `requirePerm('marketplace:org:list')`
+
+**响应 `data`**：`{ items: BizOrgSummary[] }`
+
+**`BizOrgSummary`**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | number | 主键 |
+| `name` | string | 机构名称 |
+| `orgType` | string | `travel_agency` / `photo_studio` / … |
+| `licenseNo` | string? | 资质编号 |
+| `status` | string | `pending` / `active` / `frozen` |
+| `createdAt` | string | ISO 时间 |
+
+**M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：`POST` 入驻申请、`POST` 报价、`PATCH` 审核、`POST` 发单发布等。
+
+---
+
 ## 变更记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-10 | **M0 发单接单**：§25 `/api/marketplace/*`（5 个 GET）；§23 增 marketplace 枚举；总览 **125** 项；OpenAPI **103** 路径 / **122** 操作 |
 | 2026-07-09 | **C7-W**：§24 管理端 `admin/plan-sessions`（6 项）+ `admin/workflow-templates`（8 项）；§8 SSE 增 `node_status` 与 `tool_call.nodeId`；总览 **120** 项；OpenAPI **98** 路径 / **117** 操作 |
 | 2026-07-07 | **双 Token**：§4 增 `POST /refresh` · `POST /logout`；`LoginResult` 增 `refreshToken` · `expiresIn`；总览认证项 +2（见 §2）；专题 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
 | 2026-07-03 | **H10 + I3**：路线评论 dayIndex/attractionId · `route_media` CRUD · 视频审核 API · llm-status 增 douxing 字段；总览 **106** 接口 |
