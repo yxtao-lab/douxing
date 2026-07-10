@@ -17,3 +17,6 @@
 # 安全与性能
 - 所有用户输入在用于数据库查询前必须进行验证或参数化，防止 SQL 注入。
 - 异步函数必须包含 try...catch 进行错误处理。
+
+# 发单接单 M 线文档
+- 模块 B（marketplace / M0～M7）阶段或 Step 状态变更时，须同步更新 `docs/发单接单路线图.md` 等关联文档；细则见 `.cursor/rules/marketplace-roadmap-sync.mdc` 与路线图 §10。
