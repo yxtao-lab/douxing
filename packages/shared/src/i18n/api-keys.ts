@@ -289,6 +289,17 @@ export const ApiMessageKey = {
   MARKETPLACE_ORG_MEMBER_FORBIDDEN: 'api.marketplaceOrgMemberForbidden',
   MARKETPLACE_DOCUMENT_INVALID: 'api.marketplaceDocumentInvalid',
   MARKETPLACE_DOCUMENT_UPLOAD_FAILED: 'api.marketplaceDocumentUploadFailed',
+  MARKETPLACE_DEMAND_INVALID: 'api.marketplaceDemandInvalid',
+  MARKETPLACE_DEMAND_STATUS_INVALID: 'api.marketplaceDemandStatusInvalid',
+  MARKETPLACE_DEMAND_NOT_PUBLISHABLE: 'api.marketplaceDemandNotPublishable',
+  MARKETPLACE_QUOTE_INVALID: 'api.marketplaceQuoteInvalid',
+  MARKETPLACE_QUOTE_NOT_FOUND: 'api.marketplaceQuoteNotFound',
+  MARKETPLACE_QUOTE_ALREADY_EXISTS: 'api.marketplaceQuoteAlreadyExists',
+  MARKETPLACE_ORDER_NOT_FOUND: 'api.marketplaceOrderNotFound',
+  MARKETPLACE_ORDER_FORBIDDEN: 'api.marketplaceOrderForbidden',
+  MARKETPLACE_ORDER_STATUS_INVALID: 'api.marketplaceOrderStatusInvalid',
+  MARKETPLACE_SELLER_REQUIRED: 'api.marketplaceSellerRequired',
+  MARKETPLACE_DEMAND_NOT_QUOTABLE: 'api.marketplaceDemandNotQuotable',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

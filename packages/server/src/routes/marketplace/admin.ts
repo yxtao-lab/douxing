@@ -14,6 +14,7 @@ import {
   listServiceProvidersForAdminPage,
   reviewServiceProvider,
 } from '../../services/marketplace/marketplace-provider.service.js';
+import { listDemandsForAdminPage } from '../../services/marketplace/marketplace-demand.service.js';
 import {
   parseDateRangeFilter,
   parseOptionalString,
@@ -183,6 +184,31 @@ router.patch('/providers/:id/review', authMiddleware, async (req, res) => {
   try {
     const provider = await reviewServiceProvider(providerId, adminUser.id, parsed.data);
     success(res, { provider });
+  } catch (err) {
+    failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+router.get('/demands', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'marketplace:demand:list'))) return;
+
+  const pagination = parsePaginationQuery(req.query as Record<string, unknown>);
+  const keyword = parseOptionalString(req.query as Record<string, unknown>, 'keyword');
+  const status = parseOptionalString(req.query as Record<string, unknown>, 'status');
+  const categoryCode = parseOptionalString(req.query as Record<string, unknown>, 'categoryCode');
+  const destination = parseOptionalString(req.query as Record<string, unknown>, 'destination');
+  parseDateRangeFilter(req.query as Record<string, unknown>);
+
+  try {
+    const result = await listDemandsForAdminPage({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword,
+      status,
+      categoryCode,
+      destination,
+    });
+    success(res, result);
   } catch (err) {
     failFromError(res, err, ApiMessageKey.SERVER_ERROR);
   }

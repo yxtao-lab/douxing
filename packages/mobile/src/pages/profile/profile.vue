@@ -191,6 +191,7 @@ const userActions = computed<UserAction[]>(() => [
   { key: 'edit', label: t('profile.actionEdit'), variant: 'primary', needLogin: true, action: goEdit },
   { key: 'routes', label: t('profile.actionRoutes'), action: goRoutes },
   { key: 'orders', label: t('profile.actionOrders'), needLogin: true, action: goOrders },
+  { key: 'marketplace', label: t('profile.actionMarketplace'), needLogin: true, action: goMarketplace },
 ]);
 
 function requireLogin(then: () => void) {
@@ -267,6 +268,10 @@ function goCheckinMap() {
 
 function goOrders() {
   uni.navigateTo({ url: '/pages/orders/list' });
+}
+
+function goMarketplace() {
+  uni.navigateTo({ url: '/pages/marketplace/hall' });
 }
 
 function handleLogout() {

@@ -29,6 +29,7 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.floating.ambient.withMemory': '记得你提过「{hint}」，要不要再安排一次？',
     'pet.floating.viewMemoryWall': '记忆墙',
     'pet.floating.analyzePrePlan': '分析一下偏好',
+    'pet.floating.hideCompanion': '隐藏浮球',
     'pet.memoryWall.title': '记忆墙',
     'pet.memoryWall.empty': '还没有长期记忆，完成旅行或规划后我会帮你记住',
     'pet.memoryWall.analyze': 'AI 分析',
@@ -97,6 +98,7 @@ const PET_MESSAGES: Record<LocaleCode, Record<string, string>> = {
     'pet.floating.ambient.withMemory': 'I remember you mentioned 「{hint}」—want to try again?',
     'pet.floating.viewMemoryWall': 'Memory wall',
     'pet.floating.analyzePrePlan': 'Analyze preferences',
+    'pet.floating.hideCompanion': 'Hide floating pet',
     'pet.memoryWall.title': 'Memory wall',
     'pet.memoryWall.empty': 'No long-term memories yet—plan or finish a trip and I will remember for you',
     'pet.memoryWall.analyze': 'AI analysis',
@@ -271,6 +273,16 @@ export function formatPetFloatingViewMemoryWall(locale: LocaleCode = DEFAULT_LOC
 
 export function formatPetFloatingAnalyzePrePlan(locale: LocaleCode = DEFAULT_LOCALE): string {
   return petMsg('pet.floating.analyzePrePlan', locale);
+}
+
+/**
+ * 旅行伙伴浮层「隐藏浮球」按钮文案。
+ *
+ * @param locale - 界面语言
+ * @returns 本地化标签
+ */
+export function formatPetFloatingHideCompanion(locale: LocaleCode = DEFAULT_LOCALE): string {
+  return petMsg('pet.floating.hideCompanion', locale);
 }
 
 export function formatPetMemoryWallAnalyze(locale: LocaleCode = DEFAULT_LOCALE): string {

@@ -991,5 +991,13 @@ export const webZhCN = {
     statusActive: '已激活',
     statusRejected: '已驳回',
     statusFrozen: '已冻结',
+    demandColNo: '需求单号',
+    demandColTitle: '标题',
+    demandColCategory: '类目',
+    demandColDestination: '目的地',
+    demandColStatus: '状态',
+    demandSearchKeyword: '标题 / 单号 / 目的地',
+    demandDestinationPlaceholder: '目的地关键词',
+    demandEmpty: '暂无需求单',
   },
 } as const;

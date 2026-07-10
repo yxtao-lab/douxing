@@ -206,6 +206,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'marketplace/demands',
+          name: 'marketplace-demands',
+          component: () => import('@/views/MarketplaceDemandsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.marketplaceDemands',
+            menuGroupKey: 'web.menu.marketplace',
+            icon: 'FileSearchOutlined',
+            perm: 'marketplace:demand:list',
+          },
+        },
+        {
           path: 'analytics',
           name: 'analytics',
           component: () => import('@/views/AnalyticsDashboardView.vue'),

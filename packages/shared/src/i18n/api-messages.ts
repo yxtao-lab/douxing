@@ -291,6 +291,17 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN]: '您不是该商户成员',
   [ApiMessageKey.MARKETPLACE_DOCUMENT_INVALID]: '无效的资质附件',
   [ApiMessageKey.MARKETPLACE_DOCUMENT_UPLOAD_FAILED]: '资质附件上传失败',
+  [ApiMessageKey.MARKETPLACE_DEMAND_INVALID]: '需求单信息不完整或无效',
+  [ApiMessageKey.MARKETPLACE_DEMAND_STATUS_INVALID]: '当前需求单状态不允许此操作',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_PUBLISHABLE]: '仅草稿状态的需求单可发布',
+  [ApiMessageKey.MARKETPLACE_QUOTE_INVALID]: '报价信息无效',
+  [ApiMessageKey.MARKETPLACE_QUOTE_NOT_FOUND]: '报价不存在',
+  [ApiMessageKey.MARKETPLACE_QUOTE_ALREADY_EXISTS]: '您已对该需求提交过报价',
+  [ApiMessageKey.MARKETPLACE_ORDER_NOT_FOUND]: '服务订单不存在',
+  [ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN]: '无权操作该服务订单',
+  [ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID]: '当前订单状态不允许此操作',
+  [ApiMessageKey.MARKETPLACE_SELLER_REQUIRED]: '请指定商户组织或个人服务者身份',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_QUOTABLE]: '该需求当前不可报价',
 };
 
 const enUS: Record<string, string> = {
@@ -589,6 +600,17 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN]: 'You are not a member of this organization',
   [ApiMessageKey.MARKETPLACE_DOCUMENT_INVALID]: 'Invalid qualification document',
   [ApiMessageKey.MARKETPLACE_DOCUMENT_UPLOAD_FAILED]: 'Failed to upload qualification document',
+  [ApiMessageKey.MARKETPLACE_DEMAND_INVALID]: 'Invalid or incomplete service demand',
+  [ApiMessageKey.MARKETPLACE_DEMAND_STATUS_INVALID]: 'This action is not allowed in the current demand status',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_PUBLISHABLE]: 'Only draft demands can be published',
+  [ApiMessageKey.MARKETPLACE_QUOTE_INVALID]: 'Invalid quote information',
+  [ApiMessageKey.MARKETPLACE_QUOTE_NOT_FOUND]: 'Quote not found',
+  [ApiMessageKey.MARKETPLACE_QUOTE_ALREADY_EXISTS]: 'You have already submitted a quote for this demand',
+  [ApiMessageKey.MARKETPLACE_ORDER_NOT_FOUND]: 'Service order not found',
+  [ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN]: 'You cannot access this service order',
+  [ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID]: 'This action is not allowed in the current order status',
+  [ApiMessageKey.MARKETPLACE_SELLER_REQUIRED]: 'Business org or approved provider identity is required',
+  [ApiMessageKey.MARKETPLACE_DEMAND_NOT_QUOTABLE]: 'This demand is not open for quotes',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

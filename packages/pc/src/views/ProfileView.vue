@@ -94,6 +94,14 @@
           <span class="text-dx-muted">›</span>
         </button>
         <button
+          type="button"
+          class="flex w-full items-center justify-between rounded-xl px-4 py-3 text-sm font-medium text-dx-text transition hover:bg-dx-bg"
+          @click="goMarketplace"
+        >
+          {{ t('marketplace.pageTitle') }}
+          <span class="text-dx-muted">›</span>
+        </button>
+        <button
           v-if="user"
           type="button"
           class="flex w-full items-center rounded-xl px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50"
@@ -179,6 +187,14 @@ function goOrders() {
     return;
   }
   router.push({ name: 'orders' });
+}
+
+function goMarketplace() {
+  if (!user.value) {
+    router.push({ name: 'login', query: { redirect: '/marketplace' } });
+    return;
+  }
+  router.push({ name: 'marketplace-hall' });
 }
 
 async function loadUser() {

@@ -5,6 +5,7 @@ import {
   formatPetFloatingAmbientWithMemory,
   formatPetFloatingAnalyzePrePlan,
   formatPetFloatingGoPlan,
+  formatPetFloatingHideCompanion,
   formatPetFloatingLevelLabel,
   formatPetFloatingMoodLabel,
   formatPetFloatingSheetTitle,
@@ -43,6 +44,7 @@ export interface TravelPetFloatingSheetViewModel {
   goPlanLabel: string;
   viewMemoryWallLabel: string;
   analyzePrePlanLabel: string;
+  hideCompanionLabel: string;
 }
 
 const SPECIES_EMOJI: Record<string, string> = {
@@ -99,5 +101,6 @@ export function resolveTravelPetFloatingSheetViewModel(
     goPlanLabel: formatPetFloatingGoPlan(locale),
     viewMemoryWallLabel: formatPetFloatingViewMemoryWall(locale),
     analyzePrePlanLabel: formatPetFloatingAnalyzePrePlan(locale),
+    hideCompanionLabel: formatPetFloatingHideCompanion(locale),
   };
 }

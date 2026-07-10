@@ -161,7 +161,7 @@ export interface ServiceCategoryNode {
 export const SERVICE_CATEGORY_TREE: ServiceCategoryNode[] = [
   {
     code: 'travel',
-    labelKey: 'marketplace.category.travel',
+    labelKey: 'marketplace.category.travel.label',
     children: [
       { code: 'travel.group_tour', labelKey: 'marketplace.category.travel.groupTour' },
       { code: 'travel.custom_tour', labelKey: 'marketplace.category.travel.customTour' },
@@ -171,7 +171,7 @@ export const SERVICE_CATEGORY_TREE: ServiceCategoryNode[] = [
   },
   {
     code: 'photo',
-    labelKey: 'marketplace.category.photo',
+    labelKey: 'marketplace.category.photo.label',
     children: [
       { code: 'photo.travel_shoot', labelKey: 'marketplace.category.photo.travelShoot' },
       { code: 'photo.wedding', labelKey: 'marketplace.category.photo.wedding' },
@@ -181,7 +181,7 @@ export const SERVICE_CATEGORY_TREE: ServiceCategoryNode[] = [
   },
   {
     code: 'talent',
-    labelKey: 'marketplace.category.talent',
+    labelKey: 'marketplace.category.talent.label',
     children: [
       { code: 'talent.photographer', labelKey: 'marketplace.category.talent.photographer' },
       { code: 'talent.model', labelKey: 'marketplace.category.talent.model' },

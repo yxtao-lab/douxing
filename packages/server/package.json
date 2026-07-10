@@ -64,6 +64,7 @@
     "w5:workflow-graph-cases": "tsx src/scripts/w5-workflow-graph-cases.ts",
     "m0:marketplace-cases": "tsx src/scripts/m0-marketplace-cases.ts",
     "m1:marketplace-onboard-cases": "tsx src/scripts/m1-marketplace-onboard-cases.ts",
+    "m2:marketplace-demand-cases": "tsx src/scripts/m2-marketplace-demand-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

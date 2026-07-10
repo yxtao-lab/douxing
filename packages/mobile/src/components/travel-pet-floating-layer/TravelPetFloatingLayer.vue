@@ -34,6 +34,8 @@ const {
 
   updateBallPosition,
 
+  hideCompanion,
+
 } = usePetCompanion();
 
 
@@ -301,6 +303,9 @@ function onBallTap() {
             {{ sheetViewModel.analyzePrePlanLabel }}
           </button>
         </view>
+        <button class="travel-pet-floating__hide" @tap="hideCompanion">
+          {{ sheetViewModel.hideCompanionLabel }}
+        </button>
 
       </view>
 
@@ -695,6 +700,30 @@ function onBallTap() {
   border: 1rpx solid rgba(251, 191, 36, 0.45);
 
   color: #b45309;
+
+  font-size: 24rpx;
+
+}
+
+
+
+.travel-pet-floating__hide {
+
+  margin-top: 16rpx;
+
+  width: 100%;
+
+  height: 64rpx;
+
+  line-height: 64rpx;
+
+  border-radius: 999rpx;
+
+  background: transparent;
+
+  border: none;
+
+  color: #a8a29e;
 
   font-size: 24rpx;
 

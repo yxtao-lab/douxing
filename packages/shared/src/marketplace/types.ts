@@ -8,6 +8,7 @@ import type {
   OrgRoleValue,
   ProviderTypeValue,
   PublisherTypeValue,
+  QuoteStatusValue,
   ServiceCategoryNode,
   ServiceOrderStatusValue,
 } from './constants.js';
@@ -162,7 +163,62 @@ export interface MarketplaceCategoriesPayload {
   categories: ServiceCategoryNode[];
 }
 
-/** 服务履约订单摘要（M0 占位类型，M2 完善） */
+/** 创建/更新需求单入参 */
+export interface ServiceDemandInput {
+  categoryCode: string;
+  title: string;
+  description?: string;
+  destination?: string;
+  startDate?: string;
+  endDate?: string;
+  budgetMin?: string;
+  budgetMax?: string;
+  budgetType?: BudgetTypeValue;
+  routeId?: number;
+}
+
+/** 需求单发布动作入参 */
+export interface ServiceDemandPublishInput {
+  action: 'publish';
+}
+
+/** 需求大厅筛选参数 */
+export interface ServiceDemandHallQuery {
+  page?: number;
+  pageSize?: number;
+  categoryCode?: string;
+  destination?: string;
+  keyword?: string;
+}
+
+/** 报价摘要 */
+export interface DemandQuoteSummary {
+  id: number;
+  demandId: number;
+  orgId: number | null;
+  orgName: string | null;
+  providerUserId: number | null;
+  providerDisplayName: string | null;
+  amount: string;
+  proposalText: string | null;
+  status: QuoteStatusValue;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 提交报价入参 */
+export interface DemandQuoteCreateInput {
+  amount: string;
+  proposalText?: string;
+  orgId?: number;
+}
+
+/** 选定报价入参 */
+export interface DemandSelectQuoteInput {
+  quoteId: number;
+}
+
+/** 服务履约订单摘要 */
 export interface ServiceOrderSummary {
   id: number;
   orderNo: string;
@@ -175,4 +231,16 @@ export interface ServiceOrderSummary {
   platformFee: string;
   status: ServiceOrderStatusValue;
   createdAt: string;
+  updatedAt: string;
+}
+
+/** 服务履约订单详情 */
+export interface ServiceOrderDetail extends ServiceOrderSummary {
+  demandTitle: string | null;
+  demandNo: string | null;
+}
+
+/** 履约订单状态推进入参 */
+export interface ServiceOrderStatusInput {
+  status: ServiceOrderStatusValue;
 }

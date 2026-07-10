@@ -129,6 +129,30 @@ const router = createRouter({
           component: () => import('@/views/OrdersView.vue'),
           meta: { titleKey: 'nav.orders', navKey: 'profile', requiresAuth: true },
         },
+        {
+          path: 'marketplace',
+          name: 'marketplace-hall',
+          component: () => import('@/views/MarketplaceHallView.vue'),
+          meta: { titleKey: 'marketplace.pageTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'marketplace/create',
+          name: 'marketplace-create',
+          component: () => import('@/views/MarketplaceCreateView.vue'),
+          meta: { titleKey: 'marketplace.createTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'marketplace/mine',
+          name: 'marketplace-mine',
+          component: () => import('@/views/MarketplaceMineView.vue'),
+          meta: { titleKey: 'marketplace.mineTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'marketplace/:id',
+          name: 'marketplace-detail',
+          component: () => import('@/views/MarketplaceDetailView.vue'),
+          meta: { titleKey: 'marketplace.detailTitle', navKey: 'profile', requiresAuth: true },
+        },
       ],
     },
     {

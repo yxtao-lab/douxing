@@ -992,5 +992,13 @@ export const webEnUS = {
     statusActive: 'Active',
     statusRejected: 'Rejected',
     statusFrozen: 'Frozen',
+    demandColNo: 'Demand No.',
+    demandColTitle: 'Title',
+    demandColCategory: 'Category',
+    demandColDestination: 'Destination',
+    demandColStatus: 'Status',
+    demandSearchKeyword: 'Title / No. / destination',
+    demandDestinationPlaceholder: 'Destination keyword',
+    demandEmpty: 'No service demands',
   },
 } as const;

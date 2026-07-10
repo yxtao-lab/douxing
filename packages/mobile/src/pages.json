@@ -106,6 +106,30 @@
       }
     },
     {
+      "path": "pages/marketplace/hall",
+      "style": {
+        "navigationBarTitleText": "定制服务"
+      }
+    },
+    {
+      "path": "pages/marketplace/create",
+      "style": {
+        "navigationBarTitleText": "发布需求"
+      }
+    },
+    {
+      "path": "pages/marketplace/mine",
+      "style": {
+        "navigationBarTitleText": "我的需求"
+      }
+    },
+    {
+      "path": "pages/marketplace/detail",
+      "style": {
+        "navigationBarTitleText": "需求详情"
+      }
+    },
+    {
       "path": "pages/journey-albums/list",
       "style": {
         "navigationBarTitleText": "我的相册"

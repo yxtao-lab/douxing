@@ -1,0 +1,61 @@
+---
+description: 新页面须符合三端品牌风格、主题与 i18n 预留，优先复用/封装通用组件
+alwaysApply: true
+---
+
+# 新页面 UI 与组件规范
+
+后续**新增或改版页面**（移动端 / Web 管理端 / PC 用户端）须对齐项目既有风格、布局与工程约定；开发前先阅读同端相近页面与 [品牌视觉规范.md](../docs/品牌视觉规范.md)。
+
+## 禁止
+
+- 自造布局骨架、表格、筛选条、空状态、操作列按钮等已有通用能力
+- 硬编码主色 hex（`#1677ff` 等）或用户可见中英文文案
+- 在页面 scoped 覆盖全局表格/筛选/Token 基础样式
+- 同一 UI 块在 2+ 页面复制粘贴而不抽组件
+
+## 通用（三端）
+
+1. **风格**：旅行探索感 — 渐变 Hero + 白卡片内容区；色彩/圆角/阴影只用设计 Token（移动端 `--dx-*`；Web `main.css`；PC Tailwind `dx-*`）
+2. **主题预留**：样式绑定 Token / CSS 变量 / Tailwind 语义色，禁止写死与主题无关的 inline 色值；移动端根节点 `:class="themeClass"` + `useTheme()`（见 `packages/mobile/src/i18n/useTheme.ts`）
+3. **国际化**：文案走 i18n；新页调用 `usePageTitle('nav.xxx')`；细则见 `i18n-required.mdc` 与 [国际化.md](../docs/国际化.md)
+4. **组件策略**：先查 `@douxing/shared`、本端 `components/`、[公共组件.md](../docs/公共组件.md)；可复用则直接用；跨页重复 ≥2 次或单块 >~80 行则封装到 `components/` 并补 JSDoc
+5. **样式**：Tailwind / scoped CSS；移动端尺寸用 **rpx**，勿在 H5 手写根字号
+
+## 移动端（`packages/mobile`）
+
+| 场景 | 须用 |
+|------|------|
+| Tab 页 | `DouxingTabBar` + 根节点 `tab-page` |
+| 空/加载 | `DouxingEmptyState` |
+| 页面壳 | `class="page" :class="themeClass"` + Hero / `page-body` 分区（参考 `pages/marketplace/hall.vue`） |
+| custom 导航 | `buildCustomNavTopPadding()` |
+
+新增公共组件须同步更新 [公共组件.md](../docs/公共组件.md)。
+
+## Web 管理端（`packages/web`）
+
+| 场景 | 须用 |
+|------|------|
+| 页面壳 | `PageContainer admin` |
+| 列表 | `DouxingAdminTable` + `AdminTableExportButton` |
+| 筛选 | `AdminSearchBar` + `#search` |
+| 操作列 | `TableActionBar` + `TableActionButton` |
+
+细则见 `web-admin-table-filter.mdc`、`web-admin-table-actions.mdc`、[Web管理端表格规范.md](../docs/Web管理端表格规范.md)。
+
+## PC 用户端（`packages/pc`）
+
+| 场景 | 须用 |
+|------|------|
+| 子页壳 | `SubPageShell`（标题、描述、返回链） |
+| 布局 | `max-w-*` 居中 + Tailwind `text-dx-*` / `bg-dx-*` |
+| 跨端 UI | 优先 `@douxing/shared` 类型与 i18n；与移动端同域能力对齐命名（如 marketplace、routes） |
+
+## 验收自检
+
+- [ ] 与同端已有页面视觉/间距/交互一致，无「另起炉灶」感
+- [ ] 颜色来自 Token，切换主题（移动端 blue/teal）后无漏改色块
+- [ ] zh-CN / en-US 切换后文案与布局正常
+- [ ] 已用通用组件或已封装新组件，无大段重复 markup
+- [ ] 修改 shared i18n 后已 `pnpm --filter @douxing/shared build`
