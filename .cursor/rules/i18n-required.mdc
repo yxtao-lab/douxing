@@ -38,4 +38,4 @@ alwaysApply: true
 - [ ] API 错误/成功提示随 `Accept-Language` 变化
 - [ ] 新增文案键在两种语言文件中均已添加
 
-详细规范见 `docs/国际化.md`
+详细规范见 `docs/国际化.md` · 新页面 UI 见 `docs/Cursor-Agent规则.md`

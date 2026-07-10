@@ -30,6 +30,7 @@
 | 用户粘性与旅友圈战略 | [docs/用户粘性与旅友圈战略.md](docs/用户粘性与旅友圈战略.md) |
 | 项目概述与工作区说明 | [docs/项目概述.md](docs/项目概述.md) |
 | 国际化规范 | [docs/国际化.md](docs/国际化.md) |
+| Cursor Agent 规则（新页面 UI / 组件复用） | [docs/Cursor-Agent规则.md](docs/Cursor-Agent规则.md) |
 | 文档索引 | [docs/README.md](docs/README.md) |
 | 发版流程与 CI/CD | [docs/发版流程与CI-CD解析.md](docs/发版流程与CI-CD解析.md) |
 | 服务端命令手册 | [docs/服务端命令手册.md](docs/服务端命令手册.md) |
@@ -46,6 +47,7 @@
 | AI 规划与 Agent 演进（设计全稿） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
+| 移动端公共组件 | [docs/公共组件.md](docs/公共组件.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 | scripts 目录说明 | [scripts/README.md](scripts/README.md) |

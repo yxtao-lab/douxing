@@ -149,3 +149,4 @@ alwaysApply: false
 - 操作列按钮见 `web-admin-table-actions.mdc`
 - 样式见 `packages/web/src/styles/admin-page.css`，勿在页面 scoped 覆盖表格/筛选基础样式
 - 国际化见 `i18n-required.mdc`
+- 新页面 UI / 组件复用见 `page-ui-standards.mdc` · [Cursor-Agent规则.md](../docs/Cursor-Agent规则.md)

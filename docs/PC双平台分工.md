@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)；**双 Token 鉴权**见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
 
-**最后更新：** 2026-07-09（**C7-W 规划诊断/模板/可视化编辑器** · 双 Token · H10 · S1/S2 · DT5）
+**最后更新：** 2026-07-10（**新页面 UI 规范** · C7-W 规划诊断/模板/可视化编辑器 · 双 Token · H10 · S1/S2 · DT5）
 
 ---
 
@@ -197,6 +197,17 @@ Web 管理端 (:5173)     ──┘
 
 **禁止**：在管理端复刻 C 端规划/手帐创作流程；在 C 端暴露全站用户启停、系统参数等运营能力。
 
+### 5.1 新页面 UI 与组件（2026-07-10）
+
+| 端 | 页面壳 | 风格 Token | 主题 / i18n |
+|----|--------|------------|-------------|
+| PC 用户端 | `SubPageShell` | Tailwind `text-dx-*` / `bg-dx-*`（`tailwind.config.js`） | `usePageTitle` · 文案 `packages/pc/src/i18n` |
+| Web 管理端 | `PageContainer admin` | Ant Design 主题 + `main.css` Token | 顶栏语言切换 · shared `web.*` |
+| 移动端（对照） | `page` + `themeClass` | `--dx-*`（`theme.css`） | `useTheme()` · `useTf()` |
+
+- 新增页面须对齐同端已有页面，**禁止**自造表格/筛选/空状态等已有通用能力
+- 跨端重复 UI 优先封装组件；细则见 [Cursor-Agent规则.md](./Cursor-Agent规则.md) · [品牌视觉规范.md](./品牌视觉规范.md)
+
 ---
 
 ## 6. 路由对照速查
@@ -229,6 +240,7 @@ Web 管理端 (:5173)     ──┘
 
 | 文档 | 用途 |
 |------|------|
+| [Cursor-Agent规则.md](./Cursor-Agent规则.md) | `.cursor/rules` 索引 · 新页面 UI / i18n / 组件复用 |
 | [项目概述.md](./项目概述.md) | Monorepo 结构、模块 A/B 主链 |
 | [品牌视觉规范.md §14～15](./品牌视觉规范.md) | 管理端 vs PC 用户端 Logo 与色板 |
 | [国际化.md](./国际化.md) | 新增功能须同步 zh-CN / en-US |

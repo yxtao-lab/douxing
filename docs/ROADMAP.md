@@ -3,10 +3,10 @@
 > 依据《兜行平台最终详细设计文档》V2.0（2024年12月）与当前代码库对照编制。  
 > 用于跟踪 **已完成 / 进行中 / 未开始** 功能，并按 **时间节点** 记录开发进度。
 
-**文档版本**：3.45  
-**更新日期**：2026-07-09  
+**文档版本**：3.46  
+**更新日期**：2026-07-10  
 **关联仓库**：`project/` Monorepo（`packages/web` · `packages/pc` · `packages/mobile` · `packages/server` · `packages/shared`）  
-**新增专题**：[系统管理.md](./系统管理.md) · [发单接单平台.md](./发单接单平台.md) · [发单接单路线图.md](./发单接单路线图.md) · [数字孪生与三维建模.md](./数字孪生与三维建模.md) · [AI旅行宠物.md](./AI旅行宠物.md) · [AI流程编排路线图.md](./AI流程编排路线图.md) · [旅行日记博客.md](./旅行日记博客.md) · [用户粘性与旅友圈战略.md](./用户粘性与旅友圈战略.md) · [Web管理端表格规范.md](./Web管理端表格规范.md)
+**新增专题**：[系统管理.md](./系统管理.md) · [发单接单平台.md](./发单接单平台.md) · [发单接单路线图.md](./发单接单路线图.md) · [数字孪生与三维建模.md](./数字孪生与三维建模.md) · [AI旅行宠物.md](./AI旅行宠物.md) · [AI流程编排路线图.md](./AI流程编排路线图.md) · [旅行日记博客.md](./旅行日记博客.md) · [用户粘性与旅友圈战略.md](./用户粘性与旅友圈战略.md) · [Web管理端表格规范.md](./Web管理端表格规范.md) · [Cursor-Agent规则.md](./Cursor-Agent规则.md)
 
 ---
 
@@ -177,6 +177,7 @@ gantt
 | v0.9.27 | 2026-06-18 | **H9+ M3 · Step 16～21** | Playbook 扩充/Web CRUD · startDate · openHours · POI soft 对齐 · `h9:m3-accept` | **M3 达成** |
 | v0.9.28 | 2026-06-18 | **H3-a 领养 API** | `POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey | Step 25 ✅ |
 | v0.9.30 | 2026-07-06 | **AI流程编排路线图 v1.1** | 可行性分析 · Phase W0～W5 · MW1～MW4 · §12 术语表 | 与 M6 并行；不阻塞 Step 35～40 |
+| v0.9.41 | 2026-07-10 | **新页面 UI 规范** | 三端风格/布局 · 主题预留 · 组件复用 · [Cursor-Agent规则.md](./Cursor-Agent规则.md) · `.cursor/rules/page-ui-standards.mdc` | 与 H1 品牌 Token、G9 i18n 对齐 |
 | v0.9.31 | 2026-06-18 | **M5 达成** | H7/H8/H3-d 行中智能 · `h5:m5-accept` · 指针 → Step 35 I2 LoRA | — |
 | v0.9.32 | 2026-06-22 | **I2 Step 35 上传脚本** | `pnpm ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` · OSS 校验 | PAI 微调任务待执行 |
 | v0.9.33 | 2026-06-24 | **S1 RBAC 闭环** | `role_menu` · `requirePerm` · 登录 `permissions` · 角色菜单分配 UI · `s1:rbac-cases` | 见 [系统管理.md](./系统管理.md) |

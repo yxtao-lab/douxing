@@ -117,6 +117,8 @@ flowchart TB
 │   ├── deploy-app.mjs
 │   └── setup-*.sh             # 服务器初始化
 ├── docs/                      # 人类文档 + 本 AI 模板
+├── .cursor/
+│   └── rules/*.mdc            # Cursor Agent 持久化规则（索引见 docs/Cursor-Agent规则.md）
 └── packages/
     ├── shared/
     ├── server/
@@ -407,6 +409,7 @@ git pull → pnpm install --frozen-lockfile
 - [ ] 环境变量迁入 `.env.example` 文档化
 - [ ] 根目录增加 `scripts/pm.mjs`、`platforms.mjs`（若缺）
 - [ ] 将硬编码中文错误改为 ApiMessageKey
+- [ ] 新前端页面符合 `.cursor/rules/page-ui-standards.mdc`（Token、i18n、通用组件）
 - [ ] 更新 `project.manifest.yaml` 反映真实域名与端口
 
 ---
@@ -456,6 +459,7 @@ git pull → pnpm install --frozen-lockfile
 - 包管理：[`docs/包管理与命令.md`](./包管理与命令.md)
 - 启动部署：[`docs/启动与部署流程.md`](./启动与部署流程.md)
 - 品牌 Token：[`docs/品牌视觉规范.md`](./品牌视觉规范.md)
+- Agent 规则：[`docs/Cursor-Agent规则.md`](./Cursor-Agent规则.md)
 
 ---
 

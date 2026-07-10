@@ -18,6 +18,7 @@
 | [env-environments.md](./env-environments.md) | 环境文件说明与切换方式（`pnpm env:status`） |
 | [deploy-production.md](./deploy-production.md) | 生产服务器（Debian 12）详细部署指南 |
 | [国际化.md](./国际化.md) | zh-CN / en-US 强制规范（移动 + Web + API） |
+| [Cursor-Agent规则.md](./Cursor-Agent规则.md) | **`.cursor/rules` 索引**：新页面 UI、i18n、JSDoc、管理端表格、M 线文档同步 |
 | [PC双平台分工.md](./PC双平台分工.md) | **PC 用户端 vs Web 管理端**：功能边界、共用能力与展示差异 |
 | [公共组件.md](./公共组件.md) | **移动端可复用 Vue 组件**：功能、封装方式与用法 |
 | [系统管理.md](./系统管理.md) | **Web 管理端**：用户/角色/菜单 RBAC、`sys_dept` 与 `biz_org` 区分、S 线 |
@@ -65,7 +66,8 @@
 - **运维 / 安全**：详细设计 §8、§9、§11；[后期待办.md](./后期待办.md)  
 - **平台工程 / 工具选型**：[外部工具与插件推荐.md](./外部工具与插件推荐.md)  
 - **国际化（强制）**：[国际化.md](./国际化.md)
+- **新页面 UI / 组件复用（强制）**：[Cursor-Agent规则.md](./Cursor-Agent规则.md) · [品牌视觉规范.md](./品牌视觉规范.md) · [公共组件.md](./公共组件.md)
 
 日常开发脚本说明见 [../scripts/README.md](../scripts/README.md)。详细设计以 **Markdown 版** [详细设计文档.md](./详细设计文档.md) 为准（含 **§17 实施补充**）。
 
-**最后更新**：2026-07-09（**§12 术语表 v1.6** · C7-W API · OpenAPI 同步）
+**最后更新**：2026-07-10（**Cursor Agent 新页面 UI 规范** · `page-ui-standards.mdc`）
