@@ -208,7 +208,7 @@ router.use(`${API_PREFIX}/users`, usersRouter);
 
 ### 3.3 `@scope/web`
 
-**职责**：运营管理端（Ant Design Vue），非用户 C 端。系统管理（S 线）与发单接单商户端（M 线 · 远期 `/partner`）分域；C 端 AI 规划与模块 B marketplace 产品入口独立。
+**职责**：运营管理端（Ant Design Vue），非用户 C 端。系统管理（S 线）与发单接单 **商户工作台**（M 线 · **M7-α** `/partner`）分域；C 端 AI 规划与模块 B marketplace 产品入口独立。
 
 ```text
 packages/web/src/

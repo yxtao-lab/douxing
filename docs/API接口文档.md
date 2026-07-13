@@ -1,10 +1,10 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0 发单接单 marketplace**）  
-> **更新日期**：2026-07-10  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0～M2 发单接单 marketplace** · **M7-α Partner API**）  
+> **更新日期**：2026-07-13  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — 管理端诊断/沙箱/模板 API（§24）· SSE `node_status` 画布联动  
-> **发单接单（模块 B）**：[发单接单路线图.md](./发单接单路线图.md) — M0 已验收 · §25 marketplace GET API  
+> **发单接单（模块 B）**：[发单接单路线图.md](./发单接单路线图.md) — **MB2 ✅** · 当前 M3 · **M7-α** Partner API · §25  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -1493,10 +1493,10 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ## 25. 发单接单 marketplace
 
-> **模块 B** · **M0**（2026-07-09 验收）— 领域建模与只读 API 骨架；写操作（发单、报价、审核）在 **M1/M2** 交付。  
+> **模块 B** · **M0**（2026-07-09）· **M1/M2**（2026-07-10 验收）· **M7-α Partner**（2026-07-13）  
 > **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
 > **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
-> **验收**：`pnpm --filter @douxing/server m0:marketplace-cases`
+> **验收**：`m0:marketplace-cases` · `m1:marketplace-onboard-cases` · `m2:marketplace-demand-cases`（M7：`m7:marketplace-partner-cases` 待补）
 
 前缀：`/api/marketplace`
 
@@ -1597,7 +1597,30 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | `status` | string | `pending` / `active` / `frozen` |
 | `createdAt` | string | ISO 时间 |
 
-**M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：`POST` 入驻申请、`POST` 报价、`PATCH` 审核、`POST` 发单发布等。
+**M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：以下为 **M0 时代**笔误保留说明；**M1/M2 已交付**写操作，见下表。
+
+### M1/M2/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
+
+| 分组 | 方法 | 路径 | 鉴权 | 阶段 |
+|------|------|------|------|------|
+| 入驻 | POST | `/orgs/apply` | 登录 | M1 |
+| 入驻 | POST | `/orgs/documents/upload` | 登录 | M1 |
+| 入驻 | GET | `/orgs/mine` · `/orgs/:id` | 登录 | M1 |
+| 服务者 | POST | `/providers/apply` | 登录 | M1 |
+| 服务者 | GET | `/providers/me` · `/providers/:id` | 登录/公开 | M1 |
+| 平台审核 | GET/PATCH | `/admin/orgs/*` · `/admin/providers/*` | `marketplace:org:audit` 等 | M1 |
+| 发单 | POST/PATCH | `/demands` · `/demands/:id` | 登录 | M2 |
+| 大厅 | GET | `/demands` | 登录 | M2 |
+| 报价 | POST | `/demands/:id/quotes` | 登录（approved 服务方） | M2 |
+| 选定 | POST | `/demands/:id/select-quote` | 登录（发单方） | M2 |
+| 报价列表 | GET | `/demands/:id/quotes` · `/quotes/mine` | 登录 | M2 |
+| 订单 | GET | `/orders/mine` · `/orders/seller` · `/orders/:id` | 登录 | M2 |
+| 履约 | POST/PATCH | `/orders/:id/pay-mock` · `/orders/:id/status` | 登录 | M2 |
+| 监管 | GET | `/admin/demands` | `marketplace:demand:list` | M2 |
+| Partner | GET | `/partner/context` | 登录 + `merchant` | M7-α |
+| Partner | POST | `/partner/enroll` | 登录 | M7-α |
+
+路由实现：`packages/server/src/routes/marketplace/*`；Web 商户页消费 Partner + 上述卖方 API。
 
 ---
 
@@ -1605,6 +1628,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-13 | **M7-α Partner**：§25 增 M1/M2/M7-α API 速查表 · `GET/POST /partner/*`；MB2 ✅ 状态同步 |
 | 2026-07-10 | **M0 发单接单**：§25 `/api/marketplace/*`（5 个 GET）；§23 增 marketplace 枚举；总览 **125** 项；OpenAPI **103** 路径 / **122** 操作 |
 | 2026-07-09 | **C7-W**：§24 管理端 `admin/plan-sessions`（6 项）+ `admin/workflow-templates`（8 项）；§8 SSE 增 `node_status` 与 `tool_call.nodeId`；总览 **120** 项；OpenAPI **98** 路径 / **117** 操作 |
 | 2026-07-07 | **双 Token**：§4 增 `POST /refresh` · `POST /logout`；`LoginResult` 增 `refreshToken` · `expiresIn`；总览认证项 +2（见 §2）；专题 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |
