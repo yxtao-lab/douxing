@@ -230,12 +230,16 @@ export async function listServiceProvidersForAdminPage(options: {
   pageSize: number;
   certStatus?: string;
   keyword?: string;
+  providerType?: string;
 }): Promise<{ items: ServiceProviderSummary[]; total: number; page: number; pageSize: number }> {
   const db = getDb();
   const conditions = [];
 
   if (options.certStatus) {
     conditions.push(eq(serviceProvider.certStatus, options.certStatus));
+  }
+  if (options.providerType) {
+    conditions.push(eq(serviceProvider.providerType, options.providerType));
   }
   if (options.keyword) {
     const pattern = `%${options.keyword}%`;

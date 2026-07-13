@@ -151,6 +151,7 @@ router.get('/providers/pending', authMiddleware, async (req, res) => {
 
   const pagination = parsePaginationQuery(req.query as Record<string, unknown>);
   const keyword = parseOptionalString(req.query as Record<string, unknown>, 'keyword');
+  const providerType = parseOptionalString(req.query as Record<string, unknown>, 'providerType');
 
   try {
     const result = await listServiceProvidersForAdminPage({
@@ -158,6 +159,7 @@ router.get('/providers/pending', authMiddleware, async (req, res) => {
       pageSize: pagination.pageSize,
       certStatus: 'pending',
       keyword,
+      providerType,
     });
     success(res, result);
   } catch (err) {

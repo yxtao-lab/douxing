@@ -14,6 +14,8 @@ import {
   type ServiceOrderDetail,
   type ServiceOrderStatusInput,
   type ServiceOrderSummary,
+  type ServiceProviderReviewInput,
+  type ServiceProviderSummary,
 } from '@douxing/shared';
 
 export interface MarketplaceDemandListParams {
@@ -89,6 +91,48 @@ export async function reviewMarketplaceOrg(orgId: number, body: BizOrgReviewInpu
     body,
   );
   return data.data;
+}
+
+/**
+ * 分页获取待审个人服务者列表。
+ *
+ * @param params - 筛选与分页参数
+ * @returns 分页结果
+ */
+export async function fetchPendingMarketplaceProvidersPage(params: {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  providerType?: string;
+}) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.providerType) query.set('providerType', params.providerType);
+  const { data } = await http.get<ApiResponse<PaginatedResult<ServiceProviderSummary>>>(
+    `/marketplace/admin/providers/pending?${query.toString()}`,
+  );
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+}
+
+/**
+ * 审核个人服务者认证申请。
+ *
+ * @param providerId - 服务者 ID
+ * @param body - 审核动作与备注
+ * @returns 更新后的服务者摘要
+ */
+export async function reviewMarketplaceProvider(providerId: number, body: ServiceProviderReviewInput) {
+  const { data } = await http.patch<ApiResponse<{ provider: ServiceProviderSummary }>>(
+    `/marketplace/admin/providers/${providerId}/review`,
+    body,
+  );
+  return data.data?.provider;
 }
 
 /**

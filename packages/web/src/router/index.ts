@@ -206,6 +206,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'marketplace/providers/pending',
+          name: 'marketplace-providers-pending',
+          component: () => import('@/views/MarketplaceProvidersPendingView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.marketplaceProvidersPending',
+            menuGroupKey: 'web.menu.marketplace',
+            icon: 'UserOutlined',
+            perm: 'marketplace:org:audit',
+          },
+        },
+        {
           path: 'marketplace/demands',
           name: 'marketplace-demands',
           component: () => import('@/views/MarketplaceDemandsView.vue'),

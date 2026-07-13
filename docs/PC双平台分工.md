@@ -140,7 +140,8 @@ Web 管理端 (:5173)     ──┘
 
 | 模块 | 路由 | 状态 | 说明 |
 |------|------|------|------|
-| 入驻审核 | `/marketplace/orgs/pending` | ✅ | 商户 org 审核；**个人 provider Web 审核页待补** |
+| 入驻审核 | `/marketplace/orgs/pending` | ✅ | 商户 org 审核 |
+| 服务者审核 | `/marketplace/providers/pending` | ✅ | 个人 provider 认证审核 |
 | 需求监管 | `/marketplace/demands` | ✅ | 全站需求单列表 + 筛选 + 导出 |
 
 **商户工作台（M7-α · `merchant` 角色）**：

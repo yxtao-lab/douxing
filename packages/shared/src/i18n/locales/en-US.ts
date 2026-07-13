@@ -135,6 +135,7 @@ export const sharedEnUS = {
     playbooksManage: 'Route Playbooks',
     marketplaceOrgs: 'Business Orgs',
     marketplaceOrgsPending: 'Onboarding Review',
+    marketplaceProvidersPending: 'Provider Review',
     marketplaceDemands: 'Service Demands',
     analytics: 'Analytics',
     planDiagnostics: 'Plan Diagnostics',

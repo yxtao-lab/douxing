@@ -467,7 +467,8 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'marketplace', menuName: '发单接单', menuType: MenuType.DIRECTORY, icon: 'ShopOutlined', sortOrder: 25 },
   { menuKey: 'marketplace-orgs', menuName: '商户管理', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs', perms: 'marketplace:org:list', icon: 'TeamOutlined', sortOrder: 251 },
   { menuKey: 'marketplace-orgs-pending', menuName: '入驻审核', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs/pending', perms: 'marketplace:org:audit', icon: 'AuditOutlined', sortOrder: 252 },
-  { menuKey: 'marketplace-demands', menuName: '需求单', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/demands', perms: 'marketplace:demand:list', icon: 'FileSearchOutlined', sortOrder: 253 },
+  { menuKey: 'marketplace-providers-pending', menuName: '服务者审核', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/providers/pending', perms: 'marketplace:org:audit', icon: 'UserOutlined', sortOrder: 253 },
+  { menuKey: 'marketplace-demands', menuName: '需求单', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/demands', perms: 'marketplace:demand:list', icon: 'FileSearchOutlined', sortOrder: 254 },
   { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
   { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
   { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
@@ -520,7 +521,7 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'api-log',
     'ai-service-log',
   ],
-  [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'route-media-pending', 'playbooks', 'marketplace', 'marketplace-orgs-pending'],
+  [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'route-media-pending', 'playbooks', 'marketplace', 'marketplace-orgs-pending', 'marketplace-providers-pending'],
   [RoleCode.MERCHANT]: [
     'partner-workbench',
     'partner-home',

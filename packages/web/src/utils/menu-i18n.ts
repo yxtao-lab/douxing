@@ -22,6 +22,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   marketplace: 'web.menu.marketplace',
   'marketplace-orgs': 'web.marketplaceOrgs',
   'marketplace-orgs-pending': 'web.marketplaceOrgsPending',
+  'marketplace-providers-pending': 'web.marketplaceProvidersPending',
   'marketplace-demands': 'web.marketplaceDemands',
   system: 'web.menu.system',
   'sys-users': 'web.sysUsers',

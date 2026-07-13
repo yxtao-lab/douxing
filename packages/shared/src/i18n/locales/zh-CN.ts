@@ -135,6 +135,7 @@ export const sharedZhCN = {
     playbooksManage: '玩法动线',
     marketplaceOrgs: '商户管理',
     marketplaceOrgsPending: '入驻审核',
+    marketplaceProvidersPending: '服务者审核',
     marketplaceDemands: '需求单',
     analytics: '数据分析',
     planDiagnostics: '规划诊断',
