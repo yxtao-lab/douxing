@@ -1,19 +1,22 @@
 <template>
-  <div class="partner-page">
-    <a-button type="link" class="back-link" @click="$router.push({ name: 'partner-onboard' })">← {{ t('partner.onboardTitle') }}</a-button>
-    <h1 class="partner-page-title">{{ t('marketplace.orgApplyTitle') }}</h1>
+  <a-spin :spinning="loading">
+    <a-card v-if="ownerOrg && !canApply" class="partner-form-card">
+      <h3 class="partner-status-title">{{ t('partner.statusCardTitle') }}</h3>
+      <p class="partner-status-line">{{ t('partner.fieldOrgName') }}：{{ ownerOrg.org.name }}</p>
+      <p class="partner-status-line">{{ t('partner.fieldOrgType') }}：{{ orgTypeLabel(ownerOrg.org.orgType) }}</p>
+      <p class="partner-status-line">{{ t('marketplace.colStatus') }}：{{ orgStatusLabel(ownerOrg.org.status) }}</p>
+      <p v-if="ownerOrg.org.reviewNote" class="partner-status-line">{{ t('partner.reviewNote') }}：{{ ownerOrg.org.reviewNote }}</p>
+    </a-card>
 
-    <a-spin :spinning="loading">
-      <a-card v-if="ownerOrg && !canApply" class="status-card">
-        <h3>{{ t('partner.statusCardTitle') }}</h3>
-        <p>{{ t('partner.fieldOrgName') }}：{{ ownerOrg.org.name }}</p>
-        <p>{{ t('partner.fieldOrgType') }}：{{ orgTypeLabel(ownerOrg.org.orgType) }}</p>
-        <p>{{ t('marketplace.colStatus') }}：{{ orgStatusLabel(ownerOrg.org.status) }}</p>
-        <p v-if="ownerOrg.org.reviewNote">{{ t('partner.reviewNote') }}：{{ ownerOrg.org.reviewNote }}</p>
-      </a-card>
-
-      <a-form v-else layout="vertical" class="form-card" @finish="handleSubmit">
-        <a-alert v-if="ownerOrg?.org.status === 'rejected'" type="warning" :message="t('partner.reapplyHint')" show-icon class="mb-4" />
+    <a-card v-else class="partner-form-card">
+      <a-form layout="vertical">
+        <a-alert
+          v-if="ownerOrg?.org.status === 'rejected'"
+          type="warning"
+          :message="t('partner.reapplyHint')"
+          show-icon
+          class="partner-form-alert"
+        />
         <a-form-item :label="t('partner.fieldOrgName')" required>
           <a-input v-model:value="name" :placeholder="t('partner.orgNamePlaceholder')" />
         </a-form-item>
@@ -31,16 +34,16 @@
         </a-form-item>
         <a-form-item :label="t('partner.fieldLicenseDoc')" required>
           <input type="file" accept="image/*,application/pdf" @change="onLicenseFile" />
-          <p v-if="licenseDoc" class="hint">{{ t('partner.docUploaded', { name: licenseDoc.fileName }) }}</p>
+          <p v-if="licenseDoc" class="partner-form-hint">{{ t('partner.docUploaded', { name: licenseDoc.fileName }) }}</p>
         </a-form-item>
         <a-form-item :label="t('partner.fieldPortfolioDoc')">
           <input type="file" accept="image/*,application/pdf" @change="onPortfolioFile" />
-          <p v-if="portfolioDoc" class="hint">{{ t('partner.docUploaded', { name: portfolioDoc.fileName }) }}</p>
+          <p v-if="portfolioDoc" class="partner-form-hint">{{ t('partner.docUploaded', { name: portfolioDoc.fileName }) }}</p>
         </a-form-item>
-        <a-button type="primary" html-type="submit" :loading="submitting">{{ t('partner.orgApplySubmit') }}</a-button>
+        <a-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('partner.orgApplySubmit') }}</a-button>
       </a-form>
-    </a-spin>
-  </div>
+    </a-card>
+  </a-spin>
 </template>
 
 <script setup lang="ts">
@@ -53,10 +56,9 @@ import {
   type MarketplaceDocumentUploadResult,
 } from '@/api/marketplace-partner';
 import { useLocale } from '@/i18n/useLocale';
-import { usePageTitle } from '@/i18n/usePageTitle';
+import { getAppErrorMessage } from '@/utils/error-message';
 import { message } from 'ant-design-vue';
 
-usePageTitle('marketplace.orgApplyTitle');
 const { t } = useLocale();
 
 const loading = ref(true);
@@ -174,6 +176,8 @@ async function handleSubmit() {
     });
     message.success(t('partner.orgApplySuccess'));
     await load();
+  } catch (error) {
+    message.error(getAppErrorMessage(error, t('partner.orgApplyInvalid')));
   } finally {
     submitting.value = false;
   }
@@ -183,9 +187,28 @@ onMounted(load);
 </script>
 
 <style scoped>
-.partner-page-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
-.back-link { padding-left: 0; margin-bottom: 8px; }
-.form-card { max-width: 640px; }
-.hint { margin-top: 8px; color: #666; font-size: 13px; }
-.mb-4 { margin-bottom: 16px; }
+.partner-form-card {
+  max-width: 640px;
+}
+
+.partner-status-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.partner-status-line {
+  margin: 0 0 8px;
+  color: #6b7280;
+}
+
+.partner-form-alert {
+  margin-bottom: 16px;
+}
+
+.partner-form-hint {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 13px;
+}
 </style>

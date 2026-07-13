@@ -1,37 +1,51 @@
 <template>
-  <div class="partner-page">
-    <h1 class="partner-page-title">{{ t('partner.pageTitle') }}</h1>
-    <p class="partner-page-desc">{{ t('partner.homeDesc') }}</p>
+  <div class="workbench">
+    <a-page-header
+      class="workbench-header"
+      :title="t('partner.pageTitle')"
+      :sub-title="t('partner.homeDesc')"
+    />
 
     <a-spin :spinning="loading">
-      <div class="partner-cards">
-        <a-card class="partner-card" :title="t('partner.nav.onboard')">
-          <template v-if="context">
-            <p v-if="context.provider">
-              {{ t('marketplace.providerApplyTitle') }}：
-              {{ certStatusLabel(context.provider.certStatus) }}
-            </p>
-            <p v-for="item in context.memberships" :key="item.orgId">
-              {{ item.org.name }} · {{ orgStatusLabel(item.org.status) }}
-            </p>
-            <p v-if="!context.provider && context.memberships.length === 0" class="text-muted">
-              {{ t('partner.notQuotable') }}
-            </p>
-          </template>
-          <a-button type="link" @click="$router.push({ name: 'partner-onboard' })">{{ t('partner.goOnboard') }}</a-button>
-        </a-card>
+      <a-row :gutter="[16, 16]">
+        <a-col :xs="24" :md="8">
+          <WorkbenchPanel :title="t('partner.nav.onboard')">
+            <template v-if="context">
+              <p v-if="context.provider" class="panel-line">
+                {{ t('marketplace.providerApplyTitle') }}：
+                {{ certStatusLabel(context.provider.certStatus) }}
+              </p>
+              <p v-for="item in context.memberships" :key="item.orgId" class="panel-line">
+                {{ item.org.name }} · {{ orgStatusLabel(item.org.status) }}
+              </p>
+              <p v-if="!context.provider && context.memberships.length === 0" class="panel-muted">
+                {{ t('partner.notQuotable') }}
+              </p>
+            </template>
+            <a-button type="link" class="panel-link" @click="$router.push({ name: 'partner-onboard' })">
+              {{ t('partner.goOnboard') }}
+            </a-button>
+          </WorkbenchPanel>
+        </a-col>
 
-        <a-card class="partner-card" :title="t('partner.nav.demands')">
-          <p>{{ canQuote ? t('partner.demandsDesc') : t('partner.notQuotable') }}</p>
-          <a-button type="primary" :disabled="!canQuote" @click="$router.push({ name: 'partner-demands' })">
-            {{ t('partner.nav.demands') }}
-          </a-button>
-        </a-card>
+        <a-col :xs="24" :md="8">
+          <WorkbenchPanel :title="t('partner.nav.demands')">
+            <p class="panel-line">{{ canQuote ? t('partner.demandsDesc') : t('partner.notQuotable') }}</p>
+            <a-button type="primary" :disabled="!canQuote" @click="$router.push({ name: 'partner-demands' })">
+              {{ t('partner.nav.demands') }}
+            </a-button>
+          </WorkbenchPanel>
+        </a-col>
 
-        <a-card class="partner-card" :title="t('partner.nav.orders')">
-          <a-button @click="$router.push({ name: 'partner-orders' })">{{ t('partner.nav.orders') }}</a-button>
-        </a-card>
-      </div>
+        <a-col :xs="24" :md="8">
+          <WorkbenchPanel :title="t('partner.nav.orders')">
+            <p class="panel-line">{{ t('partner.ordersHomeHint') }}</p>
+            <a-button @click="$router.push({ name: 'partner-orders' })">
+              {{ t('partner.nav.orders') }}
+            </a-button>
+          </WorkbenchPanel>
+        </a-col>
+      </a-row>
     </a-spin>
   </div>
 </template>
@@ -39,6 +53,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue';
 import { BizOrgStatus, CertStatus } from '@douxing/shared';
+import WorkbenchPanel from '@/components/workbench/WorkbenchPanel.vue';
 import { usePartnerContext } from '@/composables/usePartnerContext';
 import { useLocale } from '@/i18n/useLocale';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -87,24 +102,32 @@ onMounted(reload);
 </script>
 
 <style scoped>
-.partner-page-title {
+.workbench {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.workbench-header {
+  padding: 0 0 16px;
+  background: transparent;
+}
+
+.panel-line {
   margin: 0 0 8px;
-  font-size: 22px;
-  font-weight: 600;
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
-.partner-page-desc {
-  margin: 0 0 24px;
-  color: #666;
+.panel-muted {
+  margin: 0 0 8px;
+  color: #9ca3af;
+  font-size: 14px;
 }
 
-.partner-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
-}
-
-.text-muted {
-  color: #999;
+.panel-link {
+  padding: 0;
 }
 </style>

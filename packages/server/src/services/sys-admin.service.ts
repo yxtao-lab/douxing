@@ -440,7 +440,13 @@ export interface MenuSeedItem {
 
 export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'home', menuName: '工作台', menuType: MenuType.MENU, path: '/', icon: 'HomeOutlined', sortOrder: 1 },
-  { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 2 },
+  { menuKey: 'partner-workbench', menuName: '商户工作台', menuType: MenuType.DIRECTORY, icon: 'ShopOutlined', sortOrder: 2 },
+  { menuKey: 'partner-home', menuName: '商户首页', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner', perms: 'marketplace:partner:home', icon: 'HomeOutlined', sortOrder: 21 },
+  { menuKey: 'partner-onboard', menuName: '入驻认证', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/onboard', perms: 'marketplace:partner:onboard', icon: 'AuditOutlined', sortOrder: 22 },
+  { menuKey: 'partner-demands', menuName: '接单大厅', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/demands', perms: 'marketplace:partner:demands', icon: 'FileSearchOutlined', sortOrder: 23 },
+  { menuKey: 'partner-quotes', menuName: '我的报价', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/quotes', perms: 'marketplace:partner:quotes', icon: 'TagOutlined', sortOrder: 24 },
+  { menuKey: 'partner-orders', menuName: '我的订单', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/orders', perms: 'marketplace:partner:orders', icon: 'ShoppingOutlined', sortOrder: 25 },
+  { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 3 },
   { menuKey: 'analytics', menuName: '数据分析', parentKey: 'data', menuType: MenuType.MENU, path: '/analytics', perms: 'data:analytics:view', icon: 'BarChartOutlined', sortOrder: 3 },
   { menuKey: 'plan-diagnostics', menuName: '规划诊断', parentKey: 'data', menuType: MenuType.MENU, path: '/plan-sessions/diagnostics', perms: 'data:analytics:view', icon: 'NodeIndexOutlined', sortOrder: 4 },
   { menuKey: 'workflow-templates', menuName: '工作流模板', parentKey: 'data', menuType: MenuType.MENU, path: '/workflow-templates', perms: 'data:analytics:view', icon: 'ApartmentOutlined', sortOrder: 5 },
@@ -462,12 +468,6 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'marketplace-orgs', menuName: '商户管理', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs', perms: 'marketplace:org:list', icon: 'TeamOutlined', sortOrder: 251 },
   { menuKey: 'marketplace-orgs-pending', menuName: '入驻审核', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs/pending', perms: 'marketplace:org:audit', icon: 'AuditOutlined', sortOrder: 252 },
   { menuKey: 'marketplace-demands', menuName: '需求单', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/demands', perms: 'marketplace:demand:list', icon: 'FileSearchOutlined', sortOrder: 253 },
-  { menuKey: 'partner-workbench', menuName: '商户工作台', menuType: MenuType.DIRECTORY, icon: 'ShopOutlined', sortOrder: 26 },
-  { menuKey: 'partner-home', menuName: '商户首页', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner', perms: 'marketplace:partner:home', icon: 'HomeOutlined', sortOrder: 261 },
-  { menuKey: 'partner-onboard', menuName: '入驻认证', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/onboard', perms: 'marketplace:partner:onboard', icon: 'AuditOutlined', sortOrder: 262 },
-  { menuKey: 'partner-demands', menuName: '接单大厅', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/demands', perms: 'marketplace:partner:demands', icon: 'FileSearchOutlined', sortOrder: 263 },
-  { menuKey: 'partner-quotes', menuName: '我的报价', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/quotes', perms: 'marketplace:partner:quotes', icon: 'TagOutlined', sortOrder: 264 },
-  { menuKey: 'partner-orders', menuName: '我的订单', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/orders', perms: 'marketplace:partner:orders', icon: 'ShoppingOutlined', sortOrder: 265 },
   { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
   { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
   { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
@@ -732,10 +732,26 @@ export async function seedDefaultRoleMenus() {
   }
 }
 
+/** 将 DEFAULT_MENU_SEED 中的 icon、sortOrder 同步到已有 sys_menu 记录。 */
+export async function syncMenuSeedMetadata() {
+  const db = getDb();
+  for (const item of DEFAULT_MENU_SEED) {
+    await db
+      .update(sysMenu)
+      .set({
+        ...(item.icon ? { icon: item.icon } : {}),
+        sortOrder: item.sortOrder,
+      })
+      .where(eq(sysMenu.menuKey, item.menuKey));
+  }
+  console.log('[seed] Synced menu icons and sortOrder from DEFAULT_MENU_SEED');
+}
+
 /** 将 DEFAULT_MENU_SEED 中缺失的菜单写入库，并授予管理员/预置角色 */
 export async function syncMissingMenusFromSeed() {
   const { ensureMerchantRoleSeed } = await import('./marketplace/marketplace-merchant-role.service.js');
   await ensureMerchantRoleSeed();
+  await syncMenuSeedMetadata();
   const db = getDb();
   const menuRows = await db.select({ id: sysMenu.id, menuKey: sysMenu.menuKey }).from(sysMenu);
   const idByKey = new Map(menuRows.map((row) => [row.menuKey, row.id]));

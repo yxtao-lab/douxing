@@ -1,5 +1,5 @@
 /**
- * 将 DEFAULT_MENU_SEED 中缺失的 sys_menu 写入库并授予预置角色。
+ * 将 DEFAULT_MENU_SEED 中缺失的 sys_menu 写入库，并同步 icon / sortOrder。
  *
  * 用法：pnpm --filter @douxing/server db:sync-menus
  */

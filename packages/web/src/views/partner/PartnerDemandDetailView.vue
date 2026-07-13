@@ -1,18 +1,20 @@
 <template>
-  <div class="partner-page">
-    <a-button type="link" class="back-link" @click="$router.push({ name: 'partner-demands' })">← {{ t('partner.demandsTitle') }}</a-button>
-    <h1 class="partner-page-title">{{ t('partner.demandDetailTitle') }}</h1>
+  <PageContainer :title="t('partner.demandDetailTitle')" :description="demand?.demandNo">
+    <template #extra>
+      <a-button @click="$router.push({ name: 'partner-demands' })">
+        {{ t('partner.backToDemands') }}
+      </a-button>
+    </template>
 
     <a-spin :spinning="loading">
       <template v-if="demand">
-        <a-card class="mb-4">
-          <h2>{{ demand.title }}</h2>
-          <p>{{ demand.demandNo }} · {{ demand.destination || '-' }}</p>
-          <p>{{ demandStatusLabel(demand.status) }}</p>
-          <p v-if="demand.description" class="desc">{{ demand.description }}</p>
+        <a-card class="detail-card">
+          <h2 class="detail-title">{{ demand.title }}</h2>
+          <p class="detail-meta">{{ demand.destination || '-' }} · {{ demandStatusLabel(demand.status) }}</p>
+          <p v-if="demand.description" class="detail-desc">{{ demand.description }}</p>
         </a-card>
 
-        <a-card v-if="canQuote" :title="t('partner.quoteFormTitle')">
+        <a-card v-if="canQuote" :title="t('partner.quoteFormTitle')" class="detail-card">
           <a-form layout="vertical" @finish="handleSubmit">
             <a-form-item v-if="quoteOrgOptions.length > 1" :label="t('partner.quoteOrg')">
               <a-select v-model:value="selectedOrgId" :options="quoteOrgOptions" />
@@ -29,7 +31,7 @@
         <a-alert v-else type="info" :message="t('partner.notQuotable')" show-icon />
       </template>
     </a-spin>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
@@ -38,6 +40,7 @@ import { useRoute, useRouter } from 'vue-router';
 import type { ServiceDemandDetail } from '@douxing/shared';
 import { fetchPartnerDemandDetail, submitPartnerQuote } from '@/api/marketplace-partner';
 import { usePartnerContext } from '@/composables/usePartnerContext';
+import PageContainer from '@/layouts/components/PageContainer.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { message } from 'ant-design-vue';
@@ -130,8 +133,24 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.partner-page-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
-.back-link { padding-left: 0; margin-bottom: 8px; }
-.mb-4 { margin-bottom: 16px; }
-.desc { margin-top: 12px; white-space: pre-wrap; }
+.detail-card {
+  margin-bottom: 16px;
+}
+
+.detail-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.detail-meta {
+  margin: 0;
+  color: #6b7280;
+}
+
+.detail-desc {
+  margin: 12px 0 0;
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
 </style>

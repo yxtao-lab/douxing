@@ -1,18 +1,20 @@
 <template>
-  <div class="partner-page">
-    <a-button type="link" class="back-link" @click="$router.push({ name: 'partner-orders' })">← {{ t('partner.ordersTitle') }}</a-button>
-    <h1 class="partner-page-title">{{ t('partner.orderDetailTitle') }}</h1>
+  <PageContainer :title="t('partner.orderDetailTitle')" :description="order?.orderNo">
+    <template #extra>
+      <a-button @click="$router.push({ name: 'partner-orders' })">
+        {{ t('partner.backToOrders') }}
+      </a-button>
+    </template>
 
     <a-spin :spinning="loading">
-      <a-card v-if="order">
-        <p>{{ order.orderNo }}</p>
-        <h2>{{ order.demandTitle }}</h2>
-        <p class="amount">¥{{ order.totalAmount }}</p>
-        <p>{{ orderStatusLabel(order.status) }}</p>
+      <a-card v-if="order" class="detail-card">
+        <h2 class="detail-title">{{ order.demandTitle }}</h2>
+        <p class="detail-amount">¥{{ order.totalAmount }}</p>
+        <p class="detail-meta">{{ orderStatusLabel(order.status) }}</p>
         <a-button
           v-if="nextStatus"
           type="primary"
-          class="mt-4"
+          class="detail-action"
           :loading="advancing"
           @click="handleAdvance"
         >
@@ -20,7 +22,7 @@
         </a-button>
       </a-card>
     </a-spin>
-  </div>
+  </PageContainer>
 </template>
 
 <script setup lang="ts">
@@ -28,6 +30,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ServiceOrderStatus, type ServiceOrderDetail } from '@douxing/shared';
 import { advanceSellerMarketplaceOrder, fetchMarketplaceOrderDetail } from '@/api/marketplace-partner';
+import PageContainer from '@/layouts/components/PageContainer.vue';
 import { useLocale } from '@/i18n/useLocale';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { message } from 'ant-design-vue';
@@ -93,8 +96,29 @@ onMounted(load);
 </script>
 
 <style scoped>
-.partner-page-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
-.back-link { padding-left: 0; margin-bottom: 8px; }
-.amount { font-size: 24px; font-weight: 700; color: #1677ff; }
-.mt-4 { margin-top: 16px; }
+.detail-card {
+  max-width: 640px;
+}
+
+.detail-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.detail-amount {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.detail-meta {
+  margin: 0;
+  color: #6b7280;
+}
+
+.detail-action {
+  margin-top: 16px;
+}
 </style>

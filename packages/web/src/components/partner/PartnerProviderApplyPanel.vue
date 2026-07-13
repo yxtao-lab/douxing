@@ -1,19 +1,22 @@
 <template>
-  <div class="partner-page">
-    <a-button type="link" class="back-link" @click="$router.push({ name: 'partner-onboard' })">← {{ t('partner.onboardTitle') }}</a-button>
-    <h1 class="partner-page-title">{{ t('marketplace.providerApplyTitle') }}</h1>
+  <a-spin :spinning="loading">
+    <a-card v-if="provider && !canApply" class="partner-form-card">
+      <h3 class="partner-status-title">{{ t('partner.statusCardTitle') }}</h3>
+      <p class="partner-status-line">{{ t('partner.fieldProviderType') }}：{{ providerTypeLabel(provider.providerType) }}</p>
+      <p class="partner-status-line">{{ t('marketplace.colStatus') }}：{{ certStatusLabel(provider.certStatus) }}</p>
+      <p v-if="provider.displayName" class="partner-status-line">{{ t('partner.fieldDisplayName') }}：{{ provider.displayName }}</p>
+      <p v-if="provider.reviewNote" class="partner-status-line">{{ t('partner.reviewNote') }}：{{ provider.reviewNote }}</p>
+    </a-card>
 
-    <a-spin :spinning="loading">
-      <a-card v-if="provider && !canApply" class="status-card">
-        <h3>{{ t('partner.statusCardTitle') }}</h3>
-        <p>{{ t('partner.fieldProviderType') }}：{{ providerTypeLabel(provider.providerType) }}</p>
-        <p>{{ t('marketplace.colStatus') }}：{{ certStatusLabel(provider.certStatus) }}</p>
-        <p v-if="provider.displayName">{{ t('partner.fieldDisplayName') }}：{{ provider.displayName }}</p>
-        <p v-if="provider.reviewNote">{{ t('partner.reviewNote') }}：{{ provider.reviewNote }}</p>
-      </a-card>
-
-      <a-form v-else layout="vertical" class="form-card" @finish="handleSubmit">
-        <a-alert v-if="provider?.certStatus === 'rejected'" type="warning" :message="t('partner.reapplyHint')" show-icon class="mb-4" />
+    <a-card v-else class="partner-form-card">
+      <a-form layout="vertical">
+        <a-alert
+          v-if="provider?.certStatus === 'rejected'"
+          type="warning"
+          :message="t('partner.reapplyHint')"
+          show-icon
+          class="partner-form-alert"
+        />
         <a-form-item :label="t('partner.fieldProviderType')" required>
           <a-select v-model:value="providerType" :options="providerTypeOptions" />
         </a-form-item>
@@ -29,10 +32,10 @@
         <a-form-item :label="t('partner.fieldBio')">
           <a-textarea v-model:value="bio" :placeholder="t('partner.bioPlaceholder')" :rows="3" />
         </a-form-item>
-        <a-button type="primary" html-type="submit" :loading="submitting">{{ t('partner.providerApplySubmit') }}</a-button>
+        <a-button type="primary" :loading="submitting" @click="handleSubmit">{{ t('partner.providerApplySubmit') }}</a-button>
       </a-form>
-    </a-spin>
-  </div>
+    </a-card>
+  </a-spin>
 </template>
 
 <script setup lang="ts">
@@ -40,10 +43,9 @@ import { computed, onMounted, ref } from 'vue';
 import { CertStatus, ProviderType, SERVICE_CATEGORY_TREE, type ServiceProviderSummary } from '@douxing/shared';
 import { applyMarketplaceProvider, fetchMyServiceProvider } from '@/api/marketplace-partner';
 import { useLocale } from '@/i18n/useLocale';
-import { usePageTitle } from '@/i18n/usePageTitle';
+import { getAppErrorMessage } from '@/utils/error-message';
 import { message } from 'ant-design-vue';
 
-usePageTitle('marketplace.providerApplyTitle');
 const { t } = useLocale();
 
 const loading = ref(true);
@@ -135,6 +137,8 @@ async function handleSubmit() {
     });
     message.success(t('partner.providerApplySuccess'));
     await load();
+  } catch (error) {
+    message.error(getAppErrorMessage(error, t('partner.providerApplyInvalid')));
   } finally {
     submitting.value = false;
   }
@@ -144,8 +148,22 @@ onMounted(load);
 </script>
 
 <style scoped>
-.partner-page-title { margin: 0 0 16px; font-size: 22px; font-weight: 600; }
-.back-link { padding-left: 0; margin-bottom: 8px; }
-.form-card { max-width: 640px; }
-.mb-4 { margin-bottom: 16px; }
+.partner-form-card {
+  max-width: 640px;
+}
+
+.partner-status-title {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.partner-status-line {
+  margin: 0 0 8px;
+  color: #6b7280;
+}
+
+.partner-form-alert {
+  margin-bottom: 16px;
+}
 </style>

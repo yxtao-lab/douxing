@@ -10,8 +10,8 @@ import { seedAchievementDefinitions } from '../services/achievement.service.js';
 import { seedRoutePlaybooks } from '../services/playbook.service.js';
 import { seedWorkflowTemplates } from '../services/workflow-template.service.js';
 import { sysDept, sysPost, sysDictType, sysDictData, sysNotice, sysMenu } from '../db/schema/sys-admin.js';
-import { DEFAULT_MENU_SEED, seedDefaultRoleMenus, syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
-import { seedMarketplaceDemo } from '../services/marketplace/marketplace-seed.service.js';
+import { DEFAULT_MENU_SEED, seedDefaultRoleMenus, syncMenuSeedMetadata, syncMissingMenusFromSeed } from '../services/sys-admin.service.js';
+import { seedMarketplaceDemo, seedMerchantPartnerUser } from '../services/marketplace/marketplace-seed.service.js';
 import { RouteStatus } from '@douxing/shared';
 import { RoleCode, UserType, MemberLevel } from '@douxing/shared';
 import {
@@ -277,16 +277,7 @@ async function seedSystemAdmin() {
     }
     console.log('[seed] Created sys_menu');
   } else {
-    for (const item of DEFAULT_MENU_SEED) {
-      await db
-        .update(sysMenu)
-        .set({
-          ...(item.icon ? { icon: item.icon } : {}),
-          sortOrder: item.sortOrder,
-        })
-        .where(eq(sysMenu.menuKey, item.menuKey));
-    }
-    console.log('[seed] Synced menu icons and sortOrder from DEFAULT_MENU_SEED');
+    await syncMenuSeedMetadata();
   }
 
   await syncMissingMenusFromSeed();
@@ -319,6 +310,7 @@ async function main() {
   await seedMarketplaceDemo(demoUserId);
   await seedSystemConfig();
   await seedSystemAdmin();
+  await seedMerchantPartnerUser();
   console.log('[seed] Done');
   process.exit(0);
 }
