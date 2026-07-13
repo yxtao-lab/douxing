@@ -5,6 +5,7 @@ import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
 import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel, ApiError, ApiMessageKey } from '@douxing/shared';
 import { rewritePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 import { getPermissionsForUser } from './permission.service.js';
+import { syncMerchantRoleForUser } from './marketplace/marketplace-merchant-role.service.js';
 
 const PRESET_SET = new Set<string>(USER_INTEREST_PRESETS);
 
@@ -62,6 +63,8 @@ export async function getUserWithRoles(userId: number): Promise<UserInfo | null>
   const userRows = await db.select().from(users).where(eq(users.id, userId)).limit(1);
   const user = userRows[0];
   if (!user) return null;
+
+  await syncMerchantRoleForUser(userId);
 
   const roleRows = await db
     .select({ code: roles.code })

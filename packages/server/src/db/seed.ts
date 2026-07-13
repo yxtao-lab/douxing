@@ -28,6 +28,7 @@ async function seedRoles() {
     { code: RoleCode.ADMIN, name: '管理员', description: '系统管理员' },
     { code: RoleCode.OPERATOR, name: '运营', description: '业务与内容运营，无系统用户/角色删改' },
     { code: RoleCode.AUDITOR, name: '审核员', description: '景点审核与内容处理' },
+    { code: RoleCode.MERCHANT, name: '商户', description: '发单接单商户与个人服务者' },
     { code: RoleCode.USER, name: '普通用户', description: '普通注册用户' },
   ];
 

@@ -1,4 +1,4 @@
-import { and, desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, or } from 'drizzle-orm';
 import {
   ApiError,
   ApiMessageKey,
@@ -7,12 +7,13 @@ import {
   QuoteStatus,
   type DemandQuoteCreateInput,
   type DemandQuoteSummary,
+  type PartnerQuoteListItem,
 } from '@douxing/shared';
 import { getDb } from '../../db/client.js';
 import { bizOrg } from '../../db/schema/marketplace-biz-org.js';
 import { demandQuote, serviceDemand } from '../../db/schema/marketplace-demand.js';
 import { serviceProvider } from '../../db/schema/marketplace-provider.js';
-import { getOrgRoleForUser } from './marketplace-org-onboard.service.js';
+import { getOrgRoleForUser, listOrgMembershipsByUser } from './marketplace-org-onboard.service.js';
 import { getDemandById } from './marketplace-demand.service.js';
 import { isApprovedServiceProvider } from './marketplace-provider.service.js';
 
@@ -213,4 +214,53 @@ export async function getQuoteRowById(quoteId: number): Promise<typeof demandQuo
   const db = getDb();
   const rows = await db.select().from(demandQuote).where(eq(demandQuote.id, quoteId)).limit(1);
   return rows[0] ?? null;
+}
+
+/**
+ * 列出当前用户作为服务方提交的全部报价（个人或所属商户）。
+ *
+ * @param userId - 当前用户 ID
+ * @returns 按创建时间倒序的报价列表；无记录时为空数组
+ */
+export async function listPartnerQuotesByUser(userId: number): Promise<PartnerQuoteListItem[]> {
+  const memberships = await listOrgMembershipsByUser(userId);
+  const orgIds = memberships.map((item) => item.orgId);
+
+  const db = getDb();
+  const quoteConditions = [eq(demandQuote.providerUserId, userId)];
+  if (orgIds.length > 0) {
+    quoteConditions.push(inArray(demandQuote.orgId, orgIds));
+  }
+
+  const quoteRows = await db
+    .select()
+    .from(demandQuote)
+    .where(or(...quoteConditions))
+    .orderBy(desc(demandQuote.createdAt));
+
+  const result: PartnerQuoteListItem[] = [];
+  for (const row of quoteRows) {
+    const demand = await getDemandById(row.demandId);
+    let orgName: string | null = null;
+    if (row.orgId != null) {
+      const orgRows = await db.select({ name: bizOrg.name }).from(bizOrg).where(eq(bizOrg.id, row.orgId)).limit(1);
+      orgName = orgRows[0]?.name ?? null;
+    }
+    let providerDisplayName: string | null = null;
+    if (row.providerUserId != null) {
+      const providerRows = await db
+        .select({ displayName: serviceProvider.displayName })
+        .from(serviceProvider)
+        .where(eq(serviceProvider.userId, row.providerUserId))
+        .limit(1);
+      providerDisplayName = providerRows[0]?.displayName ?? null;
+    }
+    result.push({
+      ...toQuoteSummary(row, orgName, providerDisplayName),
+      demandTitle: demand?.title ?? null,
+      demandNo: demand?.demandNo ?? null,
+      demandStatus: (demand?.status ?? DemandStatus.DRAFT) as PartnerQuoteListItem['demandStatus'],
+    });
+  }
+  return result;
 }

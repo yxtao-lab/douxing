@@ -17,6 +17,7 @@ import {
 import { getDb } from '../../db/client.js';
 import { bizOrg, orgMember } from '../../db/schema/marketplace-biz-org.js';
 import { bizOrgDocument } from '../../db/schema/marketplace-biz-org-documents.js';
+import { syncMerchantRoleForUser } from './marketplace-merchant-role.service.js';
 
 const ACTIVE_OWNER_STATUSES = [BizOrgStatus.PENDING, BizOrgStatus.ACTIVE] as const;
 
@@ -155,6 +156,7 @@ export async function applyBizOrg(userId: number, input: BizOrgApplyInput): Prom
   if (!detail) {
     throw new ApiError(ApiMessageKey.SERVER_ERROR);
   }
+  await syncMerchantRoleForUser(userId);
   return detail;
 }
 

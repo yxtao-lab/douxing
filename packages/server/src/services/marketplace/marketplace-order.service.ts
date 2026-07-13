@@ -1,7 +1,8 @@
-import { and, desc, eq, ne } from 'drizzle-orm';
+import { and, desc, eq, inArray, ne, or } from 'drizzle-orm';
 import {
   ApiError,
   ApiMessageKey,
+  BizOrgStatus,
   DemandStatus,
   QuoteStatus,
   ServiceOrderStatus,
@@ -15,6 +16,7 @@ import { demandQuote, serviceDemand } from '../../db/schema/marketplace-demand.j
 import { serviceOrder } from '../../db/schema/marketplace-order.js';
 import { getDemandById, getDemandByIdForUser } from './marketplace-demand.service.js';
 import { generateServiceOrderNo } from './marketplace-org.service.js';
+import { getOrgRoleForUser, listOrgMembershipsByUser } from './marketplace-org-onboard.service.js';
 import { getQuoteRowById } from './marketplace-quote.service.js';
 
 const DEFAULT_PLATFORM_FEE_RATE = 0.05;
@@ -236,7 +238,7 @@ export async function getServiceOrderById(orderId: number): Promise<ServiceOrder
 }
 
 /**
- * 读取服务订单并校验买方或卖方归属。
+ * 读取服务订单并校验买方或卖方归属（含商户成员）。
  *
  * @param orderId - 订单 ID
  * @param userId - 当前用户 ID
@@ -249,11 +251,66 @@ export async function getOrderByIdForUser(orderId: number, userId: number): Prom
     throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_NOT_FOUND);
   }
   const isBuyer = order.buyerUserId === userId;
-  const isSeller = order.sellerProviderUserId === userId;
+  const isSeller = await isUserSellerForOrder(userId, order.sellerOrgId, order.sellerProviderUserId);
   if (!isBuyer && !isSeller) {
     throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN);
   }
   return order;
+}
+
+/**
+ * 判断用户是否为指定订单的卖方（个人服务者或商户成员）。
+ *
+ * @param userId - 当前用户 ID
+ * @param sellerOrgId - 卖方商户 ID；个人单为 `null`
+ * @param sellerProviderUserId - 卖方个人用户 ID；商户单为 `null`
+ * @returns 属于卖方可访问时为 true
+ */
+export async function isUserSellerForOrder(
+  userId: number,
+  sellerOrgId: number | null,
+  sellerProviderUserId: number | null,
+): Promise<boolean> {
+  if (sellerProviderUserId === userId) {
+    return true;
+  }
+  if (sellerOrgId != null) {
+    const role = await getOrgRoleForUser(userId, sellerOrgId);
+    return role != null;
+  }
+  return false;
+}
+
+/**
+ * 列出当前用户作为卖方的服务订单（个人服务者或 active 商户成员）。
+ *
+ * @param userId - 当前用户 ID
+ * @returns 按创建时间倒序的订单详情列表
+ */
+export async function listServiceOrdersBySeller(userId: number): Promise<ServiceOrderDetail[]> {
+  const memberships = await listOrgMembershipsByUser(userId);
+  const activeOrgIds = memberships
+    .filter((item) => item.org.status === BizOrgStatus.ACTIVE)
+    .map((item) => item.orgId);
+
+  const db = getDb();
+  const sellerConditions = [eq(serviceOrder.sellerProviderUserId, userId)];
+  if (activeOrgIds.length > 0) {
+    sellerConditions.push(inArray(serviceOrder.sellerOrgId, activeOrgIds));
+  }
+
+  const rows = await db
+    .select()
+    .from(serviceOrder)
+    .where(or(...sellerConditions))
+    .orderBy(desc(serviceOrder.createdAt));
+
+  const result: ServiceOrderDetail[] = [];
+  for (const row of rows) {
+    const demand = await getDemandById(row.demandId);
+    result.push(toOrderDetail(row, demand?.title ?? null, demand?.demandNo ?? null));
+  }
+  return result;
 }
 
 /**

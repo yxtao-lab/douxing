@@ -12,8 +12,8 @@
 
     <div class="user-layout-main">
       <section class="user-layout-hero">
-        <h1>{{ t('layout.loginHeroTitle') }}</h1>
-        <p>{{ t('layout.loginHeroDesc') }}</p>
+        <h1>{{ isPartnerLogin ? t('partner.brand') : t('layout.loginHeroTitle') }}</h1>
+        <p>{{ isPartnerLogin ? t('partner.loginHeroDesc') : t('layout.loginHeroDesc') }}</p>
       </section>
       <section class="user-layout-form">
         <router-view />
@@ -24,11 +24,14 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
+import { useRoute } from 'vue-router';
 import { isLocaleCode } from '@douxing/shared';
 import { useLocale } from '@/i18n/useLocale';
 import AppLogo from './components/AppLogo.vue';
 
+const route = useRoute();
 const { t, currentLocale, localeOptions, setLocale } = useLocale();
+const isPartnerLogin = computed(() => route.query.portal === 'partner');
 
 const localeSelectOptions = computed(() =>
   localeOptions.map((item) => ({ value: item.code, label: item.label })),

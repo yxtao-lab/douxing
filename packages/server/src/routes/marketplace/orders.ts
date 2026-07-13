@@ -7,6 +7,7 @@ import {
   advanceServiceOrderStatus,
   getOrderByIdForUser,
   listServiceOrdersByBuyer,
+  listServiceOrdersBySeller,
   payMockServiceOrder,
 } from '../../services/marketplace/marketplace-order.service.js';
 
@@ -35,6 +36,15 @@ function parseOrderId(raw: string): number | null {
 router.get('/mine', authMiddleware, async (req, res) => {
   try {
     const items = await listServiceOrdersByBuyer(req.auth!.userId);
+    success(res, { items });
+  } catch (err) {
+    failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+router.get('/seller', authMiddleware, async (req, res) => {
+  try {
+    const items = await listServiceOrdersBySeller(req.auth!.userId);
     success(res, { items });
   } catch (err) {
     failFromError(res, err, ApiMessageKey.SERVER_ERROR);

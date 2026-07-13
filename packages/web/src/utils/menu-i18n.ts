@@ -44,6 +44,12 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   'login-log': 'web.logLogin',
   'api-log': 'web.logApi',
   'ai-service-log': 'web.logAiService',
+  'partner-workbench': 'web.menu.partnerWorkbench',
+  'partner-home': 'partner.pageTitle',
+  'partner-onboard': 'partner.onboardTitle',
+  'partner-demands': 'partner.demandsTitle',
+  'partner-quotes': 'partner.quotesTitle',
+  'partner-orders': 'partner.ordersTitle',
 };
 
 export function resolveMenuLabel(

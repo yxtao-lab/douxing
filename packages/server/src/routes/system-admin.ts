@@ -184,7 +184,12 @@ router.post('/users/:id/reset-password', async (req, res) => {
           .regex(/[0-9]/, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK),
       })
       .safeParse(req.body);
-    if (Number.isNaN(userId) || !parsed.success) return fail(res, '参数错误');
+    if (Number.isNaN(userId)) return fail(res, ApiMessageKey.PARAM_ERROR);
+    if (!parsed.success) {
+      const passwordInvalid = parsed.error.issues.some((issue) => issue.path[0] === 'password');
+      if (passwordInvalid) return fail(res, ApiMessageKey.ADMIN_PASSWORD_TOO_WEAK, 400, 400);
+      return fail(res, ApiMessageKey.PARAM_ERROR);
+    }
     await withPermWrite(req, res, AdminPerm.systemUser, '重置用户密码', () =>
       resetAdminUserPassword(userId, parsed.data.password),
     );

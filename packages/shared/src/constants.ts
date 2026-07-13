@@ -19,6 +19,7 @@ export const RoleCode = {
   ADMIN: 'admin',
   OPERATOR: 'operator',
   AUDITOR: 'auditor',
+  MERCHANT: 'merchant',
   USER: 'user',
 } as const;
 

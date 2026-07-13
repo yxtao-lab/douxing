@@ -13,6 +13,7 @@ import {
 } from '@douxing/shared';
 import { getDb } from '../../db/client.js';
 import { serviceProvider } from '../../db/schema/marketplace-provider.js';
+import { syncMerchantRoleForUser } from './marketplace-merchant-role.service.js';
 import { getBizOrgById } from './marketplace-org.service.js';
 
 const BLOCKED_PROVIDER_REAPPLY: CertStatusValue[] = [CertStatus.PENDING, CertStatus.APPROVED];
@@ -135,6 +136,7 @@ export async function applyServiceProvider(
       .from(serviceProvider)
       .where(eq(serviceProvider.id, existingRow.id))
       .limit(1);
+    await syncMerchantRoleForUser(userId);
     return toServiceProviderSummary(updated[0]!);
   }
 
@@ -155,6 +157,7 @@ export async function applyServiceProvider(
     .from(serviceProvider)
     .where(eq(serviceProvider.id, Number(result.insertId)))
     .limit(1);
+  await syncMerchantRoleForUser(userId);
   return toServiceProviderSummary(rows[0]!);
 }
 

@@ -2,6 +2,8 @@ import http from './http';
 import {
   normalizePaginatedResult,
   type ApiResponse,
+  type BizOrgReviewInput,
+  type BizOrgSummary,
   type DemandQuoteSummary,
   type DemandSelectQuoteInput,
   type PaginatedResult,
@@ -45,6 +47,48 @@ export async function fetchMarketplaceDemandsPage(params: MarketplaceDemandListP
     page: params.page,
     pageSize: params.pageSize,
   });
+}
+
+/**
+ * 分页获取待审商户列表。
+ *
+ * @param params - 筛选与分页参数
+ * @returns 分页结果
+ */
+export async function fetchPendingMarketplaceOrgsPage(params: {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  orgType?: string;
+}) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.orgType) query.set('orgType', params.orgType);
+  const { data } = await http.get<ApiResponse<PaginatedResult<BizOrgSummary>>>(
+    `/marketplace/admin/orgs/pending?${query.toString()}`,
+  );
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+}
+
+/**
+ * 审核商户入驻申请。
+ *
+ * @param orgId - 商户 ID
+ * @param body - 审核动作与备注
+ * @returns 更新后的商户摘要
+ */
+export async function reviewMarketplaceOrg(orgId: number, body: BizOrgReviewInput) {
+  const { data } = await http.patch<ApiResponse<BizOrgSummary>>(
+    `/marketplace/admin/orgs/${orgId}/review`,
+    body,
+  );
+  return data.data;
 }
 
 /**

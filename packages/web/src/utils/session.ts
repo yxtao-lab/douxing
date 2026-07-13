@@ -6,6 +6,7 @@ import { isStaffUser } from '@/composables/usePermissions';
 import { useLayoutStore } from '@/stores/layout';
 import { useMenuStore } from '@/stores/menu';
 import { useUserStore } from '@/stores/user';
+import { isPartnerPortalPath } from '@/utils/partner-session';
 
 let bootstrapPromise: Promise<void> | null = null;
 let authBootstrapping = false;
@@ -144,9 +145,17 @@ export function setupHttpAuthHandlers(router: Router): void {
     if (router.currentRoute.value.name === 'login') return;
 
     const redirect = router.currentRoute.value.fullPath;
+    const isPartner = isPartnerPortalPath(redirect);
     router.push({
       name: 'login',
-      query: redirect && redirect !== '/' ? { redirect } : undefined,
+      query:
+        redirect && redirect !== '/'
+          ? isPartner
+            ? { redirect, portal: 'partner' }
+            : { redirect }
+          : isPartner
+            ? { portal: 'partner' }
+            : undefined,
     });
   });
 }

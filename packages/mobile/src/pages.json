@@ -130,6 +130,24 @@
       }
     },
     {
+      "path": "pages/marketplace/onboard",
+      "style": {
+        "navigationBarTitleText": "服务方入驻"
+      }
+    },
+    {
+      "path": "pages/marketplace/org-apply",
+      "style": {
+        "navigationBarTitleText": "商户入驻"
+      }
+    },
+    {
+      "path": "pages/marketplace/provider-apply",
+      "style": {
+        "navigationBarTitleText": "个人服务者认证"
+      }
+    },
+    {
       "path": "pages/journey-albums/list",
       "style": {
         "navigationBarTitleText": "我的相册"

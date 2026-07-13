@@ -90,6 +90,7 @@
       :confirm-loading="saving"
     >
       <a-input-password v-model:value="newPassword" :placeholder="t('system.newPassword')" />
+      <p class="reset-password-hint">{{ t('system.resetPasswordHint') }}</p>
     </a-modal>
   </PageContainer>
 </template>
@@ -132,6 +133,20 @@ const saving = ref(false);
 const currentUser = ref<AdminUserRow | null>(null);
 const selectedRoles = ref<string[]>([]);
 const newPassword = ref('');
+
+/**
+ * 校验管理员重置密码是否符合强度要求（与后端 reset-password 一致）。
+ *
+ * @param password - 新密码明文
+ * @returns 符合要求为 true
+ */
+function isValidAdminResetPassword(password: string): boolean {
+  if (password.length < 12 || password.length > 64) return false;
+  if (!/[a-z]/.test(password)) return false;
+  if (!/[A-Z]/.test(password)) return false;
+  if (!/[0-9]/.test(password)) return false;
+  return true;
+}
 
 const { items, loading, pagination, load, reload, handleTableChange } =
   useServerTablePagination<AdminUserRow>((page, pageSize) =>
@@ -225,8 +240,12 @@ async function submitRoles() {
 }
 
 async function submitPassword() {
-  if (!currentUser.value || newPassword.value.length < 6) {
+  if (!currentUser.value || !newPassword.value.trim()) {
     message.warning(t('system.newPassword'));
+    return;
+  }
+  if (!isValidAdminResetPassword(newPassword.value)) {
+    message.warning(t('system.resetPasswordTooWeak'));
     return;
   }
   saving.value = true;
@@ -246,3 +265,12 @@ onMounted(() => {
   void load();
 });
 </script>
+
+<style scoped>
+.reset-password-hint {
+  margin-top: 8px;
+  margin-bottom: 0;
+  font-size: 12px;
+  color: var(--dx-text-muted, rgba(0, 0, 0, 0.45));
+}
+</style>

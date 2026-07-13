@@ -244,3 +244,20 @@ export interface ServiceOrderDetail extends ServiceOrderSummary {
 export interface ServiceOrderStatusInput {
   status: ServiceOrderStatusValue;
 }
+
+/** 商户工作台上下文（入驻状态与可报价身份） */
+export interface MarketplacePartnerContext {
+  memberships: OrgMembershipSummary[];
+  provider: ServiceProviderSummary | null;
+  /** 个人服务者是否已通过认证、可代个人报价 */
+  canQuoteAsProvider: boolean;
+  /** 状态为 active 且当前用户为成员的 orgId 列表，可代商户报价 */
+  quotableOrgIds: number[];
+}
+
+/** 服务方「我的报价」列表项（含需求摘要） */
+export interface PartnerQuoteListItem extends DemandQuoteSummary {
+  demandTitle: string | null;
+  demandNo: string | null;
+  demandStatus: DemandStatusValue;
+}

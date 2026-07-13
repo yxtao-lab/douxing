@@ -83,10 +83,8 @@ import {
 } from '@/api/marketplace';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useI18n } from 'vue-i18n';
-import { usePageTitle } from '@/i18n/usePageTitle';
 import { useUserStore } from '@/stores/user';
 
-usePageTitle('marketplace.detailTitle');
 const { t } = useI18n();
 const route = useRoute();
 const userStore = useUserStore();

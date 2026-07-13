@@ -2,7 +2,7 @@
   <div class="login-view">
     <div class="login-head">
       <h2>{{ isRegister ? t('common.register') : t('layout.loginTitle') }}</h2>
-      <p class="subtitle">{{ t('layout.loginSubtitle') }}</p>
+      <p class="subtitle">{{ isPartnerLogin ? t('partner.loginSubtitle') : t('layout.loginSubtitle') }}</p>
     </div>
 
     <a-tabs v-model:activeKey="loginMode">
@@ -64,12 +64,14 @@
 <script setup lang="ts">
 import { reactive, ref, computed, onUnmounted } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import { login, register, sendSmsCode, smsLogin } from '@/api/auth';
+import { login, register, sendSmsCode, smsLogin, fetchCurrentUser } from '@/api/auth';
 import { useUserStore } from '@/stores/user';
 import { useLocale } from '@/i18n/useLocale';
 import { getAppErrorMessage } from '@/utils/error-message';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
 import { establishSessionAfterLogin } from '@/utils/session';
+import { enrollMerchantAdminAccess } from '@/api/marketplace-partner';
+import { isMerchantOnlyPermissions } from '@/composables/usePermissions';
 
 type LoginMode = 'sms' | 'password';
 
@@ -88,6 +90,7 @@ const codeButtonLabel = computed(() => {
 
 const loginMode = ref<LoginMode>('password');
 const isRegister = ref(false);
+const isPartnerLogin = computed(() => route.query.portal === 'partner');
 const showDevHint = isDevelopmentExperienceEnabled();
 const form = reactive({
   username: showDevHint ? 'admin' : '',
@@ -145,6 +148,36 @@ async function handleSendCode() {
   }
 }
 
+async function finalizeLoginAfterAuth() {
+  const redirect = (route.query.redirect as string) || '/';
+  const isPartnerPortal = route.query.portal === 'partner' || redirect.startsWith('/partner');
+
+  if (isPartnerPortal) {
+    try {
+      await enrollMerchantAdminAccess();
+      const user = await fetchCurrentUser();
+      userStore.setAuth(userStore.token!, user, userStore.refreshToken ?? undefined);
+    } catch {
+      error.value = t('login.loginFailed');
+      return;
+    }
+  }
+
+  const sessionOk = await establishSessionAfterLogin();
+  if (!sessionOk) {
+    error.value = t('login.notStaff');
+    return;
+  }
+
+  const target =
+    isPartnerPortal || isMerchantOnlyPermissions(userStore.user?.permissions ?? [])
+      ? redirect.startsWith('/partner')
+        ? redirect
+        : '/partner'
+      : redirect;
+  router.push(target);
+}
+
 async function handleSmsSubmit() {
   loading.value = true;
   error.value = '';
@@ -155,13 +188,7 @@ async function handleSmsSubmit() {
     }
     const result = await smsLogin(smsForm.phone, smsForm.code);
     userStore.setAuth(result.token, result.user, result.refreshToken);
-    const sessionOk = await establishSessionAfterLogin();
-    if (!sessionOk) {
-      error.value = t('login.notStaff');
-      return;
-    }
-    const redirect = (route.query.redirect as string) || '/';
-    router.push(redirect);
+    await finalizeLoginAfterAuth();
   } catch (e) {
     error.value = getAppErrorMessage(e, t('login.loginFailed'));
   } finally {
@@ -177,13 +204,7 @@ async function handlePasswordSubmit() {
       ? await register(form.username, form.password)
       : await login(form.username, form.password);
     userStore.setAuth(result.token, result.user, result.refreshToken);
-    const sessionOk = await establishSessionAfterLogin();
-    if (!sessionOk) {
-      error.value = t('login.notStaff');
-      return;
-    }
-    const redirect = (route.query.redirect as string) || '/';
-    router.push(redirect);
+    await finalizeLoginAfterAuth();
   } catch (e) {
     error.value = getAppErrorMessage(e, t('common.operationFailed'));
   } finally {

@@ -218,6 +218,114 @@ const router = createRouter({
           },
         },
         {
+          path: 'partner',
+          name: 'partner-home',
+          component: () => import('@/views/partner/PartnerHomeView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.pageTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'HomeOutlined',
+            perm: 'marketplace:partner:home',
+          },
+        },
+        {
+          path: 'partner/onboard',
+          name: 'partner-onboard',
+          component: () => import('@/views/partner/PartnerOnboardView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.onboardTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'AuditOutlined',
+            perm: 'marketplace:partner:onboard',
+          },
+        },
+        {
+          path: 'partner/onboard/org',
+          name: 'partner-org-apply',
+          component: () => import('@/views/partner/PartnerOrgApplyView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'marketplace.orgApplyTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            hideInMenu: true,
+            perm: 'marketplace:partner:onboard',
+          },
+        },
+        {
+          path: 'partner/onboard/provider',
+          name: 'partner-provider-apply',
+          component: () => import('@/views/partner/PartnerProviderApplyView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'marketplace.providerApplyTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            hideInMenu: true,
+            perm: 'marketplace:partner:onboard',
+          },
+        },
+        {
+          path: 'partner/demands',
+          name: 'partner-demands',
+          component: () => import('@/views/partner/PartnerDemandHallView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.demandsTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'FileSearchOutlined',
+            perm: 'marketplace:partner:demands',
+          },
+        },
+        {
+          path: 'partner/demands/:id',
+          name: 'partner-demand-detail',
+          component: () => import('@/views/partner/PartnerDemandDetailView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.demandDetailTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            hideInMenu: true,
+            perm: 'marketplace:partner:demands',
+          },
+        },
+        {
+          path: 'partner/quotes',
+          name: 'partner-quotes',
+          component: () => import('@/views/partner/PartnerQuotesView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.quotesTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'TagOutlined',
+            perm: 'marketplace:partner:quotes',
+          },
+        },
+        {
+          path: 'partner/orders',
+          name: 'partner-orders',
+          component: () => import('@/views/partner/PartnerOrdersView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.ordersTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'ShoppingOutlined',
+            perm: 'marketplace:partner:orders',
+          },
+        },
+        {
+          path: 'partner/orders/:id',
+          name: 'partner-order-detail',
+          component: () => import('@/views/partner/PartnerOrderDetailView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.orderDetailTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            hideInMenu: true,
+            perm: 'marketplace:partner:orders',
+          },
+        },
+        {
           path: 'analytics',
           name: 'analytics',
           component: () => import('@/views/AnalyticsDashboardView.vue'),
@@ -487,7 +595,7 @@ const router = createRouter({
 
 router.beforeEach(async (to) => {
   const userStore = useUserStore();
-  const { hasPerm, isStaff } = usePermissions();
+  const { hasPerm, isStaff, isMerchantOnly } = usePermissions();
 
   if (userStore.sessionStatus === 'idle' || userStore.sessionStatus === 'checking') {
     await ensureSessionBootstrapped();
@@ -499,7 +607,13 @@ router.beforeEach(async (to) => {
       !userStore.token ||
       !isStaff.value
     ) {
-      return { name: 'login', query: { redirect: to.fullPath } };
+      return {
+        name: 'login',
+        query:
+          to.fullPath.startsWith('/partner')
+            ? { redirect: to.fullPath, portal: 'partner' }
+            : { redirect: to.fullPath },
+      };
     }
   }
 
@@ -509,13 +623,17 @@ router.beforeEach(async (to) => {
     userStore.token &&
     isStaff.value
   ) {
-    return { name: 'home' };
+    return { name: isMerchantOnly.value ? 'partner-home' : 'home' };
+  }
+
+  if (to.meta.requiresAuth && to.name === 'home' && isMerchantOnly.value) {
+    return { name: 'partner-home' };
   }
 
   if (to.meta.requiresAuth && to.name !== 'home') {
     const perm = to.meta.perm as string | undefined;
     if (perm && !hasPerm(perm)) {
-      return { name: 'home' };
+      return { name: isMerchantOnly.value ? 'partner-home' : 'home' };
     }
   }
 });

@@ -462,6 +462,12 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'marketplace-orgs', menuName: '商户管理', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs', perms: 'marketplace:org:list', icon: 'TeamOutlined', sortOrder: 251 },
   { menuKey: 'marketplace-orgs-pending', menuName: '入驻审核', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/orgs/pending', perms: 'marketplace:org:audit', icon: 'AuditOutlined', sortOrder: 252 },
   { menuKey: 'marketplace-demands', menuName: '需求单', parentKey: 'marketplace', menuType: MenuType.MENU, path: '/marketplace/demands', perms: 'marketplace:demand:list', icon: 'FileSearchOutlined', sortOrder: 253 },
+  { menuKey: 'partner-workbench', menuName: '商户工作台', menuType: MenuType.DIRECTORY, icon: 'ShopOutlined', sortOrder: 26 },
+  { menuKey: 'partner-home', menuName: '商户首页', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner', perms: 'marketplace:partner:home', icon: 'HomeOutlined', sortOrder: 261 },
+  { menuKey: 'partner-onboard', menuName: '入驻认证', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/onboard', perms: 'marketplace:partner:onboard', icon: 'AuditOutlined', sortOrder: 262 },
+  { menuKey: 'partner-demands', menuName: '接单大厅', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/demands', perms: 'marketplace:partner:demands', icon: 'FileSearchOutlined', sortOrder: 263 },
+  { menuKey: 'partner-quotes', menuName: '我的报价', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/quotes', perms: 'marketplace:partner:quotes', icon: 'TagOutlined', sortOrder: 264 },
+  { menuKey: 'partner-orders', menuName: '我的订单', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/orders', perms: 'marketplace:partner:orders', icon: 'ShoppingOutlined', sortOrder: 265 },
   { menuKey: 'system', menuName: '系统管理', menuType: MenuType.DIRECTORY, path: 'system', icon: 'SettingOutlined', sortOrder: 40 },
   { menuKey: 'sys-users', menuName: '用户管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/users', perms: 'system:user:list', icon: 'UserOutlined', sortOrder: 41 },
   { menuKey: 'sys-roles', menuName: '角色管理', parentKey: 'system', menuType: MenuType.MENU, path: '/system/roles', perms: 'system:role:list', icon: 'TeamOutlined', sortOrder: 42 },
@@ -515,6 +521,14 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'ai-service-log',
   ],
   [RoleCode.AUDITOR]: ['home', 'biz', 'orders', 'content', 'attractions-pending', 'route-media-pending', 'playbooks', 'marketplace', 'marketplace-orgs-pending'],
+  [RoleCode.MERCHANT]: [
+    'partner-workbench',
+    'partner-home',
+    'partner-onboard',
+    'partner-demands',
+    'partner-quotes',
+    'partner-orders',
+  ],
 };
 
 export async function listAdminUsersPaginated(
@@ -638,7 +652,7 @@ export async function deleteRole(id: number) {
   const roleRow = await db.select().from(roles).where(eq(roles.id, id)).limit(1);
   const role = roleRow[0];
   if (!role) return { error: '角色不存在' };
-  if (role.code === RoleCode.ADMIN || role.code === RoleCode.USER) {
+  if (role.code === RoleCode.ADMIN || role.code === RoleCode.USER || role.code === RoleCode.MERCHANT) {
     return { error: '系统内置角色不可删除' };
   }
   const [cnt] = await db
@@ -720,6 +734,8 @@ export async function seedDefaultRoleMenus() {
 
 /** 将 DEFAULT_MENU_SEED 中缺失的菜单写入库，并授予管理员/预置角色 */
 export async function syncMissingMenusFromSeed() {
+  const { ensureMerchantRoleSeed } = await import('./marketplace/marketplace-merchant-role.service.js');
+  await ensureMerchantRoleSeed();
   const db = getDb();
   const menuRows = await db.select({ id: sysMenu.id, menuKey: sysMenu.menuKey }).from(sysMenu);
   const idByKey = new Map(menuRows.map((row) => [row.menuKey, row.id]));
@@ -747,7 +763,10 @@ export async function syncMissingMenusFromSeed() {
     console.log(`[seed] Inserted missing menu: ${item.menuKey}`);
   }
 
-  if (insertedMenuIds.length === 0) return;
+  if (insertedMenuIds.length === 0) {
+    await seedDefaultRoleMenus();
+    return;
+  }
 
   const adminRole = await db.select().from(roles).where(eq(roles.code, RoleCode.ADMIN)).limit(1);
   if (adminRole[0]) {
@@ -774,6 +793,8 @@ export async function syncMissingMenusFromSeed() {
       }
     }
   }
+
+  await seedDefaultRoleMenus();
 }
 
 export async function listDepts(filter?: {

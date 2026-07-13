@@ -45,10 +45,8 @@ import { SERVICE_CATEGORY_TREE } from '@douxing/shared';
 import { createMarketplaceDemand, publishMarketplaceDemand } from '@/api/marketplace';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useI18n } from 'vue-i18n';
-import { usePageTitle } from '@/i18n/usePageTitle';
 import { useUserStore } from '@/stores/user';
 
-usePageTitle('marketplace.createTitle');
 const { t } = useI18n();
 const router = useRouter();
 const userStore = useUserStore();

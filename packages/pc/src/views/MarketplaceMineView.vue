@@ -27,9 +27,7 @@ import type { ServiceDemandSummary } from '@douxing/shared';
 import { fetchMyMarketplaceDemands } from '@/api/marketplace';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useI18n } from 'vue-i18n';
-import { usePageTitle } from '@/i18n/usePageTitle';
 
-usePageTitle('marketplace.mineTitle');
 const { t } = useI18n();
 const loading = ref(false);
 const items = ref<ServiceDemandSummary[]>([]);

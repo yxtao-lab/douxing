@@ -64,6 +64,14 @@ export const WORKBENCH_SITES: WorkbenchSiteItem[] = [
     to: '/',
   },
   {
+    id: 'partner',
+    titleKey: 'home.sites.partner.title',
+    descKey: 'home.sites.partner.desc',
+    tagKeys: ['home.sites.partner.tag1', 'home.sites.partner.tag2'],
+    emoji: '🏪',
+    to: '/partner',
+  },
+  {
     id: 'api',
     titleKey: 'home.sites.api.title',
     descKey: 'home.sites.api.desc',

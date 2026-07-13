@@ -10,6 +10,7 @@
 
     <view class="page-body">
       <view class="toolbar">
+        <button class="btn-outline" size="mini" @click="goOnboard">{{ t('marketplaceUi.onboardEntry') }}</button>
         <button class="btn-outline" size="mini" @click="goMine">{{ t('marketplace.mineTitle') }}</button>
         <button class="btn-primary" size="mini" @click="goCreate">{{ t('marketplace.createTitle') }}</button>
       </view>
@@ -93,6 +94,10 @@ async function load() {
 
 function goCreate() {
   uni.navigateTo({ url: '/pages/marketplace/create' });
+}
+
+function goOnboard() {
+  uni.navigateTo({ url: '/pages/marketplace/onboard' });
 }
 
 function goMine() {
