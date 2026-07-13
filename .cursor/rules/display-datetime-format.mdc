@@ -1,0 +1,44 @@
+---
+description: 用户可见时间统一使用 yy-mm-dd HH:mm:ss 格式展示
+alwaysApply: true
+---
+
+# 时间展示格式（强制）
+
+后续**所有**向用户展示日期时间的 UI（移动端、PC 用户端、Web 管理端、大屏）须使用统一格式：
+
+**`yy-mm-dd HH:mm:ss`**（东八区 `Asia/Shanghai`，24 小时制）
+
+示例：`26-07-13 17:03:45`
+
+## 必须
+
+- 使用 `@douxing/shared` 的 `formatDisplayDateTime()` 或基于它的封装（如 Web 管理端 `formatAdminDateTime()`、打卡 `formatCheckInTime()`）
+- 管理端表格时间列优先依赖 `formatAdminTableCell()` 自动识别 ISO / naive 时间并格式化
+- 服务端 API 返回给前端的展示用时间字段使用 `formatDbDateTimeForApi()`（内部委托 shared）
+
+## 禁止
+
+- `toLocaleString()` / `toLocaleDateString()` 直接展示业务时间
+- 页面内 `slice(0, 16)`、`replace('T', ' ')` 等手写截断作为最终展示
+- 混用 `YYYY-MM-DD HH:mm:ss`（四位年）或其它 locale 相关格式
+
+## 例外（非用户可见时间展示）
+
+- 日期**筛选器** `value-format="YYYY-MM-DD"`（仅表单取值，非列表展示）
+- 路线班次、开放时长等业务语义 `HH:mm` 时段（非完整时间戳）
+- 导出文件名时间戳 `YYYY-MM-DD-HHmmss`
+- 数据库存储 / 日志追踪用的 ISO 8601 原始值
+- `toLocaleString()` 用于**数字**千分位（如 KPI 数值），非日期
+
+## 新增时间展示时
+
+1. 从 `@douxing/shared` 导入 `formatDisplayDateTime`
+2. Web 管理端表格列可只设 `dataIndex: 'createdAt'`，由 `formatAdminTableCell` 自动格式化
+3. 需要空值占位 `-` 时用 `formatAdminDateTime()`（Web 管理端）
+
+## 关联
+
+- 实现：`packages/shared/src/display-datetime.ts`
+- Web 封装：`packages/web/src/utils/adminDateTime.ts`
+- 服务端：`packages/server/src/utils/api-datetime.ts`

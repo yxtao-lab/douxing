@@ -1,4 +1,5 @@
 import type { CheckInInfo } from '@douxing/shared';
+import { formatCheckInTime } from '@douxing/shared';
 
 export function escapeHtml(value: string) {
   return value
@@ -56,7 +57,7 @@ export function getMarkerIconSize(item: CheckInInfo) {
 export function buildCheckInPopupHtml(item: CheckInInfo) {
   const title = escapeHtml(item.location.placeName || '未知地点');
   const city = escapeHtml(item.city || item.cityCode || '未知城市');
-  const time = escapeHtml(item.checkedAt.slice(0, 16).replace('T', ' '));
+  const time = escapeHtml(formatCheckInTime(item.checkedAt));
   const photo = item.photos[0]
     ? `<img class="checkin-map-popup-photo" src="${escapeHtml(normalizeMediaUrl(item.photos[0]))}" alt="" />`
     : '';

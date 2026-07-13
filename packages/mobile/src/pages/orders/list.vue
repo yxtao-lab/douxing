@@ -93,7 +93,7 @@
 import { ref, computed, watch } from 'vue';
 import { onReachBottom, onShow } from '@dcloudio/uni-app';
 import type { OrderInfo, OrderListTab } from '@douxing/shared';
-import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
+import { OrderStatus, OrderType, formatDisplayDateTime, getOrderStatusI18nKey } from '@douxing/shared';
 import { fetchOrdersPage, cancelOrder } from '@/api/orders';
 import { useInfiniteList } from '@/composables/useInfiniteList';
 import { continuePayForOrder, getContinuePayButtonLabel } from '@/utils/order-payment';
@@ -166,7 +166,7 @@ function amountLineText(item: OrderInfo) {
 }
 
 function formatTime(iso: string) {
-  return iso.replace('T', ' ').slice(0, 16);
+  return formatDisplayDateTime(iso) || iso;
 }
 
 function goRouteDetail(routeId: number) {

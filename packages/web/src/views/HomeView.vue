@@ -147,7 +147,7 @@ import { fetchOrdersPage } from '@/api/orders';
 import { fetchCheckInsPage } from '@/api/checkins';
 import { fetchPendingAttractionsPage } from '@/api/attractions';
 import type { ApiResponse } from '@douxing/shared';
-import { normalizePaginatedResult } from '@douxing/shared';
+import { formatDisplayDateTime, normalizePaginatedResult } from '@douxing/shared';
 import {
   WORKBENCH_CHANGELOG,
   WORKBENCH_QUICK_ACTIONS,
@@ -272,7 +272,7 @@ function openApiHealth() {
 }
 
 function formatServerTime(iso: string) {
-  return iso.replace('T', ' ').slice(0, 19);
+  return formatDisplayDateTime(iso) || iso;
 }
 
 function syncServerTimeFromHealth() {

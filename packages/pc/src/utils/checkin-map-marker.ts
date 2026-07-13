@@ -1,4 +1,5 @@
 import type { CheckInInfo } from '@douxing/shared';
+import { formatCheckInTime } from '@douxing/shared';
 
 export interface CheckInMapPopupLabels {
   unknownPlace: string;
@@ -62,7 +63,7 @@ export function getMarkerIconSize(item: CheckInInfo) {
 export function buildCheckInPopupHtml(item: CheckInInfo, labels: CheckInMapPopupLabels) {
   const title = escapeHtml(item.location.placeName || labels.unknownPlace);
   const city = escapeHtml(item.city || item.cityCode || labels.unknownCity);
-  const time = escapeHtml(item.checkedAt.slice(0, 16).replace('T', ' '));
+  const time = escapeHtml(formatCheckInTime(item.checkedAt));
   const points = escapeHtml(
     labels.pointsBadge.replace('{points}', String(item.pointsEarned)),
   );

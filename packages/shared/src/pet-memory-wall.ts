@@ -1,4 +1,5 @@
 import type { LocaleCode } from './i18n/types.js';
+import { formatDisplayDateTime } from './display-datetime.js';
 import {
   formatPetAnalyzeSceneLabel,
   formatPetMemoryTypeLabel,
@@ -91,15 +92,9 @@ export interface PetAnalyzeCardViewModel {
   cached: boolean;
 }
 
-/** 格式化记忆墙日期（客户端传入 locale） */
-export function formatPetMemoryDateLabel(iso: string, locale: LocaleCode): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleDateString(locale === 'en-US' ? 'en-US' : 'zh-CN', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+/** 格式化记忆墙日期（客户端传入 locale，展示统一为 yy-mm-dd HH:mm:ss） */
+export function formatPetMemoryDateLabel(iso: string, _locale: LocaleCode): string {
+  return formatDisplayDateTime(iso) || iso;
 }
 
 export function buildPetMemoryWallListItemViewModel(

@@ -129,6 +129,7 @@ import TableActionBar from '@/components/admin/TableActionBar.vue';
 import TableActionButton from '@/components/admin/TableActionButton.vue';
 import PageContainer from '@/layouts/components/PageContainer.vue';
 import { usePageTitle } from '@/i18n/usePageTitle';
+import { formatAdminDateTime } from '@/utils/adminDateTime';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 
@@ -181,8 +182,7 @@ const columns = computed<AdminExportColumn<AdminMembershipUserRow>[]>(() => [
   {
     title: t('membershipAdmin.colCreatedAt'),
     dataIndex: 'createdAt',
-    width: 160,
-    customRender: ({ text }) => formatDate(String(text)),
+    width: 180,
   },
   { title: t('membershipAdmin.colAction'), key: 'action', width: 120, fixed: 'right' },
 ]);
@@ -192,7 +192,7 @@ function memberLevelLabel(level: number) {
 }
 
 function formatDate(value: string) {
-  return value.slice(0, 16).replace('T', ' ');
+  return formatAdminDateTime(value);
 }
 
 async function fetchExportRows(): Promise<Record<string, unknown>[]> {

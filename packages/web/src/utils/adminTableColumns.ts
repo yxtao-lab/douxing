@@ -1,3 +1,4 @@
+import { formatDisplayDateTime, isDisplayDateTimeLike } from '@douxing/shared';
 import type { Ref } from 'vue';
 import type { ColumnType } from 'ant-design-vue/es/table';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
@@ -23,10 +24,15 @@ export function isAdminTableEmptyValue(value: unknown): boolean {
   return false;
 }
 
-/** 格式化表格/导出单元格；空值统一为 `-` */
+/** 格式化表格/导出单元格；空值统一为 `-`；时间值统一为 yy-mm-dd HH:mm:ss */
 export function formatAdminTableCell(value: unknown): string {
   if (isAdminTableEmptyValue(value)) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
-  if (value instanceof Date) return value.toISOString();
+  if (value instanceof Date) {
+    return formatDisplayDateTime(value) || ADMIN_TABLE_EMPTY_PLACEHOLDER;
+  }
+  if (typeof value === 'string' && isDisplayDateTimeLike(value)) {
+    return formatDisplayDateTime(value) || ADMIN_TABLE_EMPTY_PLACEHOLDER;
+  }
   if (Array.isArray(value)) {
     return value.map((item) => formatAdminTableCell(item)).join('; ');
   }

@@ -168,8 +168,7 @@ const columns = computed<AdminExportColumn<CheckInInfo>[]>(() => [
   {
     title: t('checkins.colTime'),
     dataIndex: 'checkedAt',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
+    width: 180,
   },
 ]);
 

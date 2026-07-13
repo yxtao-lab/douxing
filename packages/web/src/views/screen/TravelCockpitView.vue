@@ -115,7 +115,7 @@ import type {
   AnalyticsGeoFlow,
   AnalyticsOverview,
 } from '@douxing/shared';
-import { findCityRegionByCode } from '@douxing/shared';
+import { findCityRegionByCode, formatDisplayDateTime } from '@douxing/shared';
 import {
   fetchAnalyticsFunnel,
   fetchAnalyticsGeoDistribution,
@@ -185,9 +185,7 @@ function pickCityName(cityCode: string) {
 }
 
 function formatGeneratedAt(iso: string) {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString();
+  return formatDisplayDateTime(iso) || iso;
 }
 
 async function loadCityRankFallback() {
@@ -202,8 +200,7 @@ async function loadCityRankFallback() {
 }
 
 function updateClock() {
-  const now = new Date();
-  clockText.value = now.toLocaleString();
+  clockText.value = formatDisplayDateTime(new Date());
 }
 
 async function loadData() {

@@ -115,8 +115,7 @@ const columns = computed<AdminExportColumn<ConfigRow>[]>(() => [
   {
     title: t('system.colCreatedAt'),
     dataIndex: 'updatedAt',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
+    width: 180,
   },
   { title: t('system.colAction'), key: 'action', width: 120, fixed: 'right' },
 ]);

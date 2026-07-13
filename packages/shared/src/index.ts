@@ -6,6 +6,7 @@ export * from './order-state.js';
 export * from './geo.js';
 export * from './membership.js';
 export * from './pagination.js';
+export * from './display-datetime.js';
 export * from './checkin-map.js';
 export * from './city-regions.js';
 export * from './china-admin-divisions.js';

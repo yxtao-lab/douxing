@@ -67,6 +67,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { CheckInInfo, CheckInTimeRange } from '@douxing/shared';
+import { formatDisplayDateTime } from '@douxing/shared';
 import { fetchCheckInsPage } from '@/api/checkins';
 import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
@@ -89,11 +90,7 @@ const rangeOptions = computed(() => [
 ]);
 
 function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  return formatDisplayDateTime(iso) || iso;
 }
 
 async function fetchPage(nextPage: number, append: boolean) {

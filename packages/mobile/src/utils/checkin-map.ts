@@ -1,4 +1,5 @@
 import type { CheckInInfo } from '@douxing/shared';
+import { formatCheckInTime } from '@douxing/shared';
 import { mobileT } from '@/i18n/mobileT';
 import { getDxPrimaryColorAlpha } from '@/utils/theme-colors';
 
@@ -178,6 +179,4 @@ export function sumCheckInPoints(items: CheckInInfo[]) {
   return items.reduce((sum, item) => sum + item.pointsEarned, 0);
 }
 
-export function formatCheckInTime(iso: string) {
-  return iso.replace('T', ' ').slice(0, 16);
-}
+export { formatCheckInTime };

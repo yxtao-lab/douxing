@@ -76,6 +76,7 @@ import {
   BizOrgType,
   OrgDocumentType,
   OrgRole,
+  formatDisplayDateTime,
   type OrgMembershipSummary,
 } from '@douxing/shared';
 import {
@@ -160,17 +161,13 @@ function orgStatusLabel(status: string) {
 }
 
 /**
- * 格式化 ISO 时间为本地日期。
+ * 格式化申请时间为统一展示格式。
  *
  * @param iso - ISO 时间字符串
- * @returns 本地化日期时间
+ * @returns yy-mm-dd HH:mm:ss
  */
 function formatDate(iso: string) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  return formatDisplayDateTime(iso) || iso;
 }
 
 /**

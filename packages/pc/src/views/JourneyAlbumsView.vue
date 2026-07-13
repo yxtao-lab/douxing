@@ -87,6 +87,7 @@
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { JourneyAlbumSummary } from '@douxing/shared';
+import { formatDisplayDateTime } from '@douxing/shared';
 import {
   deleteJourneyAlbum,
   fetchJourneyAlbums,
@@ -131,11 +132,7 @@ const storagePercent = computed(() => {
 });
 
 function formatUpdatedAt(iso: string) {
-  try {
-    return new Date(iso).toLocaleDateString();
-  } catch {
-    return iso;
-  }
+  return formatDisplayDateTime(iso) || iso;
 }
 
 async function loadStorage() {

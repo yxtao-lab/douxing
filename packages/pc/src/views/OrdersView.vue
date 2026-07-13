@@ -67,7 +67,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import type { OrderInfo, OrderListTab } from '@douxing/shared';
-import { OrderStatus, OrderType, getOrderStatusI18nKey } from '@douxing/shared';
+import { OrderStatus, OrderType, formatDisplayDateTime, getOrderStatusI18nKey } from '@douxing/shared';
 import { cancelOrder, continuePayForOrder, fetchOrdersPage } from '@/api/orders';
 import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
 import SubPageShell from '@/components/SubPageShell.vue';
@@ -110,11 +110,7 @@ function statusClass(status: number) {
 }
 
 function formatTime(iso: string) {
-  try {
-    return new Date(iso).toLocaleString();
-  } catch {
-    return iso;
-  }
+  return formatDisplayDateTime(iso) || iso;
 }
 
 function canViewRoute(status: number) {

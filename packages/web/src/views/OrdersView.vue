@@ -163,8 +163,7 @@ const columns = computed<TableColumnsType<OrderInfo>>(() => [
   {
     title: t('orders.colTime'),
     dataIndex: 'createdAt',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 16).replace('T', ' '),
+    width: 180,
   },
 ]);
 

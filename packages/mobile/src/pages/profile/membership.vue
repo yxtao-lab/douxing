@@ -170,6 +170,7 @@ import { ref, computed } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import {
   getAllMembershipTiers,
+  formatDisplayDateTime,
   getMemberLevelBadgeClass,
   getMemberLevelI18nKey,
   MEMBERSHIP_PRODUCTS,
@@ -212,7 +213,7 @@ const upgradeProducts = computed<MembershipProduct[]>(() => {
 
 const expiresText = computed(() => {
   if (!membership.value?.memberExpiresAt || membership.value.level <= 0) return '';
-  const date = membership.value.memberExpiresAt.slice(0, 10);
+  const date = formatDisplayDateTime(membership.value.memberExpiresAt);
   return tf('membership.expiresAt', { date });
 });
 

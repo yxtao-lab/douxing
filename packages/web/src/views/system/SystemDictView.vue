@@ -243,8 +243,7 @@ const typeColumns = computed<AdminExportColumn<DictTypeRow>[]>(() => [
   {
     title: t('system.colCreatedAt'),
     dataIndex: 'createdAt',
-    width: 160,
-    customRender: ({ text }: { text: string }) => String(text).slice(0, 16).replace('T', ' '),
+    width: 180,
   },
 ]);
 

@@ -165,6 +165,14 @@ export function sumCheckInPoints(items: CheckInInfo[]) {
   return items.reduce((sum, item) => sum + item.pointsEarned, 0);
 }
 
+import { formatDisplayDateTime } from './display-datetime.js';
+
+/**
+ * 格式化打卡时间用于列表、地图等用户可见展示。
+ *
+ * @param iso - ISO 或 API 返回的时间字符串
+ * @returns `yy-mm-dd HH:mm:ss`；无法解析时回退原串
+ */
 export function formatCheckInTime(iso: string) {
-  return iso.replace('T', ' ').slice(0, 16);
+  return formatDisplayDateTime(iso) || iso;
 }

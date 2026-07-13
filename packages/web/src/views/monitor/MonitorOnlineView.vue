@@ -65,14 +65,12 @@ const columns = computed<TableColumnsType<OnlineUserRow>>(() => [
   {
     title: t('system.loginTime'),
     dataIndex: 'loginTime',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
+    width: 180,
   },
   {
     title: t('system.lastActive'),
     dataIndex: 'lastActive',
-    width: 160,
-    customRender: ({ text }) => String(text).slice(0, 19).replace('T', ' '),
+    width: 180,
   },
 ]);
 

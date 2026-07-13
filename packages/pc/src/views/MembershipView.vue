@@ -100,6 +100,7 @@ import { computed, onMounted, ref } from 'vue';
 import type { MembershipInfo, MembershipProduct } from '@douxing/shared';
 import {
   getAllMembershipTiers,
+  formatDisplayDateTime,
   getMemberLevelI18nKey,
   getMemberLevelIcon,
   MEMBERSHIP_PRODUCTS,
@@ -133,7 +134,7 @@ const upgradeProducts = computed<MembershipProduct[]>(() => {
 
 const expiresText = computed(() => {
   if (!membership.value?.memberExpiresAt || membership.value.level <= 0) return '';
-  const date = membership.value.memberExpiresAt.slice(0, 10);
+  const date = formatDisplayDateTime(membership.value.memberExpiresAt);
   return t('membership.expiresAt', { date });
 });
 

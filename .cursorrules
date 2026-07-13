@@ -9,6 +9,7 @@
 - 样式统一使用 Tailwind CSS。
 - 禁止在代码中硬编码敏感信息（如 API Key、密码），必须使用环境变量。
 - 新页面须符合三端品牌风格与布局，预留主题与国际化，优先复用/封装通用组件；详见 `.cursor/rules/page-ui-standards.mdc`。
+- 用户可见时间展示统一为 `yy-mm-dd HH:mm:ss`；详见 `.cursor/rules/display-datetime-format.mdc`。
 
 # Git 提交规范
 - 提交信息必须遵循 Conventional Commits 格式，例如：`feat(auth): 添加用户登录接口` 或 `fix(ui): 修复按钮点击无效的问题`。
