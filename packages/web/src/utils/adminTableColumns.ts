@@ -24,7 +24,7 @@ export function isAdminTableEmptyValue(value: unknown): boolean {
   return false;
 }
 
-/** 格式化表格/导出单元格；空值统一为 `-`；时间值统一为 yy-mm-dd HH:mm:ss */
+/** 格式化表格/导出单元格；空值统一为 `-`；时间值统一为 yyyy-mm-dd HH:mm:ss */
 export function formatAdminTableCell(value: unknown): string {
   if (isAdminTableEmptyValue(value)) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
   if (value instanceof Date) {

@@ -92,7 +92,7 @@ export interface PetAnalyzeCardViewModel {
   cached: boolean;
 }
 
-/** 格式化记忆墙日期（客户端传入 locale，展示统一为 yy-mm-dd HH:mm:ss） */
+/** 格式化记忆墙日期（客户端传入 locale，展示统一为 yyyy-mm-dd HH:mm:ss） */
 export function formatPetMemoryDateLabel(iso: string, _locale: LocaleCode): string {
   return formatDisplayDateTime(iso) || iso;
 }

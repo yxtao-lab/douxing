@@ -560,7 +560,7 @@ export async function listAdminUsersPaginated(
   for (const row of rows) {
     const info = await getUserWithRoles(row.id);
     if (!info) continue;
-    items.push({ ...info, createdAt: String(row.createdAt) });
+    items.push({ ...info, createdAt: formatDbDateTimeForApi(row.createdAt) });
   }
 
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
@@ -843,7 +843,7 @@ export async function listDepts(filter?: {
     name: r.name,
     sortOrder: r.sortOrder,
     status: r.status,
-    createdAt: String(r.createdAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
   }));
 }
 
@@ -913,7 +913,7 @@ export async function listPostsPaginated(
     sortOrder: r.sortOrder,
     status: r.status,
     remark: r.remark,
-    createdAt: String(r.createdAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
   }));
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
 }
@@ -958,7 +958,7 @@ export async function listDictTypes(): Promise<DictTypeRow[]> {
     dictName: r.dictName,
     status: r.status,
     remark: r.remark,
-    createdAt: String(r.createdAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
   }));
 }
 
@@ -1012,7 +1012,7 @@ export async function listDictData(dictType?: string): Promise<DictDataRow[]> {
     sortOrder: r.sortOrder,
     status: r.status,
     remark: r.remark,
-    createdAt: String(r.createdAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
   }));
 }
 
@@ -1101,8 +1101,8 @@ export async function listNoticesPaginated(
     noticeType: r.noticeType,
     status: r.status,
     content: r.content,
-    createdAt: String(r.createdAt),
-    updatedAt: String(r.updatedAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
+    updatedAt: formatDbDateTimeForApi(r.updatedAt),
   }));
   return buildPaginatedResult(items, Number(totalRow?.total ?? 0), page, pageSize);
 }
@@ -1157,7 +1157,7 @@ export async function listConfigs(filter?: { keyword?: string }): Promise<Config
     configKey: r.configKey,
     configValue: r.configValue,
     remark: r.remark,
-    updatedAt: String(r.updatedAt),
+    updatedAt: formatDbDateTimeForApi(r.updatedAt),
   }));
 }
 
@@ -1517,6 +1517,6 @@ export async function getLatestNotices(limit = 5) {
     id: r.id,
     title: r.title,
     noticeType: r.noticeType,
-    createdAt: String(r.createdAt),
+    createdAt: formatDbDateTimeForApi(r.createdAt),
   }));
 }

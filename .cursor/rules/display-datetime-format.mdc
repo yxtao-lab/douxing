@@ -1,5 +1,5 @@
 ---
-description: 用户可见时间统一使用 yy-mm-dd HH:mm:ss 格式展示
+description: 用户可见时间统一使用 yyyy-mm-dd HH:mm:ss 格式展示
 alwaysApply: true
 ---
 
@@ -7,9 +7,9 @@ alwaysApply: true
 
 后续**所有**向用户展示日期时间的 UI（移动端、PC 用户端、Web 管理端、大屏）须使用统一格式：
 
-**`yy-mm-dd HH:mm:ss`**（东八区 `Asia/Shanghai`，24 小时制）
+**`yyyy-mm-dd HH:mm:ss`**（东八区 `Asia/Shanghai`，24 小时制）
 
-示例：`26-07-13 17:03:45`
+示例：`2026-07-13 17:03:45`
 
 ## 必须
 
@@ -21,7 +21,7 @@ alwaysApply: true
 
 - `toLocaleString()` / `toLocaleDateString()` 直接展示业务时间
 - 页面内 `slice(0, 16)`、`replace('T', ' ')` 等手写截断作为最终展示
-- 混用 `YYYY-MM-DD HH:mm:ss`（四位年）或其它 locale 相关格式
+- 混用 `yy-mm-dd HH:mm:ss`（两位年）或其它 locale 相关格式
 
 ## 例外（非用户可见时间展示）
 

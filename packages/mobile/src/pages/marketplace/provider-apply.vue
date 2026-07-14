@@ -148,7 +148,7 @@ function certStatusLabel(status: string) {
  * 格式化申请时间为统一展示格式。
  *
  * @param iso - ISO 时间字符串
- * @returns yy-mm-dd HH:mm:ss
+ * @returns yyyy-mm-dd HH:mm:ss
  */
 function formatDate(iso: string) {
   return formatDisplayDateTime(iso) || iso;

@@ -171,7 +171,7 @@ import { formatDisplayDateTime } from './display-datetime.js';
  * 格式化打卡时间用于列表、地图等用户可见展示。
  *
  * @param iso - ISO 或 API 返回的时间字符串
- * @returns `yy-mm-dd HH:mm:ss`；无法解析时回退原串
+ * @returns `yyyy-mm-dd HH:mm:ss`；无法解析时回退原串
  */
 export function formatCheckInTime(iso: string) {
   return formatDisplayDateTime(iso) || iso;
