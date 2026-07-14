@@ -302,6 +302,13 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID]: '当前订单状态不允许此操作',
   [ApiMessageKey.MARKETPLACE_SELLER_REQUIRED]: '请指定商户组织或个人服务者身份',
   [ApiMessageKey.MARKETPLACE_DEMAND_NOT_QUOTABLE]: '该需求当前不可报价',
+  [ApiMessageKey.MARKETPLACE_GROUP_NOT_FOUND]: '发单团体不存在',
+  [ApiMessageKey.MARKETPLACE_GROUP_FORBIDDEN]: '无权操作该发单团体',
+  [ApiMessageKey.MARKETPLACE_GROUP_INVALID]: '团体信息不完整或无效',
+  [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_ALREADY_EXISTS]: '该用户已是团体成员',
+  [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_NOT_FOUND]: '团体成员不存在',
+  [ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED]: '仅团体所有者可执行此操作',
+  [ApiMessageKey.MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER]: '不能移除团体所有者',
 };
 
 const enUS: Record<string, string> = {
@@ -611,6 +618,13 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID]: 'This action is not allowed in the current order status',
   [ApiMessageKey.MARKETPLACE_SELLER_REQUIRED]: 'Business org or approved provider identity is required',
   [ApiMessageKey.MARKETPLACE_DEMAND_NOT_QUOTABLE]: 'This demand is not open for quotes',
+  [ApiMessageKey.MARKETPLACE_GROUP_NOT_FOUND]: 'Demand group not found',
+  [ApiMessageKey.MARKETPLACE_GROUP_FORBIDDEN]: 'You cannot access this demand group',
+  [ApiMessageKey.MARKETPLACE_GROUP_INVALID]: 'Invalid or incomplete demand group',
+  [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_ALREADY_EXISTS]: 'User is already a group member',
+  [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_NOT_FOUND]: 'Group member not found',
+  [ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED]: 'Only the group owner can perform this action',
+  [ApiMessageKey.MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER]: 'Cannot remove the group owner',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

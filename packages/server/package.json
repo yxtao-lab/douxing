@@ -66,6 +66,7 @@
     "m0:marketplace-cases": "tsx src/scripts/m0-marketplace-cases.ts",
     "m1:marketplace-onboard-cases": "tsx src/scripts/m1-marketplace-onboard-cases.ts",
     "m2:marketplace-demand-cases": "tsx src/scripts/m2-marketplace-demand-cases.ts",
+    "m3:marketplace-group-cases": "tsx src/scripts/m3-marketplace-group-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

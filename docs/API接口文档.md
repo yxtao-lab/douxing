@@ -1496,7 +1496,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 > **模块 B** · **M0**（2026-07-09）· **M1/M2**（2026-07-10 验收）· **M7-α Partner**（2026-07-13）  
 > **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
 > **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
-> **验收**：`m0:marketplace-cases` · `m1:marketplace-onboard-cases` · `m2:marketplace-demand-cases`（M7：`m7:marketplace-partner-cases` 待补）
+> **验收**：`m0:marketplace-cases` · `m1:marketplace-onboard-cases` · `m2:marketplace-demand-cases` · `m3:marketplace-group-cases`（M7：`m7:marketplace-partner-cases` 待补）
 
 前缀：`/api/marketplace`
 
@@ -1599,7 +1599,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 **M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：以下为 **M0 时代**笔误保留说明；**M1/M2 已交付**写操作，见下表。
 
-### M1/M2/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
+### M1/M2/M3-1/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
 
 | 分组 | 方法 | 路径 | 鉴权 | 阶段 |
 |------|------|------|------|------|
@@ -1617,10 +1617,31 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 订单 | GET | `/orders/mine` · `/orders/seller` · `/orders/:id` | 登录 | M2 |
 | 履约 | POST/PATCH | `/orders/:id/pay-mock` · `/orders/:id/status` | 登录 | M2 |
 | 监管 | GET | `/admin/demands` | `marketplace:demand:list` | M2 |
+| 团体 | POST | `/groups` | 登录 | M3-1 |
+| 团体 | GET | `/groups/mine` · `/groups/:id` | 登录（成员） | M3-1 |
+| 团体 | PATCH/DELETE | `/groups/:id` | 登录（owner） | M3-1 |
+| 团体成员 | POST | `/groups/:id/members` | 登录（owner） | M3-1 |
+| 团体成员 | DELETE | `/groups/:id/members/:userId` | 登录（owner） | M3-1 |
 | Partner | GET | `/partner/context` | 登录 + `merchant` | M7-α |
 | Partner | POST | `/partner/enroll` | 登录 | M7-α |
 
 路由实现：`packages/server/src/routes/marketplace/*`；Web 商户页消费 Partner + 上述卖方 API。
+
+### M3-1 团体 CRUD 摘要
+
+**鉴权**：均需登录（`Authorization: Bearer`）
+
+| 方法 | 路径 | 权限 | 说明 |
+|------|------|------|------|
+| POST | `/groups` | 登录 | 创建团体；创建者自动为 `owner` |
+| GET | `/groups/mine` | 登录 | 当前用户所属团体列表 `{ items: GroupMembershipSummary[] }` |
+| GET | `/groups/:id` | 成员 | 团体详情（含 `members`） |
+| PATCH | `/groups/:id` | owner | 更新名称/类型/人数 |
+| DELETE | `/groups/:id` | owner | 删除团体（成员 cascade） |
+| POST | `/groups/:id/members` | owner | body `{ userId }` 邀请协作者 |
+| DELETE | `/groups/:id/members/:userId` | owner | 移除协作者（不可移除 owner） |
+
+**错误 messageKey（节选）**：`api.marketplaceGroupNotFound` · `api.marketplaceGroupForbidden` · `api.marketplaceGroupOwnerRequired` · `api.marketplaceGroupMemberAlreadyExists` · `api.marketplaceGroupCannotRemoveOwner`
 
 ---
 
@@ -1628,6 +1649,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-14 | **M3-1 团体**：§25 增 `/groups/*` CRUD 与成员邀请；验收 `m3:marketplace-group-cases` |
 | 2026-07-13 | **M7-α Partner**：§25 增 M1/M2/M7-α API 速查表 · `GET/POST /partner/*`；MB2 ✅ 状态同步 |
 | 2026-07-10 | **M0 发单接单**：§25 `/api/marketplace/*`（5 个 GET）；§23 增 marketplace 枚举；总览 **125** 项；OpenAPI **103** 路径 / **122** 操作 |
 | 2026-07-09 | **C7-W**：§24 管理端 `admin/plan-sessions`（6 项）+ `admin/workflow-templates`（8 项）；§8 SSE 增 `node_status` 与 `tool_call.nodeId`；总览 **120** 项；OpenAPI **98** 路径 / **117** 操作 |

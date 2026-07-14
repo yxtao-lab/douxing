@@ -300,6 +300,13 @@ export const ApiMessageKey = {
   MARKETPLACE_ORDER_STATUS_INVALID: 'api.marketplaceOrderStatusInvalid',
   MARKETPLACE_SELLER_REQUIRED: 'api.marketplaceSellerRequired',
   MARKETPLACE_DEMAND_NOT_QUOTABLE: 'api.marketplaceDemandNotQuotable',
+  MARKETPLACE_GROUP_NOT_FOUND: 'api.marketplaceGroupNotFound',
+  MARKETPLACE_GROUP_FORBIDDEN: 'api.marketplaceGroupForbidden',
+  MARKETPLACE_GROUP_INVALID: 'api.marketplaceGroupInvalid',
+  MARKETPLACE_GROUP_MEMBER_ALREADY_EXISTS: 'api.marketplaceGroupMemberAlreadyExists',
+  MARKETPLACE_GROUP_MEMBER_NOT_FOUND: 'api.marketplaceGroupMemberNotFound',
+  MARKETPLACE_GROUP_OWNER_REQUIRED: 'api.marketplaceGroupOwnerRequired',
+  MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER: 'api.marketplaceGroupCannotRemoveOwner',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

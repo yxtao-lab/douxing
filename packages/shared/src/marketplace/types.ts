@@ -3,7 +3,9 @@ import type {
   BizOrgTypeValue,
   BudgetTypeValue,
   CertStatusValue,
+  DemandGroupTypeValue,
   DemandStatusValue,
+  GroupMemberRoleValue,
   OrgDocumentTypeValue,
   OrgRoleValue,
   ProviderTypeValue,
@@ -123,6 +125,52 @@ export interface OrgMembershipSummary {
   orgId: number;
   orgRole: OrgRoleValue;
   org: BizOrgSummary;
+}
+
+/** 发单团体摘要（列表/详情） */
+export interface DemandGroupSummary {
+  id: number;
+  name: string;
+  groupType: DemandGroupTypeValue;
+  headcount: number | null;
+  ownerUserId: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 团体成员摘要 */
+export interface GroupMemberSummary {
+  id: number;
+  groupId: number;
+  userId: number;
+  memberRole: GroupMemberRoleValue;
+  nickname: string | null;
+  username: string | null;
+  createdAt: string;
+}
+
+/** 发单团体详情（含成员列表） */
+export interface DemandGroupDetail extends DemandGroupSummary {
+  members: GroupMemberSummary[];
+}
+
+/** 当前用户团体成员关系 */
+export interface GroupMembershipSummary {
+  groupId: number;
+  memberRole: GroupMemberRoleValue;
+  group: DemandGroupSummary;
+}
+
+/** 创建/更新发单团体入参 */
+export interface DemandGroupInput {
+  name: string;
+  groupType: DemandGroupTypeValue;
+  headcount?: number;
+}
+
+/** 邀请团体协作者入参 */
+export interface InviteGroupMemberInput {
+  userId: number;
 }
 
 /** 需求单列表项 */

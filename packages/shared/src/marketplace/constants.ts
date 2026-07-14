@@ -130,6 +130,24 @@ export const DemandGroupType = {
 
 export type DemandGroupTypeValue = (typeof DemandGroupType)[keyof typeof DemandGroupType];
 
+/** 合法团体类型列表 */
+export const DEMAND_GROUP_TYPES: DemandGroupTypeValue[] = [
+  DemandGroupType.COMPANY,
+  DemandGroupType.SCHOOL,
+  DemandGroupType.COMMUNITY,
+  DemandGroupType.OTHER,
+];
+
+/**
+ * 判断团体类型是否合法。
+ *
+ * @param value - 团体类型字符串
+ * @returns 合法为 true
+ */
+export function isValidDemandGroupType(value: string): value is DemandGroupTypeValue {
+  return DEMAND_GROUP_TYPES.includes(value as DemandGroupTypeValue);
+}
+
 /** 团体成员角色 */
 export const GroupMemberRole = {
   OWNER: 'owner',
@@ -137,6 +155,22 @@ export const GroupMemberRole = {
 } as const;
 
 export type GroupMemberRoleValue = (typeof GroupMemberRole)[keyof typeof GroupMemberRole];
+
+/** 合法团体成员角色列表 */
+export const GROUP_MEMBER_ROLES: GroupMemberRoleValue[] = [
+  GroupMemberRole.OWNER,
+  GroupMemberRole.COLLABORATOR,
+];
+
+/**
+ * 判断团体成员角色是否合法。
+ *
+ * @param value - 成员角色字符串
+ * @returns 合法为 true
+ */
+export function isValidGroupMemberRole(value: string): value is GroupMemberRoleValue {
+  return GROUP_MEMBER_ROLES.includes(value as GroupMemberRoleValue);
+}
 
 /** 预算类型 */
 export const BudgetType = {
