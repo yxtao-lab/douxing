@@ -9,6 +9,10 @@ import type {
   ServiceOrderDetail,
   ServiceOrderStatusInput,
   ServiceOrderSummary,
+  ServiceProductDetail,
+  ServiceProductHallQuery,
+  ServiceProductPurchaseInput,
+  ServiceProductSummary,
 } from '@douxing/shared';
 import http from './http';
 
@@ -136,4 +140,51 @@ export async function advanceMarketplaceOrderStatus(orderId: number, body: Servi
 export async function fetchMyMarketplaceOrders() {
   const { data } = await http.get<{ data: { items: ServiceOrderSummary[] } }>('/marketplace/orders/mine');
   return data.data?.items ?? [];
+}
+
+/**
+ * 标品大厅分页列表（仅上架）。
+ *
+ * @param params - 筛选参数
+ * @returns 分页结果
+ */
+export async function fetchMarketplaceProductHall(params: ServiceProductHallQuery = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page ?? 1),
+    pageSize: String(params.pageSize ?? 20),
+  });
+  if (params.categoryCode) query.set('categoryCode', params.categoryCode);
+  if (params.destination) query.set('destination', params.destination);
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.orgId != null) query.set('orgId', String(params.orgId));
+  const { data } = await http.get<{ data: PaginatedResult<ServiceProductSummary> }>(
+    `/marketplace/products?${query.toString()}`,
+  );
+  return data.data;
+}
+
+/**
+ * 标品详情。
+ *
+ * @param id - 标品 ID
+ * @returns 标品详情
+ */
+export async function fetchMarketplaceProductDetail(id: number) {
+  const { data } = await http.get<{ data: ServiceProductDetail }>(`/marketplace/products/${id}`);
+  return data.data;
+}
+
+/**
+ * 标品直购下单。
+ *
+ * @param productId - 标品 ID
+ * @param body - SKU 与数量
+ * @returns 待支付订单
+ */
+export async function purchaseMarketplaceProduct(productId: number, body: ServiceProductPurchaseInput) {
+  const { data } = await http.post<{ data: ServiceOrderDetail }>(
+    `/marketplace/products/${productId}/purchase`,
+    body,
+  );
+  return data.data;
 }

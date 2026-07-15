@@ -307,6 +307,21 @@ export const ApiMessageKey = {
   MARKETPLACE_GROUP_MEMBER_NOT_FOUND: 'api.marketplaceGroupMemberNotFound',
   MARKETPLACE_GROUP_OWNER_REQUIRED: 'api.marketplaceGroupOwnerRequired',
   MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER: 'api.marketplaceGroupCannotRemoveOwner',
+  MARKETPLACE_DEMAND_MATCHED: 'api.marketplaceDemandMatched',
+  MARKETPLACE_NOTIFICATION_NOT_FOUND: 'api.marketplaceNotificationNotFound',
+  MARKETPLACE_MATCH_WEIGHTS_INVALID: 'api.marketplaceMatchWeightsInvalid',
+  MARKETPLACE_PRODUCT_NOT_FOUND: 'api.marketplaceProductNotFound',
+  MARKETPLACE_PRODUCT_INVALID: 'api.marketplaceProductInvalid',
+  MARKETPLACE_PRODUCT_STATUS_INVALID: 'api.marketplaceProductStatusInvalid',
+  MARKETPLACE_PRODUCT_NOT_ON_SALE: 'api.marketplaceProductNotOnSale',
+  MARKETPLACE_PRODUCT_SKU_NOT_FOUND: 'api.marketplaceProductSkuNotFound',
+  MARKETPLACE_PRODUCT_OUT_OF_STOCK: 'api.marketplaceProductOutOfStock',
+  MARKETPLACE_PRODUCT_PURCHASE_INVALID: 'api.marketplaceProductPurchaseInvalid',
+  MARKETPLACE_ORDER_CANCEL_INVALID: 'api.marketplaceOrderCancelInvalid',
+  MARKETPLACE_ORDER_REFUND_INVALID: 'api.marketplaceOrderRefundInvalid',
+  MARKETPLACE_REFUND_PLACEHOLDER: 'api.marketplaceRefundPlaceholder',
+  MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE: 'api.marketplacePaymentWechatUnavailable',
+  MARKETPLACE_SETTLEMENT_CONFIG_INVALID: 'api.marketplaceSettlementConfigInvalid',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

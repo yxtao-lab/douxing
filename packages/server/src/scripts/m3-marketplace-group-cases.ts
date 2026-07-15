@@ -1,5 +1,5 @@
 /**
- * M3 · 发单接单团体 CRUD + 团体发单 + 人数发票验收（M3-1 / M3-2 / M3-3）
+ * M3 · 发单接单团体全阶段验收（M3-1～M3-5）
  *
  * 用法：
  *   pnpm --filter @douxing/shared build
@@ -11,16 +11,25 @@ import { eq, inArray } from 'drizzle-orm';
 import {
   ApiError,
   ApiMessageKey,
+  BizOrgStatus,
+  BizOrgType,
   DemandGroupType,
   DemandStatus,
   GroupMemberRole,
   InvoiceTitleType,
+  OrgDocumentType,
+  OrgRole,
   PublisherType,
+  QuoteStatus,
+  ServiceOrderStatus,
   resolveApiMessage,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { users } from '../db/schema/users.js';
-import { demandGroup, groupMember, serviceDemand } from '../db/schema/marketplace-demand.js';
+import { bizOrg, orgMember } from '../db/schema/marketplace-biz-org.js';
+import { bizOrgDocument } from '../db/schema/marketplace-biz-org-documents.js';
+import { demandGroup, demandQuote, groupMember, serviceDemand } from '../db/schema/marketplace-demand.js';
+import { serviceOrder } from '../db/schema/marketplace-order.js';
 import {
   createDemand,
   getDemandByIdForUser,
@@ -39,6 +48,17 @@ import {
   removeGroupMember,
   updateDemandGroup,
 } from '../services/marketplace/marketplace-group.service.js';
+import {
+  applyBizOrg,
+  getOrgRoleForUser,
+  reviewBizOrg,
+} from '../services/marketplace/marketplace-org-onboard.service.js';
+import { createDemandQuote, listQuotesForDemand } from '../services/marketplace/marketplace-quote.service.js';
+import {
+  advanceServiceOrderStatus,
+  payMockServiceOrder,
+  selectQuoteAndCreateOrder,
+} from '../services/marketplace/marketplace-order.service.js';
 
 let failed = 0;
 
@@ -78,7 +98,20 @@ async function ensureTestUser(username: string): Promise<number> {
 }
 
 /**
- * 清理测试用户关联的团体与团体需求（便于重复跑用例）。
+ * 按需求 ID 列表删除订单、报价与需求本身。
+ *
+ * @param demandIds - 需求主键列表
+ */
+async function deleteDemandsCascade(demandIds: number[]): Promise<void> {
+  if (demandIds.length === 0) return;
+  const db = getDb();
+  await db.delete(serviceOrder).where(inArray(serviceOrder.demandId, demandIds));
+  await db.delete(demandQuote).where(inArray(demandQuote.demandId, demandIds));
+  await db.delete(serviceDemand).where(inArray(serviceDemand.id, demandIds));
+}
+
+/**
+ * 清理测试用户关联的团体、团体需求及本人发单数据（便于重复跑用例）。
  *
  * @param userId - 用户 ID
  */
@@ -91,13 +124,41 @@ async function cleanupUserGroupData(userId: number): Promise<void> {
 
   const ownedIds = owned.map((row) => row.id);
   if (ownedIds.length > 0) {
-    await db.delete(serviceDemand).where(inArray(serviceDemand.publisherGroupId, ownedIds));
+    const groupDemands = await db
+      .select({ id: serviceDemand.id })
+      .from(serviceDemand)
+      .where(inArray(serviceDemand.publisherGroupId, ownedIds));
+    await deleteDemandsCascade(groupDemands.map((row) => row.id));
     await db.delete(groupMember).where(inArray(groupMember.groupId, ownedIds));
     await db.delete(demandGroup).where(inArray(demandGroup.id, ownedIds));
   }
 
   await db.delete(groupMember).where(eq(groupMember.userId, userId));
-  await db.delete(serviceDemand).where(eq(serviceDemand.publisherUserId, userId));
+
+  const ownDemands = await db
+    .select({ id: serviceDemand.id })
+    .from(serviceDemand)
+    .where(eq(serviceDemand.publisherUserId, userId));
+  await deleteDemandsCascade(ownDemands.map((row) => row.id));
+}
+
+/**
+ * 清理商户组织测试数据（入驻申请与成员）。
+ *
+ * @param userId - 商户 owner 用户 ID
+ */
+async function cleanupOrgData(userId: number): Promise<void> {
+  const db = getDb();
+  const memberships = await db
+    .select({ orgId: orgMember.orgId })
+    .from(orgMember)
+    .where(eq(orgMember.userId, userId));
+
+  for (const row of memberships) {
+    await db.delete(bizOrgDocument).where(eq(bizOrgDocument.orgId, row.orgId));
+    await db.delete(orgMember).where(eq(orgMember.orgId, row.orgId));
+    await db.delete(bizOrg).where(eq(bizOrg.id, row.orgId));
+  }
 }
 
 /**
@@ -491,19 +552,167 @@ async function checkDemandHeadcountInvoiceFlow() {
   console.log('');
 }
 
+/**
+ * M3-5：公司团建端到端 — 建团 → 邀请 HR → 团体发单（人数+发票）→ 发布 →
+ * 旅行社报价 → 协作者选定/支付/履约；并断言团员不可自报价。
+ */
+async function checkCompanyTeamBuildingFlow() {
+  console.log('--- 公司团建全链（M3-5） ---');
+  const hrOwnerUsername = 'm3_team_hr';
+  const collabUsername = 'm3_team_collab';
+  const agencyUsername = 'm3_team_agency';
+
+  const hrId = await ensureTestUser(hrOwnerUsername);
+  const collabId = await ensureTestUser(collabUsername);
+  const agencyId = await ensureTestUser(agencyUsername);
+
+  await cleanupUserGroupData(hrId);
+  await cleanupUserGroupData(collabId);
+  await cleanupUserGroupData(agencyId);
+  await cleanupOrgData(agencyId);
+
+  const group = await createDemandGroup(hrId, {
+    name: '2026 公司团建组',
+    groupType: DemandGroupType.COMPANY,
+    headcount: 20,
+  });
+  assert(group.groupType === DemandGroupType.COMPANY, '团建团体类型=company');
+  assert(group.headcount === 20, '团体预计人数=20');
+
+  await inviteGroupMember(group.id, hrId, { userId: collabId });
+  const detail = await getDemandGroupDetailForUser(group.id, collabId);
+  assert(detail.members.length === 2, '邀请后成员=owner+协作者');
+
+  const draft = await createDemand(hrId, {
+    categoryCode: 'travel.group_tour',
+    title: '2026 公司团建定制游',
+    description: 'M3-5 公司团建验收 · 含住宿与团建活动',
+    destination: '杭州',
+    publisherGroupId: group.id,
+    headcount: 20,
+    budgetMin: '30000',
+    budgetMax: '50000',
+    budgetType: 'range',
+    invoiceInfo: {
+      titleType: InvoiceTitleType.COMPANY,
+      title: '兜行团建科技有限公司',
+      taxNo: '91310000MA1FLTEAM0',
+    },
+  });
+  assert(draft.publisherType === PublisherType.GROUP, '团建需求 publisherType=group');
+  assert(draft.publisherGroupId === group.id, '团建需求挂团体');
+  assert(draft.headcount === 20, '需求 headcount=20');
+  assert(draft.invoiceInfo?.taxNo === '91310000MA1FLTEAM0', '发票税号已写入');
+
+  const published = await publishDemand(draft.id, collabId);
+  assert(published.status === DemandStatus.PUBLISHED, '协作者可发布团建需求');
+
+  const hall = await listPublishedDemands({ keyword: '公司团建', page: 1, pageSize: 20 });
+  assert(
+    hall.items.some((item) => item.id === draft.id && item.publisherType === PublisherType.GROUP),
+    '大厅可见公司团建需求',
+  );
+
+  let memberSelfQuoteBlocked = false;
+  try {
+    await createDemandQuote(draft.id, collabId, {
+      amount: '1.00',
+      proposalText: '团员自报价应失败',
+    });
+  } catch (err) {
+    memberSelfQuoteBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_QUOTE_INVALID;
+  }
+  assert(memberSelfQuoteBlocked, '团体成员不可对本团需求报价');
+
+  const appliedOrg = await applyBizOrg(agencyId, {
+    name: 'M3 团建旅行社',
+    orgType: BizOrgType.TRAVEL_AGENCY,
+    licenseNo: 'M3-TRAVEL-001',
+    contactPhone: '13800000033',
+    documents: [
+      {
+        docType: OrgDocumentType.LICENSE,
+        fileUrl: '/uploads/marketplace/test/m3-license.pdf',
+        fileName: 'license.pdf',
+      },
+    ],
+  });
+
+  const reviewerRows = await getDb()
+    .select({ id: users.id })
+    .from(users)
+    .where(eq(users.username, 'admin'))
+    .limit(1);
+  const reviewerId = reviewerRows[0]?.id ?? agencyId;
+  const approvedOrg = await reviewBizOrg(appliedOrg.id, reviewerId, { action: 'approve' });
+  assert(approvedOrg.status === BizOrgStatus.ACTIVE, '旅行社审核通过');
+  assert((await getOrgRoleForUser(agencyId, appliedOrg.id)) === OrgRole.OWNER, '旅行社 owner 角色');
+
+  const quote = await createDemandQuote(draft.id, agencyId, {
+    amount: '42000.00',
+    proposalText: '含住宿、用车与半天团建活动',
+    orgId: appliedOrg.id,
+  });
+  assert(quote.status === QuoteStatus.PENDING, '旅行社报价成功');
+  assert(quote.orgId === appliedOrg.id, '报价写入 orgId');
+
+  const quotes = await listQuotesForDemand(draft.id);
+  assert(quotes.some((item) => item.id === quote.id), '协作者可读报价列表');
+
+  const demandAfterQuote = await getDb()
+    .select({ status: serviceDemand.status })
+    .from(serviceDemand)
+    .where(eq(serviceDemand.id, draft.id))
+    .limit(1);
+  assert(demandAfterQuote[0]?.status === DemandStatus.QUOTING, '首条报价后 status=quoting');
+
+  const order = await selectQuoteAndCreateOrder(draft.id, collabId, { quoteId: quote.id });
+  assert(order.status === ServiceOrderStatus.PENDING_PAY, '协作者选定报价生成订单');
+  assert(order.totalAmount === '42000.00', '订单金额与报价一致');
+
+  const paid = await payMockServiceOrder(order.id, collabId);
+  assert(paid.status === ServiceOrderStatus.PAID, '协作者模拟支付成功');
+
+  await advanceServiceOrderStatus(order.id, collabId, { status: ServiceOrderStatus.IN_PROGRESS });
+  await advanceServiceOrderStatus(order.id, collabId, { status: ServiceOrderStatus.DELIVERED });
+  const confirmed = await advanceServiceOrderStatus(order.id, collabId, {
+    status: ServiceOrderStatus.CONFIRMED,
+  });
+  assert(confirmed.status === ServiceOrderStatus.CONFIRMED, '履约推进至 confirmed');
+
+  const completed = await getDb()
+    .select({ status: serviceDemand.status })
+    .from(serviceDemand)
+    .where(eq(serviceDemand.id, draft.id))
+    .limit(1);
+  assert(completed[0]?.status === DemandStatus.COMPLETED, '确认后需求 status=completed');
+
+  // owner 仍可读取已完成的团体需求
+  const ownerView = await getDemandByIdForUser(draft.id, hrId);
+  assert(ownerView.id === draft.id, 'owner 可读协作者走完的团体需求');
+
+  await cleanupUserGroupData(hrId);
+  await cleanupUserGroupData(collabId);
+  await cleanupUserGroupData(agencyId);
+  await cleanupOrgData(agencyId);
+  console.log('');
+}
+
 async function main() {
-  console.log('=== M3 Marketplace 团体 CRUD + 团体发单 + 人数发票验收 ===\n');
+  console.log('=== M3 Marketplace 团体全阶段验收（M3-1～M3-5） ===\n');
   await checkSchemaAndI18n();
   await checkGroupCrudFlow();
   await checkGroupDemandPublishFlow();
   await checkDemandHeadcountInvoiceFlow();
+  await checkCompanyTeamBuildingFlow();
 
   console.log('');
   if (failed > 0) {
     console.error(`\n${failed} 项失败`);
     process.exit(1);
   }
-  console.log('M3 Marketplace 团体 CRUD + 团体发单 + 人数发票验收全部通过');
+  console.log('M3 Marketplace 团体全阶段验收全部通过（含公司团建全链）');
   process.exit(0);
 }
 

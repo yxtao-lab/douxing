@@ -269,3 +269,75 @@ export const SERVICE_CATEGORY_CODES: string[] = (() => {
 export function isValidServiceCategoryCode(code: string): boolean {
   return SERVICE_CATEGORY_CODES.includes(code);
 }
+
+/** 站内通知类型（M4） */
+export const MarketplaceNotificationType = {
+  DEMAND_MATCH: 'demand_match',
+} as const;
+
+export type MarketplaceNotificationTypeValue =
+  (typeof MarketplaceNotificationType)[keyof typeof MarketplaceNotificationType];
+
+/** 通知关联实体类型 */
+export const MarketplaceNotificationRefType = {
+  SERVICE_DEMAND: 'service_demand',
+} as const;
+
+export type MarketplaceNotificationRefTypeValue =
+  (typeof MarketplaceNotificationRefType)[keyof typeof MarketplaceNotificationRefType];
+
+/**
+ * 报价列表默认排序理由（发单方可见；客户端按 key 做 i18n）。
+ */
+export const QuoteSortReason = {
+  CREDIT_THEN_AMOUNT: 'credit_then_amount',
+} as const;
+
+export type QuoteSortReasonValue = (typeof QuoteSortReason)[keyof typeof QuoteSortReason];
+
+/**
+ * 匹配规则默认权重（类目 / 区域 / 档期；总和建议 100）。
+ * 服务端可用同结构覆盖。
+ */
+export const DEFAULT_MATCH_WEIGHTS = {
+  category: 40,
+  region: 40,
+  schedule: 20,
+} as const;
+
+export type MatchWeightConfig = {
+  category: number;
+  region: number;
+  schedule: number;
+};
+
+/** 订单履约完成时服务者信用加分（占位规则） */
+export const CREDIT_DELTA_ORDER_CONFIRMED = 5;
+
+/** 纠纷扣减信用分（占位规则，待纠纷表落地后接入） */
+export const CREDIT_DELTA_DISPUTE = -10;
+
+/** 平台默认抽佣比例（商户 settlement_config 未配置时回落） */
+export const DEFAULT_PLATFORM_FEE_RATE = 0.05;
+
+/** 商户结算台账状态（M6） */
+export const SettlementStatus = {
+  PENDING: 'pending',
+  SETTLED: 'settled',
+  VOID: 'void',
+} as const;
+
+export type SettlementStatusValue = (typeof SettlementStatus)[keyof typeof SettlementStatus];
+
+/** 标品上下架状态（M5） */
+export const ProductStatus = {
+  DRAFT: 'draft',
+  ON_SALE: 'on_sale',
+  OFF_SALE: 'off_sale',
+} as const;
+
+export type ProductStatusValue = (typeof ProductStatus)[keyof typeof ProductStatus];
+
+/** 可公开浏览的标品状态 */
+export const PUBLIC_PRODUCT_STATUSES: ProductStatusValue[] = [ProductStatus.ON_SALE];
+

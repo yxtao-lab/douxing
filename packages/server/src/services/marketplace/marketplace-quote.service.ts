@@ -5,6 +5,7 @@ import {
   BizOrgStatus,
   DemandStatus,
   PublisherType,
+  QuoteSortReason,
   QuoteStatus,
   type DemandQuoteCreateInput,
   type DemandQuoteSummary,
@@ -27,12 +28,14 @@ const QUOTABLE_DEMAND_STATUSES = [DemandStatus.PUBLISHED, DemandStatus.QUOTING] 
  * @param row - `demand_quote` 表行
  * @param orgName - 商户名称；无 org 时为 `null`
  * @param providerDisplayName - 服务者展示名；无个人服务者时为 `null`
+ * @param providerCreditScore - 服务者信用分；无个人服务者时为 `null`
  * @returns 报价摘要
  */
 function toQuoteSummary(
   row: typeof demandQuote.$inferSelect,
   orgName: string | null,
   providerDisplayName: string | null,
+  providerCreditScore: number | null = null,
 ): DemandQuoteSummary {
   return {
     id: row.id,
@@ -44,6 +47,8 @@ function toQuoteSummary(
     amount: String(row.amount),
     proposalText: row.proposalText ?? null,
     status: row.status as DemandQuoteSummary['status'],
+    providerCreditScore,
+    sortReasonKey: QuoteSortReason.CREDIT_THEN_AMOUNT,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   };
@@ -169,31 +174,33 @@ export async function createDemandQuote(
   }
 
   let providerDisplayName: string | null = null;
+  let providerCreditScore: number | null = null;
   if (providerUserId != null) {
     const providerRows = await db
-      .select({ displayName: serviceProvider.displayName })
+      .select({
+        displayName: serviceProvider.displayName,
+        creditScore: serviceProvider.creditScore,
+      })
       .from(serviceProvider)
       .where(eq(serviceProvider.userId, providerUserId))
       .limit(1);
     providerDisplayName = providerRows[0]?.displayName ?? null;
+    providerCreditScore = providerRows[0]?.creditScore ?? null;
   }
 
-  return toQuoteSummary(quoteRow, orgName, providerDisplayName);
+  return toQuoteSummary(quoteRow, orgName, providerDisplayName, providerCreditScore);
 }
 
 /**
  * 列出需求单下的全部报价（仅发单方或平台管理端应调用）。
+ * 默认按信用分降序、金额升序排序，便于发单方优先看到优质报价。
  *
  * @param demandId - 需求单 ID
- * @returns 按创建时间倒序的报价列表；无记录时为空数组
+ * @returns 已排序的报价列表；无记录时为空数组
  */
 export async function listQuotesForDemand(demandId: number): Promise<DemandQuoteSummary[]> {
   const db = getDb();
-  const rows = await db
-    .select()
-    .from(demandQuote)
-    .where(eq(demandQuote.demandId, demandId))
-    .orderBy(desc(demandQuote.createdAt));
+  const rows = await db.select().from(demandQuote).where(eq(demandQuote.demandId, demandId));
 
   const result: DemandQuoteSummary[] = [];
   for (const row of rows) {
@@ -203,16 +210,32 @@ export async function listQuotesForDemand(demandId: number): Promise<DemandQuote
       orgName = orgRows[0]?.name ?? null;
     }
     let providerDisplayName: string | null = null;
+    let providerCreditScore: number | null = null;
     if (row.providerUserId != null) {
       const providerRows = await db
-        .select({ displayName: serviceProvider.displayName })
+        .select({
+          displayName: serviceProvider.displayName,
+          creditScore: serviceProvider.creditScore,
+        })
         .from(serviceProvider)
         .where(eq(serviceProvider.userId, row.providerUserId))
         .limit(1);
       providerDisplayName = providerRows[0]?.displayName ?? null;
+      providerCreditScore = providerRows[0]?.creditScore ?? null;
     }
-    result.push(toQuoteSummary(row, orgName, providerDisplayName));
+    result.push(toQuoteSummary(row, orgName, providerDisplayName, providerCreditScore));
   }
+
+  result.sort((a, b) => {
+    const creditA = a.providerCreditScore ?? 0;
+    const creditB = b.providerCreditScore ?? 0;
+    if (creditB !== creditA) return creditB - creditA;
+    const amountA = Number(a.amount);
+    const amountB = Number(b.amount);
+    if (amountA !== amountB) return amountA - amountB;
+    return b.id - a.id;
+  });
+
   return result;
 }
 
@@ -259,16 +282,21 @@ export async function listPartnerQuotesByUser(userId: number): Promise<PartnerQu
       orgName = orgRows[0]?.name ?? null;
     }
     let providerDisplayName: string | null = null;
+    let providerCreditScore: number | null = null;
     if (row.providerUserId != null) {
       const providerRows = await db
-        .select({ displayName: serviceProvider.displayName })
+        .select({
+          displayName: serviceProvider.displayName,
+          creditScore: serviceProvider.creditScore,
+        })
         .from(serviceProvider)
         .where(eq(serviceProvider.userId, row.providerUserId))
         .limit(1);
       providerDisplayName = providerRows[0]?.displayName ?? null;
+      providerCreditScore = providerRows[0]?.creditScore ?? null;
     }
     result.push({
-      ...toQuoteSummary(row, orgName, providerDisplayName),
+      ...toQuoteSummary(row, orgName, providerDisplayName, providerCreditScore),
       demandTitle: demand?.title ?? null,
       demandNo: demand?.demandNo ?? null,
       demandStatus: (demand?.status ?? DemandStatus.DRAFT) as PartnerQuoteListItem['demandStatus'],

@@ -10,6 +10,7 @@ import {
 import { users } from './users.js';
 import { bizOrg } from './marketplace-biz-org.js';
 import { serviceDemand, demandQuote } from './marketplace-demand.js';
+import { serviceProduct, serviceProductSku } from './marketplace-product.js';
 
 /** 服务履约订单（模块 B，与路线解锁 orders 分表） */
 export const serviceOrder = mysqlTable(
@@ -17,10 +18,12 @@ export const serviceOrder = mysqlTable(
   {
     id: int('id').primaryKey().autoincrement(),
     orderNo: varchar('order_no', { length: 32 }).notNull(),
-    demandId: int('demand_id')
-      .notNull()
-      .references(() => serviceDemand.id, { onDelete: 'restrict' }),
+    /** 发单成单必填；标品直购为 null */
+    demandId: int('demand_id').references(() => serviceDemand.id, { onDelete: 'restrict' }),
     quoteId: int('quote_id').references(() => demandQuote.id, { onDelete: 'set null' }),
+    /** 标品直购必填；发单成单为 null */
+    productId: int('product_id').references(() => serviceProduct.id, { onDelete: 'set null' }),
+    skuId: int('sku_id').references(() => serviceProductSku.id, { onDelete: 'set null' }),
     buyerUserId: int('buyer_user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
@@ -37,6 +40,7 @@ export const serviceOrder = mysqlTable(
   (table) => ({
     orderNoUnique: uniqueIndex('uk_service_order_no').on(table.orderNo),
     demandIdx: index('idx_service_order_demand').on(table.demandId),
+    productIdx: index('idx_service_order_product').on(table.productId),
     buyerIdx: index('idx_service_order_buyer').on(table.buyerUserId),
   }),
 );

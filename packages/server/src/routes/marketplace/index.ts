@@ -9,6 +9,8 @@ import adminRouter from './admin.js';
 import ordersRouter from './orders.js';
 import partnerRouter from './partner.js';
 import quotesRouter from './quotes.js';
+import notificationsRouter from './notifications.js';
+import productsRouter from './products.js';
 
 const router = Router();
 
@@ -20,7 +22,9 @@ router.use('/orders', ordersRouter);
 router.use('/orgs', orgsRouter);
 router.use('/providers', providersRouter);
 router.use('/partner', partnerRouter);
+router.use('/products', productsRouter);
 router.use('/quotes', quotesRouter);
+router.use('/notifications', notificationsRouter);
 router.use('/admin', adminRouter);
 
 export default router;

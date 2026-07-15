@@ -22,6 +22,7 @@ import {
   assertGroupMemberAccess,
   getGroupRoleForUser,
 } from './marketplace-group.service.js';
+import { matchAndNotifyProviders } from './marketplace-match.service.js';
 
 const HALL_STATUSES = [DemandStatus.PUBLISHED, DemandStatus.QUOTING] as const;
 const HEADCOUNT_MIN = 1;
@@ -303,7 +304,7 @@ export async function updateDemand(
 }
 
 /**
- * 将草稿需求单发布到需求大厅。
+ * 将草稿需求单发布到需求大厅，并触发匹配推送（失败不阻断发布）。
  *
  * @param id - 需求单 ID
  * @param userId - 当前用户 ID（须为发单人或团体成员）
@@ -321,6 +322,12 @@ export async function publishDemand(id: number, userId: number): Promise<Service
     .update(serviceDemand)
     .set({ status: DemandStatus.PUBLISHED })
     .where(eq(serviceDemand.id, id));
+
+  try {
+    await matchAndNotifyProviders(id);
+  } catch (err) {
+    console.error('[marketplace] matchAndNotifyProviders failed after publish', id, err);
+  }
 
   const rows = await db.select().from(serviceDemand).where(eq(serviceDemand.id, id)).limit(1);
   return toDemandDetail(rows[0]!);

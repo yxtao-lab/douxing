@@ -7,13 +7,18 @@ import type {
   DemandStatusValue,
   GroupMemberRoleValue,
   InvoiceTitleTypeValue,
+  MarketplaceNotificationRefTypeValue,
+  MarketplaceNotificationTypeValue,
   OrgDocumentTypeValue,
   OrgRoleValue,
+  ProductStatusValue,
   ProviderTypeValue,
   PublisherTypeValue,
+  QuoteSortReasonValue,
   QuoteStatusValue,
   ServiceCategoryNode,
   ServiceOrderStatusValue,
+  SettlementStatusValue,
 } from './constants.js';
 
 /** 商户组织结算配置（JSON 快照） */
@@ -285,8 +290,35 @@ export interface DemandQuoteSummary {
   amount: string;
   proposalText: string | null;
   status: QuoteStatusValue;
+  /** 服务者信用分；商户报价无个人服务者时为 `null` */
+  providerCreditScore: number | null;
+  /** 当前列表排序理由 key（见 `QuoteSortReason`） */
+  sortReasonKey: QuoteSortReasonValue;
   createdAt: string;
   updatedAt: string;
+}
+
+/** 站内通知摘要（M4） */
+export interface MarketplaceNotificationSummary {
+  id: number;
+  userId: number;
+  type: MarketplaceNotificationTypeValue;
+  refType: MarketplaceNotificationRefTypeValue;
+  refId: number;
+  messageKey: string;
+  payload: Record<string, string | number | null> | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+/** 匹配候选服务者（引擎内部/调试用） */
+export interface MarketplaceMatchCandidate {
+  providerId: number;
+  userId: number;
+  score: number;
+  matchedCategory: boolean;
+  matchedRegion: boolean;
+  matchedSchedule: boolean;
 }
 
 /** 提交报价入参 */
@@ -305,8 +337,12 @@ export interface DemandSelectQuoteInput {
 export interface ServiceOrderSummary {
   id: number;
   orderNo: string;
-  demandId: number;
+  /** 发单成单时有值；标品直购为 `null` */
+  demandId: number | null;
   quoteId: number | null;
+  /** 标品直购时有值；发单成单为 `null` */
+  productId: number | null;
+  skuId: number | null;
   buyerUserId: number;
   sellerOrgId: number | null;
   sellerProviderUserId: number | null;
@@ -321,11 +357,97 @@ export interface ServiceOrderSummary {
 export interface ServiceOrderDetail extends ServiceOrderSummary {
   demandTitle: string | null;
   demandNo: string | null;
+  /** 直购标品标题；发单成单为 `null` */
+  productTitle: string | null;
 }
 
 /** 履约订单状态推进入参 */
 export interface ServiceOrderStatusInput {
   status: ServiceOrderStatusValue;
+}
+
+/** 标品 SKU 摘要 */
+export interface ServiceProductSkuSummary {
+  id: number;
+  productId: number;
+  name: string;
+  price: string;
+  stock: number;
+  sortOrder: number;
+}
+
+/** 标品摘要（列表） */
+export interface ServiceProductSummary {
+  id: number;
+  orgId: number;
+  orgName: string | null;
+  categoryCode: string;
+  title: string;
+  coverUrl: string | null;
+  destination: string | null;
+  status: ProductStatusValue;
+  /** 最低 SKU 价；无 SKU 时为 `null` */
+  minPrice: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 标品详情 */
+export interface ServiceProductDetail extends ServiceProductSummary {
+  description: string | null;
+  skus: ServiceProductSkuSummary[];
+}
+
+/** 创建/更新标品入参（含至少一个 SKU） */
+export interface ServiceProductInput {
+  categoryCode: string;
+  title: string;
+  description?: string;
+  coverUrl?: string;
+  destination?: string;
+  skus: Array<{
+    name: string;
+    price: string;
+    stock: number;
+    sortOrder?: number;
+  }>;
+}
+
+/** 标品大厅查询 */
+export interface ServiceProductHallQuery {
+  page?: number;
+  pageSize?: number;
+  categoryCode?: string;
+  destination?: string;
+  keyword?: string;
+  orgId?: number;
+}
+
+/** 标品直购入参 */
+export interface ServiceProductPurchaseInput {
+  skuId: number;
+  quantity?: number;
+}
+
+/** 商户结算台账摘要（M6） */
+export interface OrgSettlementSummary {
+  id: number;
+  orgId: number;
+  orderId: number;
+  orderNo: string;
+  grossAmount: string;
+  platformFee: string;
+  netAmount: string;
+  status: SettlementStatusValue;
+  createdAt: string;
+  settledAt: string | null;
+}
+
+/** 退款占位响应（真退款归 E2/微信） */
+export interface ServiceOrderRefundPlaceholder {
+  orderId: number;
+  status: 'refund_pending';
+  messageKey: string;
 }
 
 /** 商户工作台上下文（入驻状态与可报价身份） */

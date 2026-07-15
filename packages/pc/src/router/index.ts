@@ -166,6 +166,12 @@ const router = createRouter({
           meta: { titleKey: 'marketplace.groupDetailTitle', navKey: 'profile', requiresAuth: true },
         },
         {
+          path: 'marketplace/products/:id',
+          name: 'marketplace-product-detail',
+          component: () => import('@/views/MarketplaceProductDetailView.vue'),
+          meta: { titleKey: 'marketplace.productDetailTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
           path: 'marketplace/:id',
           name: 'marketplace-detail',
           component: () => import('@/views/MarketplaceDetailView.vue'),

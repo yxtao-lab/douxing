@@ -5,10 +5,13 @@ import { fail, failFromError, success } from '../../utils/response.js';
 import { ApiMessageKey, ServiceOrderStatus } from '@douxing/shared';
 import {
   advanceServiceOrderStatus,
+  cancelServiceOrder,
   getOrderByIdForUser,
   listServiceOrdersByBuyer,
   listServiceOrdersBySeller,
   payMockServiceOrder,
+  requestServiceOrderPay,
+  requestServiceOrderRefundPlaceholder,
 } from '../../services/marketplace/marketplace-order.service.js';
 
 const router = Router();
@@ -76,6 +79,66 @@ router.post('/:id/pay-mock', authMiddleware, async (req, res) => {
   try {
     const order = await payMockServiceOrder(id, req.auth!.userId);
     success(res, order);
+  } catch (err) {
+    failFromError(res, err);
+  }
+});
+
+/**
+ * 统一支付入口：mock 模式走模拟支付；微信真通道待 E2。
+ *
+ * @route POST /api/marketplace/orders/:id/pay
+ */
+router.post('/:id/pay', authMiddleware, async (req, res) => {
+  const rawId = req.params.id;
+  const id = parseOrderId(Array.isArray(rawId) ? rawId[0] ?? '' : rawId ?? '');
+  if (!id) {
+    return failFromError(res, new Error('invalid id'), ApiMessageKey.PARAM_ERROR);
+  }
+
+  try {
+    const order = await requestServiceOrderPay(id, req.auth!.userId);
+    success(res, order);
+  } catch (err) {
+    failFromError(res, err);
+  }
+});
+
+/**
+ * 取消待支付订单。
+ *
+ * @route POST /api/marketplace/orders/:id/cancel
+ */
+router.post('/:id/cancel', authMiddleware, async (req, res) => {
+  const rawId = req.params.id;
+  const id = parseOrderId(Array.isArray(rawId) ? rawId[0] ?? '' : rawId ?? '');
+  if (!id) {
+    return failFromError(res, new Error('invalid id'), ApiMessageKey.PARAM_ERROR);
+  }
+
+  try {
+    const order = await cancelServiceOrder(id, req.auth!.userId);
+    success(res, order);
+  } catch (err) {
+    failFromError(res, err);
+  }
+});
+
+/**
+ * 退款占位（不调微信）。
+ *
+ * @route POST /api/marketplace/orders/:id/refund
+ */
+router.post('/:id/refund', authMiddleware, async (req, res) => {
+  const rawId = req.params.id;
+  const id = parseOrderId(Array.isArray(rawId) ? rawId[0] ?? '' : rawId ?? '');
+  if (!id) {
+    return failFromError(res, new Error('invalid id'), ApiMessageKey.PARAM_ERROR);
+  }
+
+  try {
+    const result = await requestServiceOrderRefundPlaceholder(id, req.auth!.userId);
+    success(res, result);
   } catch (err) {
     failFromError(res, err);
   }

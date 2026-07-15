@@ -9,6 +9,10 @@ import type {
   ServiceOrderDetail,
   ServiceOrderStatusInput,
   ServiceOrderSummary,
+  ServiceProductDetail,
+  ServiceProductHallQuery,
+  ServiceProductPurchaseInput,
+  ServiceProductSummary,
 } from '@douxing/shared';
 import { request } from '@/utils/request';
 
@@ -128,4 +132,46 @@ export function advanceMarketplaceOrderStatus(orderId: number, body: ServiceOrde
  */
 export function fetchMyMarketplaceOrders() {
   return request<{ items: ServiceOrderSummary[] }>('/marketplace/orders/mine').then((r) => r.items ?? []);
+}
+
+/**
+ * 标品大厅分页列表（仅上架）。
+ *
+ * @param params - 筛选参数
+ * @returns 分页结果
+ */
+export function fetchMarketplaceProductHall(params: ServiceProductHallQuery = {}) {
+  const query = new URLSearchParams({
+    page: String(params.page ?? 1),
+    pageSize: String(params.pageSize ?? 20),
+  });
+  if (params.categoryCode) query.set('categoryCode', params.categoryCode);
+  if (params.destination) query.set('destination', params.destination);
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.orgId != null) query.set('orgId', String(params.orgId));
+  return request<PaginatedResult<ServiceProductSummary>>(`/marketplace/products?${query.toString()}`);
+}
+
+/**
+ * 标品详情。
+ *
+ * @param id - 标品 ID
+ * @returns 标品详情
+ */
+export function fetchMarketplaceProductDetail(id: number) {
+  return request<ServiceProductDetail>(`/marketplace/products/${id}`);
+}
+
+/**
+ * 标品直购下单。
+ *
+ * @param productId - 标品 ID
+ * @param body - SKU 与数量
+ * @returns 待支付订单
+ */
+export function purchaseMarketplaceProduct(productId: number, body: ServiceProductPurchaseInput) {
+  return request<ServiceOrderDetail>(`/marketplace/products/${productId}/purchase`, {
+    method: 'POST',
+    data: body,
+  });
 }

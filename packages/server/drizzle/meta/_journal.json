@@ -288,6 +288,27 @@
       "when": 1751904000000,
       "tag": "0041_marketplace_m3_demand_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "5",
+      "when": 1751990400000,
+      "tag": "0042_marketplace_m4_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "5",
+      "when": 1752076800000,
+      "tag": "0043_marketplace_m5_products",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "5",
+      "when": 1752163200000,
+      "tag": "0044_marketplace_m6_settlement",
+      "breakpoints": true
     }
   ]
 }

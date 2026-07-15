@@ -234,6 +234,8 @@ export const sharedZhCN = {
     },
     pageTitle: '定制服务',
     hallTitle: '需求大厅',
+    productsTitle: '标准套餐',
+    productDetailTitle: '套餐详情',
     createTitle: '发布需求',
     mineTitle: '我的需求',
     groupsTitle: '我的团体',

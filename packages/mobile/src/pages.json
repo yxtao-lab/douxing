@@ -166,6 +166,12 @@
       }
     },
     {
+      "path": "pages/marketplace/product-detail",
+      "style": {
+        "navigationBarTitleText": "套餐详情"
+      }
+    },
+    {
       "path": "pages/journey-albums/list",
       "style": {
         "navigationBarTitleText": "我的相册"

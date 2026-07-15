@@ -234,6 +234,8 @@ export const sharedEnUS = {
     },
     pageTitle: 'Custom services',
     hallTitle: 'Demand hall',
+    productsTitle: 'Packages',
+    productDetailTitle: 'Package detail',
     createTitle: 'Post a demand',
     mineTitle: 'My demands',
     groupsTitle: 'My groups',

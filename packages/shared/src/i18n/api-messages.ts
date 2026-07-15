@@ -309,6 +309,21 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_NOT_FOUND]: '团体成员不存在',
   [ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED]: '仅团体所有者可执行此操作',
   [ApiMessageKey.MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER]: '不能移除团体所有者',
+  [ApiMessageKey.MARKETPLACE_DEMAND_MATCHED]: '有新的服务需求「{title}」与您匹配',
+  [ApiMessageKey.MARKETPLACE_NOTIFICATION_NOT_FOUND]: '通知不存在或无权查看',
+  [ApiMessageKey.MARKETPLACE_MATCH_WEIGHTS_INVALID]: '匹配权重配置无效',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_NOT_FOUND]: '标品不存在或无权查看',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_INVALID]: '标品信息不完整或无效',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_STATUS_INVALID]: '标品状态操作无效',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_NOT_ON_SALE]: '标品未上架，无法购买',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_SKU_NOT_FOUND]: '规格不存在或不属于该标品',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_OUT_OF_STOCK]: '库存不足',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_PURCHASE_INVALID]: '购买参数无效',
+  [ApiMessageKey.MARKETPLACE_ORDER_CANCEL_INVALID]: '当前订单状态不可取消',
+  [ApiMessageKey.MARKETPLACE_ORDER_REFUND_INVALID]: '当前订单状态不可申请退款',
+  [ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER]: '退款申请已登记，待支付通道就绪后处理',
+  [ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE]: '微信支付通道未配置，请使用模拟支付或等待商户号就绪',
+  [ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID]: '结算配置无效',
 };
 
 const enUS: Record<string, string> = {
@@ -625,6 +640,22 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_GROUP_MEMBER_NOT_FOUND]: 'Group member not found',
   [ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED]: 'Only the group owner can perform this action',
   [ApiMessageKey.MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER]: 'Cannot remove the group owner',
+  [ApiMessageKey.MARKETPLACE_DEMAND_MATCHED]: 'A new demand "{title}" matches your services',
+  [ApiMessageKey.MARKETPLACE_NOTIFICATION_NOT_FOUND]: 'Notification not found or access denied',
+  [ApiMessageKey.MARKETPLACE_MATCH_WEIGHTS_INVALID]: 'Invalid match weight configuration',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_NOT_FOUND]: 'Product not found or access denied',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_INVALID]: 'Invalid or incomplete product',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_STATUS_INVALID]: 'Invalid product status action',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_NOT_ON_SALE]: 'Product is not on sale',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_SKU_NOT_FOUND]: 'SKU not found for this product',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_OUT_OF_STOCK]: 'Insufficient stock',
+  [ApiMessageKey.MARKETPLACE_PRODUCT_PURCHASE_INVALID]: 'Invalid purchase parameters',
+  [ApiMessageKey.MARKETPLACE_ORDER_CANCEL_INVALID]: 'Order cannot be cancelled in the current status',
+  [ApiMessageKey.MARKETPLACE_ORDER_REFUND_INVALID]: 'Order cannot request refund in the current status',
+  [ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER]: 'Refund request recorded; processing awaits payment channel',
+  [ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE]:
+    'WeChat Pay is not configured; use mock pay or wait for merchant credentials',
+  [ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID]: 'Invalid settlement configuration',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

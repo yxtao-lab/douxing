@@ -15,6 +15,7 @@ import {
   reviewServiceProvider,
 } from '../../services/marketplace/marketplace-provider.service.js';
 import { listDemandsForAdminPage } from '../../services/marketplace/marketplace-demand.service.js';
+import { listSettlementsForAdmin } from '../../services/marketplace/marketplace-settlement.service.js';
 import {
   parseDateRangeFilter,
   parseOptionalString,
@@ -211,6 +212,30 @@ router.get('/demands', authMiddleware, async (req, res) => {
       destination,
     });
     success(res, result);
+  } catch (err) {
+    failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+/**
+ * 管理端结算台账列表。
+ *
+ * @route GET /api/marketplace/admin/settlements
+ */
+router.get('/settlements', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'marketplace:org:list'))) return;
+
+  const orgIdRaw = req.query.orgId;
+  const orgId =
+    orgIdRaw != null && String(orgIdRaw).trim() !== '' ? Number(orgIdRaw) : undefined;
+  const status = parseOptionalString(req.query as Record<string, unknown>, 'status');
+
+  try {
+    const items = await listSettlementsForAdmin({
+      orgId: Number.isInteger(orgId) && (orgId as number) > 0 ? orgId : undefined,
+      status,
+    });
+    success(res, { items });
   } catch (err) {
     failFromError(res, err, ApiMessageKey.SERVER_ERROR);
   }

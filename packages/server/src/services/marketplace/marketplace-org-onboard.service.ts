@@ -11,6 +11,7 @@ import {
   type BizOrgDetail,
   type BizOrgDocumentSummary,
   type BizOrgReviewInput,
+  type BizOrgSettlementConfig,
   type BizOrgSummary,
   type OrgMembershipSummary,
 } from '@douxing/shared';
@@ -361,4 +362,49 @@ export async function addBizOrgDocuments(
     .limit(documents.length);
 
   return rows.map(toBizOrgDocumentSummary);
+}
+
+/**
+ * 更新商户结算配置（抽佣费率等；owner/admin 可写，验收脚本可直接调）。
+ *
+ * @param orgId - 商户 ID
+ * @param userId - 操作人；传 `null` 时跳过成员校验（仅测试/管理脚本）
+ * @param config - 结算配置；会与现有配置浅合并
+ * @returns 合并后的结算配置
+ * @throws {ApiError} 商户不存在、无权或费率非法
+ */
+export async function updateOrgSettlementConfig(
+  orgId: number,
+  userId: number | null,
+  config: BizOrgSettlementConfig,
+): Promise<BizOrgSettlementConfig> {
+  if (
+    config.platformFeeRate != null &&
+    (!Number.isFinite(config.platformFeeRate) ||
+      config.platformFeeRate < 0 ||
+      config.platformFeeRate > 1)
+  ) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID);
+  }
+
+  const db = getDb();
+  const rows = await db.select().from(bizOrg).where(eq(bizOrg.id, orgId)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORG_NOT_FOUND);
+  }
+
+  if (userId != null) {
+    const role = await getOrgRoleForUser(userId, orgId);
+    if (role !== OrgRole.OWNER && role !== OrgRole.ADMIN) {
+      throw new ApiError(ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN);
+    }
+  }
+
+  const next: BizOrgSettlementConfig = {
+    ...(row.settlementConfig ?? {}),
+    ...config,
+  };
+  await db.update(bizOrg).set({ settlementConfig: next }).where(eq(bizOrg.id, orgId));
+  return next;
 }
