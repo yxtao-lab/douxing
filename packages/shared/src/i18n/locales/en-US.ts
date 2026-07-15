@@ -232,6 +232,11 @@ export const sharedEnUS = {
       settled: 'Settled',
       cancelled: 'Cancelled',
     },
+    settlementStatus: {
+      pending: 'Pending',
+      settled: 'Settled',
+      void: 'Void',
+    },
     pageTitle: 'Custom services',
     hallTitle: 'Demand hall',
     productsTitle: 'Packages',

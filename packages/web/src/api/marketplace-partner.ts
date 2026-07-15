@@ -5,6 +5,7 @@ import type {
   DemandQuoteCreateInput,
   MarketplacePartnerContext,
   OrgMembershipSummary,
+  OrgSettlementSummary,
   PartnerQuoteListItem,
   ServiceDemandDetail,
   ServiceDemandHallQuery,
@@ -174,4 +175,21 @@ export async function fetchMarketplaceOrderDetail(orderId: number) {
 export async function advanceSellerMarketplaceOrder(orderId: number, body: ServiceOrderStatusInput) {
   const { data } = await http.patch<ApiResponse<ServiceOrderDetail>>(`/marketplace/orders/${orderId}/status`, body);
   return data.data;
+}
+
+/**
+ * 商户结算台账列表（仅当前用户为该商户 owner/admin 时可查）。
+ *
+ * @param params - `orgId` 必填；`status` 可选状态过滤
+ * @returns 结算摘要列表；无记录时为空数组
+ */
+export async function fetchPartnerSettlements(params: {
+  orgId: number;
+  status?: string;
+}): Promise<OrgSettlementSummary[]> {
+  const { data } = await http.get<ApiResponse<{ items: OrgSettlementSummary[] }>>(
+    '/marketplace/partner/settlements',
+    { params },
+  );
+  return data.data?.items ?? [];
 }

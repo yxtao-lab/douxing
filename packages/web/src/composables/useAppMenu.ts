@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import type { MenuProps } from 'ant-design-vue';
 import {
+  AccountBookOutlined,
   ApartmentOutlined,
   ApiOutlined,
   AuditOutlined,
@@ -48,6 +49,7 @@ import { resolveMenuLabel } from '@/utils/menu-i18n';
 
 export const menuIconMap: Record<string, Component> = {
   HomeOutlined,
+  AccountBookOutlined,
   UnorderedListOutlined,
   ShoppingOutlined,
   EnvironmentOutlined,

@@ -8,7 +8,7 @@
 
     <a-spin :spinning="loading">
       <a-row :gutter="[16, 16]">
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :md="12" :lg="6">
           <WorkbenchPanel :title="t('partner.nav.onboard')">
             <template v-if="context">
               <p v-if="context.provider" class="panel-line">
@@ -28,7 +28,7 @@
           </WorkbenchPanel>
         </a-col>
 
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :md="12" :lg="6">
           <WorkbenchPanel :title="t('partner.nav.demands')">
             <p class="panel-line">{{ canQuote ? t('partner.demandsDesc') : t('partner.notQuotable') }}</p>
             <a-button type="primary" :disabled="!canQuote" @click="$router.push({ name: 'partner-demands' })">
@@ -37,11 +37,20 @@
           </WorkbenchPanel>
         </a-col>
 
-        <a-col :xs="24" :md="8">
+        <a-col :xs="24" :md="12" :lg="6">
           <WorkbenchPanel :title="t('partner.nav.orders')">
             <p class="panel-line">{{ t('partner.ordersHomeHint') }}</p>
             <a-button @click="$router.push({ name: 'partner-orders' })">
               {{ t('partner.nav.orders') }}
+            </a-button>
+          </WorkbenchPanel>
+        </a-col>
+
+        <a-col :xs="24" :md="12" :lg="6">
+          <WorkbenchPanel :title="t('partner.nav.settlements')">
+            <p class="panel-line">{{ t('partner.settlementsHomeHint') }}</p>
+            <a-button @click="$router.push({ name: 'partner-settlements' })">
+              {{ t('partner.nav.settlements') }}
             </a-button>
           </WorkbenchPanel>
         </a-col>

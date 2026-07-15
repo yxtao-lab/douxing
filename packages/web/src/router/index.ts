@@ -324,6 +324,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'partner/settlements',
+          name: 'partner-settlements',
+          component: () => import('@/views/partner/PartnerSettlementsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.settlementsTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'AccountBookOutlined',
+            perm: 'marketplace:partner:settlements',
+          },
+        },
+        {
           path: 'analytics',
           name: 'analytics',
           component: () => import('@/views/AnalyticsDashboardView.vue'),

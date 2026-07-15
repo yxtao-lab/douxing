@@ -232,6 +232,11 @@ export const sharedZhCN = {
       settled: '已结算',
       cancelled: '已取消',
     },
+    settlementStatus: {
+      pending: '待结算',
+      settled: '已结算',
+      void: '已作废',
+    },
     pageTitle: '定制服务',
     hallTitle: '需求大厅',
     productsTitle: '标准套餐',

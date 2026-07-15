@@ -1626,6 +1626,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 团体成员 | DELETE | `/groups/:id/members/:userId` | 登录（owner） | M3-1 |
 | Partner | GET | `/partner/context` | 登录 + `merchant` | M7-α |
 | Partner | POST | `/partner/enroll` | 登录 | M7-α |
+| Partner | GET | `/partner/settlements` | 登录；须为该商户 owner/admin；query `orgId` 必填、`status` 可选 | M7-5 |
 
 路由实现：`packages/server/src/routes/marketplace/*`；Web 商户页消费 Partner + 上述卖方 API。
 
@@ -1675,6 +1676,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-15 | **M7-5 Partner 财务 UI**：§25 增 `GET /partner/settlements`；Web `/partner/settlements` |
 | 2026-07-14 | **M3-3 人数与发票**：§25 增 `headcount` / `invoiceInfo`；迁移 `0041`；验收 `m3:marketplace-group-cases` |
 | 2026-07-14 | **M3-2 团体发单**：§25 增 `publisherGroupId` · 团体成员权限 · 防自报价；验收 `m3:marketplace-group-cases` |
 | 2026-07-14 | **M3-1 团体**：§25 增 `/groups/*` CRUD 与成员邀请；验收 `m3:marketplace-group-cases` |

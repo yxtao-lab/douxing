@@ -446,6 +446,7 @@ export const DEFAULT_MENU_SEED: MenuSeedItem[] = [
   { menuKey: 'partner-demands', menuName: '接单大厅', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/demands', perms: 'marketplace:partner:demands', icon: 'FileSearchOutlined', sortOrder: 23 },
   { menuKey: 'partner-quotes', menuName: '我的报价', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/quotes', perms: 'marketplace:partner:quotes', icon: 'TagOutlined', sortOrder: 24 },
   { menuKey: 'partner-orders', menuName: '我的订单', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/orders', perms: 'marketplace:partner:orders', icon: 'ShoppingOutlined', sortOrder: 25 },
+  { menuKey: 'partner-settlements', menuName: '财务结算', parentKey: 'partner-workbench', menuType: MenuType.MENU, path: '/partner/settlements', perms: 'marketplace:partner:settlements', icon: 'AccountBookOutlined', sortOrder: 26 },
   { menuKey: 'data', menuName: '数据中台', menuType: MenuType.DIRECTORY, icon: 'BarChartOutlined', sortOrder: 3 },
   { menuKey: 'analytics', menuName: '数据分析', parentKey: 'data', menuType: MenuType.MENU, path: '/analytics', perms: 'data:analytics:view', icon: 'BarChartOutlined', sortOrder: 3 },
   { menuKey: 'plan-diagnostics', menuName: '规划诊断', parentKey: 'data', menuType: MenuType.MENU, path: '/plan-sessions/diagnostics', perms: 'data:analytics:view', icon: 'NodeIndexOutlined', sortOrder: 4 },
@@ -529,6 +530,7 @@ export const DEFAULT_ROLE_MENU_KEYS: Record<string, string[] | 'ALL'> = {
     'partner-demands',
     'partner-quotes',
     'partner-orders',
+    'partner-settlements',
   ],
 };
 
