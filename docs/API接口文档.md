@@ -1493,7 +1493,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ## 25. 发单接单 marketplace
 
-> **模块 B** · **M0**（2026-07-09）· **M1/M2**（2026-07-10 验收）· **M7-α Partner**（2026-07-13）  
+> **模块 B** · **M0**（2026-07-09）· **M1/M2**（2026-07-10 验收）· **M3-1～M3-3**（2026-07-14）· **M7-α Partner**（2026-07-13）
 > **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
 > **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
 > **验收**：`m0:marketplace-cases` · `m1:marketplace-onboard-cases` · `m2:marketplace-demand-cases` · `m3:marketplace-group-cases`（M7：`m7:marketplace-partner-cases` 待补）
@@ -1549,7 +1549,9 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | `id` | number | 主键 |
 | `demandNo` | string | 业务单号（`SD` 前缀） |
 | `publisherType` | string | `user` / `group` |
-| `publisherUserId` | number | 发单方用户 ID |
+| `publisherUserId` | number | 发单方用户 ID（操作者） |
+| `publisherGroupId` | number? | 团体发单时的团体 ID；个人发单为 `null` |
+| `headcount` | number? | 预计人数（1～100000）；未填为 `null` |
 | `categoryCode` | string | 类目 code |
 | `title` | string | 标题 |
 | `destination` | string? | 目的地 |
@@ -1562,20 +1564,20 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ### GET `/demands/:id`
 
-需求单详情；**仅发单方本人**可查看。
+需求单详情；**发单方本人、团体成员**，或大厅公开状态（`published` / `quoting`）可查看。
 
 **鉴权**：登录
 
 **路径参数**：`id` — 需求单主键（正整数）
 
-**响应 `data`**：`ServiceDemandDetail`（在 Summary 基础上增加 `description`、`publisherGroupId`）
+**响应 `data`**：`ServiceDemandDetail`（在 Summary 基础上增加 `description`、`invoiceInfo`）
 
 **错误**
 
 | 场景 | messageKey |
 |------|------------|
 | 不存在 | `api.marketplaceDemandNotFound` |
-| 非本人 | `api.marketplaceDemandForbidden` |
+| 无权 | `api.marketplaceDemandForbidden` |
 | 非法 ID | `api.paramError` |
 
 ### GET `/admin/orgs`
@@ -1599,7 +1601,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 **M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：以下为 **M0 时代**笔误保留说明；**M1/M2 已交付**写操作，见下表。
 
-### M1/M2/M3-1/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
+### M1/M2/M3/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
 
 | 分组 | 方法 | 路径 | 鉴权 | 阶段 |
 |------|------|------|------|------|
@@ -1609,10 +1611,10 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 服务者 | POST | `/providers/apply` | 登录 | M1 |
 | 服务者 | GET | `/providers/me` · `/providers/:id` | 登录/公开 | M1 |
 | 平台审核 | GET/PATCH | `/admin/orgs/*` · `/admin/providers/*` | `marketplace:org:audit` 等 | M1 |
-| 发单 | POST/PATCH | `/demands` · `/demands/:id` | 登录 | M2 |
+| 发单 | POST/PATCH | `/demands` · `/demands/:id` | 登录；body 可选 `publisherGroupId`（M3-2） | M2/M3-2 |
 | 大厅 | GET | `/demands` | 登录 | M2 |
-| 报价 | POST | `/demands/:id/quotes` | 登录（approved 服务方） | M2 |
-| 选定 | POST | `/demands/:id/select-quote` | 登录（发单方） | M2 |
+| 报价 | POST | `/demands/:id/quotes` | 登录（approved 服务方；团体成员不可报本团） | M2/M3-2 |
+| 选定 | POST | `/demands/:id/select-quote` | 登录（发单方/团体成员） | M2/M3-2 |
 | 报价列表 | GET | `/demands/:id/quotes` · `/quotes/mine` | 登录 | M2 |
 | 订单 | GET | `/orders/mine` · `/orders/seller` · `/orders/:id` | 登录 | M2 |
 | 履约 | POST/PATCH | `/orders/:id/pay-mock` · `/orders/:id/status` | 登录 | M2 |
@@ -1643,12 +1645,38 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 **错误 messageKey（节选）**：`api.marketplaceGroupNotFound` · `api.marketplaceGroupForbidden` · `api.marketplaceGroupOwnerRequired` · `api.marketplaceGroupMemberAlreadyExists` · `api.marketplaceGroupCannotRemoveOwner`
 
+### M3-2 团体发单摘要
+
+**创建**：`POST /demands` body 增加可选 `publisherGroupId`（正整数）。
+
+| 行为 | 说明 |
+|------|------|
+| 有 `publisherGroupId` | `publisher_type=group`；须为该团成员；`publisher_user_id`=操作者 |
+| 无 `publisherGroupId` | 个人发单（与 M2 一致） |
+| 更新/发布/选定报价 | 团体成员均可管理本团需求（不限创建者本人） |
+| 报价 | 团体成员不可对本团需求报价 |
+
+### M3-3 人数与发票摘要
+
+**迁移**：`0041_marketplace_m3_demand_fields`（`service_demand.headcount` · `invoice_info`）
+
+| 字段 | 说明 |
+|------|------|
+| `headcount` | 可选整数 1～100000；可传 `null` 清空 |
+| `invoiceInfo` | JSON；`titleType`=`personal`/`company` · `title` 必填；**企业须 `taxNo`**；可传 `null` 清空 |
+
+本阶段**仅存资料**，不做真开票。
+
+**验收**：`pnpm --filter @douxing/server db:migrate` → `m3:marketplace-group-cases`
+
 ---
 
 ## 变更记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-14 | **M3-3 人数与发票**：§25 增 `headcount` / `invoiceInfo`；迁移 `0041`；验收 `m3:marketplace-group-cases` |
+| 2026-07-14 | **M3-2 团体发单**：§25 增 `publisherGroupId` · 团体成员权限 · 防自报价；验收 `m3:marketplace-group-cases` |
 | 2026-07-14 | **M3-1 团体**：§25 增 `/groups/*` CRUD 与成员邀请；验收 `m3:marketplace-group-cases` |
 | 2026-07-13 | **M7-α Partner**：§25 增 M1/M2/M7-α API 速查表 · `GET/POST /partner/*`；MB2 ✅ 状态同步 |
 | 2026-07-10 | **M0 发单接单**：§25 `/api/marketplace/*`（5 个 GET）；§23 增 marketplace 枚举；总览 **125** 项；OpenAPI **103** 路径 / **122** 操作 |

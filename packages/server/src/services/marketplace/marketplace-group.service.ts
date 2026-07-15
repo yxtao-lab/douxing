@@ -105,9 +105,10 @@ export async function getGroupRoleForUser(
  * @param groupId - 团体 ID
  * @param options - `requireOwner` 为 true 时仅 owner 通过
  * @returns 当前用户在团体中的角色
- * @throws {ApiError} 非成员或非 owner
+ * @throws {ApiError} `MARKETPLACE_GROUP_FORBIDDEN` 非成员
+ * @throws {ApiError} `MARKETPLACE_GROUP_OWNER_REQUIRED` 要求 owner 但角色不符
  */
-async function assertGroupAccess(
+export async function assertGroupAccess(
   userId: number,
   groupId: number,
   options?: { requireOwner?: boolean },
@@ -120,6 +121,25 @@ async function assertGroupAccess(
     throw new ApiError(ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED);
   }
   return role;
+}
+
+/**
+ * 断言团体存在且当前用户为成员（可选仅 owner）。
+ *
+ * @param userId - 用户 ID
+ * @param groupId - 团体 ID
+ * @param options - `requireOwner` 为 true 时仅 owner 通过
+ * @returns 当前用户在团体中的角色
+ * @throws {ApiError} `MARKETPLACE_GROUP_NOT_FOUND` 团体不存在
+ * @throws {ApiError} `MARKETPLACE_GROUP_FORBIDDEN` / `OWNER_REQUIRED` 权限不足
+ */
+export async function assertGroupMemberAccess(
+  userId: number,
+  groupId: number,
+  options?: { requireOwner?: boolean },
+): Promise<GroupMemberRoleValue> {
+  await requireDemandGroupRow(groupId);
+  return assertGroupAccess(userId, groupId, options);
 }
 
 /**

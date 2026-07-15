@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authMiddleware } from '../../middleware/auth.js';
 import { fail, failFromError, success } from '../../utils/response.js';
-import { ApiMessageKey, BudgetType } from '@douxing/shared';
+import { ApiMessageKey, BudgetType, InvoiceTitleType } from '@douxing/shared';
 import {
   createDemand,
   getDemandByIdForUser,
@@ -22,6 +22,18 @@ import { parseOptionalString } from '../../utils/admin-list-filter.js';
 
 const router = Router();
 
+const invoiceInfoSchema = z
+  .object({
+    titleType: z.enum([InvoiceTitleType.PERSONAL, InvoiceTitleType.COMPANY]),
+    title: z.string().min(1).max(128),
+    taxNo: z.string().max(64).optional(),
+    address: z.string().max(256).optional(),
+    phone: z.string().max(32).optional(),
+    bankName: z.string().max(128).optional(),
+    bankAccount: z.string().max(64).optional(),
+  })
+  .nullable();
+
 const demandInputSchema = z.object({
   categoryCode: z.string().min(1).max(64),
   title: z.string().min(2).max(200),
@@ -33,6 +45,12 @@ const demandInputSchema = z.object({
   budgetMax: z.string().optional(),
   budgetType: z.enum([BudgetType.FIXED, BudgetType.RANGE, BudgetType.NEGOTIABLE]).optional(),
   routeId: z.number().int().positive().optional(),
+  /** 团体发单主体；传入则创建为 `publisher_type=group` */
+  publisherGroupId: z.number().int().positive().optional(),
+  /** 预计人数 */
+  headcount: z.number().int().min(1).max(100_000).nullable().optional(),
+  /** 发票抬头；`null` 表示清空 */
+  invoiceInfo: invoiceInfoSchema.optional(),
 });
 
 const quoteSchema = z.object({

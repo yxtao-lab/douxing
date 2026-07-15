@@ -172,6 +172,30 @@ export function isValidGroupMemberRole(value: string): value is GroupMemberRoleV
   return GROUP_MEMBER_ROLES.includes(value as GroupMemberRoleValue);
 }
 
+/** 发票抬头类型（个人 / 企业） */
+export const InvoiceTitleType = {
+  PERSONAL: 'personal',
+  COMPANY: 'company',
+} as const;
+
+export type InvoiceTitleTypeValue = (typeof InvoiceTitleType)[keyof typeof InvoiceTitleType];
+
+/** 合法发票抬头类型列表 */
+export const INVOICE_TITLE_TYPES: InvoiceTitleTypeValue[] = [
+  InvoiceTitleType.PERSONAL,
+  InvoiceTitleType.COMPANY,
+];
+
+/**
+ * 判断发票抬头类型是否合法。
+ *
+ * @param value - 抬头类型字符串
+ * @returns 合法为 true
+ */
+export function isValidInvoiceTitleType(value: string): value is InvoiceTitleTypeValue {
+  return INVOICE_TITLE_TYPES.includes(value as InvoiceTitleTypeValue);
+}
+
 /** 预算类型 */
 export const BudgetType = {
   FIXED: 'fixed',

@@ -4,6 +4,7 @@ import {
   ApiMessageKey,
   BizOrgStatus,
   DemandStatus,
+  PublisherType,
   QuoteStatus,
   type DemandQuoteCreateInput,
   type DemandQuoteSummary,
@@ -15,6 +16,7 @@ import { demandQuote, serviceDemand } from '../../db/schema/marketplace-demand.j
 import { serviceProvider } from '../../db/schema/marketplace-provider.js';
 import { getOrgRoleForUser, listOrgMembershipsByUser } from './marketplace-org-onboard.service.js';
 import { getDemandById } from './marketplace-demand.service.js';
+import { getGroupRoleForUser } from './marketplace-group.service.js';
 import { isApprovedServiceProvider } from './marketplace-provider.service.js';
 
 const QUOTABLE_DEMAND_STATUSES = [DemandStatus.PUBLISHED, DemandStatus.QUOTING] as const;
@@ -95,6 +97,16 @@ export async function createDemandQuote(
   }
   if (demand.publisherUserId === userId) {
     throw new ApiError(ApiMessageKey.MARKETPLACE_QUOTE_INVALID);
+  }
+  // 团体成员不可对本团需求报价（避免自买自卖）
+  if (
+    demand.publisherType === PublisherType.GROUP
+    && demand.publisherGroupId != null
+  ) {
+    const groupRole = await getGroupRoleForUser(userId, demand.publisherGroupId);
+    if (groupRole) {
+      throw new ApiError(ApiMessageKey.MARKETPLACE_QUOTE_INVALID);
+    }
   }
 
   const db = getDb();

@@ -6,9 +6,11 @@ import {
   decimal,
   date,
   timestamp,
+  json,
   uniqueIndex,
   index,
 } from 'drizzle-orm/mysql-core';
+import type { DemandInvoiceInfo } from '@douxing/shared';
 import { users } from './users.js';
 import { travelRoutes } from './travel-routes.js';
 import { bizOrg } from './marketplace-biz-org.js';
@@ -73,6 +75,10 @@ export const serviceDemand = mysqlTable(
     budgetMin: decimal('budget_min', { precision: 12, scale: 2 }),
     budgetMax: decimal('budget_max', { precision: 12, scale: 2 }),
     budgetType: varchar('budget_type', { length: 16 }),
+    /** 预计出行/服务人数（M3-3） */
+    headcount: int('headcount'),
+    /** 发票抬头 JSON（M3-3；本阶段仅存资料，不做真开票） */
+    invoiceInfo: json('invoice_info').$type<DemandInvoiceInfo | null>(),
     status: varchar('status', { length: 16 }).notNull().default('draft'),
     routeId: int('route_id').references(() => travelRoutes.id, { onDelete: 'set null' }),
     createdAt: timestamp('created_at').notNull().defaultNow(),

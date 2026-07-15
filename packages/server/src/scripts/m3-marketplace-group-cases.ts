@@ -1,5 +1,5 @@
 /**
- * M3-1 · 发单接单团体 CRUD 验收
+ * M3 · 发单接单团体 CRUD + 团体发单 + 人数发票验收（M3-1 / M3-2 / M3-3）
  *
  * 用法：
  *   pnpm --filter @douxing/shared build
@@ -7,17 +7,28 @@
  *   pnpm --filter @douxing/server m3:marketplace-group-cases
  */
 import '../config/env.js';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 import {
   ApiError,
   ApiMessageKey,
   DemandGroupType,
+  DemandStatus,
   GroupMemberRole,
+  InvoiceTitleType,
+  PublisherType,
   resolveApiMessage,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { users } from '../db/schema/users.js';
-import { demandGroup, groupMember } from '../db/schema/marketplace-demand.js';
+import { demandGroup, groupMember, serviceDemand } from '../db/schema/marketplace-demand.js';
+import {
+  createDemand,
+  getDemandByIdForUser,
+  listDemandsByUser,
+  listPublishedDemands,
+  publishDemand,
+  updateDemand,
+} from '../services/marketplace/marketplace-demand.service.js';
 import {
   createDemandGroup,
   deleteDemandGroup,
@@ -67,7 +78,7 @@ async function ensureTestUser(username: string): Promise<number> {
 }
 
 /**
- * 清理测试用户关联的团体记录（便于重复跑用例）。
+ * 清理测试用户关联的团体与团体需求（便于重复跑用例）。
  *
  * @param userId - 用户 ID
  */
@@ -78,12 +89,15 @@ async function cleanupUserGroupData(userId: number): Promise<void> {
     .from(demandGroup)
     .where(eq(demandGroup.ownerUserId, userId));
 
-  for (const row of owned) {
-    await db.delete(groupMember).where(eq(groupMember.groupId, row.id));
-    await db.delete(demandGroup).where(eq(demandGroup.id, row.id));
+  const ownedIds = owned.map((row) => row.id);
+  if (ownedIds.length > 0) {
+    await db.delete(serviceDemand).where(inArray(serviceDemand.publisherGroupId, ownedIds));
+    await db.delete(groupMember).where(inArray(groupMember.groupId, ownedIds));
+    await db.delete(demandGroup).where(inArray(demandGroup.id, ownedIds));
   }
 
   await db.delete(groupMember).where(eq(groupMember.userId, userId));
+  await db.delete(serviceDemand).where(eq(serviceDemand.publisherUserId, userId));
 }
 
 /**
@@ -105,12 +119,29 @@ async function checkSchemaAndI18n() {
     assert(false, '表 group_member 存在');
   }
 
+  try {
+    await getDb()
+      .select({
+        id: serviceDemand.id,
+        publisherGroupId: serviceDemand.publisherGroupId,
+        headcount: serviceDemand.headcount,
+        invoiceInfo: serviceDemand.invoiceInfo,
+      })
+      .from(serviceDemand)
+      .limit(1);
+    assert(true, '表 service_demand 含 publisher_group_id / headcount / invoice_info');
+  } catch {
+    assert(false, '表 service_demand 含 publisher_group_id / headcount / invoice_info');
+  }
+
   const keys = [
     ApiMessageKey.MARKETPLACE_GROUP_NOT_FOUND,
     ApiMessageKey.MARKETPLACE_GROUP_FORBIDDEN,
     ApiMessageKey.MARKETPLACE_GROUP_MEMBER_ALREADY_EXISTS,
     ApiMessageKey.MARKETPLACE_GROUP_OWNER_REQUIRED,
     ApiMessageKey.MARKETPLACE_GROUP_CANNOT_REMOVE_OWNER,
+    ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN,
+    ApiMessageKey.MARKETPLACE_DEMAND_INVALID,
   ] as const;
 
   for (const key of keys) {
@@ -126,7 +157,7 @@ async function checkSchemaAndI18n() {
  * 走通创建团体 → 邀请协作者 → 更新 → 权限校验 → 移除 → 删除。
  */
 async function checkGroupCrudFlow() {
-  console.log('--- 团体 CRUD ---');
+  console.log('--- 团体 CRUD（M3-1） ---');
   const ownerUsername = 'm3_group_owner';
   const collabUsername = 'm3_group_collab';
   const strangerUsername = 'm3_group_stranger';
@@ -246,17 +277,233 @@ async function checkGroupCrudFlow() {
   console.log('');
 }
 
+/**
+ * M3-2：团体发单 — publisher_type=group · 权限 · 发布到大厅。
+ */
+async function checkGroupDemandPublishFlow() {
+  console.log('--- 团体发单（M3-2） ---');
+  const ownerUsername = 'm3_demand_owner';
+  const collabUsername = 'm3_demand_collab';
+  const strangerUsername = 'm3_demand_stranger';
+
+  const ownerId = await ensureTestUser(ownerUsername);
+  const collabId = await ensureTestUser(collabUsername);
+  const strangerId = await ensureTestUser(strangerUsername);
+
+  await cleanupUserGroupData(ownerId);
+  await cleanupUserGroupData(collabId);
+  await cleanupUserGroupData(strangerId);
+
+  const group = await createDemandGroup(ownerId, {
+    name: '2026 公司团建组',
+    groupType: DemandGroupType.COMPANY,
+    headcount: 20,
+  });
+  await inviteGroupMember(group.id, ownerId, { userId: collabId });
+
+  const draft = await createDemand(ownerId, {
+    categoryCode: 'travel.group_tour',
+    title: '2026 公司团建定制游',
+    description: 'M3-2 团体发单验收',
+    destination: '杭州',
+    publisherGroupId: group.id,
+  });
+
+  assert(draft.publisherType === PublisherType.GROUP, 'owner 发单 publisherType=group');
+  assert(draft.publisherGroupId === group.id, '需求挂 publisherGroupId');
+  assert(draft.publisherUserId === ownerId, 'publisherUserId 为操作者');
+  assert(draft.status === DemandStatus.DRAFT, '新建为 draft');
+
+  const collabDraft = await createDemand(collabId, {
+    categoryCode: 'travel.custom_tour',
+    title: '协作者发起的团体需求',
+    destination: '苏州',
+    publisherGroupId: group.id,
+  });
+  assert(collabDraft.publisherType === PublisherType.GROUP, '协作者可创建团体需求');
+  assert(collabDraft.publisherUserId === collabId, '协作者创建时 publisherUserId=协作者');
+
+  let strangerCreateBlocked = false;
+  try {
+    await createDemand(strangerId, {
+      categoryCode: 'travel.group_tour',
+      title: '非成员应失败',
+      publisherGroupId: group.id,
+    });
+  } catch (err) {
+    strangerCreateBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_GROUP_FORBIDDEN;
+  }
+  assert(strangerCreateBlocked, '非成员创建抛 MARKETPLACE_GROUP_FORBIDDEN');
+
+  let missingGroupBlocked = false;
+  try {
+    await createDemand(ownerId, {
+      categoryCode: 'travel.group_tour',
+      title: '无效团体应失败',
+      publisherGroupId: 999_999_999,
+    });
+  } catch (err) {
+    missingGroupBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_GROUP_NOT_FOUND;
+  }
+  assert(missingGroupBlocked, '无效团体抛 MARKETPLACE_GROUP_NOT_FOUND');
+
+  const updated = await updateDemand(draft.id, collabId, {
+    categoryCode: 'travel.group_tour',
+    title: '2026 公司团建定制游（协作者已改）',
+    destination: '杭州西湖',
+  });
+  assert(updated.title.includes('协作者已改'), '协作者可更新团体草稿');
+  assert(updated.publisherGroupId === group.id, '更新后仍保留 publisherGroupId');
+
+  let strangerUpdateBlocked = false;
+  try {
+    await updateDemand(draft.id, strangerId, {
+      categoryCode: 'travel.group_tour',
+      title: '非成员改标题应失败',
+    });
+  } catch (err) {
+    strangerUpdateBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_DEMAND_FORBIDDEN;
+  }
+  assert(strangerUpdateBlocked, '非成员更新抛 MARKETPLACE_DEMAND_FORBIDDEN');
+
+  const ownerCanReadCollab = await getDemandByIdForUser(collabDraft.id, ownerId);
+  assert(ownerCanReadCollab.id === collabDraft.id, 'owner 可读协作者创建的团体需求');
+
+  const mineOwner = await listDemandsByUser(ownerId);
+  assert(
+    mineOwner.some((item) => item.id === draft.id && item.publisherGroupId === group.id),
+    'owner「我的需求」含团体单',
+  );
+  assert(
+    mineOwner.some((item) => item.id === collabDraft.id),
+    'owner「我的需求」含协作者创建的团体单',
+  );
+
+  const published = await publishDemand(draft.id, collabId);
+  assert(published.status === DemandStatus.PUBLISHED, '协作者可发布团体草稿');
+
+  const hall = await listPublishedDemands({ keyword: '公司团建', page: 1, pageSize: 20 });
+  assert(
+    hall.items.some((item) => item.id === draft.id && item.publisherType === PublisherType.GROUP),
+    '发布后大厅可见团体需求',
+  );
+
+  await cleanupUserGroupData(ownerId);
+  await cleanupUserGroupData(collabId);
+  await cleanupUserGroupData(strangerId);
+  console.log('');
+}
+
+/**
+ * M3-3：需求单 headcount 与发票抬头 JSON 读写与校验。
+ */
+async function checkDemandHeadcountInvoiceFlow() {
+  console.log('--- 人数与发票（M3-3） ---');
+  const ownerUsername = 'm3_invoice_owner';
+  const ownerId = await ensureTestUser(ownerUsername);
+  await cleanupUserGroupData(ownerId);
+
+  const group = await createDemandGroup(ownerId, {
+    name: 'M3-3 发票测试团',
+    groupType: DemandGroupType.COMPANY,
+    headcount: 50,
+  });
+
+  const draft = await createDemand(ownerId, {
+    categoryCode: 'travel.group_tour',
+    title: '含人数与发票的团体需求',
+    destination: '上海',
+    publisherGroupId: group.id,
+    headcount: 50,
+    invoiceInfo: {
+      titleType: InvoiceTitleType.COMPANY,
+      title: '兜行测试科技有限公司',
+      taxNo: '91310000MA1FLTEST0',
+      address: '上海市浦东新区',
+      phone: '021-00000000',
+    },
+  });
+
+  assert(draft.headcount === 50, '创建写入 headcount=50');
+  assert(draft.invoiceInfo?.titleType === InvoiceTitleType.COMPANY, '发票 titleType=company');
+  assert(draft.invoiceInfo?.title === '兜行测试科技有限公司', '发票抬头名称正确');
+  assert(draft.invoiceInfo?.taxNo === '91310000MA1FLTEST0', '发票税号正确');
+
+  let companyMissingTaxBlocked = false;
+  try {
+    await createDemand(ownerId, {
+      categoryCode: 'travel.group_tour',
+      title: '企业发票缺税号应失败',
+      publisherGroupId: group.id,
+      invoiceInfo: {
+        titleType: InvoiceTitleType.COMPANY,
+        title: '缺税号公司',
+      },
+    });
+  } catch (err) {
+    companyMissingTaxBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_DEMAND_INVALID;
+  }
+  assert(companyMissingTaxBlocked, '企业发票缺税号抛 MARKETPLACE_DEMAND_INVALID');
+
+  let badHeadcountBlocked = false;
+  try {
+    await createDemand(ownerId, {
+      categoryCode: 'travel.group_tour',
+      title: '非法人数应失败',
+      publisherGroupId: group.id,
+      headcount: 0,
+    });
+  } catch (err) {
+    badHeadcountBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_DEMAND_INVALID;
+  }
+  assert(badHeadcountBlocked, 'headcount=0 抛 MARKETPLACE_DEMAND_INVALID');
+
+  const personal = await updateDemand(draft.id, ownerId, {
+    categoryCode: 'travel.group_tour',
+    title: '含人数与发票的团体需求（已改）',
+    destination: '上海',
+    headcount: 80,
+    invoiceInfo: {
+      titleType: InvoiceTitleType.PERSONAL,
+      title: '张三',
+    },
+  });
+  assert(personal.headcount === 80, '更新 headcount=80');
+  assert(personal.invoiceInfo?.titleType === InvoiceTitleType.PERSONAL, '可改为个人抬头');
+  assert(personal.invoiceInfo?.title === '张三', '个人抬头名称正确');
+
+  const cleared = await updateDemand(draft.id, ownerId, {
+    categoryCode: 'travel.group_tour',
+    title: '含人数与发票的团体需求（已改）',
+    destination: '上海',
+    headcount: null,
+    invoiceInfo: null,
+  });
+  assert(cleared.headcount === null, '可清空 headcount');
+  assert(cleared.invoiceInfo === null, '可清空 invoiceInfo');
+
+  await cleanupUserGroupData(ownerId);
+  console.log('');
+}
+
 async function main() {
-  console.log('=== M3-1 Marketplace 团体 CRUD 验收 ===\n');
+  console.log('=== M3 Marketplace 团体 CRUD + 团体发单 + 人数发票验收 ===\n');
   await checkSchemaAndI18n();
   await checkGroupCrudFlow();
+  await checkGroupDemandPublishFlow();
+  await checkDemandHeadcountInvoiceFlow();
 
   console.log('');
   if (failed > 0) {
     console.error(`\n${failed} 项失败`);
     process.exit(1);
   }
-  console.log('M3-1 Marketplace 团体 CRUD 验收全部通过');
+  console.log('M3 Marketplace 团体 CRUD + 团体发单 + 人数发票验收全部通过');
   process.exit(0);
 }
 

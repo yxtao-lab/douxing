@@ -6,6 +6,7 @@ import type {
   DemandGroupTypeValue,
   DemandStatusValue,
   GroupMemberRoleValue,
+  InvoiceTitleTypeValue,
   OrgDocumentTypeValue,
   OrgRoleValue,
   ProviderTypeValue,
@@ -20,6 +21,26 @@ export interface BizOrgSettlementConfig {
   platformFeeRate?: number;
   settlementCycleDays?: number;
   bankAccountHint?: string;
+}
+
+/**
+ * 需求单发票抬头信息（存 JSON；本阶段仅存资料，不做真开票）。
+ */
+export interface DemandInvoiceInfo {
+  /** 抬头类型：个人 / 企业 */
+  titleType: InvoiceTitleTypeValue;
+  /** 发票抬头名称 */
+  title: string;
+  /** 纳税人识别号；企业抬头建议填写 */
+  taxNo?: string;
+  /** 注册地址（可选） */
+  address?: string;
+  /** 联系电话（可选） */
+  phone?: string;
+  /** 开户银行（可选） */
+  bankName?: string;
+  /** 银行账号（可选） */
+  bankAccount?: string;
 }
 
 /** 商户资质附件摘要 */
@@ -179,6 +200,8 @@ export interface ServiceDemandSummary {
   demandNo: string;
   publisherType: PublisherTypeValue;
   publisherUserId: number;
+  /** 团体发单时的团体 ID；个人发单为 `null` */
+  publisherGroupId: number | null;
   categoryCode: string;
   title: string;
   destination: string | null;
@@ -187,6 +210,8 @@ export interface ServiceDemandSummary {
   budgetMin: string | null;
   budgetMax: string | null;
   budgetType: BudgetTypeValue | null;
+  /** 预计出行/服务人数；未填为 `null` */
+  headcount: number | null;
   status: DemandStatusValue;
   routeId: number | null;
   createdAt: string;
@@ -196,7 +221,8 @@ export interface ServiceDemandSummary {
 /** 需求单详情 */
 export interface ServiceDemandDetail extends ServiceDemandSummary {
   description: string | null;
-  publisherGroupId: number | null;
+  /** 发票抬头；未填为 `null`（本阶段仅存资料） */
+  invoiceInfo: DemandInvoiceInfo | null;
 }
 
 /** marketplace 健康检查响应 */
@@ -223,6 +249,15 @@ export interface ServiceDemandInput {
   budgetMax?: string;
   budgetType?: BudgetTypeValue;
   routeId?: number;
+  /**
+   * 团体发单主体 ID；创建时传入则 `publisher_type=group`。
+   * 更新草稿时忽略（不可改发单主体）。
+   */
+  publisherGroupId?: number;
+  /** 预计人数；可选，1～100000 */
+  headcount?: number | null;
+  /** 发票抬头；传 `null` 可清空 */
+  invoiceInfo?: DemandInvoiceInfo | null;
 }
 
 /** 需求单发布动作入参 */
