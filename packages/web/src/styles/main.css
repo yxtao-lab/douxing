@@ -1,8 +1,8 @@
 :root {
-  /* 管理后台品牌色（与 logo 青蓝渐变 + 橙色弧线一致） */
-  --color-primary: #008cba;
-  --color-primary-dark: #0066a1;
-  --color-primary-light: #e0f7fb;
+  /* 管理后台品牌色（与 logo 青蓝渐变 + 橙色弧线一致，略提亮便于白天阅读） */
+  --color-primary: #00a8d4;
+  --color-primary-dark: #008cbc;
+  --color-primary-light: #e6fafd;
   --color-accent: #f57c00;
   --color-accent-dark: #e65100;
   --color-accent-light: #fff3e0;
@@ -14,9 +14,9 @@
   --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
   --gradient-admin-hero: linear-gradient(
     135deg,
-    #004b6e 0%,
-    #0066a1 45%,
-    #008cba 100%
+    #006080 0%,
+    #008cbc 45%,
+    #00a8d4 100%
   );
 }
 

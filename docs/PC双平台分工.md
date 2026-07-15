@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)；**双 Token 鉴权**见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
 
-**最后更新：** 2026-07-15（**强制：PC 仅 C 端 · B 端一律 Web** · M7-α `/partner` · 双 Token · C7-W · H10 · S1/S2 · DT5）
+**最后更新：** 2026-07-15（**强制：PC 仅 C 端 · B 端一律 Web** · M7 `/partner` α+排期+财务 · E2 接线 · 双 Token · C7-W · H10 · S1/S2 · DT5）
 
 ---
 
@@ -168,7 +168,9 @@ Web 管理端 (:5173)     ──┘
 | 入驻与认证 | `/partner/onboard` | ✅ | `?panel=org\|provider` 单页切换 |
 | 接单大厅 | `/partner/demands` | ✅ | 需求列表 + 报价入口 |
 | 我的报价 | `/partner/quotes` | ✅ | 报价记录 |
-| 我的订单 | `/partner/orders` | ✅ | 卖方履约推进 |
+| 我的订单 | `/partner/orders` | ✅ | 卖方履约推进 · 汇报时间线 |
+| 行程排期 | `/partner/schedule` | ✅ | 领队指派 · 行程日历（M7-3） |
+| 财务结算 | `/partner/settlements` | ✅ | 结算台账列表（M7-5） |
 
 登录：`/login?portal=partner` · 演示账号 `merchant` / `merchant123`（`db:seed-merchant`）
 
@@ -178,7 +180,7 @@ Web 管理端 (:5173)     ──┘
 |------|------|------|
 | **DT5 旅行运营大屏** | — | 全屏 `/screen/travel`；全国分布 + 用户路径漏斗 + 热力图层 | [旅行运营大屏.md](./旅行运营大屏.md) |
 | **F2 3D 资产审核** | glTF/GLB 入库、绑定景点；用户在 pc 播放 | [数字孪生与三维建模.md](./数字孪生与三维建模.md) |
-| **M7 正式验收** | `m7:marketplace-partner-cases` · 排期/财务 | [发单接单路线图 §M7](./发单接单路线图.md#phase-m7--商户端自助闭环p2p3--m7-α-提前落地中) |
+| **沙箱真机支付** | 商户号就绪后联调一笔，收口完整 MB4 | [发单接单路线图 §0](./发单接单路线图.md#0-当前指针必读) · [后期待办.md](./后期待办.md) |
 | **S1/S2 RBAC** | `requirePerm` · 动态侧栏 · 数据权限（远期） | [系统管理.md](./系统管理.md)（**S0～S2 已验收**） |
 
 ---

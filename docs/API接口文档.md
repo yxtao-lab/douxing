@@ -1,10 +1,10 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0～M2 发单接单 marketplace** · **M7-α Partner API**）  
-> **更新日期**：2026-07-13  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0～M7 发单接单 marketplace** · **E2 微信通道接线** · **M7 Partner API**）  
+> **更新日期**：2026-07-15  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — 管理端诊断/沙箱/模板 API（§24）· SSE `node_status` 画布联动  
-> **发单接单（模块 B）**：[发单接单路线图.md](./发单接单路线图.md) — **MB2 ✅** · 当前 M3 · **M7-α** Partner API · §25  
+> **发单接单（模块 B）**：[发单接单路线图.md](./发单接单路线图.md) — **MB0～MB3 ✅** · **E2 接线 ✅** · 下一沙箱真机一笔 · §25  
 > **服务包**：`packages/server`（Express + MySQL）  
 > **类型契约**：`@douxing/shared`（`types.ts`、`constants.ts`）
 
@@ -1493,10 +1493,10 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ## 25. 发单接单 marketplace
 
-> **模块 B** · **M0**（2026-07-09）· **M1/M2**（2026-07-10 验收）· **M3-1～M3-3**（2026-07-14）· **M7-α Partner**（2026-07-13）
+> **模块 B** · **M0～M5 ✅** · **M6/E2 通道接线 ✅** · **M7-α/3/4/5 ✅**（2026-07-15）· **MB4 通道预览**；完整商用待沙箱真机一笔  
 > **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
 > **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
-> **验收**：`m0:marketplace-cases` · `m1:marketplace-onboard-cases` · `m2:marketplace-demand-cases` · `m3:marketplace-group-cases`（M7：`m7:marketplace-partner-cases` 待补）
+> **验收**：`m0`～`m7:marketplace-*-cases`（见路线图 §6）；OpenAPI 全量同步仍为可选扫尾
 
 前缀：`/api/marketplace`
 
@@ -1601,7 +1601,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 **M0 暂不暴露**（见 [发单接单平台 §13.3](./发单接单平台.md#133-m0-明确不做留给-m1m2)）：以下为 **M0 时代**笔误保留说明；**M1/M2 已交付**写操作，见下表。
 
-### M1/M2/M3/M7-α API 速查（代码已落地 · OpenAPI 待全量同步）
+### M1～M7 / E2 API 速查（代码已落地 · OpenAPI 待全量同步）
 
 | 分组 | 方法 | 路径 | 鉴权 | 阶段 |
 |------|------|------|------|------|
@@ -1695,6 +1695,8 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-15 | **文档全量同步**：文首/§25 状态对齐路线图 v1.11.0（E2 接线 ✅ · 下一沙箱真机） |
+| 2026-07-15 | **E2 微信通道接线**：§25 增 `prepay` · notify 双表路由 · C 端对齐 |
 | 2026-07-15 | **M7-4 履约汇报**：§25 增 reports API；迁移 `0046` |
 | 2026-07-15 | **M7-3 排期指派**：§25 增 `GET /orgs/:id/members` · `PATCH /orders/:id/assign`；迁移 `0045` |
 | 2026-07-15 | **M7-5 Partner 财务 UI**：§25 增 `GET /partner/settlements`；Web `/partner/settlements` |
