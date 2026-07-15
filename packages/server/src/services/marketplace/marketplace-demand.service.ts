@@ -83,6 +83,27 @@ function normalizeInvoiceInfo(
 }
 
 /**
+ * 将 MySQL date / Date / 字符串规范为 `YYYY-MM-DD`；无效时 `null`。
+ *
+ * @param value - 原始日期值
+ * @returns 规范日期字符串或 `null`
+ */
+function toDateOnlyString(value: unknown): string | null {
+  if (value == null) return null;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed ? trimmed.slice(0, 10) : null;
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const y = value.getFullYear();
+    const m = String(value.getMonth() + 1).padStart(2, '0');
+    const d = String(value.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+  return null;
+}
+
+/**
  * 将需求单行映射为列表摘要 DTO。
  *
  * @param row - `service_demand` 表行
@@ -98,8 +119,8 @@ function toDemandSummary(row: typeof serviceDemand.$inferSelect): ServiceDemandS
     categoryCode: row.categoryCode,
     title: row.title,
     destination: row.destination,
-    startDate: row.startDate ? String(row.startDate) : null,
-    endDate: row.endDate ? String(row.endDate) : null,
+    startDate: toDateOnlyString(row.startDate),
+    endDate: toDateOnlyString(row.endDate),
     budgetMin: row.budgetMin != null ? String(row.budgetMin) : null,
     budgetMax: row.budgetMax != null ? String(row.budgetMax) : null,
     budgetType: row.budgetType as ServiceDemandSummary['budgetType'],

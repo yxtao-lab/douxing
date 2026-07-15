@@ -43,7 +43,7 @@
             :loading="paying"
             @click="handlePay"
           >
-            {{ t('marketplace.payMock') }}
+            {{ payButtonLabel }}
           </button>
           <button
             v-else-if="nextOrderStatus"
@@ -75,9 +75,12 @@ import {
   fetchMarketplaceDemandDetail,
   fetchMarketplaceDemandQuotes,
   fetchMyMarketplaceOrders,
-  payMockMarketplaceOrder,
   selectMarketplaceQuote,
 } from '@/api/marketplace';
+import {
+  completeMarketplaceOrderPayment,
+  getMarketplacePayButtonLabel,
+} from '@/utils/marketplace-payment';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -97,6 +100,7 @@ const order = ref<ServiceOrderSummary | null>(null);
 const selectingId = ref<number | null>(null);
 const paying = ref(false);
 const advancing = ref(false);
+const payButtonLabel = computed(() => getMarketplacePayButtonLabel());
 
 const isOwner = computed(() => {
   const user = getStoredUser();
@@ -187,7 +191,7 @@ async function handlePay() {
   if (!order.value) return;
   paying.value = true;
   try {
-    order.value = await payMockMarketplaceOrder(order.value.id);
+    order.value = await completeMarketplaceOrderPayment(order.value.id);
     await load();
     uni.showToast({ title: t('common.success'), icon: 'success' });
   } catch (e) {

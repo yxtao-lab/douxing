@@ -309,6 +309,20 @@
       "when": 1752163200000,
       "tag": "0044_marketplace_m6_settlement",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "5",
+      "when": 1752249600000,
+      "tag": "0045_marketplace_m7_assign",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "5",
+      "when": 1752336000000,
+      "tag": "0046_marketplace_m7_report",
+      "breakpoints": true
     }
   ]
 }

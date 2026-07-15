@@ -4,12 +4,16 @@ import type {
   BizOrgDetail,
   DemandQuoteCreateInput,
   MarketplacePartnerContext,
+  OrgMemberListItem,
   OrgMembershipSummary,
   OrgSettlementSummary,
   PartnerQuoteListItem,
   ServiceDemandDetail,
   ServiceDemandHallQuery,
+  ServiceOrderAssignInput,
   ServiceOrderDetail,
+  ServiceOrderReportCreateInput,
+  ServiceOrderReportSummary,
   ServiceOrderStatusInput,
   ServiceProviderApplyInput,
   ServiceProviderSummary,
@@ -192,4 +196,89 @@ export async function fetchPartnerSettlements(params: {
     { params },
   );
   return data.data?.items ?? [];
+}
+
+/**
+ * 列出商户成员（指派领队候选）。
+ *
+ * @param orgId - 商户 ID
+ * @returns 成员列表；空数组表示无成员
+ */
+export async function fetchOrgMembers(orgId: number): Promise<OrgMemberListItem[]> {
+  const { data } = await http.get<ApiResponse<{ items: OrgMemberListItem[] }>>(
+    `/marketplace/orgs/${orgId}/members`,
+  );
+  return data.data?.items ?? [];
+}
+
+/**
+ * 指派或清除服务订单履约领队。
+ *
+ * @param orderId - 订单 ID
+ * @param body - `guideUserId` 为 null 时清除指派
+ * @returns 更新后的订单详情
+ */
+export async function assignMarketplaceOrderGuide(
+  orderId: number,
+  body: ServiceOrderAssignInput,
+): Promise<ServiceOrderDetail> {
+  const { data } = await http.patch<ApiResponse<ServiceOrderDetail>>(
+    `/marketplace/orders/${orderId}/assign`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 列出订单履约汇报时间线。
+ *
+ * @param orderId - 订单 ID
+ * @returns 按时间升序的汇报列表；无记录为空数组
+ */
+export async function fetchMarketplaceOrderReports(
+  orderId: number,
+): Promise<ServiceOrderReportSummary[]> {
+  const { data } = await http.get<ApiResponse<{ items: ServiceOrderReportSummary[] }>>(
+    `/marketplace/orders/${orderId}/reports`,
+  );
+  return data.data?.items ?? [];
+}
+
+/**
+ * 提交履约汇报（签到或图文）。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 汇报表单
+ * @returns 新建汇报摘要
+ */
+export async function createMarketplaceOrderReport(
+  orderId: number,
+  body: ServiceOrderReportCreateInput,
+): Promise<ServiceOrderReportSummary> {
+  const { data } = await http.post<ApiResponse<ServiceOrderReportSummary>>(
+    `/marketplace/orders/${orderId}/reports`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 上传履约汇报图片。
+ *
+ * @param orderId - 订单 ID（用于权限校验）
+ * @param file - 本地图片文件
+ * @returns 存储路径与对外 URL
+ */
+export async function uploadMarketplaceOrderReportPhoto(
+  orderId: number,
+  file: File,
+): Promise<{ fileUrl: string; publicUrl: string; fileName: string }> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const { data } = await http.post<{
+    data: { fileUrl: string; publicUrl: string; fileName: string };
+  }>(`/marketplace/orders/${orderId}/reports/photos`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return data.data;
 }

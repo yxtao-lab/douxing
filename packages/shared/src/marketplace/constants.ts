@@ -120,6 +120,21 @@ export const ServiceOrderStatus = {
 
 export type ServiceOrderStatusValue = (typeof ServiceOrderStatus)[keyof typeof ServiceOrderStatus];
 
+/** 服务订单履约汇报类型（M7-4） */
+export const ServiceOrderReportType = {
+  CHECKIN: 'checkin',
+  REPORT: 'report',
+} as const;
+
+export type ServiceOrderReportTypeValue =
+  (typeof ServiceOrderReportType)[keyof typeof ServiceOrderReportType];
+
+/** 合法履约汇报类型列表 */
+export const SERVICE_ORDER_REPORT_TYPES: ServiceOrderReportTypeValue[] = [
+  ServiceOrderReportType.CHECKIN,
+  ServiceOrderReportType.REPORT,
+];
+
 /** 团体类型 */
 export const DemandGroupType = {
   COMPANY: 'company',

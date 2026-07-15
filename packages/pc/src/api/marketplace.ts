@@ -110,13 +110,13 @@ export async function selectMarketplaceQuote(demandId: number, body: DemandSelec
 }
 
 /**
- * 模拟支付。
+ * 模拟支付确认（PC 无微信收银台，走 `/pay` mock 履约）。
  *
  * @param orderId - 订单 ID
  * @returns 更新后订单
  */
 export async function payMockMarketplaceOrder(orderId: number) {
-  const { data } = await http.post<{ data: ServiceOrderDetail }>(`/marketplace/orders/${orderId}/pay-mock`);
+  const { data } = await http.post<{ data: ServiceOrderDetail }>(`/marketplace/orders/${orderId}/pay`);
   return data.data;
 }
 

@@ -10,6 +10,7 @@ import {
   BarChartOutlined,
   BlockOutlined,
   BookOutlined,
+  CalendarOutlined,
   CloudServerOutlined,
   DatabaseOutlined,
   DesktopOutlined,
@@ -50,6 +51,7 @@ import { resolveMenuLabel } from '@/utils/menu-i18n';
 export const menuIconMap: Record<string, Component> = {
   HomeOutlined,
   AccountBookOutlined,
+  CalendarOutlined,
   UnorderedListOutlined,
   ShoppingOutlined,
   EnvironmentOutlined,

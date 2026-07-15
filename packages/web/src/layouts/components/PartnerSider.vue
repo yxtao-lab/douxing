@@ -17,6 +17,7 @@ import {
   AccountBookOutlined,
   AppstoreOutlined,
   AuditOutlined,
+  CalendarOutlined,
   FileSearchOutlined,
   HomeOutlined,
   ShoppingOutlined,
@@ -34,6 +35,7 @@ const menuItems = [
   { key: 'partner-demands', labelKey: 'partner.nav.demands', icon: FileSearchOutlined },
   { key: 'partner-quotes', labelKey: 'partner.nav.quotes', icon: TagOutlined },
   { key: 'partner-orders', labelKey: 'partner.nav.orders', icon: ShoppingOutlined },
+  { key: 'partner-schedule', labelKey: 'partner.nav.schedule', icon: CalendarOutlined },
   { key: 'partner-settlements', labelKey: 'partner.nav.settlements', icon: AccountBookOutlined },
   { key: 'partner-admin-link', labelKey: 'partner.nav.adminPortal', icon: AppstoreOutlined },
 ];
@@ -42,6 +44,7 @@ const selectedKey = computed(() => {
   const name = route.name as string | undefined;
   if (name?.startsWith('partner-demand')) return 'partner-demands';
   if (name?.startsWith('partner-order')) return 'partner-orders';
+  if (name?.startsWith('partner-schedule')) return 'partner-schedule';
   if (name?.startsWith('partner-settlement')) return 'partner-settlements';
   if (name?.startsWith('partner-org') || name?.startsWith('partner-provider')) return 'partner-onboard';
   return name ?? 'partner-home';

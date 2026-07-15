@@ -32,6 +32,7 @@ export * from './marketplace-biz-org-documents.js';
 export * from './marketplace-provider.js';
 export * from './marketplace-demand.js';
 export * from './marketplace-order.js';
+export * from './marketplace-order-report.js';
 export * from './marketplace-notification.js';
 export * from './marketplace-product.js';
 export * from './marketplace-settlement.js';

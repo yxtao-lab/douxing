@@ -5,10 +5,14 @@ import {
   BizOrgStatus,
   DEFAULT_PLATFORM_FEE_RATE,
   DemandStatus,
+  OrgRole,
+  PaymentChannel,
   ProductStatus,
   QuoteStatus,
   ServiceOrderStatus,
   type DemandSelectQuoteInput,
+  type OrderPrepayResult,
+  type ServiceOrderAssignInput,
   type ServiceOrderDetail,
   type ServiceOrderRefundPlaceholder,
   type ServiceOrderStatusInput,
@@ -19,6 +23,10 @@ import { getDb } from '../../db/client.js';
 import { bizOrg } from '../../db/schema/marketplace-biz-org.js';
 import { demandQuote, serviceDemand } from '../../db/schema/marketplace-demand.js';
 import { serviceOrder } from '../../db/schema/marketplace-order.js';
+import { users } from '../../db/schema/users.js';
+import { resolvePaymentChannel } from '../../config/payment.js';
+import { exchangeWxCodeForOpenid } from '../wechat-mini.service.js';
+import { createWechatJsapiPrepay } from '../wechat-pay.service.js';
 import { getDemandById, getDemandByIdForUser } from './marketplace-demand.service.js';
 import { generateServiceOrderNo } from './marketplace-org.service.js';
 import { getOrgRoleForUser, listOrgMembershipsByUser } from './marketplace-org-onboard.service.js';
@@ -31,7 +39,6 @@ import {
   increaseSkuStock,
 } from './marketplace-product.service.js';
 import { createPendingSettlementForOrder } from './marketplace-settlement.service.js';
-import { getPaymentMode } from '../../config/payment.js';
 
 const DEFAULT_PLATFORM_FEE_RATE_LOCAL = DEFAULT_PLATFORM_FEE_RATE;
 
@@ -60,6 +67,8 @@ function toOrderSummary(row: typeof serviceOrder.$inferSelect): ServiceOrderSumm
     buyerUserId: row.buyerUserId,
     sellerOrgId: row.sellerOrgId,
     sellerProviderUserId: row.sellerProviderUserId,
+    assignedGuideUserId: row.assignedGuideUserId ?? null,
+    assignedAt: row.assignedAt ? row.assignedAt.toISOString() : null,
     totalAmount: String(row.totalAmount),
     platformFee: String(row.platformFee),
     status: row.status as ServiceOrderSummary['status'],
@@ -75,6 +84,7 @@ function toOrderSummary(row: typeof serviceOrder.$inferSelect): ServiceOrderSumm
  * @param demandTitle - 关联需求标题；直购为 `null`
  * @param demandNo - 关联需求单号；直购为 `null`
  * @param productTitle - 直购标品标题；发单成单为 `null`
+ * @param extras - 行程日期与领队展示信息
  * @returns 订单详情
  */
 function toOrderDetail(
@@ -82,17 +92,27 @@ function toOrderDetail(
   demandTitle: string | null,
   demandNo: string | null,
   productTitle: string | null = null,
+  extras?: {
+    demandStartDate?: string | null;
+    demandEndDate?: string | null;
+    assignedGuideNickname?: string | null;
+    assignedGuideUsername?: string | null;
+  },
 ): ServiceOrderDetail {
   return {
     ...toOrderSummary(row),
     demandTitle,
     demandNo,
     productTitle,
+    demandStartDate: extras?.demandStartDate ?? null,
+    demandEndDate: extras?.demandEndDate ?? null,
+    assignedGuideNickname: extras?.assignedGuideNickname ?? null,
+    assignedGuideUsername: extras?.assignedGuideUsername ?? null,
   };
 }
 
 /**
- * 组装订单详情（按发单或直购补全标题）。
+ * 组装订单详情（按发单或直购补全标题、行程与领队信息）。
  *
  * @param row - 订单行
  * @returns 订单详情
@@ -101,18 +121,39 @@ async function buildOrderDetail(row: typeof serviceOrder.$inferSelect): Promise<
   let demandTitle: string | null = null;
   let demandNo: string | null = null;
   let productTitle: string | null = null;
+  let demandStartDate: string | null = null;
+  let demandEndDate: string | null = null;
+  let assignedGuideNickname: string | null = null;
+  let assignedGuideUsername: string | null = null;
 
   if (row.demandId != null) {
     const demand = await getDemandById(row.demandId);
     demandTitle = demand?.title ?? null;
     demandNo = demand?.demandNo ?? null;
+    demandStartDate = demand?.startDate ?? null;
+    demandEndDate = demand?.endDate ?? null;
   }
   if (row.productId != null) {
     const product = await getProductDetailById(row.productId);
     productTitle = product?.title ?? null;
   }
+  if (row.assignedGuideUserId != null) {
+    const db = getDb();
+    const guideRows = await db
+      .select({ nickname: users.nickname, username: users.username })
+      .from(users)
+      .where(eq(users.id, row.assignedGuideUserId))
+      .limit(1);
+    assignedGuideNickname = guideRows[0]?.nickname ?? null;
+    assignedGuideUsername = guideRows[0]?.username ?? null;
+  }
 
-  return toOrderDetail(row, demandTitle, demandNo, productTitle);
+  return toOrderDetail(row, demandTitle, demandNo, productTitle, {
+    demandStartDate,
+    demandEndDate,
+    assignedGuideNickname,
+    assignedGuideUsername,
+  });
 }
 
 /**
@@ -217,8 +258,7 @@ export async function selectQuoteAndCreateOrder(
     .where(eq(serviceDemand.id, demandId));
 
   const orderRows = await db.select().from(serviceOrder).where(eq(serviceOrder.id, orderId)).limit(1);
-  const orderRow = orderRows[0]!;
-  return toOrderDetail(orderRow, demand.title, demand.demandNo, null);
+  return buildOrderDetail(orderRows[0]!);
 }
 
 /**
@@ -283,7 +323,7 @@ export async function createOrderFromProduct(
   const orderId = Number(orderResult.insertId);
 
   const orderRows = await db.select().from(serviceOrder).where(eq(serviceOrder.id, orderId)).limit(1);
-  return toOrderDetail(orderRows[0]!, null, null, product.title);
+  return buildOrderDetail(orderRows[0]!);
 }
 
 /**
@@ -296,25 +336,19 @@ export async function createOrderFromProduct(
  */
 export async function payMockServiceOrder(orderId: number, userId: number): Promise<ServiceOrderDetail> {
   const order = await getOrderByIdForUser(orderId, userId);
+  if (order.buyerUserId !== userId) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN);
+  }
   if (order.status !== ServiceOrderStatus.PENDING_PAY) {
     throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID);
   }
 
-  const db = getDb();
-  await db
-    .update(serviceOrder)
-    .set({ status: ServiceOrderStatus.PAID })
-    .where(eq(serviceOrder.id, orderId));
-
-  if (order.demandId != null) {
-    await db
-      .update(serviceDemand)
-      .set({ status: DemandStatus.CONTRACTED })
-      .where(eq(serviceDemand.id, order.demandId));
+  const fulfilled = await fulfillServiceOrderAfterPaid(orderId);
+  if ('error' in fulfilled) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID);
   }
 
-  const rows = await db.select().from(serviceOrder).where(eq(serviceOrder.id, orderId)).limit(1);
-  return buildOrderDetail(rows[0]!);
+  return getOrderByIdForUser(orderId, userId);
 }
 
 /**
@@ -444,22 +478,151 @@ export async function requestServiceOrderRefundPlaceholder(
 }
 
 /**
- * 发起服务订单支付：mock/auto 模式走模拟支付；微信真通道待 E2 商户号就绪。
+ * 发起服务订单支付（模拟通道）：将 `pending_pay` 标记为 `paid`。
+ * 微信 JSAPI 请先调 `createServiceOrderPrepay`，由回调 `fulfillServiceOrderAfterPaid` 履约。
  *
  * @param orderId - 订单 ID
  * @param userId - 买方用户 ID
- * @returns 支付后订单（mock）或抛出微信未就绪错误
- * @throws {ApiError} 状态非法、无权，或微信通道未配置
+ * @returns 支付后订单
+ * @throws {ApiError} 状态非法或无权
  */
 export async function requestServiceOrderPay(
   orderId: number,
   userId: number,
 ): Promise<ServiceOrderDetail> {
-  const mode = getPaymentMode();
-  if (mode === 'wechat') {
-    throw new ApiError(ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE);
-  }
   return payMockServiceOrder(orderId, userId);
+}
+
+/**
+ * 按业务单号查找服务订单行。
+ *
+ * @param orderNo - `service_order.order_no`（通常以 `SO` 开头）
+ * @returns 订单行；不存在时 `null`
+ */
+export async function getServiceOrderByOrderNo(orderNo: string) {
+  const db = getDb();
+  const rows = await db
+    .select()
+    .from(serviceOrder)
+    .where(eq(serviceOrder.orderNo, orderNo))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+/**
+ * 支付成功履约（模拟支付确认 / 微信回调共用）：`pending_pay` → `paid`，发单成单同步需求为已签约。
+ * 幂等：已是 `paid` 及后续状态时直接成功。
+ *
+ * @param orderId - 服务订单 ID
+ * @returns `{ ok: true }` 或 `{ error }`
+ */
+export async function fulfillServiceOrderAfterPaid(
+  orderId: number,
+): Promise<{ ok: true } | { error: string }> {
+  const db = getDb();
+  const rows = await db.select().from(serviceOrder).where(eq(serviceOrder.id, orderId)).limit(1);
+  const row = rows[0];
+  if (!row) return { error: '订单不存在' };
+
+  if (row.status !== ServiceOrderStatus.PENDING_PAY) {
+    if (
+      row.status === ServiceOrderStatus.PAID ||
+      row.status === ServiceOrderStatus.IN_PROGRESS ||
+      row.status === ServiceOrderStatus.DELIVERED ||
+      row.status === ServiceOrderStatus.CONFIRMED ||
+      row.status === ServiceOrderStatus.SETTLED
+    ) {
+      return { ok: true };
+    }
+    return { error: '订单状态不可支付' };
+  }
+
+  await db
+    .update(serviceOrder)
+    .set({ status: ServiceOrderStatus.PAID })
+    .where(eq(serviceOrder.id, orderId));
+
+  if (row.demandId != null) {
+    await db
+      .update(serviceDemand)
+      .set({ status: DemandStatus.CONTRACTED })
+      .where(eq(serviceDemand.id, row.demandId));
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 服务订单预下单：按 `PAYMENT_MODE` 返回 mock 或微信 JSAPI 参数。
+ *
+ * @param orderId - 订单 ID
+ * @param userId - 买方用户 ID
+ * @param wxCode - 小程序 `wx.login` code；微信通道必填
+ * @returns 预下单结果；失败时 `{ error }`
+ */
+export async function createServiceOrderPrepay(
+  orderId: number,
+  userId: number,
+  wxCode?: string,
+): Promise<{ prepay: OrderPrepayResult } | { error: string }> {
+  let order: ServiceOrderDetail;
+  try {
+    order = await getOrderByIdForUser(orderId, userId);
+  } catch {
+    return { error: '订单不存在' };
+  }
+
+  if (order.buyerUserId !== userId) {
+    return { error: '仅买方可支付' };
+  }
+  if (order.status !== ServiceOrderStatus.PENDING_PAY) {
+    return { error: '仅待支付订单可发起支付' };
+  }
+
+  let channel: typeof PaymentChannel.MOCK | typeof PaymentChannel.WECHAT_JSAPI;
+  try {
+    channel = resolvePaymentChannel(wxCode);
+  } catch (e) {
+    if (e instanceof ApiError) {
+      return { error: e.messageKey };
+    }
+    return { error: e instanceof Error ? e.message : '支付渠道不可用' };
+  }
+
+  const base: OrderPrepayResult = {
+    channel,
+    orderId: order.id,
+    orderNo: order.orderNo,
+    totalAmount: order.totalAmount,
+  };
+
+  if (channel === PaymentChannel.MOCK) {
+    return { prepay: base };
+  }
+
+  if (!wxCode) {
+    return { error: ApiMessageKey.WECHAT_PAY_MP_ONLY };
+  }
+
+  const session = await exchangeWxCodeForOpenid(wxCode);
+  if ('error' in session) return { error: session.error };
+
+  const description =
+    order.demandTitle || order.productTitle || `服务订单 ${order.orderNo}`;
+  const wxPrepay = await createWechatJsapiPrepay({
+    description,
+    outTradeNo: order.orderNo,
+    totalAmountYuan: order.totalAmount,
+    openid: session.openid,
+  });
+  if ('error' in wxPrepay) return { error: wxPrepay.error };
+
+  return {
+    prepay: {
+      ...base,
+      wechat: wxPrepay.params,
+    },
+  };
 }
 
 /**
@@ -490,7 +653,12 @@ export async function getOrderByIdForUser(orderId: number, userId: number): Prom
     throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_NOT_FOUND);
   }
   const isBuyer = order.buyerUserId === userId;
-  const isSeller = await isUserSellerForOrder(userId, order.sellerOrgId, order.sellerProviderUserId);
+  const isSeller = await isUserSellerForOrder(
+    userId,
+    order.sellerOrgId,
+    order.sellerProviderUserId,
+    order.assignedGuideUserId,
+  );
   if (!isBuyer && !isSeller) {
     throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN);
   }
@@ -509,8 +677,12 @@ export async function isUserSellerForOrder(
   userId: number,
   sellerOrgId: number | null,
   sellerProviderUserId: number | null,
+  assignedGuideUserId?: number | null,
 ): Promise<boolean> {
   if (sellerProviderUserId === userId) {
+    return true;
+  }
+  if (assignedGuideUserId === userId) {
     return true;
   }
   if (sellerOrgId != null) {
@@ -518,6 +690,62 @@ export async function isUserSellerForOrder(
     return role != null;
   }
   return false;
+}
+
+/**
+ * 指派或清除服务订单履约领队（等价 `org:tour:assign`：仅 owner/admin）。
+ *
+ * @param orderId - 订单 ID
+ * @param actorUserId - 操作者用户 ID
+ * @param input - `guideUserId` 为正整数时指派；为 `null` 时清除
+ * @returns 更新后的订单详情
+ * @throws {ApiError} 无权、非商户单、或指派对象非本商户成员
+ */
+export async function assignGuideToServiceOrder(
+  orderId: number,
+  actorUserId: number,
+  input: ServiceOrderAssignInput,
+): Promise<ServiceOrderDetail> {
+  const db = getDb();
+  const rows = await db.select().from(serviceOrder).where(eq(serviceOrder.id, orderId)).limit(1);
+  const row = rows[0];
+  if (!row) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_NOT_FOUND);
+  }
+  if (row.sellerOrgId == null) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID);
+  }
+
+  const actorRole = await getOrgRoleForUser(actorUserId, row.sellerOrgId);
+  if (actorRole !== OrgRole.OWNER && actorRole !== OrgRole.ADMIN) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_FORBIDDEN);
+  }
+
+  if (input.guideUserId != null) {
+    if (!Number.isInteger(input.guideUserId) || input.guideUserId <= 0) {
+      throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID);
+    }
+    const guideRole = await getOrgRoleForUser(input.guideUserId, row.sellerOrgId);
+    if (guideRole == null) {
+      throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID);
+    }
+  }
+
+  const cancelled =
+    row.status === ServiceOrderStatus.CANCELLED || row.status === ServiceOrderStatus.SETTLED;
+  if (cancelled) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORDER_STATUS_INVALID);
+  }
+
+  await db
+    .update(serviceOrder)
+    .set({
+      assignedGuideUserId: input.guideUserId,
+      assignedAt: input.guideUserId != null ? new Date() : null,
+    })
+    .where(eq(serviceOrder.id, orderId));
+
+  return getOrderByIdForUser(orderId, actorUserId);
 }
 
 /**
@@ -533,7 +761,10 @@ export async function listServiceOrdersBySeller(userId: number): Promise<Service
     .map((item) => item.orgId);
 
   const db = getDb();
-  const sellerConditions = [eq(serviceOrder.sellerProviderUserId, userId)];
+  const sellerConditions = [
+    eq(serviceOrder.sellerProviderUserId, userId),
+    eq(serviceOrder.assignedGuideUserId, userId),
+  ];
   if (activeOrgIds.length > 0) {
     sellerConditions.push(inArray(serviceOrder.sellerOrgId, activeOrgIds));
   }

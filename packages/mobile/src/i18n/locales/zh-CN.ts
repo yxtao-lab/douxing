@@ -642,6 +642,7 @@ export const mobileZhCN = {
     publish: '发布需求',
     selectQuote: '选定报价',
     payMock: '模拟支付',
+    payWechat: '微信支付',
     category: {
       travel: {
         label: '旅行服务',

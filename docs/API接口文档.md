@@ -1617,7 +1617,8 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 选定 | POST | `/demands/:id/select-quote` | 登录（发单方/团体成员） | M2/M3-2 |
 | 报价列表 | GET | `/demands/:id/quotes` · `/quotes/mine` | 登录 | M2 |
 | 订单 | GET | `/orders/mine` · `/orders/seller` · `/orders/:id` | 登录 | M2 |
-| 履约 | POST/PATCH | `/orders/:id/pay-mock` · `/orders/:id/status` | 登录 | M2 |
+| 履约 | POST/PATCH | `/orders/:id/pay-mock` · `/orders/:id/pay` · `/orders/:id/prepay` · `/orders/:id/status` | 登录 | M2/E2 |
+| 支付回调 | POST | `/api/payments/wechat/notify` | 微信回调；按 `out_trade_no` 路由 `orders` 或 `service_order` | E2 |
 | 监管 | GET | `/admin/demands` | `marketplace:demand:list` | M2 |
 | 团体 | POST | `/groups` | 登录 | M3-1 |
 | 团体 | GET | `/groups/mine` · `/groups/:id` | 登录（成员） | M3-1 |
@@ -1627,8 +1628,26 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | Partner | GET | `/partner/context` | 登录 + `merchant` | M7-α |
 | Partner | POST | `/partner/enroll` | 登录 | M7-α |
 | Partner | GET | `/partner/settlements` | 登录；须为该商户 owner/admin；query `orgId` 必填、`status` 可选 | M7-5 |
+| Org | GET | `/orgs/:id/members` | 登录；须为该商户成员 | M7-3 |
+| 订单 | PATCH | `/orders/:id/assign` | 登录；body `{ guideUserId }`（null 清除）；仅 seller org owner/admin | M7-3 |
+| 订单 | GET | `/orders/:id/reports` | 登录；买方或卖方可读 | M7-4 |
+| 订单 | POST | `/orders/:id/reports` | 登录；卖方侧；`in_progress`/`delivered`；body 签到或图文 | M7-4 |
+| 订单 | POST | `/orders/:id/reports/photos` | 登录；卖方侧；上传汇报图片 | M7-4 |
 
 路由实现：`packages/server/src/routes/marketplace/*`；Web 商户页消费 Partner + 上述卖方 API。
+
+### M7-4 履约汇报摘要
+
+- 表 `service_order_report`（迁移 `0046`）：`checkin` / `report` · 可选地点坐标 · 多图 URL
+- 卖方侧（含指派领队）可写；买方可读时间线
+- Partner 订单详情内提交与展示
+
+### M7-3 排期与指派摘要
+
+- `service_order.assigned_guide_user_id` / `assigned_at`（迁移 `0045`）
+- 指派对象须为本商户 `org_member`；订单须有 `seller_org_id`
+- 订单详情回填 `demandStartDate` / `demandEndDate` 与领队展示名
+- Partner：`/partner/schedule` 月视图 · 订单详情指派 UI
 
 ### M3-1 团体 CRUD 摘要
 
@@ -1676,6 +1695,8 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-15 | **M7-4 履约汇报**：§25 增 reports API；迁移 `0046` |
+| 2026-07-15 | **M7-3 排期指派**：§25 增 `GET /orgs/:id/members` · `PATCH /orders/:id/assign`；迁移 `0045` |
 | 2026-07-15 | **M7-5 Partner 财务 UI**：§25 增 `GET /partner/settlements`；Web `/partner/settlements` |
 | 2026-07-14 | **M3-3 人数与发票**：§25 增 `headcount` / `invoiceInfo`；迁移 `0041`；验收 `m3:marketplace-group-cases` |
 | 2026-07-14 | **M3-2 团体发单**：§25 增 `publisherGroupId` · 团体成员权限 · 防自报价；验收 `m3:marketplace-group-cases` |

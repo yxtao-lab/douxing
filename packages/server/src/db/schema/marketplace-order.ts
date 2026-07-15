@@ -31,6 +31,11 @@ export const serviceOrder = mysqlTable(
     sellerProviderUserId: int('seller_provider_user_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    /** 履约领队（须为本商户成员；M7-3） */
+    assignedGuideUserId: int('assigned_guide_user_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+    assignedAt: timestamp('assigned_at'),
     totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
     platformFee: decimal('platform_fee', { precision: 12, scale: 2 }).notNull().default('0.00'),
     status: varchar('status', { length: 16 }).notNull().default('pending_pay'),
@@ -42,6 +47,7 @@ export const serviceOrder = mysqlTable(
     demandIdx: index('idx_service_order_demand').on(table.demandId),
     productIdx: index('idx_service_order_product').on(table.productId),
     buyerIdx: index('idx_service_order_buyer').on(table.buyerUserId),
+    assignedGuideIdx: index('idx_service_order_assigned_guide').on(table.assignedGuideUserId),
   }),
 );
 

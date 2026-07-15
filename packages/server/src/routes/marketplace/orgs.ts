@@ -12,6 +12,7 @@ import { fail, failFromError, success } from '../../utils/response.js';
 import {
   applyBizOrg,
   getBizOrgDetailById,
+  listOrgMembersForActor,
   listOrgMembershipsByUser,
 } from '../../services/marketplace/marketplace-org-onboard.service.js';
 import {
@@ -143,6 +144,26 @@ router.get('/mine', authMiddleware, async (req, res) => {
     success(res, { items: memberships });
   } catch (err) {
     failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+router.get('/:id/members', authMiddleware, async (req, res) => {
+  if (!req.auth) {
+    fail(res, ApiMessageKey.UNAUTHORIZED, 401, 401);
+    return;
+  }
+
+  const orgId = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(orgId) || orgId <= 0) {
+    fail(res, ApiMessageKey.PARAM_ERROR, 400, 400);
+    return;
+  }
+
+  try {
+    const items = await listOrgMembersForActor(orgId, req.auth.userId);
+    success(res, { items });
+  } catch (err) {
+    failFromError(res, err);
   }
 });
 

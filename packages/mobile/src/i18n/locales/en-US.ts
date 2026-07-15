@@ -645,6 +645,7 @@ export const mobileEnUS = {
     publish: 'Publish demand',
     selectQuote: 'Select quote',
     payMock: 'Mock pay',
+    payWechat: 'WeChat Pay',
     category: {
       travel: {
         label: 'Travel services',

@@ -237,6 +237,10 @@ export const sharedZhCN = {
       settled: '已结算',
       void: '已作废',
     },
+    reportType: {
+      checkin: '行中签到',
+      report: '图文汇报',
+    },
     pageTitle: '定制服务',
     hallTitle: '需求大厅',
     productsTitle: '标准套餐',

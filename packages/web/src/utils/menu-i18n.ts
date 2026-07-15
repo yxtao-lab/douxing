@@ -51,6 +51,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   'partner-demands': 'partner.demandsTitle',
   'partner-quotes': 'partner.quotesTitle',
   'partner-orders': 'partner.ordersTitle',
+  'partner-schedule': 'partner.scheduleTitle',
   'partner-settlements': 'partner.settlementsTitle',
 };
 

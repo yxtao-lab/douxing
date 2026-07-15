@@ -336,6 +336,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'partner/schedule',
+          name: 'partner-schedule',
+          component: () => import('@/views/partner/PartnerScheduleView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'partner.scheduleTitle',
+            menuGroupKey: 'web.menu.partnerWorkbench',
+            icon: 'CalendarOutlined',
+            perm: 'marketplace:partner:schedule',
+          },
+        },
+        {
           path: 'analytics',
           name: 'analytics',
           component: () => import('@/views/AnalyticsDashboardView.vue'),

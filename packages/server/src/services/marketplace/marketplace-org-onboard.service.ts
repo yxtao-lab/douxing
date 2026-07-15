@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
+import { and, asc, count, desc, eq, inArray, like, or, sql } from 'drizzle-orm';
 import {
   ApiMessageKey,
   ApiError,
@@ -13,11 +13,13 @@ import {
   type BizOrgReviewInput,
   type BizOrgSettlementConfig,
   type BizOrgSummary,
+  type OrgMemberListItem,
   type OrgMembershipSummary,
 } from '@douxing/shared';
 import { getDb } from '../../db/client.js';
 import { bizOrg, orgMember } from '../../db/schema/marketplace-biz-org.js';
 import { bizOrgDocument } from '../../db/schema/marketplace-biz-org-documents.js';
+import { users } from '../../db/schema/users.js';
 import { syncMerchantRoleForUser } from './marketplace-merchant-role.service.js';
 
 const ACTIVE_OWNER_STATUSES = [BizOrgStatus.PENDING, BizOrgStatus.ACTIVE] as const;
@@ -229,6 +231,51 @@ export async function getOrgRoleForUser(
     .where(and(eq(orgMember.userId, userId), eq(orgMember.orgId, orgId)))
     .limit(1);
   return rows[0]?.orgRole ?? null;
+}
+
+/**
+ * 列出商户全部成员（含用户展示名）；调用者须为该商户成员。
+ *
+ * @param orgId - 商户 ID
+ * @param actorUserId - 当前用户 ID
+ * @returns 成员列表，按成员 id 升序；无成员时为空数组
+ * @throws {ApiError} 非成员时 `MARKETPLACE_ORG_MEMBER_FORBIDDEN`；商户不存在时 `MARKETPLACE_ORG_NOT_FOUND`
+ */
+export async function listOrgMembersForActor(
+  orgId: number,
+  actorUserId: number,
+): Promise<OrgMemberListItem[]> {
+  const db = getDb();
+  const orgRows = await db.select({ id: bizOrg.id }).from(bizOrg).where(eq(bizOrg.id, orgId)).limit(1);
+  if (!orgRows[0]) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORG_NOT_FOUND);
+  }
+
+  const actorRole = await getOrgRoleForUser(actorUserId, orgId);
+  if (actorRole == null) {
+    throw new ApiError(ApiMessageKey.MARKETPLACE_ORG_MEMBER_FORBIDDEN);
+  }
+
+  const rows = await db
+    .select({
+      member: orgMember,
+      nickname: users.nickname,
+      username: users.username,
+    })
+    .from(orgMember)
+    .leftJoin(users, eq(users.id, orgMember.userId))
+    .where(eq(orgMember.orgId, orgId))
+    .orderBy(asc(orgMember.id));
+
+  return rows.map((item) => ({
+    id: item.member.id,
+    orgId: item.member.orgId,
+    userId: item.member.userId,
+    orgRole: item.member.orgRole as OrgMemberListItem['orgRole'],
+    nickname: item.nickname ?? null,
+    username: item.username ?? null,
+    createdAt: item.member.createdAt.toISOString(),
+  }));
 }
 
 /**

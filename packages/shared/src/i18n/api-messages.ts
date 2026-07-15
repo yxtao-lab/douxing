@@ -324,6 +324,11 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER]: '退款申请已登记，待支付通道就绪后处理',
   [ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE]: '微信支付通道未配置，请使用模拟支付或等待商户号就绪',
   [ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID]: '结算配置无效',
+  [ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_FORBIDDEN]: '仅商户 owner/admin 可指派领队',
+  [ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID]: '指派对象须为本商户成员，且订单须归属商户',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_INVALID]: '汇报内容无效（请填写说明或上传图片）',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_FORBIDDEN]: '无权提交或查看该订单的履约汇报',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_STATUS_INVALID]: '仅进行中或已交付的订单可提交履约汇报',
 };
 
 const enUS: Record<string, string> = {
@@ -656,6 +661,15 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE]:
     'WeChat Pay is not configured; use mock pay or wait for merchant credentials',
   [ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID]: 'Invalid settlement configuration',
+  [ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_FORBIDDEN]: 'Only org owners/admins can assign a guide',
+  [ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID]:
+    'Assignee must be an org member, and the order must belong to an organization',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_INVALID]:
+    'Invalid report: provide description text or at least one photo',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_FORBIDDEN]:
+    'You cannot submit or view fulfillment reports for this order',
+  [ApiMessageKey.MARKETPLACE_ORDER_REPORT_STATUS_INVALID]:
+    'Fulfillment reports are only allowed when the order is in progress or delivered',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

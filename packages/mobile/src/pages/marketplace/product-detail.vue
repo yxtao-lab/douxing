@@ -34,9 +34,9 @@ import { onLoad } from '@dcloudio/uni-app';
 import type { ServiceProductDetail } from '@douxing/shared';
 import {
   fetchMarketplaceProductDetail,
-  payMockMarketplaceOrder,
   purchaseMarketplaceProduct,
 } from '@/api/marketplace';
+import { completeMarketplaceOrderPayment } from '@/utils/marketplace-payment';
 import { useTf } from '@/i18n/useTf';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -56,6 +56,8 @@ let productId = 0;
 
 /**
  * 加载标品详情并默认选中第一个有库存 SKU。
+ *
+ * @returns 无返回值
  */
 async function load() {
   loading.value = true;
@@ -72,7 +74,9 @@ async function load() {
 }
 
 /**
- * 直购下单并模拟支付。
+ * 直购下单并完成支付（mock 或微信 JSAPI）。
+ *
+ * @returns 无返回值
  */
 async function buy() {
   if (!selectedSkuId.value || buying.value) return;
@@ -82,7 +86,7 @@ async function buy() {
       skuId: selectedSkuId.value,
       quantity: 1,
     });
-    await payMockMarketplaceOrder(order.id);
+    await completeMarketplaceOrderPayment(order.id);
     uni.showToast({ title: t('marketplaceUi.purchaseSuccess'), icon: 'none' });
     await load();
   } catch (e) {

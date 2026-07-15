@@ -237,6 +237,10 @@ export const sharedEnUS = {
       settled: 'Settled',
       void: 'Void',
     },
+    reportType: {
+      checkin: 'Check-in',
+      report: 'Trip report',
+    },
     pageTitle: 'Custom services',
     hallTitle: 'Demand hall',
     productsTitle: 'Packages',

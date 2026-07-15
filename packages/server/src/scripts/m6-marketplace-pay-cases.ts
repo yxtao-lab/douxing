@@ -1,12 +1,13 @@
 /**
- * M6 · 支付与分佣验收（mock 子集；微信真付待 E2）
+ * M6 · 支付与分佣验收（含 E2 预下单/履约接线；沙箱真机一笔待商户号）
  *
  * 用法：
  *   pnpm --filter @douxing/shared build
  *   pnpm --filter @douxing/server db:migrate
  *   pnpm --filter @douxing/server m6:marketplace-pay-cases
  *
- * 说明：沙箱「真实微信支付一笔」依赖 E2 商户号，本脚本以 mock 支付 + 抽佣/台账/取消验收。
+ * 说明：沙箱「真实微信支付一笔」依赖公司主体 + 商户号；本脚本验收 mock 支付、预下单
+ * 渠道解析、履约幂等、抽佣/台账/取消。
  */
 import '../config/env.js';
 import { eq, inArray } from 'drizzle-orm';
@@ -17,6 +18,7 @@ import {
   BizOrgType,
   OrgDocumentType,
   OrgRole,
+  PaymentChannel,
   ProductStatus,
   ServiceOrderStatus,
   SettlementStatus,
@@ -45,6 +47,9 @@ import {
   calcPlatformFee,
   cancelServiceOrder,
   createOrderFromProduct,
+  createServiceOrderPrepay,
+  fulfillServiceOrderAfterPaid,
+  getServiceOrderByOrderNo,
   payMockServiceOrder,
   requestServiceOrderPay,
   requestServiceOrderRefundPlaceholder,
@@ -54,7 +59,7 @@ import {
   getSettlementByOrderId,
   listSettlementsByOrg,
 } from '../services/marketplace/marketplace-settlement.service.js';
-import { getPaymentMode } from '../config/payment.js';
+import { getPaymentMode, isWechatPayConfigured } from '../config/payment.js';
 
 let failed = 0;
 
@@ -176,6 +181,8 @@ function checkI18nKeys() {
     ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER,
     ApiMessageKey.MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE,
     ApiMessageKey.MARKETPLACE_SETTLEMENT_CONFIG_INVALID,
+    ApiMessageKey.WECHAT_PAY_MP_ONLY,
+    ApiMessageKey.WECHAT_PAY_NOT_CONFIGURED,
   ] as const;
   for (const key of keys) {
     const zh = resolveApiMessage(key, 'zh-CN');
@@ -188,6 +195,8 @@ function checkI18nKeys() {
 
 /**
  * M6-2：可配抽佣费率写入订单快照。
+ *
+ * @returns 含待支付订单的上下文
  */
 async function checkPlatformFee() {
   console.log('--- M6-2 平台抽佣 ---');
@@ -219,7 +228,7 @@ async function checkPlatformFee() {
 }
 
 /**
- * M6-1/M6-4：mock 支付入口、取消、退款占位。
+ * M6-1 / E2：预下单渠道、履约幂等、统一支付入口。
  *
  * @param ctx - 含待支付订单上下文
  */
@@ -231,17 +240,37 @@ async function checkPayAndCancel(ctx: {
   buyerId: number;
   orderId: number;
 }) {
-  console.log('--- M6-1/4 支付与取消 ---');
+  console.log('--- M6-1/E2 支付与取消 ---');
 
   const mode = getPaymentMode();
   assert(mode === 'mock' || mode === 'auto' || mode === 'wechat', `支付模式可读: ${mode}`);
 
+  const prepayPending = await createServiceOrderPrepay(ctx.orderId, ctx.buyerId);
   if (mode === 'wechat') {
-    console.log('[SKIP] PAYMENT_MODE=wechat，跳过 mock 支付入口用例（真付待 E2）');
+    assert('error' in prepayPending, 'wechat 模式无 wxCode → 预下单失败');
+    if ('error' in prepayPending) {
+      assert(
+        prepayPending.error === ApiMessageKey.WECHAT_PAY_MP_ONLY ||
+          prepayPending.error === ApiMessageKey.WECHAT_PAY_NOT_CONFIGURED,
+        `无 wxCode 错误可识别: ${prepayPending.error}`,
+      );
+    }
   } else {
-    const paid = await requestServiceOrderPay(ctx.orderId, ctx.buyerId);
-    assert(paid.status === ServiceOrderStatus.PAID, 'requestServiceOrderPay(mock) → paid');
+    assert(!('error' in prepayPending), '预下单成功（mock/auto）');
+    if (!('error' in prepayPending)) {
+      assert(prepayPending.prepay.channel === PaymentChannel.MOCK, '预下单 channel=mock');
+      assert(prepayPending.prepay.orderId === ctx.orderId, '预下单 orderId 一致');
+    }
   }
+
+  const paid = await requestServiceOrderPay(ctx.orderId, ctx.buyerId);
+  assert(paid.status === ServiceOrderStatus.PAID, 'requestServiceOrderPay → paid');
+
+  const idempotent = await fulfillServiceOrderAfterPaid(ctx.orderId);
+  assert(!('error' in idempotent), 'fulfillServiceOrderAfterPaid 幂等');
+
+  const found = await getServiceOrderByOrderNo(paid.orderNo);
+  assert(found != null && found.id === ctx.orderId, 'getServiceOrderByOrderNo 可路由回调');
 
   const cancelOrder = await createOrderFromProduct(ctx.productId, ctx.buyerId, {
     skuId: ctx.skuId,
@@ -264,13 +293,11 @@ async function checkPayAndCancel(ctx: {
     cancelBlocked =
       err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_ORDER_CANCEL_INVALID;
   }
-  assert(cancelBlocked || mode === 'wechat', '已支付不可取消（或 wechat 跳过）');
+  assert(cancelBlocked, '已支付不可取消');
 
-  if (mode !== 'wechat') {
-    const refund = await requestServiceOrderRefundPlaceholder(ctx.orderId, ctx.buyerId);
-    assert(refund.status === 'refund_pending', '退款占位 status');
-    assert(refund.messageKey === ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER, '退款占位 messageKey');
-  }
+  const refund = await requestServiceOrderRefundPlaceholder(ctx.orderId, ctx.buyerId);
+  assert(refund.status === 'refund_pending', '退款占位 status');
+  assert(refund.messageKey === ApiMessageKey.MARKETPLACE_REFUND_PLACEHOLDER, '退款占位 messageKey');
 
   console.log('');
 }
@@ -323,8 +350,10 @@ async function checkSettlement(ctx: {
  * 入口。
  */
 async function main() {
-  console.log('=== M6 marketplace pay cases (mock subset) ===\n');
-  console.log(`[info] PAYMENT_MODE=${getPaymentMode()} · 微信真付待 E2\n`);
+  console.log('=== M6 marketplace pay cases (E2 wiring) ===\n');
+  console.log(
+    `[info] PAYMENT_MODE=${getPaymentMode()} · wechatConfigured=${isWechatPayConfigured()} · 沙箱真机一笔待商户号\n`,
+  );
 
   checkI18nKeys();
   const feeCtx = await checkPlatformFee();
@@ -335,7 +364,7 @@ async function main() {
     console.error(`\nM6 验收失败：${failed} 项`);
     process.exit(1);
   }
-  console.log('\nM6 mock 子集验收全部通过（微信真付缺口：E2）');
+  console.log('\nM6/E2 通道接线验收全部通过（沙箱真机一笔待商户号）');
   process.exit(0);
 }
 

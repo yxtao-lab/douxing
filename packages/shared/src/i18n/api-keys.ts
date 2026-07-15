@@ -322,6 +322,11 @@ export const ApiMessageKey = {
   MARKETPLACE_REFUND_PLACEHOLDER: 'api.marketplaceRefundPlaceholder',
   MARKETPLACE_PAYMENT_WECHAT_UNAVAILABLE: 'api.marketplacePaymentWechatUnavailable',
   MARKETPLACE_SETTLEMENT_CONFIG_INVALID: 'api.marketplaceSettlementConfigInvalid',
+  MARKETPLACE_ORDER_ASSIGN_FORBIDDEN: 'api.marketplaceOrderAssignForbidden',
+  MARKETPLACE_ORDER_ASSIGN_INVALID: 'api.marketplaceOrderAssignInvalid',
+  MARKETPLACE_ORDER_REPORT_INVALID: 'api.marketplaceOrderReportInvalid',
+  MARKETPLACE_ORDER_REPORT_FORBIDDEN: 'api.marketplaceOrderReportForbidden',
+  MARKETPLACE_ORDER_REPORT_STATUS_INVALID: 'api.marketplaceOrderReportStatusInvalid',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

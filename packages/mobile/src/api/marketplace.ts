@@ -1,6 +1,7 @@
 import type {
   DemandQuoteSummary,
   DemandSelectQuoteInput,
+  OrderPrepayResult,
   PaginatedResult,
   ServiceDemandDetail,
   ServiceDemandHallQuery,
@@ -102,13 +103,47 @@ export function selectMarketplaceQuote(demandId: number, body: DemandSelectQuote
 }
 
 /**
- * 模拟支付。
+ * 模拟支付（兼容旧入口，等同 `payMarketplaceOrder`）。
  *
  * @param orderId - 订单 ID
  * @returns 更新后订单
  */
 export function payMockMarketplaceOrder(orderId: number) {
   return request<ServiceOrderDetail>(`/marketplace/orders/${orderId}/pay-mock`, { method: 'POST' });
+}
+
+/**
+ * 服务订单预下单。
+ *
+ * @param orderId - 订单 ID
+ * @param data - 可选 `wxCode`（小程序微信通道）
+ * @returns 预下单结果（mock 或微信 JSAPI）
+ */
+export function createMarketplaceOrderPrepay(orderId: number, data?: { wxCode?: string }) {
+  return request<OrderPrepayResult>(`/marketplace/orders/${orderId}/prepay`, {
+    method: 'POST',
+    data: data ?? {},
+  });
+}
+
+/**
+ * 模拟支付确认（`pending_pay` → `paid`）；微信真付由回调履约。
+ *
+ * @param orderId - 订单 ID
+ * @returns 更新后订单
+ */
+export function payMarketplaceOrder(orderId: number) {
+  return request<ServiceOrderDetail>(`/marketplace/orders/${orderId}/pay`, { method: 'POST' });
+}
+
+/**
+ * 按 ID 获取服务订单详情（买方或卖方）。
+ *
+ * @param orderId - 订单 ID
+ * @returns 订单详情
+ */
+export function fetchMarketplaceOrderById(orderId: number) {
+  return request<ServiceOrderDetail>(`/marketplace/orders/${orderId}`);
 }
 
 /**

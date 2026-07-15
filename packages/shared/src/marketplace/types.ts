@@ -17,6 +17,7 @@ import type {
   QuoteSortReasonValue,
   QuoteStatusValue,
   ServiceCategoryNode,
+  ServiceOrderReportTypeValue,
   ServiceOrderStatusValue,
   SettlementStatusValue,
 } from './constants.js';
@@ -151,6 +152,17 @@ export interface OrgMembershipSummary {
   orgId: number;
   orgRole: OrgRoleValue;
   org: BizOrgSummary;
+}
+
+/** 商户组织成员列表项（含用户展示名） */
+export interface OrgMemberListItem {
+  id: number;
+  orgId: number;
+  userId: number;
+  orgRole: OrgRoleValue;
+  nickname: string | null;
+  username: string | null;
+  createdAt: string;
 }
 
 /** 发单团体摘要（列表/详情） */
@@ -346,6 +358,10 @@ export interface ServiceOrderSummary {
   buyerUserId: number;
   sellerOrgId: number | null;
   sellerProviderUserId: number | null;
+  /** 履约领队用户 ID；未指派为 `null` */
+  assignedGuideUserId: number | null;
+  /** 指派时间；未指派为 `null` */
+  assignedAt: string | null;
   totalAmount: string;
   platformFee: string;
   status: ServiceOrderStatusValue;
@@ -359,11 +375,50 @@ export interface ServiceOrderDetail extends ServiceOrderSummary {
   demandNo: string | null;
   /** 直购标品标题；发单成单为 `null` */
   productTitle: string | null;
+  /** 关联需求行程开始日（YYYY-MM-DD）；无需求或未填为 `null` */
+  demandStartDate: string | null;
+  /** 关联需求行程结束日（YYYY-MM-DD）；无需求或未填为 `null` */
+  demandEndDate: string | null;
+  /** 已指派领队昵称 */
+  assignedGuideNickname: string | null;
+  /** 已指派领队用户名 */
+  assignedGuideUsername: string | null;
 }
 
 /** 履约订单状态推进入参 */
 export interface ServiceOrderStatusInput {
   status: ServiceOrderStatusValue;
+}
+
+/** 指派/清除履约领队入参（`guideUserId` 为 null 时清除） */
+export interface ServiceOrderAssignInput {
+  guideUserId: number | null;
+}
+
+/** 履约汇报摘要（时间线项） */
+export interface ServiceOrderReportSummary {
+  id: number;
+  orderId: number;
+  authorUserId: number;
+  authorNickname: string | null;
+  authorUsername: string | null;
+  reportType: ServiceOrderReportTypeValue;
+  content: string | null;
+  photos: string[];
+  latitude: string | null;
+  longitude: string | null;
+  placeName: string | null;
+  createdAt: string;
+}
+
+/** 创建履约汇报入参 */
+export interface ServiceOrderReportCreateInput {
+  reportType: ServiceOrderReportTypeValue;
+  content?: string;
+  photos?: string[];
+  latitude?: number;
+  longitude?: number;
+  placeName?: string;
 }
 
 /** 标品 SKU 摘要 */

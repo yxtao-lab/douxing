@@ -1,8 +1,9 @@
 /**
- * M7 · 商户端 Partner 正式验收（M7-α 子集）
+ * M7 · 商户端 Partner 正式验收（M7-α + M7-3 + M7-4）
  *
- * 覆盖：入驻 → partner context → 大厅可见 → org 报价 → 选定 → mock 支付 → 卖方履约 → 结算旁证
- * 不覆盖：M7-3 排期、M7-4 履约汇报、Partner 财务 UI、微信真付、独立 packages/partner
+ * 覆盖：入驻 → partner context → 大厅可见 → org 报价 → 选定 → mock 支付 → 履约汇报
+ *       → 卖方履约 → 结算旁证 → 成员列表 → 领队指派 → 行程日期回填
+ * 不覆盖：微信真付、独立 packages/partner
  *
  * 用法：
  *   pnpm --filter @douxing/shared build
@@ -20,6 +21,7 @@ import {
   OrgDocumentType,
   OrgRole,
   QuoteStatus,
+  ServiceOrderReportType,
   ServiceOrderStatus,
   SettlementStatus,
   resolveApiMessage,
@@ -30,11 +32,13 @@ import { bizOrg, orgMember } from '../db/schema/marketplace-biz-org.js';
 import { bizOrgDocument } from '../db/schema/marketplace-biz-org-documents.js';
 import { demandQuote, serviceDemand } from '../db/schema/marketplace-demand.js';
 import { serviceOrder } from '../db/schema/marketplace-order.js';
+import { serviceOrderReport } from '../db/schema/marketplace-order-report.js';
 import { orgSettlement } from '../db/schema/marketplace-settlement.js';
 import { marketplaceNotification } from '../db/schema/marketplace-notification.js';
 import {
   applyBizOrg,
   getOrgRoleForUser,
+  listOrgMembersForActor,
   reviewBizOrg,
 } from '../services/marketplace/marketplace-org-onboard.service.js';
 import { enrollMerchantAdminAccess } from '../services/marketplace/marketplace-merchant-role.service.js';
@@ -50,10 +54,15 @@ import {
 } from '../services/marketplace/marketplace-quote.service.js';
 import {
   advanceServiceOrderStatus,
+  assignGuideToServiceOrder,
   listServiceOrdersBySeller,
   payMockServiceOrder,
   selectQuoteAndCreateOrder,
 } from '../services/marketplace/marketplace-order.service.js';
+import {
+  createServiceOrderReport,
+  listServiceOrderReports,
+} from '../services/marketplace/marketplace-order-report.service.js';
 import { getSettlementByOrderId, listSettlementsByOrg } from '../services/marketplace/marketplace-settlement.service.js';
 
 let failed = 0;
@@ -112,6 +121,7 @@ async function cleanupPublisherData(userId: number): Promise<void> {
     .where(inArray(serviceOrder.demandId, demandIds));
   const orderIds = orders.map((row) => row.id);
   if (orderIds.length > 0) {
+    await db.delete(serviceOrderReport).where(inArray(serviceOrderReport.orderId, orderIds));
     await db.delete(orgSettlement).where(inArray(orgSettlement.orderId, orderIds));
     await db.delete(serviceOrder).where(inArray(serviceOrder.id, orderIds));
   }
@@ -161,6 +171,11 @@ function checkI18nKeys() {
     ApiMessageKey.MARKETPLACE_PROVIDER_NOT_APPROVED,
     ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN,
     ApiMessageKey.MARKETPLACE_DEMAND_NOT_QUOTABLE,
+    ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_FORBIDDEN,
+    ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID,
+    ApiMessageKey.MARKETPLACE_ORDER_REPORT_INVALID,
+    ApiMessageKey.MARKETPLACE_ORDER_REPORT_FORBIDDEN,
+    ApiMessageKey.MARKETPLACE_ORDER_REPORT_STATUS_INVALID,
   ] as const;
   for (const key of keys) {
     const zh = resolveApiMessage(key, 'zh-CN');
@@ -226,8 +241,12 @@ async function checkOnboardAndContext(): Promise<{ merchantId: number; orgId: nu
  * M7-2/2c：大厅报价 → 成单 → 卖方履约 → 结算旁证。
  *
  * @param merchant - 已入驻商户
+ * @returns 成单后的订单与发单人，供 M7-3 复用
  */
-async function checkPartnerFullOrder(merchant: { merchantId: number; orgId: number }) {
+async function checkPartnerFullOrder(merchant: {
+  merchantId: number;
+  orgId: number;
+}): Promise<{ orderId: number; publisherId: number; demandId: number }> {
   console.log('--- M7-2/2c 接单履约闭环 ---');
 
   const publisherId = await ensureTestUser('m7_publisher');
@@ -242,9 +261,13 @@ async function checkPartnerFullOrder(merchant: { merchantId: number; orgId: numb
     budgetMin: '5000',
     budgetMax: '12000',
     budgetType: 'range',
+    startDate: '2026-08-01',
+    endDate: '2026-08-05',
   });
   const published = await publishDemand(draft.id, publisherId);
   assert(published.status === DemandStatus.PUBLISHED, '需求已发布');
+  assert(published.startDate === '2026-08-01', '需求行程开始日');
+  assert(published.endDate === '2026-08-05', '需求行程结束日');
 
   const hall = await listPublishedDemands({ page: 1, pageSize: 30, destination: '杭州' });
   assert(hall.items.some((item) => item.id === draft.id), '接单大厅可见需求');
@@ -279,6 +302,8 @@ async function checkPartnerFullOrder(merchant: { merchantId: number; orgId: numb
   const order = await selectQuoteAndCreateOrder(draft.id, publisherId, { quoteId: quote.id });
   assert(order.status === ServiceOrderStatus.PENDING_PAY, '选定后 pending_pay');
   assert(order.sellerOrgId === merchant.orgId, '卖方为商户');
+  assert(order.demandStartDate === '2026-08-01', '订单详情带回行程开始日');
+  assert(order.demandEndDate === '2026-08-05', '订单详情带回行程结束日');
 
   const paid = await payMockServiceOrder(order.id, publisherId);
   assert(paid.status === ServiceOrderStatus.PAID, 'mock 支付成功');
@@ -289,6 +314,50 @@ async function checkPartnerFullOrder(merchant: { merchantId: number; orgId: numb
   await advanceServiceOrderStatus(order.id, merchant.merchantId, {
     status: ServiceOrderStatus.IN_PROGRESS,
   });
+
+  console.log('--- M7-4 履约汇报 ---');
+  let strangerReportBlocked = false;
+  try {
+    await createServiceOrderReport(order.id, strangerId, {
+      reportType: ServiceOrderReportType.CHECKIN,
+      placeName: '西湖',
+      content: '陌生人签到应失败',
+    });
+  } catch (err) {
+    strangerReportBlocked =
+      err instanceof ApiError &&
+      (err.messageKey === ApiMessageKey.MARKETPLACE_ORDER_FORBIDDEN ||
+        err.messageKey === ApiMessageKey.MARKETPLACE_ORDER_REPORT_FORBIDDEN);
+  }
+  assert(strangerReportBlocked, '非卖方不可提交汇报');
+
+  const checkin = await createServiceOrderReport(order.id, merchant.merchantId, {
+    reportType: ServiceOrderReportType.CHECKIN,
+    placeName: '杭州西湖',
+    content: '抵达集合点',
+    latitude: 30.242,
+    longitude: 120.148,
+  });
+  assert(checkin.reportType === ServiceOrderReportType.CHECKIN, '签到已创建');
+  assert(checkin.placeName === '杭州西湖', '签到地点写入');
+
+  const report = await createServiceOrderReport(order.id, merchant.merchantId, {
+    reportType: ServiceOrderReportType.REPORT,
+    content: '今日行程顺利，客人反馈良好',
+    photos: ['/uploads/marketplace/m7/demo.jpg'],
+  });
+  assert(report.reportType === ServiceOrderReportType.REPORT, '图文汇报已创建');
+  assert(report.photos.length === 1, '图文含照片');
+
+  const timeline = await listServiceOrderReports(order.id, publisherId);
+  assert(timeline.length === 2, '买方可读汇报时间线');
+  assert(
+    timeline.some((item) => item.reportType === ServiceOrderReportType.CHECKIN) &&
+      timeline.some((item) => item.reportType === ServiceOrderReportType.REPORT),
+    '时间线含签到与图文',
+  );
+  console.log('');
+
   await advanceServiceOrderStatus(order.id, merchant.merchantId, {
     status: ServiceOrderStatus.DELIVERED,
   });
@@ -313,24 +382,79 @@ async function checkPartnerFullOrder(merchant: { merchantId: number; orgId: numb
   assert(settlements.some((item) => item.orderId === order.id), '商户结算列表可读（财务 API 基础）');
 
   console.log('');
+  return { orderId: order.id, publisherId, demandId: draft.id };
 }
 
 /**
- * 入口：M7-α 子集验收。
+ * M7-3：成员列表、领队指派、被指派人可见卖方订单。
+ *
+ * @param merchant - 已入驻商户
+ * @param orderId - 已成单订单 ID
+ */
+async function checkAssignAndSchedule(
+  merchant: { merchantId: number; orgId: number },
+  orderId: number,
+) {
+  console.log('--- M7-3 排期与指派 ---');
+
+  const guideId = await ensureTestUser('m7_guide');
+  const db = getDb();
+  await db.delete(orgMember).where(eq(orgMember.userId, guideId));
+  await db.insert(orgMember).values({
+    orgId: merchant.orgId,
+    userId: guideId,
+    orgRole: OrgRole.GUIDE,
+  });
+
+  const members = await listOrgMembersForActor(merchant.orgId, merchant.merchantId);
+  assert(members.some((m) => m.userId === guideId && m.orgRole === OrgRole.GUIDE), '成员列表含 guide');
+
+  let strangerAssignBlocked = false;
+  const strangerId = await ensureTestUser('m7_stranger');
+  try {
+    await assignGuideToServiceOrder(orderId, merchant.merchantId, { guideUserId: strangerId });
+  } catch (err) {
+    strangerAssignBlocked =
+      err instanceof ApiError && err.messageKey === ApiMessageKey.MARKETPLACE_ORDER_ASSIGN_INVALID;
+  }
+  assert(strangerAssignBlocked, '不可指派非成员');
+
+  const assigned = await assignGuideToServiceOrder(orderId, merchant.merchantId, {
+    guideUserId: guideId,
+  });
+  assert(assigned.assignedGuideUserId === guideId, '领队已指派');
+  assert(assigned.assignedAt != null, '指派时间已写入');
+
+  const guideOrders = await listServiceOrdersBySeller(guideId);
+  assert(guideOrders.some((item) => item.id === orderId), '被指派领队可见卖方订单');
+
+  const cleared = await assignGuideToServiceOrder(orderId, merchant.merchantId, {
+    guideUserId: null,
+  });
+  assert(cleared.assignedGuideUserId == null, '清除指派成功');
+
+  await assignGuideToServiceOrder(orderId, merchant.merchantId, { guideUserId: guideId });
+
+  console.log('');
+}
+
+/**
+ * 入口：M7-α + M7-3 + M7-4 验收。
  */
 async function main() {
-  console.log('=== M7 marketplace partner cases (α 子集) ===\n');
-  console.log('[info] 不覆盖 M7-3 排期 / M7-4 汇报 / Partner 财务 UI / 微信真付\n');
+  console.log('=== M7 marketplace partner cases (α + M7-3 + M7-4) ===\n');
+  console.log('[info] 不覆盖微信真付 / 独立 packages/partner\n');
 
   checkI18nKeys();
   const merchant = await checkOnboardAndContext();
-  await checkPartnerFullOrder(merchant);
+  const { orderId } = await checkPartnerFullOrder(merchant);
+  await checkAssignAndSchedule(merchant, orderId);
 
   if (failed > 0) {
-    console.error(`\nM7-α 验收失败：${failed} 项`);
+    console.error(`\nM7 验收失败：${failed} 项`);
     process.exit(1);
   }
-  console.log('\nM7-α 子集验收全部通过（服务方自助一单 · MB4 完整达成仍待 E2 + M7-3～5）');
+  console.log('\nM7-α + M7-3 + M7-4 验收全部通过（完整 MB4 仍待 E2 真付）');
   process.exit(0);
 }
 

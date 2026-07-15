@@ -2,10 +2,21 @@ import { OrderStatus, PaymentChannel } from '@douxing/shared';
 import type { OrderPrepayResult } from '@douxing/shared';
 import { resolvePaymentChannel } from '../config/payment.js';
 import { exchangeWxCodeForOpenid } from './wechat-mini.service.js';
-import { createWechatJsapiPrepay } from './wechat-pay.service.js';
+import { createWechatJsapiPrepay, getWechatPayClient } from './wechat-pay.service.js';
 import { findUserOrder, fulfillOrderAfterPaid, getOrderByOrderNo } from './order.service.js';
-import { getWechatPayClient } from './wechat-pay.service.js';
+import {
+  fulfillServiceOrderAfterPaid,
+  getServiceOrderByOrderNo,
+} from './marketplace/marketplace-order.service.js';
 
+/**
+ * 路线解锁订单预下单：按 `PAYMENT_MODE` 返回 mock 或微信 JSAPI 参数。
+ *
+ * @param orderId - 路线订单 ID
+ * @param userId - 下单用户 ID
+ * @param wxCode - 小程序 `wx.login` code；微信通道必填
+ * @returns 预下单结果；失败时 `{ error }`
+ */
 export async function createOrderPrepay(
   orderId: number,
   userId: number,
@@ -60,7 +71,17 @@ export async function createOrderPrepay(
   };
 }
 
-export async function handleWechatPayNotify(rawBody: string, headers: Record<string, string | string[] | undefined>) {
+/**
+ * 处理微信支付异步通知：按 `out_trade_no` 路由至路线解锁订单或 marketplace 服务订单。
+ *
+ * @param rawBody - 原始通知正文
+ * @param headers - 验签所需请求头
+ * @returns HTTP 状态与微信协议响应体
+ */
+export async function handleWechatPayNotify(
+  rawBody: string,
+  headers: Record<string, string | string[] | undefined>,
+) {
   const pay = getWechatPayClient();
   if (!pay) {
     return { status: 500, body: { code: 'FAIL', message: '支付未配置' } };
@@ -108,23 +129,37 @@ export async function handleWechatPayNotify(rawBody: string, headers: Record<str
       return { status: 200, body: { code: 'SUCCESS', message: '已忽略' } };
     }
 
-    const orderRow = await getOrderByOrderNo(decrypted.out_trade_no);
-    if (!orderRow) {
-      return { status: 200, body: { code: 'SUCCESS', message: '订单不存在' } };
+    const outTradeNo = decrypted.out_trade_no;
+
+    const routeOrder = await getOrderByOrderNo(outTradeNo);
+    if (routeOrder) {
+      const expectedFen = Math.round(parseFloat(String(routeOrder.totalAmount)) * 100);
+      if (decrypted.amount?.total != null && decrypted.amount.total !== expectedFen) {
+        console.error('[wechat-pay] 金额不一致', outTradeNo, decrypted.amount.total, expectedFen);
+        return { status: 400, body: { code: 'FAIL', message: '金额不一致' } };
+      }
+      const result = await fulfillOrderAfterPaid(routeOrder.id);
+      if ('error' in result) {
+        console.error('[wechat-pay] 路线订单履约失败', result.error, routeOrder.id);
+      }
+      return { status: 200, body: { code: 'SUCCESS', message: '成功' } };
     }
 
-    const expectedFen = Math.round(parseFloat(String(orderRow.totalAmount)) * 100);
-    if (decrypted.amount?.total != null && decrypted.amount.total !== expectedFen) {
-      console.error('[wechat-pay] 金额不一致', decrypted.out_trade_no, decrypted.amount.total, expectedFen);
-      return { status: 400, body: { code: 'FAIL', message: '金额不一致' } };
+    const serviceOrderRow = await getServiceOrderByOrderNo(outTradeNo);
+    if (serviceOrderRow) {
+      const expectedFen = Math.round(parseFloat(String(serviceOrderRow.totalAmount)) * 100);
+      if (decrypted.amount?.total != null && decrypted.amount.total !== expectedFen) {
+        console.error('[wechat-pay] 金额不一致', outTradeNo, decrypted.amount.total, expectedFen);
+        return { status: 400, body: { code: 'FAIL', message: '金额不一致' } };
+      }
+      const result = await fulfillServiceOrderAfterPaid(serviceOrderRow.id);
+      if ('error' in result) {
+        console.error('[wechat-pay] 服务订单履约失败', result.error, serviceOrderRow.id);
+      }
+      return { status: 200, body: { code: 'SUCCESS', message: '成功' } };
     }
 
-    const result = await fulfillOrderAfterPaid(orderRow.id);
-    if ('error' in result) {
-      console.error('[wechat-pay] 履约失败', result.error, orderRow.id);
-    }
-
-    return { status: 200, body: { code: 'SUCCESS', message: '成功' } };
+    return { status: 200, body: { code: 'SUCCESS', message: '订单不存在' } };
   } catch (err) {
     console.error('[wechat-pay] notify', err);
     return { status: 500, body: { code: 'FAIL', message: '处理失败' } };
