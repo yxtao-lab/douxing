@@ -11,6 +11,7 @@
     <view class="page-body">
       <view class="toolbar">
         <button class="btn-outline" size="mini" @click="goOnboard">{{ t('marketplaceUi.onboardEntry') }}</button>
+        <button class="btn-outline" size="mini" @click="goGroups">{{ t('marketplaceUi.groupsEntry') }}</button>
         <button class="btn-outline" size="mini" @click="goMine">{{ t('marketplace.mineTitle') }}</button>
         <button class="btn-primary" size="mini" @click="goCreate">{{ t('marketplace.createTitle') }}</button>
       </view>
@@ -98,6 +99,10 @@ function goCreate() {
 
 function goOnboard() {
   uni.navigateTo({ url: '/pages/marketplace/onboard' });
+}
+
+function goGroups() {
+  uni.navigateTo({ url: '/pages/marketplace/groups' });
 }
 
 function goMine() {

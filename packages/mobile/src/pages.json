@@ -148,6 +148,24 @@
       }
     },
     {
+      "path": "pages/marketplace/groups",
+      "style": {
+        "navigationBarTitleText": "我的团体"
+      }
+    },
+    {
+      "path": "pages/marketplace/group-create",
+      "style": {
+        "navigationBarTitleText": "创建团体"
+      }
+    },
+    {
+      "path": "pages/marketplace/group-detail",
+      "style": {
+        "navigationBarTitleText": "团体详情"
+      }
+    },
+    {
       "path": "pages/journey-albums/list",
       "style": {
         "navigationBarTitleText": "我的相册"

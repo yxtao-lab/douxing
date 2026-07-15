@@ -6,6 +6,13 @@
   >
     <form class="dx-card space-y-4" @submit.prevent="handleSubmit">
       <div>
+        <label class="mb-1 block text-sm text-dx-muted">{{ t('marketplaceUi.fieldPublisherGroup') }}</label>
+        <select v-model="publisherGroupId" class="dx-input w-full">
+          <option :value="0">{{ t('marketplaceUi.pickGroup') }}</option>
+          <option v-for="m in memberships" :key="m.groupId" :value="m.groupId">{{ m.group.name }}</option>
+        </select>
+      </div>
+      <div>
         <label class="mb-1 block text-sm text-dx-muted">{{ t('marketplaceUi.fieldTitle') }}</label>
         <input v-model="title" class="dx-input w-full" :placeholder="t('marketplaceUi.titlePlaceholder')" />
       </div>
@@ -39,15 +46,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { SERVICE_CATEGORY_TREE } from '@douxing/shared';
+import { onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import { SERVICE_CATEGORY_TREE, type GroupMembershipSummary } from '@douxing/shared';
 import { createMarketplaceDemand, publishMarketplaceDemand } from '@/api/marketplace';
+import { fetchMyMarketplaceGroups } from '@/api/marketplace-groups';
 import SubPageShell from '@/components/SubPageShell.vue';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/stores/user';
 
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
 const userStore = useUserStore();
 const leafCategories = SERVICE_CATEGORY_TREE.flatMap((node) => node.children ?? []);
@@ -57,8 +66,28 @@ const destination = ref('');
 const description = ref('');
 const budgetMin = ref('');
 const budgetMax = ref('');
+const publisherGroupId = ref(0);
+const memberships = ref<GroupMembershipSummary[]>([]);
 const submitting = ref(false);
 
+/**
+ * 加载我的团体并应用 query 预选。
+ */
+async function loadGroups() {
+  try {
+    memberships.value = await fetchMyMarketplaceGroups();
+    const gid = Number(route.query.groupId || 0);
+    if (Number.isInteger(gid) && gid > 0 && memberships.value.some((m) => m.groupId === gid)) {
+      publisherGroupId.value = gid;
+    }
+  } catch {
+    memberships.value = [];
+  }
+}
+
+/**
+ * 提交草稿并发布需求。
+ */
 async function handleSubmit() {
   if (!userStore.token) {
     router.push({ name: 'login', query: { redirect: '/marketplace/create' } });
@@ -75,6 +104,7 @@ async function handleSubmit() {
       budgetMin: budgetMin.value || undefined,
       budgetMax: budgetMax.value || undefined,
       budgetType: budgetMin.value || budgetMax.value ? 'range' : undefined,
+      publisherGroupId: publisherGroupId.value > 0 ? publisherGroupId.value : undefined,
     });
     await publishMarketplaceDemand(draft.id);
     router.push({ name: 'marketplace-detail', params: { id: draft.id } });
@@ -82,4 +112,6 @@ async function handleSubmit() {
     submitting.value = false;
   }
 }
+
+onMounted(loadGroups);
 </script>

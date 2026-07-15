@@ -6,6 +6,7 @@
     :back-label="t('pc.nav.profile')"
   >
     <div class="mb-4 flex justify-end gap-2">
+      <RouterLink :to="{ name: 'marketplace-groups' }" class="dx-btn-outline text-sm">{{ t('marketplaceUi.groupsEntry') }}</RouterLink>
       <RouterLink :to="{ name: 'marketplace-mine' }" class="dx-btn-outline text-sm">{{ t('marketplace.mineTitle') }}</RouterLink>
       <RouterLink :to="{ name: 'marketplace-create' }" class="dx-btn-primary text-sm">{{ t('marketplace.createTitle') }}</RouterLink>
     </div>

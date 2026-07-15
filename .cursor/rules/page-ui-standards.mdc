@@ -35,6 +35,8 @@ alwaysApply: true
 
 ## Web 管理端（`packages/web`）
 
+> 含平台运营与 **全部 B 端**（`/partner` 商户工作台）。勿在商户台放置纯 C 端发单方能力（如「我的团体」）。
+
 | 场景 | 须用 |
 |------|------|
 | 页面壳 | `PageContainer admin` |
@@ -45,6 +47,8 @@ alwaysApply: true
 细则见 `web-admin-table-filter.mdc`、`web-admin-table-actions.mdc`、[Web管理端表格规范.md](../docs/Web管理端表格规范.md)。
 
 ## PC 用户端（`packages/pc`）
+
+> **仅 C 端**：禁止在此包新增商户入驻、接单、报价、卖方履约等 B 端页面；B 端一律 `packages/web`（见 `pc-c-web-b-split.mdc`）。
 
 | 场景 | 须用 |
 |------|------|

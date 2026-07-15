@@ -148,6 +148,24 @@ const router = createRouter({
           meta: { titleKey: 'marketplace.mineTitle', navKey: 'profile', requiresAuth: true },
         },
         {
+          path: 'marketplace/groups',
+          name: 'marketplace-groups',
+          component: () => import('@/views/MarketplaceGroupsView.vue'),
+          meta: { titleKey: 'marketplace.groupsTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'marketplace/groups/create',
+          name: 'marketplace-group-create',
+          component: () => import('@/views/MarketplaceGroupCreateView.vue'),
+          meta: { titleKey: 'marketplace.groupCreateTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'marketplace/groups/:id',
+          name: 'marketplace-group-detail',
+          component: () => import('@/views/MarketplaceGroupDetailView.vue'),
+          meta: { titleKey: 'marketplace.groupDetailTitle', navKey: 'profile', requiresAuth: true },
+        },
+        {
           path: 'marketplace/:id',
           name: 'marketplace-detail',
           component: () => import('@/views/MarketplaceDetailView.vue'),
