@@ -20,7 +20,7 @@
 | **现网模型** | 百炼 DashScope · `douxing` provider · `auto` 链：`douxing → deepseek → lmstudio` |
 | **验收** | `i3:douxing-llm-cases --live` · `c7-d:plan-agent-ab-cases --live` |
 | **Step 35（延后）** | PAI LoRA 微调 + 自训 checkpoint 注册百炼；脚本与数据集已就绪，待平台恢复后执行 |
-| **可选并行** | [AI流程编排路线图](./AI流程编排路线图.md) W0 · DT5 二期 · H10 Web 视频审核 UI |
+| **可选并行** | [AI流程编排路线图](./AI流程编排路线图.md) · DT5 二期（按需） |
 
 **Step 35 延后（2026-07-06）**：`ml:upload-dataset` · `i2:pai-lora-cases` 等 I2 资产已交付；**PAI Model Gallery 任务暂停**，后期再训；当前 **`DOUXING_LLM_MODEL` 指向百炼可用模型即可**。
 
@@ -28,7 +28,7 @@
 
 **Step 38 已达成（2026-07-02）**：评论按天/POI 筛选 · POI 信任链详情（说明+打卡图+UGC 视频摘要）· `h10-a:trust-cases`。
 
-**Step 39 已达成（2026-07-03）**：`route_media` 表 · 路线/POI ≤60s 视频上传/播放/审核 API · mobile/pc `RouteMediaPlayerSheet` · `h10-bc:trust-cases`（**Web 视频审核 UI 待补**）。
+**Step 39 已达成（2026-07-03）**：`route_media` 表 · 路线/POI ≤60s 视频上传/播放/审核 API · mobile/pc `RouteMediaPlayerSheet` · `h10-bc:trust-cases` · **Web 审核 UI ✅**（`/attractions/media/pending`）。
 
 **Step 34 已达成（2026-06-18）**：`pet-exp.service.ts` · `in_trip`/`in_plan` analyze · 打卡庆祝 UI · `h3-d:in-trip-cases` · **`h5:m5-accept` M5 达成**。
 
@@ -42,7 +42,7 @@
 [███████████████████████] 100%  —  M0～M5 + M6 主链（Step 36～40）已达成；Step 35 PAI 延后
 
 当前阶段：M6 主链验收完成 · 现网百炼模型 · I2 PAI LoRA 后期规划
-下一焦点：流程编排 W0 / DT5 二期 / H10 Web 审核 UI（按需）
+下一焦点：沙箱真机一笔（收口 MB4）· DT5 二期（按需）
 最终目标：M6 — 路线图全部 Step 验收（见 §2.2）
 ```
 
@@ -173,7 +173,7 @@
 | Step | 状态 | 任务 | 验收标准 |
 |------|------|------|----------|
 | **38** | [x] | **H10-a 景点说明 + 评论强化** | [x] POI 详情有说明+评+打卡图 [x] 评论 dayIndex/attractionId 筛选 |
-| **39** | [x] | **H10-b + H10-c UGC 视频** | [x] 路线/POI ≤60s 视频 [x] 详情/分享/流程图可播放 [ ] Web 审核 UI |
+| **39** | [x] | **H10-b + H10-c UGC 视频** | [x] 路线/POI ≤60s 视频 [x] 详情/分享/流程图可播放 [x] Web 审核 UI |
 | **40** | [x] | **H10-d 热评聚合** | [x] 热门讨论区 [x] 外链二次确认 |
 | **41** | [ ] | **（远期）H10-e vlog→规划** | [ ] ASR+OCR 提取地名 [ ] 人工确认写入 |
 | **42** | [ ] | **（远期）H3-e 向量记忆** | [ ] embedding 检索 [ ] 月度旅行 DNA |

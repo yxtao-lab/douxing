@@ -33,7 +33,7 @@
 |------|------|------|
 | **整体阶段** | 阶段 C 已完成 · G8 生产部署已落地 · **G9 国际化已验收** | C1～C5 已验收；API 可公有化至 `api.yxtao.site` |
 | **当前焦点** | **M6 主链已达成** · **现网百炼模型** · Step 35 PAI **延后** | H10-a/b/c/d · I3/C7-d · 全站 API 日志；见 [下一步工作.md](./下一步工作.md) |
-| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI流程编排路线图](./AI流程编排路线图.md)** | **沙箱真机一笔**（收口 MB4）· DT5 二期 · H10 Web 审核 UI（按需） |
+| **下一步建议** | 见 **[下一步工作.md](./下一步工作.md)** · **[AI流程编排路线图](./AI流程编排路线图.md)** | **沙箱真机一笔**（收口 MB4）· DT5 二期（按需） |
 | **完成度（里程碑）** | M0：**7/7** · A：**4/4** · B：**6/6** · C：**5/5** · G8：**已交付** · G9：**已验收** · 其余未开始 | 见 [时间轴](#2-项目开发进度时间轴) |
 
 **状态图例**：`[ ]` 未开始 · `[~]` 进行中 · `[x]` 已完成
@@ -189,7 +189,7 @@ gantt
 | v0.9.37 | 2026-07-01 | **DT5 地理时间口径 + 热力图层** | `scopeDays` / `effectiveScope` · 页头角标 · `TravelGeoMap` heatmap | — |
 | v0.9.38 | 2026-07-01 | **I3 微调模型基础设施 + API 日志** | `douxing` LLM provider · `sys_api_log` · Web `/log/api` · `i3:douxing-llm-cases` | — |
 | v0.9.39 | 2026-07-02 | **H10-a POI 信任链** | 评论 dayIndex/attractionId 筛选 · POI 详情说明/打卡图 · `h10-a:trust-cases` | mobile/pc `RouteDayFlowChart` |
-| v0.9.40 | 2026-07-03 | **H10-b/c 路线视频** | `route_media` · 上传/播放/审核 API · `RouteMediaPlayerSheet` · `h10-bc:trust-cases` | Web 视频审核 UI 待补 |
+| v0.9.40 | 2026-07-03 | **H10-b/c 路线视频** | `route_media` · 上传/播放/审核 API · `RouteMediaPlayerSheet` · `h10-bc:trust-cases` | Web 审核 UI 后补 ✅（`/attractions/media/pending`） |
 | v0.9.30 | 2026-06-18 | **文档同步** | 路线图/下一步/API 文档对齐 M4；指针 → Step 31 H8 | — |
 | v0.9.23 | 2026-06-15 | **W2 Web 管理端表格规范** | 全列表 `AdminSearchBar` 筛选 · `AdminTableExportButton` XLSX 导出（表头/文件名 i18n + 时间戳）· 空值 `-` 占位 · [Web管理端表格规范.md](./Web管理端表格规范.md) · `.cursor/rules/web-admin-table-filter.mdc` | 业务/系统/监控/日志/会员/分析内嵌表均可导出；见 [§ W2](./开发记录-重难点与亮点.md#web-管理端表格筛选导出与空值占位2026-06-15) |
 
@@ -985,7 +985,7 @@ generateRoute 管道
 | 步 | 状态 | 批次 | 名称 | 依赖 | 交付内容 | 验收标准 |
 |----|------|------|------|------|----------|----------|
 | **H10-a** | [x] | 信任链 MVP | **景点说明 + 站内评论强化** | A2、A3 | 路线详情 POI 展开景点库说明；评论 **按天/按 POI 筛选**；打卡图缩略；`h10-a:trust-cases` | 2026-07-02 验收 |
-| **H10-b** | [x] | UGC 视频 MVP | **短视频上传与绑定** | G7/OSS | 表 `route_media`：≤60s · ≤50MB；绑定 `routeId` 或 POI；审核态 API | 2026-07-03 验收 |
+| **H10-b** | [x] | UGC 视频 MVP | **短视频上传与绑定** | G7/OSS | 表 `route_media`：≤60s · ≤50MB；审核 API + **Web `/attractions/media/pending`** | 2026-07-03 API · Web UI ✅ |
 | **H10-c** | [x] | 消费侧 | **详情/流程图/分享跳转播放** | H10-b | 路线详情 · `RouteDayFlowChart` · 分享页 · `RouteMediaPlayerSheet` | 2026-07-03 验收；手帐扫码入口待迭代 |
 | **H10-d** | [x] | 社区 | **热评与「去过」聚合** | H10-a、D5 | **站内**：路线评论点赞排序、「精选」运营位；**站外**：POI 挂载用户提交的小红书/抖音链接（跳转外链） | 详情页有「热门讨论」区；外链跳转前二次确认；Web 评论精选 UI |
 | **H10-e** | [ ] | 智能化 | **视频辅助规划（可选）** | H10-b、C3 | 上传 vlog 后 **ASR+抽帧 OCR** 提取地名→与景点库对齐→建议写入路线（人工确认） | 降低「只信 AI 没去过」；与 I 线可共用 ASR |

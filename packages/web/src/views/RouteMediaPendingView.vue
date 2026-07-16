@@ -121,7 +121,6 @@
       v-model:open="previewVisible"
       :title="previewTitle"
       width="720px"
-      :footer="null"
       destroy-on-close
       @cancel="closePreview"
     >
@@ -140,6 +139,16 @@
           <dd>{{ previewItem.routeName }} (#{{ previewItem.routeId }})</dd>
         </div>
         <div class="preview-meta-row">
+          <dt>{{ t('routeMedia.colUploader') }}</dt>
+          <dd>
+            {{
+              previewItem.userNickname?.trim()
+                ? previewItem.userNickname
+                : t('routeMedia.userIdFallback', { id: previewItem.userId })
+            }}
+          </dd>
+        </div>
+        <div class="preview-meta-row">
           <dt>{{ t('routeMedia.colScope') }}</dt>
           <dd>{{ scopeLabel(previewItem) }}</dd>
         </div>
@@ -147,7 +156,30 @@
           <dt>{{ t('routeMedia.colDuration') }}</dt>
           <dd>{{ formatDuration(previewItem.durationSec) }}</dd>
         </div>
+        <div class="preview-meta-row">
+          <dt>{{ t('routeMedia.colSize') }}</dt>
+          <dd>{{ formatBytes(previewItem.byteSize) }}</dd>
+        </div>
       </dl>
+      <template #footer>
+        <a-button @click="closePreview">{{ t('common.cancel') }}</a-button>
+        <a-button
+          danger
+          :loading="reviewingId === previewItem?.id && reviewAction === 'reject'"
+          :disabled="!previewItem"
+          @click="previewItem && handleReview(previewItem, 'reject')"
+        >
+          {{ t('routeMedia.reject') }}
+        </a-button>
+        <a-button
+          type="primary"
+          :loading="reviewingId === previewItem?.id && reviewAction === 'approve'"
+          :disabled="!previewItem"
+          @click="previewItem && handleReview(previewItem, 'approve')"
+        >
+          {{ t('routeMedia.approve') }}
+        </a-button>
+      </template>
     </a-modal>
   </PageContainer>
 </template>
