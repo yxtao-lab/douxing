@@ -356,3 +356,75 @@ export type ProductStatusValue = (typeof ProductStatus)[keyof typeof ProductStat
 /** 可公开浏览的标品状态 */
 export const PUBLIC_PRODUCT_STATUSES: ProductStatusValue[] = [ProductStatus.ON_SALE];
 
+/** 履约评价方类型（谁写的评价） */
+export const ServiceOrderReviewTargetType = {
+  BUYER: 'buyer',
+  SELLER: 'seller',
+} as const;
+
+export type ServiceOrderReviewTargetTypeValue =
+  (typeof ServiceOrderReviewTargetType)[keyof typeof ServiceOrderReviewTargetType];
+
+/** 合法评价方类型列表 */
+export const SERVICE_ORDER_REVIEW_TARGET_TYPES: ServiceOrderReviewTargetTypeValue[] = [
+  ServiceOrderReviewTargetType.BUYER,
+  ServiceOrderReviewTargetType.SELLER,
+];
+
+/** 履约评价对象类型（评价谁） */
+export const ServiceOrderRevieweeType = {
+  USER: 'user',
+  ORG: 'org',
+} as const;
+
+export type ServiceOrderRevieweeTypeValue =
+  (typeof ServiceOrderRevieweeType)[keyof typeof ServiceOrderRevieweeType];
+
+/** 合法评价对象类型列表 */
+export const SERVICE_ORDER_REVIEWEE_TYPES: ServiceOrderRevieweeTypeValue[] = [
+  ServiceOrderRevieweeType.USER,
+  ServiceOrderRevieweeType.ORG,
+];
+
+/** 履约争议类型 */
+export const ServiceOrderDisputeType = {
+  QUALITY: 'quality',
+  NO_SHOW: 'no_show',
+  SCHEDULE: 'schedule',
+  SAFETY: 'safety',
+  OTHER: 'other',
+} as const;
+
+export type ServiceOrderDisputeTypeValue =
+  (typeof ServiceOrderDisputeType)[keyof typeof ServiceOrderDisputeType];
+
+/** 合法争议类型列表 */
+export const SERVICE_ORDER_DISPUTE_TYPES: ServiceOrderDisputeTypeValue[] = [
+  ServiceOrderDisputeType.QUALITY,
+  ServiceOrderDisputeType.NO_SHOW,
+  ServiceOrderDisputeType.SCHEDULE,
+  ServiceOrderDisputeType.SAFETY,
+  ServiceOrderDisputeType.OTHER,
+];
+
+/** 履约争议状态 */
+export const ServiceOrderDisputeStatus = {
+  PENDING: 'pending',
+  PLATFORM_PROCESSING: 'platform_processing',
+  RESOLVED_BUYER: 'resolved_buyer',
+  RESOLVED_SELLER: 'resolved_seller',
+  CLOSED: 'closed',
+} as const;
+
+export type ServiceOrderDisputeStatusValue =
+  (typeof ServiceOrderDisputeStatus)[keyof typeof ServiceOrderDisputeStatus];
+
+/** 合法争议状态列表 */
+export const SERVICE_ORDER_DISPUTE_STATUSES: ServiceOrderDisputeStatusValue[] = [
+  ServiceOrderDisputeStatus.PENDING,
+  ServiceOrderDisputeStatus.PLATFORM_PROCESSING,
+  ServiceOrderDisputeStatus.RESOLVED_BUYER,
+  ServiceOrderDisputeStatus.RESOLVED_SELLER,
+  ServiceOrderDisputeStatus.CLOSED,
+];
+

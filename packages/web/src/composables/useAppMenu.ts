@@ -42,6 +42,7 @@ import {
   GiftOutlined,
   HistoryOutlined,
   VideoCameraOutlined,
+  WarningOutlined,
 } from '@ant-design/icons-vue';
 import type { Component } from 'vue';
 import type { NavMenuNode } from '@/api/system';
@@ -88,6 +89,7 @@ export const menuIconMap: Record<string, Component> = {
   GiftOutlined,
   HistoryOutlined,
   VideoCameraOutlined,
+  WarningOutlined,
 };
 
 /** 可选图标列表（按名称排序，供菜单图标选择器使用） */

@@ -36,3 +36,5 @@ export * from './marketplace-order-report.js';
 export * from './marketplace-notification.js';
 export * from './marketplace-product.js';
 export * from './marketplace-settlement.js';
+export * from './marketplace-review.js';
+export * from './marketplace-dispute.js';

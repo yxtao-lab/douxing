@@ -230,6 +230,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'marketplace/disputes',
+          name: 'marketplace-disputes',
+          component: () => import('@/views/MarketplaceDisputesView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.marketplaceDisputes',
+            menuGroupKey: 'web.menu.marketplace',
+            icon: 'WarningOutlined',
+            perm: 'marketplace:dispute:audit',
+          },
+        },
+        {
           path: 'partner',
           name: 'partner-home',
           component: () => import('@/views/partner/PartnerHomeView.vue'),

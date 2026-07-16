@@ -1,6 +1,6 @@
 # 兜行 API 接口文档
 
-> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0～M7 发单接单 marketplace** · **E2 微信通道接线** · **M7 Partner API**）  
+> **版本**：与代码同步（含 **双 Token 无感刷新** · C7 Agent · **C7-W W0～W5 流程编排** · H3 旅行宠物 · **M5 行中 H7/H8** · **H10-a/b/c 路线可信度** · **I3 微调模型** · J1～J5+ 旅程相册 · **DT5 运营大屏 geo API** · **M0～M7 发单接单 marketplace** · **E2 微信通道接线** · **M7 Partner API** · **M7-ext 评价与争议**）  
 > **更新日期**：2026-07-16  
 > **AI 规划执行顺序**：[AI路径规划路线图.md](./AI路径规划路线图.md)（**Step 38/39 已交付** · **Step 35→40** · **M1～M5 已验收**）  
 > **流程编排（规划）**：[AI流程编排路线图.md](./AI流程编排路线图.md) — 管理端诊断/沙箱/模板 API（§24）· SSE `node_status` 画布联动  
@@ -1493,10 +1493,10 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ## 25. 发单接单 marketplace
 
-> **模块 B** · **M0～M5 ✅** · **M6/E2 通道接线 ✅** · **M7-α/3/4/5 ✅**（2026-07-15）· **MB4 通道预览**；完整商用待沙箱真机一笔  
+> **模块 B** · **M0～M5 ✅** · **M6/E2 通道接线 ✅** · **M7-α/2c/3/4/5 ✅**（2026-07-15）· **M7-ext 评价与争议 ✅**（2026-07-16）· **MB4 通道预览**；完整商用待沙箱真机一笔  
 > **产品**：[发单接单平台.md](./发单接单平台.md) · **路线图**：[发单接单路线图.md](./发单接单路线图.md)  
 > **类型契约**：`@douxing/shared` → `marketplace/constants.ts`、`marketplace/types.ts`  
-> **验收**：`m0`～`m7:marketplace-*-cases`（见路线图 §6）；OpenAPI 全量同步仍为可选扫尾
+> **验收**：`m0`～`m7:marketplace-*-cases` + `m7-ext:marketplace-trust-cases`（见路线图 §6）；OpenAPI 全量同步仍为可选扫尾
 
 前缀：`/api/marketplace`
 
@@ -1633,6 +1633,13 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 订单 | GET | `/orders/:id/reports` | 登录；买方或卖方可读 | M7-4 |
 | 订单 | POST | `/orders/:id/reports` | 登录；卖方侧；`in_progress`/`delivered`；body 签到或图文 | M7-4 |
 | 订单 | POST | `/orders/:id/reports/photos` | 登录；卖方侧；上传汇报图片 | M7-4 |
+| 评价 | GET | `/orders/:id/reviews` | 登录；订单相关方可读 | M7-ext |
+| 评价 | POST | `/orders/:id/reviews` | 登录；订单相关方；`confirmed`/`delivered`/`completed` 后可写；body `rating`/`content` | M7-ext |
+| 评价 | POST | `/orders/:id/reviews/:reviewId/reply` | 登录；评价对象方（卖方）可回复 | M7-ext |
+| 争议 | GET | `/orders/:id/disputes` | 登录；订单相关方可读 | M7-ext |
+| 争议 | POST | `/orders/:id/disputes` | 登录；买方/卖方；订单存在且非已结案；body `type`/`reason` | M7-ext |
+| 管理端 | GET | `/admin/disputes` | 登录 + `marketplace:dispute:list`；query `keyword`/`status`/`page`/`pageSize` | M7-ext |
+| 管理端 | PATCH | `/admin/disputes/:id` | 登录 + `marketplace:dispute:resolve`；body `status`/`platformNote` | M7-ext |
 
 路由实现：`packages/server/src/routes/marketplace/*`；Web 商户页消费 Partner + 上述卖方 API。
 
@@ -1641,6 +1648,14 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 - 表 `service_order_report`（迁移 `0046`）：`checkin` / `report` · 可选地点坐标 · 多图 URL
 - 卖方侧（含指派领队）可写；买方可读时间线
 - Partner 订单详情内提交与展示
+
+### M7-ext 履约评价与争议摘要
+
+- 表 `service_order_review`（迁移 `0047`）：`fromUserId` / `toTargetType` (`buyer`/`seller`/`provider`/`org`) / `toUserId`/`toOrgId` / `rating` / `content` / `tags` / `replyContent` / `replyAt`
+- 表 `service_order_dispute`（迁移 `0047`）：`initiatorUserId` / `respondentType` / `respondentUserId`/`respondentOrgId` / `type` / `reason` / `status` / `platformNote` / `resolvedAt`
+- 订单状态 `confirmed`/`delivered`/`completed` 后可评价；同一订单同一目标方不可重复评价；评价对象方可回复
+- 争议：订单相关方在 `confirmed`/`delivered`/`completed`/`disputed` 状态可发起；存在未结案争议时不可重复发起；平台仲裁后转入 `resolved_buyer`/`resolved_seller`/`closed` 并触发信用分扣减
+- 管理端 `/marketplace/disputes` 仲裁；C 端/PC 订单详情发起评价与申诉；Partner 订单详情展示并回复
 
 ### M7-3 排期与指派摘要
 
@@ -1696,6 +1711,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 日期 | 说明 |
 |------|------|
 | 2026-07-15 | **文档全量同步**：文首/§25 状态对齐路线图 v1.11.0（E2 接线 ✅ · 下一沙箱真机） |
+| 2026-07-16 | **M7-ext 评价与争议**：§25 增 reviews / disputes / admin/disputes API；迁移 `0047`；`m7-ext:marketplace-trust-cases` |
 | 2026-07-15 | **E2 微信通道接线**：§25 增 `prepay` · notify 双表路由 · C 端对齐 |
 | 2026-07-15 | **M7-4 履约汇报**：§25 增 reports API；迁移 `0046` |
 | 2026-07-15 | **M7-3 排期指派**：§25 增 `GET /orgs/:id/members` · `PATCH /orders/:id/assign`；迁移 `0045` |

@@ -26,6 +26,8 @@ import {
   saveMarketplaceDocumentLocal,
 } from '../../utils/marketplace-document-upload.util.js';
 import { resolvePublicAssetUrl, resolvePublicBaseFromRequest } from '../../utils/public-asset-url.util.js';
+import reviewsRouter from './reviews.js';
+import disputesRouter from './disputes.js';
 
 const router = Router();
 
@@ -368,5 +370,8 @@ router.post('/:id/reports/photos', authMiddleware, (req, res) => {
     }
   });
 });
+
+router.use('/:id/reviews', reviewsRouter);
+router.use('/:id/disputes', disputesRouter);
 
 export default router;

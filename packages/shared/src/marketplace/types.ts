@@ -17,7 +17,11 @@ import type {
   QuoteSortReasonValue,
   QuoteStatusValue,
   ServiceCategoryNode,
+  ServiceOrderDisputeStatusValue,
+  ServiceOrderDisputeTypeValue,
   ServiceOrderReportTypeValue,
+  ServiceOrderRevieweeTypeValue,
+  ServiceOrderReviewTargetTypeValue,
   ServiceOrderStatusValue,
   SettlementStatusValue,
 } from './constants.js';
@@ -520,4 +524,81 @@ export interface PartnerQuoteListItem extends DemandQuoteSummary {
   demandTitle: string | null;
   demandNo: string | null;
   demandStatus: DemandStatusValue;
+}
+
+/** 履约评价摘要 */
+export interface ServiceOrderReviewSummary {
+  id: number;
+  orderId: number;
+  targetType: ServiceOrderReviewTargetTypeValue;
+  fromUserId: number;
+  fromNickname: string | null;
+  fromUsername: string | null;
+  toTargetType: ServiceOrderRevieweeTypeValue;
+  toUserId: number | null;
+  toOrgId: number | null;
+  toOrgName: string | null;
+  toProviderDisplayName: string | null;
+  rating: number;
+  content: string | null;
+  tags: string[];
+  replyContent: string | null;
+  replyAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 创建履约评价入参 */
+export interface ServiceOrderReviewCreateInput {
+  targetType: ServiceOrderReviewTargetTypeValue;
+  rating: number;
+  content?: string;
+  tags?: string[];
+}
+
+/** 回复履约评价入参 */
+export interface ServiceOrderReviewReplyInput {
+  replyContent: string;
+}
+
+/** 履约争议摘要 */
+export interface ServiceOrderDisputeSummary {
+  id: number;
+  orderId: number;
+  orderNo: string | null;
+  initiatorUserId: number;
+  initiatorNickname: string | null;
+  initiatorUsername: string | null;
+  respondentType: ServiceOrderRevieweeTypeValue;
+  respondentUserId: number | null;
+  respondentOrgId: number | null;
+  respondentOrgName: string | null;
+  type: ServiceOrderDisputeTypeValue;
+  reason: string | null;
+  status: ServiceOrderDisputeStatusValue;
+  platformNote: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 创建履约争议入参 */
+export interface ServiceOrderDisputeCreateInput {
+  type: ServiceOrderDisputeTypeValue;
+  reason: string;
+}
+
+/** 平台仲裁争议入参 */
+export interface ServiceOrderDisputeResolveInput {
+  status: ServiceOrderDisputeStatusValue;
+  platformNote?: string;
+}
+
+/** 管理端争议列表筛选参数 */
+export interface ServiceOrderDisputeAdminQuery {
+  page?: number;
+  pageSize?: number;
+  keyword?: string;
+  status?: string;
+  type?: string;
 }

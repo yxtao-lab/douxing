@@ -12,6 +12,12 @@ import {
   type ServiceDemandInput,
   type ServiceDemandSummary,
   type ServiceOrderDetail,
+  type ServiceOrderDisputeAdminQuery,
+  type ServiceOrderDisputeResolveInput,
+  type ServiceOrderDisputeSummary,
+  type ServiceOrderReviewCreateInput,
+  type ServiceOrderReviewReplyInput,
+  type ServiceOrderReviewSummary,
   type ServiceOrderStatusInput,
   type ServiceOrderSummary,
   type ServiceProviderReviewInput,
@@ -297,4 +303,138 @@ export async function advanceMarketplaceOrderStatus(orderId: number, body: Servi
 export async function fetchMyMarketplaceOrders() {
   const { data } = await http.get<ApiResponse<{ items: ServiceOrderSummary[] }>>('/marketplace/orders/mine');
   return data.data?.items ?? [];
+}
+
+/**
+ * 创建服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 评价内容
+ * @returns 新建评价摘要
+ */
+export async function createMarketplaceOrderReview(
+  orderId: number,
+  body: ServiceOrderReviewCreateInput,
+): Promise<ServiceOrderReviewSummary> {
+  const { data } = await http.post<ApiResponse<ServiceOrderReviewSummary>>(
+    `/marketplace/orders/${orderId}/reviews`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 列出服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @returns 评价列表
+ */
+export async function fetchMarketplaceOrderReviews(
+  orderId: number,
+): Promise<{ items: ServiceOrderReviewSummary[] }> {
+  const { data } = await http.get<ApiResponse<{ items: ServiceOrderReviewSummary[] }>>(
+    `/marketplace/orders/${orderId}/reviews`,
+  );
+  return data.data ?? { items: [] };
+}
+
+/**
+ * 回复服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @param reviewId - 评价 ID
+ * @param body - 回复内容
+ * @returns 更新后评价摘要
+ */
+export async function replyMarketplaceOrderReview(
+  orderId: number,
+  reviewId: number,
+  body: ServiceOrderReviewReplyInput,
+): Promise<ServiceOrderReviewSummary> {
+  const { data } = await http.post<ApiResponse<ServiceOrderReviewSummary>>(
+    `/marketplace/orders/${orderId}/reviews/${reviewId}/reply`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 创建服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 争议类型与原因
+ * @returns 新建争议摘要
+ */
+export async function createMarketplaceOrderDispute(
+  orderId: number,
+  body: { type: string; reason: string },
+): Promise<ServiceOrderDisputeSummary> {
+  const { data } = await http.post<ApiResponse<ServiceOrderDisputeSummary>>(
+    `/marketplace/orders/${orderId}/disputes`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 列出服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @returns 争议列表
+ */
+export async function fetchMarketplaceOrderDisputes(
+  orderId: number,
+): Promise<{ items: ServiceOrderDisputeSummary[] }> {
+  const { data } = await http.get<ApiResponse<{ items: ServiceOrderDisputeSummary[] }>>(
+    `/marketplace/orders/${orderId}/disputes`,
+  );
+  return data.data ?? { items: [] };
+}
+
+export interface MarketplaceDisputeListParams extends ServiceOrderDisputeAdminQuery {
+  page: number;
+  pageSize: number;
+}
+
+/**
+ * 管理端分页获取履约争议列表。
+ *
+ * @param params - 筛选与分页参数
+ * @returns 分页结果
+ */
+export async function fetchMarketplaceDisputesPage(
+  params: MarketplaceDisputeListParams,
+) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.status) query.set('status', params.status);
+  if (params.type) query.set('type', params.type);
+  const { data } = await http.get<ApiResponse<PaginatedResult<ServiceOrderDisputeSummary>>>(
+    `/marketplace/admin/disputes?${query.toString()}`,
+  );
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+}
+
+/**
+ * 平台仲裁结案争议。
+ *
+ * @param disputeId - 争议 ID
+ * @param body - 结案状态与备注
+ * @returns 更新后争议摘要
+ */
+export async function resolveMarketplaceDispute(
+  disputeId: number,
+  body: ServiceOrderDisputeResolveInput,
+): Promise<ServiceOrderDisputeSummary> {
+  const { data } = await http.patch<ApiResponse<ServiceOrderDisputeSummary>>(
+    `/marketplace/admin/disputes/${disputeId}/resolve`,
+    body,
+  );
+  return data.data;
 }

@@ -60,7 +60,7 @@ tags:
   - name: 工作流模板
     description: C7-W W3/W5 工作流模板 CRUD 与 DAG 校验
   - name: 发单接单
-    description: 模块 B marketplace M0 — 类目、发单只读、管理端商户占位
+    description: 模块 B marketplace M0～M7-ext — 类目、发单、撮合、商户、履约、评价、争议
 
 security:
   - bearerAuth: []
@@ -2745,6 +2745,216 @@ paths:
         '403':
           description: 无权限（api.forbidden）
 
+  /api/marketplace/orders/{id}/reviews:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [发单接单]
+      summary: 订单评价列表
+      description: 登录；订单相关方可读
+      operationId: marketplaceOrderReviewsList
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ServiceOrderReviewSummary'
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限（api.marketplaceOrderForbidden）
+        '404':
+          description: 订单不存在（api.marketplaceOrderNotFound）
+    post:
+      tags: [发单接单]
+      summary: 创建订单评价
+      description: 登录；订单相关方；订单状态须为 confirmed / delivered / completed
+      operationId: marketplaceOrderReviewCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceOrderReviewCreateInput'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: 参数错误或重复评价
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限或状态不满足
+        '404':
+          description: 订单不存在
+
+  /api/marketplace/orders/{id}/reviews/{reviewId}/reply:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+      - $ref: '#/components/parameters/ReviewId'
+    post:
+      tags: [发单接单]
+      summary: 回复订单评价
+      description: 登录；评价对象方（卖方）可回复
+      operationId: marketplaceOrderReviewReply
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceOrderReviewReplyInput'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: 参数错误或已回复
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限
+        '404':
+          description: 评价不存在
+
+  /api/marketplace/orders/{id}/disputes:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [发单接单]
+      summary: 订单争议列表
+      description: 登录；订单相关方可读
+      operationId: marketplaceOrderDisputesList
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          items:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ServiceOrderDisputeSummary'
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限
+        '404':
+          description: 订单不存在
+    post:
+      tags: [发单接单]
+      summary: 创建订单争议
+      description: 登录；订单相关方；存在未结案争议时不可重复发起
+      operationId: marketplaceOrderDisputeCreate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceOrderDisputeCreateInput'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: 参数错误或已有争议
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限或状态不满足
+        '404':
+          description: 订单不存在
+
+  /api/marketplace/admin/disputes:
+    get:
+      tags: [发单接单]
+      summary: 管理端争议列表
+      description: 需权限 marketplace:dispute:list
+      operationId: marketplaceAdminDisputesList
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PageSize'
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: 订单号、用户名、原因关键字
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, platform_processing, resolved_buyer, resolved_seller, closed]
+          description: 争议状态
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaginatedApiResponse'
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限
+    patch:
+      tags: [发单接单]
+      summary: 管理端仲裁争议
+      description: 需权限 marketplace:dispute:resolve
+      operationId: marketplaceAdminDisputeResolve
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceOrderDisputeResolveInput'
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: 参数错误
+        '401':
+          description: 未登录
+        '403':
+          description: 无权限
+        '404':
+          description: 争议不存在
+
 components:
   securitySchemes:
     bearerAuth:
@@ -2833,6 +3043,14 @@ components:
         type: integer
         minimum: 1
       description: 需求单主键
+    ReviewId:
+      name: reviewId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+      description: 评价主键
 
   schemas:
     ApiResponse:
@@ -3627,3 +3845,88 @@ components:
         occurredAt:
           type: string
           format: date-time
+
+    ServiceOrderReviewSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        orderId: { type: integer }
+        fromUserId: { type: integer }
+        fromUserDisplayName: { type: string, nullable: true }
+        toTargetType:
+          type: string
+          enum: [buyer, seller, provider, org]
+        toUserId: { type: integer, nullable: true }
+        toOrgId: { type: integer, nullable: true }
+        toTargetDisplayName: { type: string, nullable: true }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        content: { type: string, nullable: true }
+        tags: { type: array, items: { type: string } }
+        replyContent: { type: string, nullable: true }
+        replyAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ServiceOrderReviewCreateInput:
+      type: object
+      required: [toTargetType, rating]
+      properties:
+        toTargetType:
+          type: string
+          enum: [buyer, seller, provider, org]
+        toUserId: { type: integer, nullable: true }
+        toOrgId: { type: integer, nullable: true }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        content: { type: string, maxLength: 2000, nullable: true }
+        tags: { type: array, items: { type: string, maxLength: 32 } }
+
+    ServiceOrderReviewReplyInput:
+      type: object
+      required: [replyContent]
+      properties:
+        replyContent: { type: string, minLength: 1, maxLength: 2000 }
+
+    ServiceOrderDisputeSummary:
+      type: object
+      properties:
+        id: { type: integer }
+        orderId: { type: integer }
+        orderNo: { type: string, nullable: true }
+        initiatorUserId: { type: integer }
+        initiatorDisplayName: { type: string, nullable: true }
+        respondentType:
+          type: string
+          enum: [buyer, seller, provider, org]
+        respondentUserId: { type: integer, nullable: true }
+        respondentOrgId: { type: integer, nullable: true }
+        respondentDisplayName: { type: string, nullable: true }
+        type:
+          type: string
+          enum: [service_not_match, no_show, price_dispute, safety, other]
+        reason: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [open, platform_processing, resolved_buyer, resolved_seller, closed]
+        platformNote: { type: string, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    ServiceOrderDisputeCreateInput:
+      type: object
+      required: [type, reason]
+      properties:
+        type:
+          type: string
+          enum: [service_not_match, no_show, price_dispute, safety, other]
+        reason: { type: string, minLength: 1, maxLength: 2000 }
+
+    ServiceOrderDisputeResolveInput:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: integer }
+        status:
+          type: string
+          enum: [platform_processing, resolved_buyer, resolved_seller, closed]
+        platformNote: { type: string, maxLength: 2000, nullable: true }

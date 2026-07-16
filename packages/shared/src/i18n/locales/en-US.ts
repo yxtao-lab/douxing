@@ -6,6 +6,7 @@ export const sharedEnUS = {
     name: 'Douxing',
   },
   common: {
+    action: 'Actions',
     confirm: 'OK',
     cancel: 'Cancel',
     loading: 'Loading…',
@@ -19,6 +20,7 @@ export const sharedEnUS = {
     loginRequired: 'Please sign in first',
     filterAll: 'All',
     statusAll: 'All statuses',
+    typeAll: 'All types',
     statusUnlocked: 'Unlocked',
     statusLocked: 'Locked',
     unknownPlace: 'Unknown place',
@@ -137,6 +139,7 @@ export const sharedEnUS = {
     marketplaceOrgsPending: 'Onboarding Review',
     marketplaceProvidersPending: 'Provider Review',
     marketplaceDemands: 'Service Demands',
+    marketplaceDisputes: 'Fulfillment Disputes',
     analytics: 'Analytics',
     planDiagnostics: 'Plan Diagnostics',
     workflowTemplates: 'Workflow Templates',
@@ -285,6 +288,32 @@ export const sharedEnUS = {
     certStatusPending: 'Pending review',
     certStatusApproved: 'Approved',
     certStatusRejected: 'Rejected',
+    reviewTargetType: {
+      buyer: 'Buyer Review',
+      seller: 'Seller Review',
+    },
+    revieweeType: {
+      user: 'Individual',
+      org: 'Organization',
+    },
+    disputeType: {
+      quality: 'Service Quality',
+      no_show: 'No Show',
+      schedule: 'Schedule Change',
+      safety: 'Safety Issue',
+      other: 'Other',
+    },
+    disputeStatus: {
+      pending: 'Pending',
+      platform_processing: 'Processing',
+      resolved_buyer: 'Resolved for Buyer',
+      resolved_seller: 'Resolved for Seller',
+      closed: 'Closed',
+    },
+    reviewRating: {
+      label: 'Rating',
+      star: '{rating} stars',
+    },
   },
   apiLog: {
     module: {

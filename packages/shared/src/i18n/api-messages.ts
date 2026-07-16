@@ -329,6 +329,19 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_ORDER_REPORT_INVALID]: '汇报内容无效（请填写说明或上传图片）',
   [ApiMessageKey.MARKETPLACE_ORDER_REPORT_FORBIDDEN]: '无权提交或查看该订单的履约汇报',
   [ApiMessageKey.MARKETPLACE_ORDER_REPORT_STATUS_INVALID]: '仅进行中或已交付的订单可提交履约汇报',
+
+  [ApiMessageKey.MARKETPLACE_REVIEW_INVALID]: '评价内容无效（评分须为 1～5 星）',
+  [ApiMessageKey.MARKETPLACE_REVIEW_FORBIDDEN]: '当前订单状态不可评价或无权评价',
+  [ApiMessageKey.MARKETPLACE_REVIEW_ALREADY_EXISTS]: '该订单已提交过同方向评价',
+  [ApiMessageKey.MARKETPLACE_REVIEW_NOT_FOUND]: '评价不存在',
+  [ApiMessageKey.MARKETPLACE_REVIEW_REPLY_INVALID]: '回复内容无效',
+  [ApiMessageKey.MARKETPLACE_REVIEW_REPLY_FORBIDDEN]: '仅被评价方可回复该评价',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_INVALID]: '争议类型或原因无效',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_FORBIDDEN]: '当前订单状态不可发起争议或无权发起',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_ALREADY_EXISTS]: '该订单已存在未结案争议',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_NOT_FOUND]: '争议不存在',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_STATUS_INVALID]: '争议状态非法',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_RESOLVE_FORBIDDEN]: '仅平台运营可仲裁争议',
 };
 
 const enUS: Record<string, string> = {
@@ -670,6 +683,21 @@ const enUS: Record<string, string> = {
     'You cannot submit or view fulfillment reports for this order',
   [ApiMessageKey.MARKETPLACE_ORDER_REPORT_STATUS_INVALID]:
     'Fulfillment reports are only allowed when the order is in progress or delivered',
+
+  [ApiMessageKey.MARKETPLACE_REVIEW_INVALID]: 'Invalid review: rating must be 1 to 5 stars',
+  [ApiMessageKey.MARKETPLACE_REVIEW_FORBIDDEN]:
+    'You cannot review this order in its current status or without permission',
+  [ApiMessageKey.MARKETPLACE_REVIEW_ALREADY_EXISTS]: 'You have already submitted a review for this direction',
+  [ApiMessageKey.MARKETPLACE_REVIEW_NOT_FOUND]: 'Review not found',
+  [ApiMessageKey.MARKETPLACE_REVIEW_REPLY_INVALID]: 'Invalid reply content',
+  [ApiMessageKey.MARKETPLACE_REVIEW_REPLY_FORBIDDEN]: 'Only the reviewed party can reply',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_INVALID]: 'Invalid dispute type or reason',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_FORBIDDEN]:
+    'You cannot open a dispute for this order in its current status or without permission',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_ALREADY_EXISTS]: 'An unresolved dispute already exists for this order',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_NOT_FOUND]: 'Dispute not found',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_STATUS_INVALID]: 'Invalid dispute status',
+  [ApiMessageKey.MARKETPLACE_DISPUTE_RESOLVE_FORBIDDEN]: 'Only platform operators can arbitrate disputes',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

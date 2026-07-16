@@ -71,6 +71,7 @@
     "m5:marketplace-product-cases": "tsx src/scripts/m5-marketplace-product-cases.ts",
     "m6:marketplace-pay-cases": "tsx src/scripts/m6-marketplace-pay-cases.ts",
     "m7:marketplace-partner-cases": "tsx src/scripts/m7-marketplace-partner-cases.ts",
+    "m7-ext:marketplace-trust-cases": "tsx src/scripts/m7-ext-marketplace-trust-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

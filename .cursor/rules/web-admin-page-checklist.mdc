@@ -1,0 +1,51 @@
+# Web 管理端新页面自检清单
+
+后续**新增 Web 管理端页面**（含 `/partner` 商户工作台）完成后，必须逐项自检，避免菜单图标缺失、国际化漏键、权限未同步等低级问题。
+
+## 禁止
+
+- 侧边栏菜单项无图标，或图标名在页面中无法渲染
+- 用户可见处显示裸 i18n key（如 `common.action`、`common.typeAll`）
+- 新增菜单未写入 `sys-admin.service.ts` `DEFAULT_MENU_SEED` 或未运行 `db:sync-menus`
+- 路由 `meta.icon` 与 `sys_menu.icon` 不一致
+
+## 必须
+
+### 1. 菜单与图标
+
+1. 路由注册在 `packages/web/src/router/index.ts`，设置 `titleKey`、`menuGroupKey`、`icon`。
+2. `icon` 取值必须是 `packages/web/src/composables/useAppMenu.ts` 中 `menuIconMap` 已注册的 `*Outlined` 名称。
+3. 若使用新图标，须同步在 `useAppMenu.ts` 中**导入并加入 `menuIconMap`**，否则菜单会显示空白。
+4. 后端菜单种子同步：`packages/server/src/services/sys-admin.service.ts` → `DEFAULT_MENU_SEED` 中追加记录，设置相同 `icon` 字符串。
+5. 开发/测试环境执行 `pnpm --filter @douxing/server db:sync-menus` 使菜单树生效。
+
+### 2. 国际化（i18n）
+
+1. 页面标题调用 `usePageTitle('nav.xxx')` 或路由 `titleKey`；新 key 同时写入 `packages/web/src/i18n/locales/zh-CN.ts` 和 `en-US.ts`。
+2. 表格列头、筛选占位符、按钮文案、空状态文案、弹窗标题全部使用 `t('xxx.yyy')`。
+3. 优先复用 shared `common.*` 键：
+   - 操作列：`common.action`
+   - 全部状态：`common.statusAll`
+   - 全部类型：`common.typeAll`
+   - 搜索/重置/刷新：`common.search` / `common.reset` / `common.refresh`
+   - 若 shared 中不存在，须同时补入 `packages/shared/src/i18n/locales/zh-CN.ts` 和 `en-US.ts`，然后执行 `pnpm --filter @douxing/shared build`。
+4. 提交前切换 zh-CN / en-US 检查页面，确保无裸 key、无中文/英文硬编码（品牌符号除外）。
+
+### 3. 权限
+
+1. 页面级权限与 `sys_menu.perms` 对齐，通过 `perm` 或路由守卫控制。
+2. 新权限须在 `DEFAULT_MENU_SEED` 中赋值给目标角色（`AUDITOR` / `OPERATOR` / `ADMIN` 等）。
+
+### 4. 数据初始化
+
+1. 使用 `useServerTablePagination` 的列表页，必须在 `onMounted` 中调用 `load()`，否则页面首次进入时空表。
+2. 筛选重置调用 `reload()`；分页变化调用 `handleTableChange`；操作后刷新调用 `reload()` 或 `load()`。
+3. 手动写的 `load()` 函数同样需要在 `onMounted` 中触发。
+
+### 5. 验收自检
+
+- [ ] 左侧菜单图标正常显示，切换主题不丢失
+- [ ] zh-CN / en-US 下无裸 key、无文案截断
+- [ ] 无权限角色访问时正确 403
+- [ ] 清空浏览器缓存后菜单与权限仍一致
+- [ ] 页面首次进入自动加载表格数据，无空表误报

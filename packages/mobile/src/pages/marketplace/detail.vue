@@ -54,7 +54,86 @@
           >
             {{ tf('marketplaceUi.advanceOrder', { status: orderStatusLabel(nextOrderStatus) }) }}
           </button>
+          <button
+            v-if="canReview"
+            class="btn-outline"
+            size="mini"
+            @click="reviewModalVisible = true"
+          >
+            {{ t('marketplaceUi.reviewTitle') }}
+          </button>
+          <button
+            v-if="canDispute"
+            class="btn-outline"
+            size="mini"
+            @click="disputeModalVisible = true"
+          >
+            {{ t('marketplaceUi.disputeTitle') }}
+          </button>
         </view>
+      </view>
+
+      <view v-if="order" class="section">
+        <text class="section-title">{{ t('marketplaceUi.reviewTitle') }}</text>
+        <DouxingEmptyState v-if="reviews.length === 0" :title="t('marketplaceUi.reviewEmpty')" embedded compact />
+        <view v-for="item in reviews" :key="item.id" class="quote-card">
+          <text class="status">{{ t(`marketplace.reviewTargetType.${item.targetType}`) }} · {{ t('marketplaceUi.reviewRating', { rating: item.rating }) }}</text>
+          <text v-if="item.content" class="desc">{{ item.content }}</text>
+          <text v-if="item.replyContent" class="desc">{{ t('marketplaceUi.reviewReply') }}：{{ item.replyContent }}</text>
+        </view>
+      </view>
+
+      <view v-if="order" class="section">
+        <text class="section-title">{{ t('marketplaceUi.disputeTitle') }}</text>
+        <DouxingEmptyState v-if="disputes.length === 0" :title="t('marketplaceUi.disputeEmpty')" embedded compact />
+        <view v-for="item in disputes" :key="item.id" class="quote-card">
+          <text class="status">{{ t(`marketplace.disputeType.${item.type}`) }} · {{ t(`marketplace.disputeStatus.${item.status}`) }}</text>
+          <text class="desc">{{ item.reason }}</text>
+          <text v-if="item.platformNote" class="desc">{{ t('marketplaceUi.disputeType') }}：{{ item.platformNote }}</text>
+        </view>
+      </view>
+    </view>
+
+    <view v-if="reviewModalVisible" class="modal-overlay" @click.self="reviewModalVisible = false">
+      <view class="modal-card">
+        <text class="section-title">{{ t('marketplaceUi.reviewTitle') }}</text>
+        <text>{{ t('marketplaceUi.reviewRating') }}：{{ reviewRating }}</text>
+        <slider :value="reviewRating" min="1" max="5" step="1" show-value @change="handleReviewRatingChange" />
+        <textarea
+          v-model="reviewContent"
+          class="form-textarea"
+          :placeholder="t('marketplaceUi.reviewContent')"
+          maxlength="2000"
+        />
+        <button class="btn-primary" size="mini" :loading="submittingReview" @click="handleSubmitReview">
+          {{ t('marketplaceUi.reviewSubmit') }}
+        </button>
+        <button class="btn-outline" size="mini" @click="reviewModalVisible = false">
+          {{ t('common.cancel') }}
+        </button>
+      </view>
+    </view>
+
+    <view v-if="disputeModalVisible" class="modal-overlay" @click.self="disputeModalVisible = false">
+      <view class="modal-card">
+        <text class="section-title">{{ t('marketplaceUi.disputeTitle') }}</text>
+        <picker mode="selector" :range="disputeTypeOptions" range-key="label" :value="0" @change="handleDisputeTypeChange">
+          <view class="picker-row">
+            {{ t('marketplaceUi.disputeType') }}：{{ t(`marketplace.disputeType.${disputeType}`) }}
+          </view>
+        </picker>
+        <textarea
+          v-model="disputeReason"
+          class="form-textarea"
+          :placeholder="t('marketplaceUi.disputeReason')"
+          maxlength="4000"
+        />
+        <button class="btn-primary" size="mini" :loading="submittingDispute" @click="handleSubmitDispute">
+          {{ t('marketplaceUi.disputeSubmit') }}
+        </button>
+        <button class="btn-outline" size="mini" @click="disputeModalVisible = false">
+          {{ t('common.cancel') }}
+        </button>
       </view>
     </view>
   </view>
@@ -65,15 +144,24 @@ import { computed, ref } from 'vue';
 import { onLoad, onShow } from '@dcloudio/uni-app';
 import {
   DemandStatus,
+  ServiceOrderDisputeType,
+  ServiceOrderReviewTargetType,
   ServiceOrderStatus,
   type DemandQuoteSummary,
   type ServiceDemandDetail,
+  type ServiceOrderDisputeSummary,
+  type ServiceOrderReviewSummary,
+  type ServiceOrderStatusValue,
   type ServiceOrderSummary,
 } from '@douxing/shared';
 import {
   advanceMarketplaceOrderStatus,
+  createMarketplaceOrderDispute,
+  createMarketplaceOrderReview,
   fetchMarketplaceDemandDetail,
   fetchMarketplaceDemandQuotes,
+  fetchMarketplaceOrderDisputes,
+  fetchMarketplaceOrderReviews,
   fetchMyMarketplaceOrders,
   selectMarketplaceQuote,
 } from '@/api/marketplace';
@@ -97,9 +185,19 @@ const loading = ref(true);
 const demand = ref<ServiceDemandDetail | null>(null);
 const quotes = ref<DemandQuoteSummary[]>([]);
 const order = ref<ServiceOrderSummary | null>(null);
+const reviews = ref<ServiceOrderReviewSummary[]>([]);
+const disputes = ref<ServiceOrderDisputeSummary[]>([]);
 const selectingId = ref<number | null>(null);
 const paying = ref(false);
 const advancing = ref(false);
+const reviewModalVisible = ref(false);
+const reviewRating = ref(5);
+const reviewContent = ref('');
+const disputeModalVisible = ref(false);
+const disputeType = ref<string>(ServiceOrderDisputeType.QUALITY);
+const disputeReason = ref('');
+const submittingReview = ref(false);
+const submittingDispute = ref(false);
 const payButtonLabel = computed(() => getMarketplacePayButtonLabel());
 
 const isOwner = computed(() => {
@@ -123,6 +221,31 @@ const nextOrderStatus = computed(() => {
   };
   return map[order.value.status] ?? null;
 });
+
+const canReview = computed(() => {
+  if (!isOwner.value || !order.value) return false;
+  return (
+    order.value.status === ServiceOrderStatus.CONFIRMED ||
+    order.value.status === ServiceOrderStatus.DELIVERED
+  );
+});
+
+const canDispute = computed(() => {
+  if (!isOwner.value || !order.value) return false;
+  return ([
+    ServiceOrderStatus.PAID,
+    ServiceOrderStatus.IN_PROGRESS,
+    ServiceOrderStatus.DELIVERED,
+    ServiceOrderStatus.CONFIRMED,
+  ] as ServiceOrderStatusValue[]).includes(order.value.status);
+});
+
+const disputeTypeOptions = computed(() =>
+  Object.values(ServiceOrderDisputeType).map((value) => ({
+    value,
+    label: t(`marketplace.disputeType.${value}`),
+  })),
+);
 
 /**
  * 解析需求状态展示名。
@@ -161,6 +284,10 @@ async function load() {
     }
     const orders = await fetchMyMarketplaceOrders();
     order.value = orders.find((o) => o.demandId === demandId.value) ?? null;
+    if (order.value) {
+      await loadReviews(order.value.id);
+      await loadDisputes(order.value.id);
+    }
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e), icon: 'none' });
   } finally {
@@ -217,6 +344,105 @@ async function handleAdvance() {
   }
 }
 
+/**
+ * 加载订单评价列表。
+ *
+ * @param orderId - 订单 ID
+ */
+async function loadReviews(orderId: number) {
+  try {
+    reviews.value = await fetchMarketplaceOrderReviews(orderId);
+  } catch {
+    reviews.value = [];
+  }
+}
+
+/**
+ * 加载订单争议列表。
+ *
+ * @param orderId - 订单 ID
+ */
+async function loadDisputes(orderId: number) {
+  try {
+    disputes.value = await fetchMarketplaceOrderDisputes(orderId);
+  } catch {
+    disputes.value = [];
+  }
+}
+
+/**
+ * 处理评分滑块变化。
+ *
+ * @param e - slider change 事件
+ */
+function handleReviewRatingChange(e: { detail: { value: number } }) {
+  reviewRating.value = e.detail.value;
+}
+
+/**
+ * 提交买方对卖方的评价。
+ */
+async function handleSubmitReview() {
+  if (!order.value || !isOwner.value) return;
+  submittingReview.value = true;
+  try {
+    await createMarketplaceOrderReview(order.value.id, {
+      targetType: ServiceOrderReviewTargetType.SELLER,
+      rating: reviewRating.value,
+      content: reviewContent.value.trim() || undefined,
+    });
+    uni.showToast({ title: t('marketplaceUi.reviewSubmitSuccess'), icon: 'success' });
+    reviewModalVisible.value = false;
+    reviewContent.value = '';
+    reviewRating.value = 5;
+    await loadReviews(order.value.id);
+  } catch (e) {
+    uni.showToast({ title: getAppErrorMessage(e), icon: 'none' });
+  } finally {
+    submittingReview.value = false;
+  }
+}
+
+/**
+ * 选择争议类型。
+ *
+ * @param e - picker change 事件
+ */
+function handleDisputeTypeChange(e: { detail: { value: number } }) {
+  const index = e.detail.value;
+  const selected = disputeTypeOptions.value[index];
+  if (selected) {
+    disputeType.value = selected.value;
+  }
+}
+
+/**
+ * 提交买方对卖方的争议。
+ */
+async function handleSubmitDispute() {
+  if (!order.value || !isOwner.value) return;
+  const reason = disputeReason.value.trim();
+  if (!reason) {
+    uni.showToast({ title: t('marketplaceUi.formInvalid'), icon: 'none' });
+    return;
+  }
+  submittingDispute.value = true;
+  try {
+    await createMarketplaceOrderDispute(order.value.id, {
+      type: disputeType.value,
+      reason,
+    });
+    uni.showToast({ title: t('marketplaceUi.disputeSubmitSuccess'), icon: 'success' });
+    disputeModalVisible.value = false;
+    disputeReason.value = '';
+    await loadDisputes(order.value.id);
+  } catch (e) {
+    uni.showToast({ title: getAppErrorMessage(e), icon: 'none' });
+  } finally {
+    submittingDispute.value = false;
+  }
+}
+
 onLoad((query) => {
   demandId.value = Number(query?.id ?? 0);
 });
@@ -235,4 +461,8 @@ onShow(load);
 .section-title { display: block; margin-bottom: 16rpx; font-size: 28rpx; font-weight: 600; }
 .quote-amount { display: block; font-size: 32rpx; font-weight: 700; color: var(--dx-primary); }
 .quote-card { margin-bottom: 16rpx; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.modal-card { width: 80%; background: #fff; border-radius: 20rpx; padding: 32rpx; display: flex; flex-direction: column; gap: 16rpx; }
+.form-textarea { width: 100%; height: 160rpx; border: 1rpx solid #ddd; border-radius: 12rpx; padding: 16rpx; font-size: 26rpx; box-sizing: border-box; }
+.picker-row { padding: 16rpx 0; font-size: 28rpx; color: var(--dx-text-primary); }
 </style>

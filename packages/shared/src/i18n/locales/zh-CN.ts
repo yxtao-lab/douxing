@@ -6,6 +6,7 @@ export const sharedZhCN = {
     name: '兜行',
   },
   common: {
+    action: '操作',
     confirm: '确定',
     cancel: '取消',
     loading: '加载中…',
@@ -19,6 +20,7 @@ export const sharedZhCN = {
     loginRequired: '请先登录',
     filterAll: '全部',
     statusAll: '全部状态',
+    typeAll: '全部类型',
     statusUnlocked: '已解锁',
     statusLocked: '未解锁',
     unknownPlace: '未知地点',
@@ -137,6 +139,7 @@ export const sharedZhCN = {
     marketplaceOrgsPending: '入驻审核',
     marketplaceProvidersPending: '服务者审核',
     marketplaceDemands: '需求单',
+    marketplaceDisputes: '履约争议',
     analytics: '数据分析',
     planDiagnostics: '规划诊断',
     workflowTemplates: '工作流模板',
@@ -285,6 +288,32 @@ export const sharedZhCN = {
     certStatusPending: '待审核',
     certStatusApproved: '已通过',
     certStatusRejected: '已驳回',
+    reviewTargetType: {
+      buyer: '买方评价',
+      seller: '卖方评价',
+    },
+    revieweeType: {
+      user: '个人',
+      org: '商户',
+    },
+    disputeType: {
+      quality: '服务质量',
+      no_show: '未履约',
+      schedule: '行程变更',
+      safety: '安全问题',
+      other: '其他',
+    },
+    disputeStatus: {
+      pending: '待处理',
+      platform_processing: '平台处理中',
+      resolved_buyer: '买家胜诉',
+      resolved_seller: '卖家胜诉',
+      closed: '已关闭',
+    },
+    reviewRating: {
+      label: '评分',
+      star: '{rating} 星',
+    },
   },
   apiLog: {
     module: {

@@ -17,6 +17,10 @@ import {
 import { listDemandsForAdminPage } from '../../services/marketplace/marketplace-demand.service.js';
 import { listSettlementsForAdmin } from '../../services/marketplace/marketplace-settlement.service.js';
 import {
+  listServiceOrderDisputesForAdmin,
+  resolveServiceOrderDispute,
+} from '../../services/marketplace/marketplace-dispute.service.js';
+import {
   parseDateRangeFilter,
   parseOptionalString,
 } from '../../utils/admin-list-filter.js';
@@ -28,6 +32,11 @@ const router = Router();
 const reviewSchema = z.object({
   action: z.enum(['approve', 'reject']),
   reviewNote: z.string().max(1000).optional(),
+});
+
+const disputeResolveSchema = z.object({
+  status: z.enum(['platform_processing', 'resolved_buyer', 'resolved_seller', 'closed']),
+  platformNote: z.string().max(2000).optional(),
 });
 
 /**
@@ -238,6 +247,53 @@ router.get('/settlements', authMiddleware, async (req, res) => {
     success(res, { items });
   } catch (err) {
     failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+router.get('/disputes', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'marketplace:dispute:audit'))) return;
+
+  const pagination = parsePaginationQuery(req.query as Record<string, unknown>);
+  const keyword = parseOptionalString(req.query as Record<string, unknown>, 'keyword');
+  const status = parseOptionalString(req.query as Record<string, unknown>, 'status');
+  const type = parseOptionalString(req.query as Record<string, unknown>, 'type');
+  parseDateRangeFilter(req.query as Record<string, unknown>);
+
+  try {
+    const result = await listServiceOrderDisputesForAdmin({
+      page: pagination.page,
+      pageSize: pagination.pageSize,
+      keyword,
+      status,
+      type,
+    });
+    success(res, result);
+  } catch (err) {
+    failFromError(res, err, ApiMessageKey.SERVER_ERROR);
+  }
+});
+
+router.patch('/disputes/:id/resolve', authMiddleware, async (req, res) => {
+  const adminUser = await requirePerm(req, res, 'marketplace:dispute:audit');
+  if (!adminUser) return;
+
+  const disputeId = parseInt(String(req.params.id), 10);
+  if (Number.isNaN(disputeId) || disputeId <= 0) {
+    fail(res, ApiMessageKey.PARAM_ERROR, 400, 400);
+    return;
+  }
+
+  const parsed = disputeResolveSchema.safeParse(req.body ?? {});
+  if (!parsed.success) {
+    fail(res, ApiMessageKey.MARKETPLACE_DISPUTE_STATUS_INVALID, 400, 400);
+    return;
+  }
+
+  try {
+    const dispute = await resolveServiceOrderDispute(disputeId, adminUser.id, parsed.data);
+    success(res, dispute);
+  } catch (err) {
+    failFromError(res, err);
   }
 });
 

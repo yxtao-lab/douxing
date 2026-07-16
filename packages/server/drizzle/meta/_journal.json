@@ -323,6 +323,13 @@
       "when": 1752336000000,
       "tag": "0046_marketplace_m7_report",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "5",
+      "when": 1752422400000,
+      "tag": "0047_marketplace_m7_trust",
+      "breakpoints": true
     }
   ]
 }

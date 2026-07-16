@@ -8,6 +8,9 @@ import type {
   ServiceDemandInput,
   ServiceDemandSummary,
   ServiceOrderDetail,
+  ServiceOrderDisputeSummary,
+  ServiceOrderReviewCreateInput,
+  ServiceOrderReviewSummary,
   ServiceOrderStatusInput,
   ServiceOrderSummary,
   ServiceProductDetail,
@@ -209,4 +212,62 @@ export function purchaseMarketplaceProduct(productId: number, body: ServiceProdu
     method: 'POST',
     data: body,
   });
+}
+
+/**
+ * 创建服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 评价内容
+ * @returns 新建评价摘要
+ */
+export function createMarketplaceOrderReview(
+  orderId: number,
+  body: ServiceOrderReviewCreateInput,
+) {
+  return request<ServiceOrderReviewSummary>(`/marketplace/orders/${orderId}/reviews`, {
+    method: 'POST',
+    data: body,
+  });
+}
+
+/**
+ * 列出服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @returns 评价列表
+ */
+export function fetchMarketplaceOrderReviews(orderId: number) {
+  return request<{ items: ServiceOrderReviewSummary[] }>(
+    `/marketplace/orders/${orderId}/reviews`,
+  ).then((r) => r.items ?? []);
+}
+
+/**
+ * 创建服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 争议类型与原因
+ * @returns 新建争议摘要
+ */
+export function createMarketplaceOrderDispute(
+  orderId: number,
+  body: { type: string; reason: string },
+) {
+  return request<ServiceOrderDisputeSummary>(`/marketplace/orders/${orderId}/disputes`, {
+    method: 'POST',
+    data: body,
+  });
+}
+
+/**
+ * 列出服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @returns 争议列表
+ */
+export function fetchMarketplaceOrderDisputes(orderId: number) {
+  return request<{ items: ServiceOrderDisputeSummary[] }>(
+    `/marketplace/orders/${orderId}/disputes`,
+  ).then((r) => r.items ?? []);
 }

@@ -7,6 +7,9 @@ import type {
   ServiceDemandInput,
   ServiceDemandSummary,
   ServiceOrderDetail,
+  ServiceOrderDisputeSummary,
+  ServiceOrderReviewCreateInput,
+  ServiceOrderReviewSummary,
   ServiceOrderStatusInput,
   ServiceOrderSummary,
   ServiceProductDetail,
@@ -187,4 +190,66 @@ export async function purchaseMarketplaceProduct(productId: number, body: Servic
     body,
   );
   return data.data;
+}
+
+/**
+ * 创建服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 评价内容
+ * @returns 新建评价摘要
+ */
+export async function createMarketplaceOrderReview(
+  orderId: number,
+  body: ServiceOrderReviewCreateInput,
+): Promise<ServiceOrderReviewSummary> {
+  const { data } = await http.post<{ data: ServiceOrderReviewSummary }>(
+    `/marketplace/orders/${orderId}/reviews`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 列出服务订单评价。
+ *
+ * @param orderId - 订单 ID
+ * @returns 评价列表
+ */
+export async function fetchMarketplaceOrderReviews(orderId: number): Promise<ServiceOrderReviewSummary[]> {
+  const { data } = await http.get<{ data: { items: ServiceOrderReviewSummary[] } }>(
+    `/marketplace/orders/${orderId}/reviews`,
+  );
+  return data.data?.items ?? [];
+}
+
+/**
+ * 创建服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @param body - 争议类型与原因
+ * @returns 新建争议摘要
+ */
+export async function createMarketplaceOrderDispute(
+  orderId: number,
+  body: { type: string; reason: string },
+): Promise<ServiceOrderDisputeSummary> {
+  const { data } = await http.post<{ data: ServiceOrderDisputeSummary }>(
+    `/marketplace/orders/${orderId}/disputes`,
+    body,
+  );
+  return data.data;
+}
+
+/**
+ * 列出服务订单争议。
+ *
+ * @param orderId - 订单 ID
+ * @returns 争议列表
+ */
+export async function fetchMarketplaceOrderDisputes(orderId: number): Promise<ServiceOrderDisputeSummary[]> {
+  const { data } = await http.get<{ data: { items: ServiceOrderDisputeSummary[] } }>(
+    `/marketplace/orders/${orderId}/disputes`,
+  );
+  return data.data?.items ?? [];
 }
