@@ -1712,6 +1712,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 |------|------|
 | 2026-07-15 | **文档全量同步**：文首/§25 状态对齐路线图 v1.11.0（E2 接线 ✅ · 下一沙箱真机） |
 | 2026-07-16 | **M7-ext 评价与争议**：§25 增 reviews / disputes / admin/disputes API；迁移 `0047`；`m7-ext:marketplace-trust-cases` |
+| 2026-07-16 | **A-CLOSE-01 路线一键发定制需求**：路线详情新增入口 → 发单页带出 `routeId`/`title`/`destination`/`budgetMin`/`budgetMax`/`description`（含关键 POI）；`m2-ext:route-to-demand-cases` |
 | 2026-07-15 | **E2 微信通道接线**：§25 增 `prepay` · notify 双表路由 · C 端对齐 |
 | 2026-07-15 | **M7-4 履约汇报**：§25 增 reports API；迁移 `0046` |
 | 2026-07-15 | **M7-3 排期指派**：§25 增 `GET /orgs/:id/members` · `PATCH /orders/:id/assign`；迁移 `0045` |

@@ -1,6 +1,9 @@
 <template>
   <view class="page" :class="themeClass">
     <view class="page-body">
+      <view v-if="fromRouteHint" class="route-hint-banner">
+        <text class="route-hint-text">{{ fromRouteHint }}</text>
+      </view>
       <view class="form-card">
         <view class="field">
           <text class="label">{{ t('marketplaceUi.fieldPublisherGroup') }}</text>
@@ -75,6 +78,8 @@ const publisherIndex = ref(0);
 const submitting = ref(false);
 const memberships = ref<GroupMembershipSummary[]>([]);
 const presetGroupId = ref<number | null>(null);
+const presetRouteId = ref<number | null>(null);
+const fromRouteHint = ref('');
 
 const leafCategories = SERVICE_CATEGORY_TREE.flatMap((node) => node.children ?? []);
 const categoryLabels = computed(() => leafCategories.map((c) => t(c.labelKey)));
@@ -142,6 +147,7 @@ async function handleSubmit() {
       budgetMax: budgetMax.value || undefined,
       budgetType: budgetMin.value || budgetMax.value ? 'range' : undefined,
       publisherGroupId,
+      routeId: presetRouteId.value ?? undefined,
     });
     await publishMarketplaceDemand(draft.id);
     uni.showToast({ title: t('common.success'), icon: 'success' });
@@ -156,6 +162,18 @@ async function handleSubmit() {
 onLoad((query) => {
   const gid = Number(query?.groupId || 0);
   if (Number.isInteger(gid) && gid > 0) presetGroupId.value = gid;
+  const rid = Number(query?.routeId || 0);
+  if (Number.isInteger(rid) && rid > 0) {
+    presetRouteId.value = rid;
+    if (query?.title) title.value = String(query.title);
+    if (query?.destination) destination.value = String(query.destination);
+    if (query?.budgetMin) budgetMin.value = String(query.budgetMin);
+    if (query?.budgetMax) budgetMax.value = String(query.budgetMax);
+    if (query?.description) {
+      description.value = String(query.description);
+      fromRouteHint.value = t('marketplaceUi.fromRouteHint');
+    }
+  }
   void loadGroups();
 });
 </script>
@@ -167,6 +185,16 @@ onLoad((query) => {
 }
 .page-body {
   padding: 32rpx;
+}
+.route-hint-banner {
+  background: var(--dx-primary-bg, rgba(22, 119, 255, 0.08));
+  border-radius: var(--dx-radius-sm);
+  padding: 16rpx 24rpx;
+  margin-bottom: 24rpx;
+}
+.route-hint-text {
+  font-size: 24rpx;
+  color: var(--dx-primary, #1677ff);
 }
 .form-card {
   background: var(--dx-surface);

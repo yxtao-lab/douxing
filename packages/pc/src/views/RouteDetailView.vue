@@ -377,6 +377,13 @@
             >
               {{ t('routes.publishRoute') }}
             </button>
+            <RouterLink
+              v-if="isUnlocked"
+              :to="publishFromRouteLink"
+              class="dx-btn-secondary w-full block text-center"
+            >
+              {{ t('marketplaceUi.publishFromRoute') }}
+            </RouterLink>
             <RouterLink :to="{ name: 'routes' }" class="block text-center text-sm text-dx-primary hover:underline">
               {{ t('pc.routes.backToList') }}
             </RouterLink>
@@ -926,6 +933,60 @@ const heroMeta = computed(() => {
     budget: route.value.budgetRange ?? t('routes.budgetTbd'),
     tags: joinLabels.value(route.value.interestTags),
   });
+});
+
+/**
+ * 解析预算范围字符串（如 "3000-8000"）为最小/最大值。
+ *
+ * @param budgetRange - 路线预算范围字符串
+ * @returns `{ min, max }`；无法解析时返回 `null`
+ */
+function parseBudgetRange(budgetRange: string | null): { min: string; max: string } | null {
+  if (!budgetRange) return null;
+  const parts = budgetRange.split('-').map((s) => s.trim());
+  if (parts.length === 2 && parts[0] && parts[1]) return { min: parts[0], max: parts[1] };
+  if (parts.length === 1 && parts[0]) return { min: parts[0], max: parts[0] };
+  return null;
+}
+
+/**
+ * 从行程天数中提取关键 POI 名称（最多 8 个），用于预填需求描述。
+ *
+ * @param dayPlans - 行程天数数组
+ * @returns POI 名称数组
+ */
+function extractKeyPoiNames(dayPlans: RouteDetailPayload['days']): string[] {
+  const names: string[] = [];
+  for (const day of dayPlans) {
+    for (const attr of day.attractions ?? []) {
+      if (attr.name && !names.includes(attr.name)) {
+        names.push(attr.name);
+        if (names.length >= 8) return names;
+      }
+    }
+  }
+  return names;
+}
+
+/** 「按此路线发定制需求」跳转链接，带出标题、目的地、预算与关键 POI */
+const publishFromRouteLink = computed(() => {
+  if (!route.value) return { name: 'marketplace-create' };
+  const r = route.value;
+  const detail = r.routeDetail as RouteDetailPayload | null;
+  const city = detail?.matchedCity ?? '';
+  const budget = parseBudgetRange(r.budgetRange);
+  const poiNames = extractKeyPoiNames(detail?.days ?? []);
+  const poiSummary = poiNames.length > 0 ? `${t('marketplaceUi.fromRoutePoiPrefix')}：${poiNames.join('、')}` : '';
+  const desc = [t('marketplaceUi.fromRouteHint'), poiSummary].filter(Boolean).join('\n');
+
+  const query: Record<string, string> = { routeId: String(r.id), title: r.name };
+  if (city) query.destination = city;
+  if (budget) {
+    query.budgetMin = budget.min;
+    query.budgetMax = budget.max;
+  }
+  if (desc) query.description = desc;
+  return { name: 'marketplace-create', query };
 });
 
 watch(numericRouteId, () => {

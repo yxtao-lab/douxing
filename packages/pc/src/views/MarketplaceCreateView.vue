@@ -5,6 +5,9 @@
     :back-label="t('marketplace.hallTitle')"
   >
     <form class="dx-card space-y-4" @submit.prevent="handleSubmit">
+      <div v-if="fromRouteHint" class="rounded-lg bg-dx-primary/10 px-4 py-2 text-sm text-dx-primary">
+        {{ fromRouteHint }}
+      </div>
       <div>
         <label class="mb-1 block text-sm text-dx-muted">{{ t('marketplaceUi.fieldPublisherGroup') }}</label>
         <select v-model="publisherGroupId" class="dx-input w-full">
@@ -69,6 +72,8 @@ const budgetMax = ref('');
 const publisherGroupId = ref(0);
 const memberships = ref<GroupMembershipSummary[]>([]);
 const submitting = ref(false);
+const presetRouteId = ref<number | null>(null);
+const fromRouteHint = ref('');
 
 /**
  * 加载我的团体并应用 query 预选。
@@ -82,6 +87,23 @@ async function loadGroups() {
     }
   } catch {
     memberships.value = [];
+  }
+}
+
+/**
+ * 从路由 query 读取路线预填参数（routeId / title / destination / budget / description）。
+ */
+function applyRoutePreset() {
+  const rid = Number(route.query.routeId || 0);
+  if (!Number.isInteger(rid) || rid <= 0) return;
+  presetRouteId.value = rid;
+  if (typeof route.query.title === 'string') title.value = route.query.title;
+  if (typeof route.query.destination === 'string') destination.value = route.query.destination;
+  if (typeof route.query.budgetMin === 'string') budgetMin.value = route.query.budgetMin;
+  if (typeof route.query.budgetMax === 'string') budgetMax.value = route.query.budgetMax;
+  if (typeof route.query.description === 'string') {
+    description.value = route.query.description;
+    fromRouteHint.value = t('marketplaceUi.fromRouteHint');
   }
 }
 
@@ -105,6 +127,7 @@ async function handleSubmit() {
       budgetMax: budgetMax.value || undefined,
       budgetType: budgetMin.value || budgetMax.value ? 'range' : undefined,
       publisherGroupId: publisherGroupId.value > 0 ? publisherGroupId.value : undefined,
+      routeId: presetRouteId.value ?? undefined,
     });
     await publishMarketplaceDemand(draft.id);
     router.push({ name: 'marketplace-detail', params: { id: draft.id } });
@@ -113,5 +136,8 @@ async function handleSubmit() {
   }
 }
 
-onMounted(loadGroups);
+onMounted(async () => {
+  applyRoutePreset();
+  await loadGroups();
+});
 </script>

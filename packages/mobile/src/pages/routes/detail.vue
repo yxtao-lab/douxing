@@ -289,6 +289,7 @@
 
     <view class="actions">
       <button v-if="route.status !== publishedStatus" class="btn-outline" @click="handlePublish">{{ t('routes.publishRoute') }}</button>
+      <button v-if="isUnlocked" class="btn-outline" @click="handlePublishFromRoute">{{ t('marketplaceUi.publishFromRoute') }}</button>
     </view>
 
     <view v-if="externalLinkFormVisible" class="external-link-mask" @click="closeExternalLinkForm">
@@ -1142,6 +1143,69 @@ async function handlePublish() {
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.publishFailed')), icon: 'none' });
   }
+}
+
+/**
+ * 解析预算范围字符串（如 "3000-8000"）为最小/最大值。
+ *
+ * @param budgetRange - 路线预算范围字符串
+ * @returns `{ min, max }`；无法解析时返回 `null`
+ */
+function parseBudgetRange(budgetRange: string | null): { min: string; max: string } | null {
+  if (!budgetRange) return null;
+  const parts = budgetRange.split('-').map((s) => s.trim());
+  if (parts.length === 2 && parts[0] && parts[1]) {
+    return { min: parts[0], max: parts[1] };
+  }
+  if (parts.length === 1 && parts[0]) {
+    return { min: parts[0], max: parts[0] };
+  }
+  return null;
+}
+
+/**
+ * 从行程天数中提取关键 POI 名称（最多 8 个），用于预填需求描述。
+ *
+ * @param dayPlans - 行程天数数组
+ * @returns POI 名称数组
+ */
+function extractKeyPoiNames(dayPlans: RouteDayPlan[]): string[] {
+  const names: string[] = [];
+  for (const day of dayPlans) {
+    for (const attr of day.attractions ?? []) {
+      if (attr.name && !names.includes(attr.name)) {
+        names.push(attr.name);
+        if (names.length >= 8) return names;
+      }
+    }
+  }
+  return names;
+}
+
+/**
+ * 跳转到发单页并带出当前路线的标题、目的地、预算与关键 POI。
+ */
+function handlePublishFromRoute() {
+  if (!route.value) return;
+  const r = route.value;
+  const detail = r.routeDetail as RouteDetailPayload | null;
+  const city = detail?.matchedCity ?? '';
+  const budget = parseBudgetRange(r.budgetRange);
+  const poiNames = extractKeyPoiNames(detail?.days ?? []);
+  const poiSummary = poiNames.length > 0 ? `${t('marketplaceUi.fromRoutePoiPrefix')}：${poiNames.join('、')}` : '';
+  const desc = [t('marketplaceUi.fromRouteHint'), poiSummary].filter(Boolean).join('\n');
+
+  const query = new URLSearchParams();
+  query.set('routeId', String(r.id));
+  query.set('title', r.name);
+  if (city) query.set('destination', city);
+  if (budget) {
+    query.set('budgetMin', budget.min);
+    query.set('budgetMax', budget.max);
+  }
+  if (desc) query.set('description', desc);
+
+  uni.navigateTo({ url: `/pages/marketplace/create?${query.toString()}` });
 }
 
 function openPosterSheet() {
