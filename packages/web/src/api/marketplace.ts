@@ -58,6 +58,35 @@ export async function fetchMarketplaceDemandsPage(params: MarketplaceDemandListP
 }
 
 /**
+ * 分页获取商户组织列表。
+ *
+ * @param params - 筛选与分页参数
+ * @returns 分页结果
+ */
+export async function fetchMarketplaceOrgsPage(params: {
+  page: number;
+  pageSize: number;
+  keyword?: string;
+  status?: string;
+  orgType?: string;
+}) {
+  const query = new URLSearchParams({
+    page: String(params.page),
+    pageSize: String(params.pageSize),
+  });
+  if (params.keyword) query.set('keyword', params.keyword);
+  if (params.status) query.set('status', params.status);
+  if (params.orgType) query.set('orgType', params.orgType);
+  const { data } = await http.get<ApiResponse<PaginatedResult<BizOrgSummary>>>(
+    `/marketplace/admin/orgs?${query.toString()}`,
+  );
+  return normalizePaginatedResult(data.data, {
+    page: params.page,
+    pageSize: params.pageSize,
+  });
+}
+
+/**
  * 分页获取待审商户列表。
  *
  * @param params - 筛选与分页参数

@@ -981,6 +981,7 @@ export const webEnUS = {
     colCreatedAt: 'Applied at',
     colAction: 'Actions',
     searchKeyword: 'Name / license no.',
+    emptyOrgs: 'No organizations',
     emptyPending: 'No pending organizations',
     emptyPendingProviders: 'No pending providers',
     colDisplayName: 'Display name',

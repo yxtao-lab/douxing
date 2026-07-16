@@ -194,6 +194,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'marketplace/orgs',
+          name: 'marketplace-orgs',
+          component: () => import('@/views/MarketplaceOrgsView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.marketplaceOrgs',
+            menuGroupKey: 'web.menu.marketplace',
+            icon: 'TeamOutlined',
+            perm: 'marketplace:org:list',
+          },
+        },
+        {
           path: 'marketplace/orgs/pending',
           name: 'marketplace-orgs-pending',
           component: () => import('@/views/MarketplaceOrgsPendingView.vue'),

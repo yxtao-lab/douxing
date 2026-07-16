@@ -67,7 +67,7 @@
           {{ disputeTypeLabel(record.type) }}
         </template>
         <template v-else-if="column.key === 'action'">
-          <TableActionBar>
+          <TableActionBar :show-edit="false" :show-delete="false">
             <TableActionButton
               variant="primary"
               :label="t('marketplace.disputeResolve')"

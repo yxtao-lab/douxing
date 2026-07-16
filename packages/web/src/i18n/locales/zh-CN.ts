@@ -980,6 +980,7 @@ export const webZhCN = {
     colCreatedAt: '申请时间',
     colAction: '操作',
     searchKeyword: '机构名称 / 资质编号',
+    emptyOrgs: '暂无商户',
     emptyPending: '暂无待审商户',
     emptyPendingProviders: '暂无待审服务者',
     colDisplayName: '展示名称',
