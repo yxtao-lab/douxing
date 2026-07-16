@@ -3,7 +3,7 @@
 > **定位**：明确 `packages/pc`（PC 用户端）与 `packages/web`（Web 管理端）的功能边界、共用能力与展示差异。  
 > **关联**：移动端 C 端能力对齐见 [ROADMAP · 阶段 P](./ROADMAP.md#阶段-pc-用户端c-端桌面网页2026-06-08-录入)；管理端 RBAC 见 [系统管理.md](./系统管理.md)；**双 Token 鉴权**见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)。
 
-**最后更新：** 2026-07-15（**强制：PC 仅 C 端 · B 端一律 Web** · M7 `/partner` α+排期+财务 · E2 接线 · 双 Token · C7-W · H10 · S1/S2 · DT5）
+**最后更新：** 2026-07-16（**强制：PC 仅 C 端 · B 端一律 Web** · M7 `/partner` · H10 Web 视频审核 · E2 接线 · 双 Token · C7-W · S1/S2 · DT5）
 
 ---
 
@@ -116,6 +116,7 @@ Web 管理端 (:5173)     ──┘
 | 全平台打卡 | `/checkins` | ✅ | 全用户打卡列表 |
 | 全平台打卡地图 | `/checkins/map` | ✅ | **全平台足迹**；Leaflet + 侧栏筛选 |
 | 景点待审核 | `/attractions/pending` | ✅ | AI 同步景点审核通过 |
+| **路线视频审核** | `/attractions/media/pending` | ✅ | H10 UGC 短视频待审 · 预览通过/拒绝 |
 | 景点库管理 | `/attractions/manage` | ✅ | 目录维护、封面上传、高德封面刷新 |
 | 动线 Playbook | `/playbooks/manage` | ✅ | 经典动线 CRUD、`classicOrder`、段间边 |
 | 数据分析 | `/analytics` | ✅ | 概览、30 日趋势、城市 Top10（DT1） |
