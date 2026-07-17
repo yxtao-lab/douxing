@@ -2,7 +2,7 @@
 
 > **用途**：仓库根目录 `.cursor/rules/*.mdc` 为 Cursor / AI Agent 的持久化开发约束；人类可读全文见各专题文档。  
 > **根配置**：`.cursorrules` 汇总基础规范并指向下列规则。  
-**最后更新**：2026-07-16
+**最后更新**：2026-07-17
 
 ---
 
@@ -21,22 +21,54 @@
 
 ---
 
-## 新页面开发（三端）
+## 精准化与人群定制开发规则（2026-07-17 录入）
 
-新增或改版页面时，Agent 须同时满足：
+> **关联**：[精准化与人群定制路线图.md](./精准化与人群定制路线图.md) · ROADMAP §9.10
 
-1. **风格与布局**：对齐同端已有页面；色彩/圆角/阴影只用设计 Token（见 [品牌视觉规范.md](./品牌视觉规范.md)）
-2. **主题预留**：禁止硬编码与主题无关的色值；移动端根节点 `:class="themeClass"` + `useTheme()`
-3. **国际化**：用户可见文案走 i18n；新页 `usePageTitle('nav.xxx')`（见 `i18n-required.mdc`）
-4. **组件复用**：优先通用组件；跨页重复 ≥2 次须封装（见 `page-ui-standards.mdc`）
+涉及 `P-TAG-01` / `P-ONBOARD-01` / `P-INPUT-01` / `P-MEMORY-01` / `P-THEME-01` / `P-LIVE-01` / `P-DEMAND-01` / `P-PROFILE-01` 任一待办的开发，须遵守以下规则：
 
-### 分端页面壳与必用组件
+### 1. 标签双层体系
 
-| 端 | 页面壳 | 常见通用组件 |
-|----|--------|--------------|
-| 移动端 `packages/mobile` | `class="page" :class="themeClass"` | `DouxingTabBar`、`DouxingEmptyState` |
-| Web 管理端 `packages/web` | `PageContainer admin` | `DouxingAdminTable`、`AdminSearchBar`、`TableActionBar`；**B 端**另见 `/partner` |
-| PC 用户端 `packages/pc` | `SubPageShell` | Tailwind `dx-*` Token、`AppLogo`；**仅 C 端**（见 `pc-c-web-b-split.mdc`） |
+- **类型层**（`interestTags`，已有 12 slug）**不动**
+- **场景层**（`sceneTags`，新增）存储中文值，展示用 `formatSceneTagLabel(tag, locale)`，禁止硬编码
+
+### 2. 引导与画像字段
+
+- `gender` / `ageRange` / `birthYear` 为**自愿填写**，必须支持「不愿透露」
+- `ageVisibility` 控制可见性（0 不公开 / 1 仅年龄段 / 2 公开年龄）
+- 不收集未成年人精确信息
+- 引导流程必须**可跳过**，跳过时用默认值填充保证非空
+- 画像字段写入与修改须记录审计日志
+
+### 3. 推荐引擎
+
+- 推荐结果须可解释（`matchScore` + `matchedScenes`）
+- 避重过滤（P-MEMORY-01）默认开启，用户可切换策略
+- 实时人数（P-LIVE-01）计数 < 5 时仅展示档位语义，不暴露具体数字
+
+### 4. 群体主题（P-THEME-01）
+
+- 每套主题定义一套 `--dx-*` CSS 变量覆盖，**不新增硬编码色值**
+- 根据 `ageRange` + `gender` 自动推荐默认主题，用户手动选择优先
+- 不强制绑定人群，支持自由切换
+- 移动端全量支持 6 套；PC 支持 blue/teal/tech/mature；Web 管理端不接入
+
+### 5. i18n 强制
+
+- 场景标签、分类标签、主题名称、引导流程文案、推荐理由、隐私提示全部走 i18n
+- 新增 i18n 资源文件：`scene-tags.ts` · `profile-tags.ts` · `theme-presets.ts`
+- 修改 `packages/shared` i18n 后执行：`pnpm --filter @douxing/shared build`
+
+### 6. 组件复用
+
+- 标签选择器、引导面板、场景入口、规划定制面板、实时人数徽标、主题选择器须封装为公共组件（见 [公共组件.md](./公共组件.md) 精准化与人群定制组件章节）
+- 跨页重复 ≥2 次或单块 >~80 行须抽组件
+
+### 7. 隐私合规
+
+- 涉及画像字段的功能须同步 [后期待办.md §9](./后期待办.md#9-精准化与人群定制隐私合规2026-07-17-录入) 隐私政策
+- `P-PROFILE-01` 同龄人社交依赖隐私政策更新 + 未成年人保护条款
+- 用户可一键清除画像重置为默认（`DELETE /api/users/me/persona`）
 
 ---
 
@@ -45,3 +77,5 @@
 - 新增 `.cursor/rules/*.mdc` 时，须在本文件登记，并在相关专题文档中交叉引用
 - 规则内容与人类文档冲突时，以**代码库实际约定**为准，并同步修正规则或文档
 - 修改 `packages/shared` i18n 后执行：`pnpm --filter @douxing/shared build`
+
+**最后更新**：2026-07-17（新增精准化与人群定制开发规则）

@@ -716,6 +716,150 @@ LANGFUSE_SECRET_KEY=
 | [阿里云-兜行专属模型训练与部署.md](./阿里云-兜行专属模型训练与部署.md) | I2/I3 |
 | [外部工具与插件推荐.md](./外部工具与插件推荐.md) | Langfuse · LangGraph · Vue Flow |
 | [开发记录 § C5/H9](./开发记录-重难点与亮点.md) | 历史决策依据 |
+| [精准化与人群定制路线图.md §13](./精准化与人群定制路线图.md#13-ai-流程优化联动2026-07-17-录入) | 标签约束引入后的 21 个 AI 流程优化点 |
+
+---
+
+## 17. 标签约束对 Agent 的影响（2026-07-17 录入）
+
+> **来源**：[精准化与人群定制路线图.md §13](./精准化与人群定制路线图.md#13-ai-流程优化联动2026-07-17-录入) · 标签体系（P-TAG-01 / P-ONBOARD-01 / P-INPUT-01 / P-MEMORY-01）引入后对 Agent 架构的影响。
+
+### 17.1 对意图解析的影响（C2 / Supervisor）
+
+**现状**：Supervisor Agent 路由意图为 `plan_new / tweak_day / qa_food / select_variant` 等，意图来源为 LLM 解析用户文本。
+
+**标签引入后**：
+
+| 变化 | 说明 |
+|------|------|
+| 新增 `source='manual'` | P-INPUT-01 标签化定制直接构建 `TravelIntentSnapshot`，**跳过 LLM 解析**，Supervisor 直接进入 plan_agent |
+| 新增 `source='hybrid'` | 标签 + 文本混合时，标签为强约束，文本由 C2 解析补充 |
+| 新增 `tweak_tags` 意图 | 用户改标签（「换个场景，改成约会」）→ Supervisor 路由 `tweak_tags` → 局部 patch 而非重生 |
+| C2 新增 `sceneTags` 解析 | 纯文本输入也能抽取场景标签（「带娃玩水」→ `sceneTags: ['溜娃', '玩水']`） |
+
+**Supervisor 路由扩展**：
+
+```text
+现有：plan_new · tweak_day · qa_food · select_variant · budget_tune
+新增：tweak_tags（标签调整 → patch intentSnapshot.sceneTags）
+```
+
+### 17.2 对记忆 Agent 的影响（C7-c）
+
+**现状**：`recall_user_memory` 返回全部相关记忆，`write_trip_memory` 写入记忆。
+
+**标签引入后**：
+
+| 变化 | 说明 |
+|------|------|
+| 记忆召回按场景过滤 | 规划溜娃行程时优先返回 `sceneTags=溜娃` 的记忆，过滤无关场景 |
+| regret 记忆始终召回 | 明确不想再去的记忆不受场景过滤 |
+| 画像刷新纳入场景偏好 | 用户多次规划溜娃 → `preferredScenes` 权重提升；多次跳过约会 → 权重下降 |
+| Agent 主动读取画像建议 | Supervisor 在合适时机建议「你之前选了溜娃，要不要带孩子去 XX 主题乐园？」 |
+
+**memory_agent 增强**：
+
+```text
+recall_user_memory(currentScene) =
+  WHERE memory.sceneTags ∩ [currentScene]
+  OR memory.type = 'regret'
+```
+
+### 17.3 对规划 Agent 的影响（plan_agent）
+
+**现状**：plan_agent 调用 `generate_route_draft` + `enrich_route` + `validate_route`。
+
+**标签引入后**：
+
+| 变化 | 说明 |
+|------|------|
+| Prompt 注入画像段 | `【人群画像】23-30 岁女性，偏好约会场景…` |
+| Prompt 注入场景标签 | `【场景标签】溜娃、玩水` |
+| Prompt 注入已去过列表 | `【已去过景点】西湖、灵隐寺（请避免重复推荐）` |
+| Prompt 注入同伴结构 | `【同伴结构】couple，2 人` |
+| 按场景标签选 Prompt 模板 | 溜娃 Prompt 强调亲子友好；约会 Prompt 强调浪漫氛围 |
+| RAG topK 重排引入场景匹配分 | 同样检索「杭州」，溜娃用户优先看到亲子乐园 |
+| RAG 避重过滤前置 | `WHERE id NOT IN (visitedIds)`，已去过不进入候选池 |
+| RAG 参数按人群动态调整 | 溜娃家庭 topK=30；银发 topK=15 |
+
+### 17.4 对行中 Agent 的影响（transit_agent / H7 / H8）
+
+**现状**：`transit_agent` 行中重规划，`detect_missed_pois` 错过景点检测。
+
+**标签引入后**：
+
+| 变化 | 说明 |
+|------|------|
+| 重规划替补参考场景 | 溜娃场景错过亲子乐园 → 替补仍优先亲子友好 |
+| 行中救场结合画像 | 带娃家庭疲劳 → 建议回酒店 + 亲子餐厅；情侣 → 咖啡馆 |
+| Enricher 段间交通参考场景 | 溜娃优先步行/观光车；约会优先出租车 |
+| Enricher 住宿选址参考同伴 | family 优先亲子酒店；couple 优先景观房 |
+
+### 17.5 对流程编排的影响（C7-W）
+
+**现状**：W3 工作流模板按 intent 选模板。
+
+**标签引入后**：
+
+```text
+workflowTemplate = selectTemplate(intent, sceneTags)
+  - plan_new + 溜娃   → family_fun_workflow（亲子友好 RAG topK + 溜娃 Prompt + 亲子 Enricher）
+  - plan_new + 约会   → romantic_workflow（浪漫 RAG topK + 约会 Prompt + 出租车 Enricher）
+  - plan_new + 露营   → camping_workflow（户外 RAG topK + 露营 Prompt + 自驾 Enricher）
+```
+
+不同场景走不同的 RAG topK / Enricher 参数 / Prompt 模板组合。
+
+### 17.6 对降级链的影响
+
+**现状**：降级链 Agent → generateRoute 管道 → Python ai-service → Node LLM → 模板/RAG。
+
+**标签引入后**：标签约束（场景标签 + 避重 + 人群画像）作为**贯穿降级链的强约束**，即使降级到模板，也按场景标签选模板：
+
+```text
+降级到模板时：
+  template = selectTemplate(sceneTags)  // 溜娃场景选亲子模板
+  avoidList = visitedAttractionIds       // 避重始终生效
+```
+
+降级不降质，标签精准化在所有路径都生效。
+
+### 17.7 对反馈环的影响（A-COGNITION-02 / I1）
+
+**现状**：行程复盘回流 Golden Case，训练数据生成未分桶。
+
+**标签引入后**：
+
+| 变化 | 说明 |
+|------|------|
+| Golden Case 按人群分桶 | `WHERE age_range = currentPersona.ageRange AND scene_tags ∩ preferredScenes` |
+| 训练数据分层采样 | 按人群画像分层生成样本，确保各人群均衡 |
+| 同人群案例优先召回 | 23-30 女性规划时召回同人群案例，而非 50+ 银发 |
+
+### 17.8 落地策略
+
+**P0（与标签待办同步落地，必须）**：
+
+- 优化点 1（标签直接构建意图）、5（避重前置 RAG）、7（Prompt 注入画像）、21（降级链贯穿）
+- 这是标签体系发挥价值的关键路径，缺一则标签精准化打折
+
+**P1（标签待办落地后第一迭代）**：
+
+- 优化点 2、3、4、8、11、15
+- 主要提升规划质量与场景适配度
+
+**P2/P3（后续迭代，按需）**：
+
+- 其余优化点视资源与效果数据排期
+
+### 17.9 验收
+
+- [ ] Supervisor 路由新增 `tweak_tags` 意图
+- [ ] `TravelIntentSnapshot.source` 支持 `manual` / `hybrid`
+- [ ] memory_agent 召回按场景过滤
+- [ ] plan_agent Prompt 含画像段 + 场景标签 + 已去过列表
+- [ ] 降级链各层标签约束生效
+- [ ] `p-ai-flow:optimization-cases` 覆盖关键路径
 
 ---
 
@@ -729,5 +873,6 @@ LANGFUSE_SECRET_KEY=
 | 2026-06-22 | 2.7 | **I2 Step 35 上传脚本**：`ml:upload-dataset` · `i2:pai-lora-cases` · PAI manifest |
 | 2026-07-06 | 2.9 | **AI流程编排路线图 v1.1** 关联 · 分工说明补充 · §16 相关文档 |
 | 2026-07-03 | 2.8 | **I3 基础设施** · **H10-a/b/c 交付** · `douxing` provider · 路线视频 · POI 信任链 |
+| 2026-07-17 | 3.0 | **标签约束对 Agent 的影响**：新增 §17，覆盖意图解析/记忆/规划/行中/编排/降级链/反馈环 7 层影响；关联 [精准化与人群定制路线图.md §13](./精准化与人群定制路线图.md#13-ai-流程优化联动2026-07-17-录入) |
 | 2026-06-17 | 2.3 | **M1 达成**：C7-b Step 1～9 验收 · SSE API ✅ · 指针 → Step 10 |
 | 2026-06-16 | 2.1 | **C7-a 主体落地**：9 Tool · `/v1/agent/plan` · `graph.py` · C7-b 追问 patch · H3 记忆表与 Tool · 实现进度速览 |

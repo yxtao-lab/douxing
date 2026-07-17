@@ -47,13 +47,14 @@
 | 专属模型训练（I2/I3） | [docs/阿里云-兜行专属模型训练与部署.md](docs/阿里云-兜行专属模型训练与部署.md) · [packages/ml-training/README.md](packages/ml-training/README.md) |
 | AI 规划与 Agent 演进（设计全稿） | [docs/AI规划与Agent演进.md](docs/AI规划与Agent演进.md) |
 | AI 旅行宠物（H3 线） | [docs/AI旅行宠物.md](docs/AI旅行宠物.md) |
+| 精准化与人群定制（P-TAG/P-ONBOARD/P-INPUT/P-MEMORY/P-THEME/P-LIVE/P-DEMAND/P-PROFILE） | [docs/精准化与人群定制路线图.md](docs/精准化与人群定制路线图.md) |
 | 品牌视觉规范（移动端 H1） | [docs/品牌视觉规范.md](docs/品牌视觉规范.md) |
 | 移动端公共组件 | [docs/公共组件.md](docs/公共组件.md) |
 | 移动端支付联调 | [docs/移动端支付联调说明.md](docs/移动端支付联调说明.md) |
 | 原生 App 部署 | [scripts/app-native.md](scripts/app-native.md) |
 | scripts 目录说明 | [scripts/README.md](scripts/README.md) |
 
-未完成能力与分步实施计划见 **ROADMAP**（含模块 A 主链与 **S 系统管理** / **M 发单接单** 线）。
+未完成能力与分步实施计划见 **ROADMAP**（含模块 A 主链与 **S 系统管理** / **M 发单接单** / **精准化与人群定制** 线）。
 
 ## 目录结构
 

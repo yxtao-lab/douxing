@@ -1706,10 +1706,197 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ---
 
+## 26. 精准化与人群定制 personalization
+
+> **录入日期**：2026-07-17 · **专题**：[精准化与人群定制路线图.md](./精准化与人群定制路线图.md) · **状态**：待开发（P-TAG-01 / P-ONBOARD-01 / P-INPUT-01 / P-MEMORY-01 / P-THEME-01 / P-LIVE-01 / P-DEMAND-01 / P-PROFILE-01）
+
+前缀：`/api/personalization`（部分复用 `/api/users`、`/api/attractions`、`/api/marketplace`）
+
+### 26.1 标签体系
+
+#### GET `/api/personalization/tag-taxonomy`
+
+返回分类标签体系（供前端引导与选择器使用）。
+
+**响应 `data`**：
+
+```json
+{
+  "coreCategories": [
+    {
+      "id": "basic",
+      "i18nKey": "personalization.tagCategory.basic",
+      "subTags": [
+        { "slug": "gender_male", "i18nKey": "personalization.tag.gender_male", "defaultValue": "男" },
+        { "slug": "gender_female", "i18nKey": "personalization.tag.gender_female", "defaultValue": "女" }
+      ]
+    },
+    { "id": "radius", "subTags": [{ "slug": "local" }, { "slug": "domestic" }, { "slug": "global" }] },
+    { "id": "scene", "subTags": [{ "slug": "溜娃" }, { "slug": "约会" }, { "slug": "玩水" }] }
+  ],
+  "optionalCategories": [
+    { "id": "interest", "subTags": [{ "slug": "culture" }, { "slug": "nature" }] },
+    { "id": "companion", "subTags": [{ "slug": "solo" }, { "slug": "couple" }] }
+  ],
+  "defaults": { "gender": "prefer_not_to_say", "ageRange": "23-30", "travelRadius": "any", "preferredScenes": ["溜娃", "纳凉"] }
+}
+```
+
+#### GET `/api/personalization/scenes`
+
+场景标签列表（P-TAG-01），用于首页 chip 行与专题页。
+
+**响应 `data`**：`{ slug, i18nKey, coverImageUrl, routeCount, attractionCount }[]`
+
+### 26.2 首次进入引导（P-ONBOARD-01）
+
+#### POST `/api/users/me/onboarding`
+
+提交引导选择的标签（可分步提交或一次性提交）。
+
+**Body**（均可选）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `gender` | string | `male`/`female`/`other`/`prefer_not_to_say` |
+| `ageRange` | string | `18-22`/`23-30`/`31-40`/`41-50`/`50+` |
+| `travelRadius` | string | `local`/`domestic`/`global`/`any` |
+| `preferredScenes` | string[] | 场景标签 slug 列表 |
+| `interestTags` | string[] | 兴趣类型（复用现有） |
+| `companionStructure` | string[] | `solo`/`couple`/`family`/`group` |
+| `budgetTier` | string | `budget`/`mid-range`/`premium`/`luxury` |
+| `skipped` | boolean | true 表示用户跳过，系统用默认值填充 |
+
+**响应 `data`**：更新后的 `UserInfo` + `onboardedAt`
+
+#### POST `/api/users/me/onboarding/skip`
+
+一键跳过整个引导，全部用默认值填充。
+
+### 26.3 人群定制推荐（P-ONBOARD-01 §9.8）
+
+#### GET `/api/recommendations/home`
+
+首页个性化推荐（替代 `/routes/hot`）。
+
+**Query**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `limit` | number | 默认 10 |
+| `scope` | string | `routes`/`attractions`/`mixed`，默认 `mixed` |
+
+**响应 `data`**：
+
+```json
+{
+  "routes": [{ "id", "title", "coverImageUrl", "matchedScenes": ["溜娃"], "matchScore": 0.92 }],
+  "attractions": [{ "id", "name", "coverImageUrl", "city", "matchedScenes": ["溜娃"], "matchScore": 0.88 }],
+  "personaSnapshot": { "ageRange": "31-40", "preferredScenes": ["溜娃"] }
+}
+```
+
+#### GET `/api/recommendations/scenes/:sceneSlug`
+
+某场景专题页聚合推荐。
+
+**响应 `data`**：`{ scene, attractions[], routes[], products[], demands[] }`
+
+### 26.4 规划标签化定制（P-INPUT-01）
+
+#### POST `/api/routes/generate-by-tags`
+
+直接基于标签构建 `TravelIntentSnapshot` 发起规划（跳过 LLM 意图解析）。
+
+**Body**
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `city` | string | 目的地城市 |
+| `days` | number | 天数 |
+| `budgetMin` / `budgetMax` | number | 预算区间 |
+| `themes` | string[] | 兴趣类型 slug |
+| `scenes` | string[] | 场景标签 slug |
+| `headcount` | number | 人数 |
+| `companionStructure` | string[] | 同伴结构 |
+| `transportPreference` | string | 大交通偏好 |
+| `lodgingTier` | string | 住宿档次 |
+| `startDate` | string | ISO 日期 |
+
+**响应**：同 `POST /api/routes/generate`，但 `intentSnapshot.source='manual'`
+
+### 26.5 已去景点避重（P-MEMORY-01）
+
+#### GET `/api/users/me/visited-attractions`
+
+返回用户已去过景点列表（来自 `check_ins` + `travel_routes` + `pet_memories.regret`）。
+
+**Query**：`?includePlanned=true` 是否包含仅规划未打卡的
+
+**响应 `data`**：`{ attractionId, name, source: 'checkin'|'planned'|'regret', visitedAt }[]`
+
+#### PUT `/api/users/me/avoid-repeat-strategy`
+
+设置避重策略。
+
+**Body**：`{ strategy: 'strict'|'soft'|'off', manualAvoidAttractionIds: number[], allowRepeatAttractionIds: number[] }`
+
+### 26.6 景点实时人数（P-LIVE-01）
+
+#### GET `/api/attractions/:id/live-visitor`
+
+**响应 `data`**：
+
+```json
+{ "level": 2, "levelLabel": "适中", "trend": "up", "updatedAt": "2026-07-17 09:30:00", "estimatedCount": null }
+```
+
+- `level`：0 稀疏 / 1 适中 / 2 密集 / 3 旺季
+- `estimatedCount`：仅当计数 ≥ 阈值（默认 5）时返回数字，否则 null
+
+### 26.7 单景点需求（P-DEMAND-01）
+
+复用 `/api/marketplace/demands`，新增字段：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `demandScene` | string | `custom`（默认）/ `single_poi` / `same_city_day` |
+| `targetAttractionId` | number | 单景点需求的景点 ID |
+| `targetDate` | date | 单日需求的目标日期 |
+
+**新增筛选**：`GET /api/marketplace/demands?demandScene=single_poi&targetAttractionId=10&targetDate=2026-07-17`
+
+### 26.8 群体主题（P-THEME-01）
+
+#### GET `/api/personalization/themes`
+
+返回可用主题列表。
+
+**响应 `data`**：`{ id, i18nKey, primaryColor, previewImageUrl, recommendedFor: { ageRange, gender } }[]`
+
+#### PUT `/api/users/me/preferred-theme`
+
+**Body**：`{ themeId: 'blue'|'teal'|'kids'|'pink'|'tech'|'mature' }`
+
+#### GET `/api/users/me/recommended-theme`
+
+根据画像自动推荐主题（用户可覆盖）。
+
+**响应 `data`**：`{ themeId, reason: 'based_on_age_range_and_gender' }`
+
+### 26.9 隐私合规
+
+- 所有画像字段写入与修改须记录审计日志
+- `GET /api/users/me/privacy-report` 返回画像字段使用情况
+- `DELETE /api/users/me/persona` 一键清除画像重置为默认
+
+---
+
 ## 变更记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-17 | **精准化与人群定制 API 录入**：新增 §26 `/api/personalization/*` · `/api/recommendations/*` · `/api/users/me/onboarding` · `/api/users/me/visited-attractions` · `/api/attractions/:id/live-visitor` · `/api/users/me/preferred-theme` 等；关联 [精准化与人群定制路线图.md](./精准化与人群定制路线图.md) · ROADMAP §9.10 |
 | 2026-07-15 | **文档全量同步**：文首/§25 状态对齐路线图 v1.11.0（E2 接线 ✅ · 下一沙箱真机） |
 | 2026-07-16 | **M7-ext 评价与争议**：§25 增 reviews / disputes / admin/disputes API；迁移 `0047`；`m7-ext:marketplace-trust-cases` |
 | 2026-07-16 | **A-CLOSE-01 路线一键发定制需求**：路线详情新增入口 → 发单页带出 `routeId`/`title`/`destination`/`budgetMin`/`budgetMax`/`description`（含关键 POI）；`m2-ext:route-to-demand-cases` |
