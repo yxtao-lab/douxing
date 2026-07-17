@@ -92,6 +92,7 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "kill-port": "^2.0.1",
+    "playwright": "^1.61.1",
     "pm2": "^5.4.3"
   }
 }
