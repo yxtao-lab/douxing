@@ -22,6 +22,21 @@ export interface UserInfo {
   interestTags: string[] | null;
   /** P-TAG-01：用户偏好场景标签 slug 列表 */
   preferredScenes?: string[] | null;
+  /** P-ONBOARD-01：性别 */
+  gender?: string | null;
+  /** P-ONBOARD-01：年龄段 */
+  ageRange?: string | null;
+  /** P-ONBOARD-01：旅行半径 */
+  travelRadius?: string | null;
+  /** P-ONBOARD-01：同伴结构 */
+  companionStructure?: string[] | null;
+  /** P-ONBOARD-01：预算档次 */
+  budgetTier?: string | null;
+  /**
+   * P-ONBOARD-01：首次标签引导完成时间（API 展示格式 yyyy-mm-dd HH:mm:ss）；
+   * null 表示尚未完成引导
+   */
+  onboardedAt?: string | null;
   /** 会员等级，见 MemberLevel */
   memberLevel: number;
   status: number;
@@ -38,6 +53,29 @@ export interface UpdateUserProfileRequest {
   interestTags?: string[];
   /** P-TAG-01：用户偏好场景标签 slug 列表 */
   preferredScenes?: string[];
+  /** P-ONBOARD-01：性别 */
+  gender?: string | null;
+  /** P-ONBOARD-01：年龄段 */
+  ageRange?: string | null;
+  /** P-ONBOARD-01：旅行半径 */
+  travelRadius?: string | null;
+  /** P-ONBOARD-01：同伴结构 */
+  companionStructure?: string[];
+  /** P-ONBOARD-01：预算档次 */
+  budgetTier?: string | null;
+}
+
+/** P-ONBOARD-01：完成首次标签引导（POST /users/me/onboarding/complete） */
+export interface CompleteOnboardingRequest {
+  gender?: string | null;
+  ageRange?: string | null;
+  travelRadius?: string | null;
+  preferredScenes?: string[] | null;
+  interestTags?: string[] | null;
+  companionStructure?: string[] | null;
+  budgetTier?: string | null;
+  /** 整页跳过时为 true，服务端用默认值填充 */
+  skipped?: boolean;
 }
 
 export interface LoginResult {

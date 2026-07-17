@@ -183,6 +183,7 @@ gantt
 | v0.9.30 | 2026-07-06 | **AI流程编排路线图 v1.1** | 可行性分析 · Phase W0～W5 · MW1～MW4 · §12 术语表 | 与 M6 并行；不阻塞 Step 35～40 |
 | v0.9.41 | 2026-07-10 | **新页面 UI 规范** | 三端风格/布局 · 主题预留 · 组件复用 · [Cursor-Agent规则.md](./Cursor-Agent规则.md) · `.cursor/rules/page-ui-standards.mdc` | 与 H1 品牌 Token、G9 i18n 对齐 |
 | v0.9.42 | 2026-07-17 | **P-TAG-01 场景标签 + 标签专题区** | `shared/i18n/scene-tags.ts` · `attractions/travel_routes/users` 新增 `scene_tags`/`preferred_scenes` · `PATCH /admin/attractions/:id/scene-tags` · C2 `detectSceneTags` + C3 RAG 场景重排 · mobile/pc 首页场景 chip + `/scenes/:slug` 专题页 · Web 景点管理场景标签列与编辑 · `p-tag:scene-cases` 全绿 | [精准化路线图 §2](./精准化与人群定制路线图.md#2-p-tag-01-场景标签--标签专题区) · P-TAG-01 ✅ |
+| v0.9.43 | 2026-07-17 | **P-ONBOARD-01 首次标签引导** | `profile-tags.ts` · users 画像字段 + `onboarded_at` · `POST /users/me/onboarding/complete` · mobile/pc 3 步引导页 · profile 可改 · 规划注入 preferredScenes · `p-onboard:tag-guide-cases` 全绿 | [精准化路线图 §9](./精准化与人群定制路线图.md#9-p-onboard-01-首次进入标签引导--分类标签体系) · P-ONBOARD-01 ✅（推荐引擎后续） |
 | v0.9.43 | 2026-07-17 | **系统资源统计（数据中台）** | 远程 Git 浅克隆 · `GET /analytics/system-resources` · Web `/system-resources` · ECharts 多图 · [系统资源统计.md](./系统资源统计.md) | 侧栏「数据中台 → 系统资源统计」；`data:analytics:view` |
 | v0.9.31 | 2026-06-18 | **M5 达成** | H7/H8/H3-d 行中智能 · `h5:m5-accept` · 指针 → Step 35 I2 LoRA | — |
 | v0.9.32 | 2026-06-22 | **I2 Step 35 上传脚本** | `pnpm ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` · OSS 校验 | PAI 微调任务待执行 |
@@ -1507,7 +1508,7 @@ Step 35～40（M6 主链验收）
 | **P1** | **P-TAG-01** ✅ | **场景标签 + 标签专题区**（溜娃/约会/玩水/纳凉） | 按场景而非类型找需求 | `interestTags` 偏类型，无场景维度 | `attractions.sceneTags` + `travel_routes.sceneTags` + 专题页 | 首页场景 chip → 专题页聚合景点/路线/标品/需求；`p-tag:scene-cases` 全绿 | [精准化路线图 §2](./精准化与人群定制路线图.md#2-p-tag-01-场景标签--标签专题区) · **已完成 2026-07-17** |
 | **P1** | **P-MEMORY-01** | **已去景点避重推荐** | 不再推荐去过的地方 | `user_travel_persona.avoidList` 已有字段未注入规划 | C2/C3 注入 + Enricher 去重 + 用户可控开关 | 默认严格避重；可切换软避重/关闭；`p-memory:avoid-repeat-cases` 全绿 | [精准化路线图 §6](./精准化与人群定制路线图.md#6-p-memory-01-已去景点避重推荐) · A-COGNITION-01 |
 | **P1** | **P-INPUT-01** | **规划对话标签化定制** | 不打字也能发起规划 | 规划页仅文本输入，约束易遗漏 | 标签/滑块/选择器面板 + 直接构建 `TravelIntentSnapshot` | 仅点选标签可发起规划；标签+文本混合生效；`p-input:tag-customize-cases` 全绿 | [精准化路线图 §8](./精准化与人群定制路线图.md#8-p-input-01-规划对话标签化定制) · C1/C2/C7 |
-| **P1** | **P-ONBOARD-01** | **首次进入标签引导 + 分类标签体系 + 人群定制推荐** | 新用户从第一次就精准 | 注册后画像为空，首页无个性化 | 3 步分类引导（基础属性/旅行半径/旅行场景）+ 可跳过 + 默认非空 + 推荐引擎 | 引导可跳过且画像非空；首页按画像差异化；`p-onboard:tag-guide-cases` + `p-recommend:personalized-cases` 全绿 | [精准化路线图 §9](./精准化与人群定制路线图.md#9-p-onboard-01-首次进入标签引导--分类标签体系) · A1/A-COGNITION-01 |
+| **P1** | **P-ONBOARD-01** ✅ | **首次进入标签引导 + 分类标签体系 + 人群定制推荐** | 新用户从第一次就精准 | 注册后画像为空，首页无个性化 | 3 步分类引导（基础属性/旅行半径/旅行场景）+ 可跳过 + 默认非空 + 推荐引擎 | 引导可跳过且画像非空；首页按画像差异化；`p-onboard:tag-guide-cases` + `p-recommend:personalized-cases` 全绿 | [精准化路线图 §9](./精准化与人群定制路线图.md#9-p-onboard-01-首次进入标签引导--分类标签体系) · **引导已完成 2026-07-17**（推荐引擎后续） |
 | **P2** | **P-THEME-01** | **群体属性定制化界面**（卡通/pink/科技/成熟 + 自由切换） | 不同人群视觉偏好 | `useTheme` 仅 blue/teal 两套 | 主题注册表扩展 6 套 + 自动推荐 + 手动覆盖 | 个人中心可切 6 套主题；全站 token 同步；`p-theme:group-theme-cases` 全绿 | [精准化路线图 §7](./精准化与人群定制路线图.md#7-p-theme-01-群体属性定制化界面) · H1-c |
 | **P2** | **P-LIVE-01** | **景点打卡实时人数** | 决策「现在去不去」 | `check_ins` 有数据但无聚合展示 | 当日打卡计数 + Redis 缓存 + 估算系数 + 隐私阈值 | 详情/专题页显示档位；<5 不暴露数字；`p-live:visitor-count-cases` 全绿 | [精准化路线图 §3](./精准化与人群定制路线图.md#3-p-live-01-景点打卡实时人数) · B1/G1 |
 | **P2** | **P-DEMAND-01** | **同城单日单景点需求** | 即时拼人同去 | M 线 `service_demand` 偏整团定制 | `demandScene=single_poi` + 景点挂载 + 同城筛选 | 景点详情可发单；专题页今日同去；`p-demand:single-poi-cases` 全绿 | [精准化路线图 §4](./精准化与人群定制路线图.md#4-p-demand-01-同城单日单景点需求) · M2/M4 |
@@ -1576,4 +1577,4 @@ Step 35～40（M6 主链验收）
 
 ---
 
-*文档版本 3.50 · 最后更新：2026-07-17（P-TAG-01 场景标签 + 标签专题区落地，v0.9.42）*
+*文档版本 3.51 · 最后更新：2026-07-17（P-ONBOARD-01 首次标签引导落地，v0.9.43）*

@@ -106,6 +106,7 @@ import { useLocale } from '@/i18n/useLocale';
 import { useUserStore } from '@/stores/user';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
 import { getAppErrorMessage } from '@/utils/error-message';
+import { needsOnboarding, type UserInfo } from '@douxing/shared';
 
 type LoginMode = 'sms' | 'password';
 
@@ -131,8 +132,20 @@ const codeButtonLabel = computed(() =>
   countdown.value > 0 ? t('login.codeCountdown', { seconds: countdown.value }) : t('login.getCode'),
 );
 
-function redirectAfterLogin() {
+/**
+ * 登录成功后跳转：未完成引导进 /onboarding，否则尊重 redirect。
+ *
+ * @param user - 登录返回的用户
+ */
+function redirectAfterLogin(user: UserInfo) {
   const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
+  if (needsOnboarding(user.onboardedAt)) {
+    router.replace({
+      name: 'onboarding',
+      query: redirect && redirect !== '/' ? { redirect } : undefined,
+    });
+    return;
+  }
   router.replace(redirect);
 }
 
@@ -144,7 +157,7 @@ async function handlePasswordSubmit() {
       ? await register(form.username, form.password)
       : await login(form.username, form.password);
     userStore.setAuth(result.token, result.user, result.refreshToken);
-    redirectAfterLogin();
+    redirectAfterLogin(result.user);
   } catch (err) {
     error.value = getAppErrorMessage(err, t('login.loginFailed'));
   } finally {
@@ -191,7 +204,7 @@ async function handleSmsSubmit() {
   try {
     const result = await smsLogin(smsForm.phone, smsForm.code);
     userStore.setAuth(result.token, result.user, result.refreshToken);
-    redirectAfterLogin();
+    redirectAfterLogin(result.user);
   } catch (err) {
     error.value = getAppErrorMessage(err, t('login.loginFailed'));
   } finally {

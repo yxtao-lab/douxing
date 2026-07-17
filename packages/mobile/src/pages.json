@@ -189,6 +189,12 @@
         "navigationStyle": "custom",
         "navigationBarTitleText": "登录"
       }
+    },
+    {
+      "path": "pages/onboarding/guide",
+      "style": {
+        "navigationBarTitleText": "旅行偏好"
+      }
     }
   ],
   "tabBar": {

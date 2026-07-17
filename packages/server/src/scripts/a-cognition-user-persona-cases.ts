@@ -177,6 +177,7 @@ async function main() {
   console.log('\n--- 规划注入 ---');
   const context: PlanUserContext = {
     interestTags: persona.interestTags,
+    preferredScenes: [],
     memoryThemes: [],
     excludePoiNames: [],
     boostPoiNames: [],
@@ -206,6 +207,7 @@ async function main() {
 
   const nullContext: PlanUserContext = {
     interestTags: [],
+    preferredScenes: [],
     memoryThemes: [],
     excludePoiNames: [],
     boostPoiNames: [],

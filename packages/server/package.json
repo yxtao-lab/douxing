@@ -75,6 +75,7 @@
     "m7:marketplace-partner-cases": "tsx src/scripts/m7-marketplace-partner-cases.ts",
     "m7-ext:marketplace-trust-cases": "tsx src/scripts/m7-ext-marketplace-trust-cases.ts",
     "p-tag:scene-cases": "tsx src/scripts/p-tag-scene-cases.ts",
+    "p-onboard:tag-guide-cases": "tsx src/scripts/p-onboard-tag-guide-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

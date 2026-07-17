@@ -15,6 +15,8 @@ import { getPersonaSummaryForPlanning } from './travel-persona.service.js';
 
 export interface PlanUserContext {
   interestTags: string[];
+  /** P-ONBOARD-01 / P-TAG-01：用户偏好场景 */
+  preferredScenes: string[];
   memoryThemes: string[];
   excludePoiNames: string[];
   boostPoiNames: string[];
@@ -22,14 +24,24 @@ export interface PlanUserContext {
   personaSummary: string | null;
 }
 
+/**
+ * 加载规划用用户上下文（兴趣、场景偏好、记忆、画像摘要）。
+ *
+ * @param userId - 用户 ID
+ * @returns PlanUserContext；无数据时字段为空数组或 null
+ */
 export async function loadPlanUserContext(userId: number): Promise<PlanUserContext> {
   const db = getDb();
   const rows = await db
-    .select({ interestTags: users.interestTags })
+    .select({
+      interestTags: users.interestTags,
+      preferredScenes: users.preferredScenes,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
   const interestTags = rows[0]?.interestTags ?? [];
+  const preferredScenes = rows[0]?.preferredScenes ?? [];
 
   const memories = await recallUserMemory(userId, { limit: 12 });
   const memoryThemes = extractMemoryThemes(memories);
@@ -40,6 +52,7 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
 
   return {
     interestTags,
+    preferredScenes,
     memoryThemes,
     excludePoiNames,
     boostPoiNames,
@@ -47,6 +60,13 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
   };
 }
 
+/**
+ * 将用户上下文合并进意图：兴趣进 themes，偏好场景并入 sceneTags。
+ *
+ * @param intent - 当前规划意图
+ * @param context - 用户上下文
+ * @returns 合并后的意图快照
+ */
 export function mergeIntentWithUserContext(
   intent: TravelIntentSnapshot,
   context: PlanUserContext,
@@ -58,9 +78,16 @@ export function mergeIntentWithUserContext(
       ...context.memoryThemes,
     ]),
   ];
+  const sceneTags = [
+    ...new Set([
+      ...(intent.sceneTags ?? []),
+      ...context.preferredScenes,
+    ]),
+  ];
   return {
     ...intent,
     themes,
+    sceneTags,
   };
 }
 

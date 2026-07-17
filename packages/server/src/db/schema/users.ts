@@ -16,6 +16,18 @@ export const users = mysqlTable('users', {
   interestTags: json('interest_tags').$type<string[]>(),
   /** P-TAG-01：用户偏好场景标签（slug 列表），用于首页/专题/规划个性化推荐 */
   preferredScenes: json('preferred_scenes').$type<string[]>(),
+  /** P-ONBOARD-01：性别（自愿） */
+  gender: varchar('gender', { length: 16 }),
+  /** P-ONBOARD-01：年龄段（不收集精确年龄） */
+  ageRange: varchar('age_range', { length: 16 }),
+  /** P-ONBOARD-01：旅行半径 */
+  travelRadius: varchar('travel_radius', { length: 16 }),
+  /** P-ONBOARD-01：同伴结构 slug 列表 */
+  companionStructure: json('companion_structure').$type<string[]>(),
+  /** P-ONBOARD-01：预算档次 */
+  budgetTier: varchar('budget_tier', { length: 32 }),
+  /** P-ONBOARD-01：首次标签引导完成时间；null 表示未引导 */
+  onboardedAt: timestamp('onboarded_at'),
   /** 会员等级，见 @douxing/shared MemberLevel */
   memberLevel: tinyint('member_level').notNull().default(0),
   /** 付费会员到期时间（免费会员为 null） */

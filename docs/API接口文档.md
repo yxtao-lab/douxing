@@ -160,6 +160,7 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 10 | GET | `/api/users/me/membership` | 登录 | 用户 |
 | 11 | GET | `/api/users/me/storage` | 登录 | 用户 |
 | 12 | POST | `/api/users/me/avatar` | 登录 | 用户 |
+| 12.1 | POST | `/api/users/me/onboarding/complete` | 登录 | 首次引导 P-ONBOARD-01 |
 | 13 | GET | `/api/attractions` | 公开 | 景点 |
 | 14 | GET | `/api/attractions/cities` | 公开 | 景点 |
 | 15 | GET | `/api/attractions/:id` | 公开 | 景点 |
@@ -1787,9 +1788,9 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 ### 26.2 首次进入引导（P-ONBOARD-01）
 
-#### POST `/api/users/me/onboarding`
+#### POST `/api/users/me/onboarding/complete`
 
-提交引导选择的标签（可分步提交或一次性提交）。
+提交引导选择（可跳过）；服务端用默认值填充未选字段，写入 `onboardedAt`，并刷新旅行人格。
 
 **Body**（均可选）
 
@@ -1799,18 +1800,16 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | `ageRange` | string | `18-22`/`23-30`/`31-40`/`41-50`/`50+` |
 | `travelRadius` | string | `local`/`domestic`/`global`/`any` |
 | `preferredScenes` | string[] | 场景标签 slug 列表 |
-| `interestTags` | string[] | 兴趣类型（复用现有） |
+| `interestTags` | string[] | 兴趣类型（复用现有中文预设） |
 | `companionStructure` | string[] | `solo`/`couple`/`family`/`group` |
 | `budgetTier` | string | `budget`/`mid-range`/`premium`/`luxury` |
-| `skipped` | boolean | true 表示用户跳过，系统用默认值填充 |
+| `skipped` | boolean | true 表示整页跳过，系统用默认值填充 |
 
-**响应 `data`**：更新后的 `UserInfo` + `onboardedAt`
+**响应 `data`**：更新后的 `UserInfo`（含 `onboardedAt`，格式 `yyyy-mm-dd HH:mm:ss`）
 
-#### POST `/api/users/me/onboarding/skip`
+> 说明：规划中的 `POST /onboarding/skip` 已合并为本接口 `skipped: true`，不再单独提供。
 
-一键跳过整个引导，全部用默认值填充。
-
-### 26.3 人群定制推荐（P-ONBOARD-01 §9.8）
+### 26.3 人群定制推荐（P-ONBOARD-01 §9.8 · 待实现）
 
 #### GET `/api/recommendations/home`
 
@@ -1933,6 +1932,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 
 | 日期 | 说明 |
 |------|------|
+| 2026-07-17 | **P-ONBOARD-01**：落地 `POST /users/me/onboarding/complete`；`PUT /users/me` 扩展 gender/ageRange/travelRadius/companionStructure/budgetTier；UserInfo 含 onboardedAt |
 | 2026-07-17 | **精准化与人群定制 API 录入**：新增 §26 `/api/personalization/*` · `/api/recommendations/*` · `/api/users/me/onboarding` · `/api/users/me/visited-attractions` · `/api/attractions/:id/live-visitor` · `/api/users/me/preferred-theme` 等；关联 [精准化与人群定制路线图.md](./精准化与人群定制路线图.md) · ROADMAP §9.10 |
 | 2026-07-15 | **文档全量同步**：文首/§25 状态对齐路线图 v1.11.0（E2 接线 ✅ · 下一沙箱真机） |
 | 2026-07-16 | **M7-ext 评价与争议**：§25 增 reviews / disputes / admin/disputes API；迁移 `0047`；`m7-ext:marketplace-trust-cases` |

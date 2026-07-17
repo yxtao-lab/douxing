@@ -119,7 +119,8 @@
 
 <script setup lang="ts">
 import { ref, computed, onUnmounted } from 'vue';
-import type { LoginResult } from '@douxing/shared';
+import type { LoginResult, UserInfo } from '@douxing/shared';
+import { needsOnboarding } from '@douxing/shared';
 import { request, setAuth, getAppErrorMessage } from '@/utils/request';
 import { buildCustomNavTopPadding } from '@/utils/safe-area';
 import { isDevelopmentExperienceEnabled } from '@/utils/build-env';
@@ -129,6 +130,18 @@ import { useTf } from '@/i18n/useTf';
 const { t, tf } = useTf();
 const { themeClass } = useTheme();
 // 登录页使用 custom 导航栏，不展示系统标题栏与返回按钮
+
+/**
+ * 登录成功后跳转：未完成引导进引导页，否则进首页。
+ *
+ * @param user - 登录返回的用户信息
+ */
+function redirectAfterAuth(user: UserInfo) {
+  const url = needsOnboarding(user.onboardedAt)
+    ? '/pages/onboarding/guide'
+    : '/pages/index/index';
+  uni.reLaunch({ url });
+}
 
 const showDemoAccount = isDevelopmentExperienceEnabled();
 
@@ -247,7 +260,7 @@ async function handleSmsLogin() {
     setAuth(data.token, data.user, data.refreshToken);
     uni.showToast({ title: t('login.loginSuccess'), icon: 'success' });
     setTimeout(() => {
-      uni.reLaunch({ url: '/pages/index/index' });
+      redirectAfterAuth(data.user);
     }, 500);
   } catch (e) {
     error.value = getAppErrorMessage(e, t('login.loginFailed'));
@@ -271,7 +284,7 @@ async function handlePasswordSubmit() {
       icon: 'success',
     });
     setTimeout(() => {
-      uni.reLaunch({ url: '/pages/index/index' });
+      redirectAfterAuth(data.user);
     }, 500);
   } catch (e) {
     error.value = getAppErrorMessage(e, t('common.operationFailed'));

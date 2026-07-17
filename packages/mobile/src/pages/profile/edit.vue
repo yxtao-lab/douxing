@@ -47,6 +47,93 @@
         </view>
       </view>
 
+      <view class="form-card">
+        <text class="label block">{{ t('personalization.profile.travelPersonaTitle') }}</text>
+        <text class="sub-hint">{{ t('personalization.profile.travelPersonaDesc') }}</text>
+
+        <text class="field-label">{{ t('personalization.profile.gender') }}</text>
+        <view class="tags">
+          <text
+            v-for="g in genderPresets"
+            :key="g"
+            class="tag"
+            :class="{ active: form.gender === g }"
+            @click="form.gender = form.gender === g ? null : g"
+          >
+            {{ formatGenderLabel(g, locale) }}
+          </text>
+        </view>
+
+        <text class="field-label">{{ t('personalization.profile.ageRange') }}</text>
+        <view class="tags">
+          <text
+            v-for="a in ageRangePresets"
+            :key="a"
+            class="tag"
+            :class="{ active: form.ageRange === a }"
+            @click="form.ageRange = form.ageRange === a ? null : a"
+          >
+            {{ formatAgeRangeLabel(a, locale) }}
+          </text>
+        </view>
+
+        <text class="field-label">{{ t('personalization.profile.travelRadius') }}</text>
+        <view class="tags">
+          <text
+            v-for="r in travelRadiusPresets"
+            :key="r"
+            class="tag"
+            :class="{ active: form.travelRadius === r }"
+            @click="form.travelRadius = form.travelRadius === r ? null : r"
+          >
+            {{ formatTravelRadiusLabel(r, locale) }}
+          </text>
+        </view>
+
+        <text class="field-label">{{ t('personalization.profile.preferredScenes') }}</text>
+        <view class="tags">
+          <text
+            v-for="s in sceneTagPresets"
+            :key="s"
+            class="tag"
+            :class="{ active: form.preferredScenes.includes(s) }"
+            @click="toggleScene(s)"
+          >
+            {{ formatSceneTagLabel(s, locale) }}
+          </text>
+        </view>
+
+        <text class="field-label">{{ t('personalization.profile.companionStructure') }}</text>
+        <view class="tags">
+          <text
+            v-for="c in companionStructurePresets"
+            :key="c"
+            class="tag"
+            :class="{ active: form.companionStructure.includes(c) }"
+            @click="toggleCompanion(c)"
+          >
+            {{ formatCompanionStructureLabel(c, locale) }}
+          </text>
+        </view>
+
+        <text class="field-label">{{ t('personalization.profile.budgetTier') }}</text>
+        <view class="tags">
+          <text
+            v-for="b in budgetTierPresets"
+            :key="b"
+            class="tag"
+            :class="{ active: form.budgetTier === b }"
+            @click="form.budgetTier = form.budgetTier === b ? null : b"
+          >
+            {{ formatBudgetTierLabel(b, locale) }}
+          </text>
+        </view>
+
+        <button class="re-onboard-btn" @click="goReOnboard">
+          {{ t('personalization.profile.reOnboard') }}
+        </button>
+      </view>
+
       <button class="save-btn" :loading="saving" @click="handleSave">{{ t('common.save') }}</button>
     </view>
   </view>
@@ -55,18 +142,34 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import type { UserInfo } from '@douxing/shared';
-import { USER_INTEREST_MAX } from '@douxing/shared';
+import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
+import {
+  USER_INTEREST_MAX,
+  genderPresets,
+  ageRangePresets,
+  travelRadiusPresets,
+  companionStructurePresets,
+  budgetTierPresets,
+  sceneTagPresets,
+  formatGenderLabel,
+  formatAgeRangeLabel,
+  formatTravelRadiusLabel,
+  formatCompanionStructureLabel,
+  formatBudgetTierLabel,
+  formatSceneTagLabel,
+} from '@douxing/shared';
 import { fetchCurrentUser, updateUserProfile, uploadUserAvatar } from '@/api/user';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
+import { useLocale } from '@/i18n/useLocale';
 import { interestTagPresets } from '@/i18n/interest-tags';
 import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
 const { t, tf } = useTf();
 const { themeClass } = useTheme();
+const { currentLocale: locale } = useLocale();
 const { labelOf } = useInterestTagLabel();
 usePageTitle('nav.profileEdit');
 
@@ -81,21 +184,43 @@ const form = ref({
   email: '',
   avatar: '' as string | null,
   interestTags: [] as string[],
+  gender: null as string | null,
+  ageRange: null as string | null,
+  travelRadius: null as string | null,
+  preferredScenes: [] as string[],
+  companionStructure: [] as string[],
+  budgetTier: null as string | null,
 });
 
 const avatarText = computed(() => form.value.nickname.slice(0, 1) || '?');
 
 const interestTagsTitle = computed(() => tf('profileEdit.interestTagsTitle', { max: maxTags }));
 
+/**
+ * 用 UserInfo 填充表单。
+ *
+ * @param user - 当前用户
+ */
 function applyUser(user: UserInfo) {
   form.value = {
     nickname: user.nickname || user.username,
     email: user.email ?? '',
     avatar: user.avatar,
     interestTags: [...(user.interestTags ?? [])],
+    gender: user.gender ?? null,
+    ageRange: user.ageRange ?? null,
+    travelRadius: user.travelRadius ?? null,
+    preferredScenes: [...(user.preferredScenes ?? [])],
+    companionStructure: [...(user.companionStructure ?? [])],
+    budgetTier: user.budgetTier ?? null,
   };
 }
 
+/**
+ * 切换兴趣标签。
+ *
+ * @param tag - 兴趣标签值
+ */
 function toggleTag(tag: string) {
   const idx = form.value.interestTags.indexOf(tag);
   if (idx >= 0) {
@@ -107,6 +232,33 @@ function toggleTag(tag: string) {
     return;
   }
   form.value.interestTags.push(tag);
+}
+
+/**
+ * 切换场景标签。
+ *
+ * @param slug - 场景 slug
+ */
+function toggleScene(slug: string) {
+  const idx = form.value.preferredScenes.indexOf(slug);
+  if (idx >= 0) form.value.preferredScenes.splice(idx, 1);
+  else form.value.preferredScenes.push(slug);
+}
+
+/**
+ * 切换同伴结构。
+ *
+ * @param slug - 同伴 slug
+ */
+function toggleCompanion(slug: string) {
+  const idx = form.value.companionStructure.indexOf(slug);
+  if (idx >= 0) form.value.companionStructure.splice(idx, 1);
+  else form.value.companionStructure.push(slug);
+}
+
+/** 跳转重新引导页 */
+function goReOnboard() {
+  uni.navigateTo({ url: '/pages/onboarding/guide' });
 }
 
 async function chooseAvatar() {
@@ -148,13 +300,15 @@ async function handleSave() {
   }
 
   const emailRaw = form.value.email.trim();
-  const payload: {
-    nickname: string;
-    interestTags: string[];
-    email?: string | null;
-  } = {
+  const payload: UpdateUserProfileRequest = {
     nickname,
     interestTags: form.value.interestTags,
+    preferredScenes: form.value.preferredScenes,
+    gender: form.value.gender,
+    ageRange: form.value.ageRange,
+    travelRadius: form.value.travelRadius,
+    companionStructure: form.value.companionStructure,
+    budgetTier: form.value.budgetTier,
   };
 
   if (emailRaw) {
@@ -292,6 +446,29 @@ onLoad(async () => {
   background: var(--dx-primary-light);
   color: var(--dx-primary);
   border: 2rpx solid var(--dx-primary-light);
+}
+.sub-hint {
+  display: block;
+  margin: -8rpx 0 20rpx;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+}
+.field-label {
+  display: block;
+  margin: 20rpx 0 12rpx;
+  font-size: 26rpx;
+  color: var(--dx-text-secondary);
+}
+.re-onboard-btn {
+  margin-top: 28rpx;
+  background: transparent;
+  color: var(--dx-primary);
+  border: 2rpx solid var(--dx-primary);
+  border-radius: var(--dx-radius-lg);
+  font-size: 28rpx;
+}
+.re-onboard-btn::after {
+  border: none;
 }
 .save-btn {
   margin-top: 8rpx;

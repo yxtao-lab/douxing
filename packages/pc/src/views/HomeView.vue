@@ -115,6 +115,8 @@ import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { TravelRouteInfo, SceneTagSlug } from '@douxing/shared';
 import { sceneTagPresets, formatSceneTagLabel } from '@douxing/shared';
+import { needsOnboarding } from '@douxing/shared';
+import { fetchUserProfile } from '@/api/user';
 import { fetchPlazaRoutesPage } from '@/api/routes';
 import AppLogo from '@/components/AppLogo.vue';
 import RouteCard from '@/components/RouteCard.vue';
@@ -200,8 +202,22 @@ async function loadHotRoutes() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  if (userStore.user && needsOnboarding(userStore.user.onboardedAt)) {
+    router.replace({ name: 'onboarding' });
+    return;
+  }
   if (userStore.user) {
+    try {
+      const fresh = await fetchUserProfile();
+      if (userStore.token) userStore.setAuth(userStore.token, fresh);
+      if (needsOnboarding(fresh.onboardedAt)) {
+        router.replace({ name: 'onboarding' });
+        return;
+      }
+    } catch {
+      /* 忽略刷新失败 */
+    }
     loadHotRoutes();
   }
 });

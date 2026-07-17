@@ -20,6 +20,19 @@ const router = createRouter({
       ],
     },
     {
+      path: '/onboarding',
+      component: AuthLayout,
+      meta: { hideNav: true },
+      children: [
+        {
+          path: '',
+          name: 'onboarding',
+          component: () => import('@/views/OnboardingView.vue'),
+          meta: { titleKey: 'nav.onboarding', requiresAuth: true },
+        },
+      ],
+    },
+    {
       path: '/',
       component: AppLayout,
       children: [
@@ -225,6 +238,22 @@ router.beforeEach(async (to) => {
   if (to.name === 'login' && userStore.token) {
     const redirect = typeof to.query.redirect === 'string' ? to.query.redirect : '/';
     return redirect;
+  }
+  // P-ONBOARD-01：已登录但未引导时，非引导页强制跳转引导
+  if (
+    userStore.token &&
+    userStore.user &&
+    to.name !== 'onboarding' &&
+    to.name !== 'login' &&
+    to.name !== 'maintenance'
+  ) {
+    const { needsOnboarding } = await import('@douxing/shared');
+    if (needsOnboarding(userStore.user.onboardedAt)) {
+      return {
+        name: 'onboarding',
+        query: to.fullPath !== '/' ? { redirect: to.fullPath } : undefined,
+      };
+    }
   }
 });
 

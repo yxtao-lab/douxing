@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail, failFromError } from '../utils/response.js';
-import { getUserWithRoles, updateUserProfile, setUserAvatar } from '../services/user.service.js';
+import { getUserWithRoles, updateUserProfile, setUserAvatar, completeUserOnboarding } from '../services/user.service.js';
 import { getMembershipInfoForUser } from '../services/membership.service.js';
 import { getUserPhotoStorageInfo } from '../services/photo-quota.service.js';
 import { getUserPersona, refreshUserPersona } from '../services/travel-persona.service.js';
@@ -54,6 +54,22 @@ const updateProfileSchema = z.object({
   interestTags: z.array(z.string().min(1).max(16)).max(USER_INTEREST_MAX).optional(),
   /** P-TAG-01：用户偏好场景标签 slug 列表 */
   preferredScenes: z.array(z.string().min(1).max(32)).max(10).optional(),
+  gender: z.string().max(16).nullable().optional(),
+  ageRange: z.string().max(16).nullable().optional(),
+  travelRadius: z.string().max(16).nullable().optional(),
+  companionStructure: z.array(z.string().min(1).max(16)).max(4).optional(),
+  budgetTier: z.string().max(32).nullable().optional(),
+});
+
+const completeOnboardingSchema = z.object({
+  gender: z.string().max(16).nullable().optional(),
+  ageRange: z.string().max(16).nullable().optional(),
+  travelRadius: z.string().max(16).nullable().optional(),
+  preferredScenes: z.array(z.string().min(1).max(32)).max(10).nullable().optional(),
+  interestTags: z.array(z.string().min(1).max(16)).max(USER_INTEREST_MAX).nullable().optional(),
+  companionStructure: z.array(z.string().min(1).max(16)).max(4).nullable().optional(),
+  budgetTier: z.string().max(32).nullable().optional(),
+  skipped: z.boolean().optional(),
 });
 
 router.get('/me', authMiddleware, async (req, res) => {
@@ -106,6 +122,26 @@ router.put('/me', authMiddleware, async (req, res) => {
     success(res, userInfo, ApiMessageKey.PROFILE_UPDATED);
   } catch (err) {
     return failFromError(res, err, ApiMessageKey.PROFILE_UPDATE_FAILED);
+  }
+});
+
+/**
+ * 完成首次标签引导（P-ONBOARD-01）。
+ * 写入画像字段、标记 onboardedAt，并刷新旅行人格。
+ */
+router.post('/me/onboarding/complete', authMiddleware, async (req, res) => {
+  try {
+    const parsed = completeOnboardingSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
+    }
+    const userInfo = await completeUserOnboarding(req.auth!.userId, parsed.data);
+    if (!userInfo) {
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
+    }
+    success(res, userInfo, ApiMessageKey.ONBOARDING_COMPLETED);
+  } catch (err) {
+    return failFromError(res, err, ApiMessageKey.ONBOARDING_FAILED);
   }
 });
 

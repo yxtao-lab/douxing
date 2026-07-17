@@ -166,6 +166,8 @@ import type { TravelRouteInfo } from '@douxing/shared';
 import { normalizePaginatedItems, sceneTagPresets, formatSceneTagLabel, type SceneTagSlug } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
+import { needsOnboarding } from '@douxing/shared';
+import { fetchCurrentUser } from '@/api/user';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
@@ -233,8 +235,22 @@ const welcomeText = computed(() => {
 onShow(() => {
   hideNativeTabBar();
   user.value = getStoredUser();
+  if (user.value && needsOnboarding(user.value.onboardedAt)) {
+    uni.reLaunch({ url: '/pages/onboarding/guide' });
+    return;
+  }
   if (user.value) {
     void loadHotRoutes();
+    void fetchCurrentUser()
+      .then((fresh) => {
+        user.value = fresh;
+        if (needsOnboarding(fresh.onboardedAt)) {
+          uni.reLaunch({ url: '/pages/onboarding/guide' });
+        }
+      })
+      .catch(() => {
+        /* 忽略刷新失败，继续展示缓存 */
+      });
   } else {
     hotRoutes.value = [];
     hotError.value = '';

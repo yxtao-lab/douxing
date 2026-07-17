@@ -344,6 +344,13 @@
       "when": 1752595200000,
       "tag": "0049_scene_tags",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "5",
+      "when": 1752681600000,
+      "tag": "0050_user_onboarding",
+      "breakpoints": true
     }
   ]
 }
