@@ -27,6 +27,15 @@ export {
   type InterestTagSlug,
 } from './interest-tags.js';
 export {
+  formatSceneTagLabel,
+  joinSceneTagLabels,
+  isSceneTagSlug,
+  normalizeSceneTags,
+  sceneTagPresets,
+  SCENE_TAG_SET,
+  type SceneTagSlug,
+} from './scene-tags.js';
+export {
   formatPlanIntentSummary,
   buildMultiCandidateAssistantReply,
   buildPlanAssistantReply,

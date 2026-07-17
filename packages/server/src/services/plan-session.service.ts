@@ -280,6 +280,7 @@ function routeToDraft(route: NonNullable<Awaited<ReturnType<typeof getRouteById>
     budgetRange: route.budgetRange ?? '',
     days: route.days,
     interestTags: route.interestTags ?? [],
+    sceneTags: route.sceneTags ?? [],
     routeDetail: { days },
     unlockPrice: typeof detail.unlockPrice === 'number' ? detail.unlockPrice : 9.9,
     matchedCity: (detail.matchedCity as string) ?? '',

@@ -59,8 +59,28 @@
         <template v-else-if="column.key === 'imageSource'">
           {{ imageSourceLabel(record.imageSource) }}
         </template>
+        <template v-else-if="column.key === 'sceneTags'">
+          <a-space :size="4" wrap>
+            <a-tag
+              v-for="slug in record.sceneTags ?? []"
+              :key="slug"
+              color="blue"
+            >
+              {{ sceneTagLabel(slug) }}
+            </a-tag>
+            <span v-if="!record.sceneTags || record.sceneTags.length === 0" class="muted">
+              {{ t('attractions.sceneTagsEmpty') }}
+            </span>
+          </a-space>
+        </template>
         <template v-else-if="column.key === 'action'">
           <TableActionBar :show-edit="false" :show-delete="false">
+            <TableActionButton
+              variant="info"
+              :icon="TagsOutlined"
+              :label="t('attractions.sceneTagsEdit')"
+              @click="openSceneTagsEditor(record)"
+            />
             <a-upload
               :show-upload-list="false"
               accept="image/*"
@@ -91,6 +111,33 @@
         </template>
       </template>
     </DouxingAdminTable>
+
+    <a-modal
+      :open="sceneTagsEditor.open"
+      :title="
+        sceneTagsEditor.item
+          ? t('attractions.sceneTagsEditTitle', { name: sceneTagsEditor.item.name })
+          : t('attractions.sceneTagsEdit')
+      "
+      :confirm-loading="sceneTagsEditor.saving"
+      :ok-text="t('attractions.sceneTagsSave')"
+      :cancel-text="t('common.cancel')"
+      @ok="submitSceneTags"
+      @cancel="closeSceneTagsEditor"
+    >
+      <p class="scene-tags-desc">{{ t('attractions.sceneTagsEditDesc') }}</p>
+      <a-checkbox-group v-model:value="sceneTagsEditor.draft">
+        <a-space direction="vertical" :size="8">
+          <a-checkbox
+            v-for="opt in sceneTagOptions"
+            :key="opt.slug"
+            :value="opt.slug"
+          >
+            {{ opt.label }}
+          </a-checkbox>
+        </a-space>
+      </a-checkbox-group>
+    </a-modal>
   </PageContainer>
 </template>
 
@@ -100,13 +147,20 @@ import { useI18n } from 'vue-i18n';
 import type { UploadProps } from 'ant-design-vue';
 import type { AttractionInfo } from '@douxing/shared';
 import {
+  formatSceneTagLabel,
+  isSceneTagSlug,
+  sceneTagPresets,
+  type SceneTagSlug,
+} from '@douxing/shared';
+import {
   fetchAdminAttractionCatalogPage,
   uploadAttractionCover,
   refreshAttractionCoverFromAmap,
+  updateAttractionSceneTags,
 } from '@/api/attractions';
 import { useServerTablePagination } from '@/composables/useServerTablePagination';
 import { getAppErrorMessage } from '@/utils/error-message';
-import { ReloadOutlined, UploadOutlined } from '@ant-design/icons-vue';
+import { ReloadOutlined, UploadOutlined, TagsOutlined } from '@ant-design/icons-vue';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
 import AdminToolbar from '@/components/admin/AdminToolbar.vue';
@@ -137,6 +191,75 @@ const { items: list, loading, pagination, load, reload, handleTableChange } =
 const error = ref('');
 const uploadingId = ref<number | null>(null);
 const refreshingId = ref<number | null>(null);
+
+const sceneTagsEditor = ref<{
+  open: boolean;
+  saving: boolean;
+  item: AttractionInfo | null;
+  draft: string[];
+}>({
+  open: false,
+  saving: false,
+  item: null,
+  draft: [],
+});
+
+const sceneTagOptions = computed(() =>
+  sceneTagPresets.map((slug) => ({
+    slug,
+    label: formatSceneTagLabel(slug, 'zh-CN'),
+  })),
+);
+
+/**
+ * 根据场景标签 slug 渲染本地化文案；非法 slug 原样返回。
+ *
+ * @param slug - 场景标签 slug
+ * @returns 当前 locale 下的展示文案
+ */
+function sceneTagLabel(slug: string): string {
+  if (!isSceneTagSlug(slug)) return slug;
+  return formatSceneTagLabel(slug as SceneTagSlug, 'zh-CN');
+}
+
+/**
+ * 打开场景标签编辑弹窗，将当前景点的 sceneTags 复制到 draft。
+ *
+ * @param item - 选中的景点行
+ */
+function openSceneTagsEditor(item: AttractionInfo) {
+  sceneTagsEditor.value = {
+    open: true,
+    saving: false,
+    item,
+    draft: [...(item.sceneTags ?? [])],
+  };
+}
+
+function closeSceneTagsEditor() {
+  sceneTagsEditor.value.open = false;
+}
+
+/**
+ * 提交场景标签修改，成功后更新列表对应行。
+ */
+async function submitSceneTags() {
+  const item = sceneTagsEditor.value.item;
+  if (!item) return;
+  sceneTagsEditor.value.saving = true;
+  try {
+    const updated = await updateAttractionSceneTags(
+      item.id,
+      sceneTagsEditor.value.draft,
+    );
+    list.value = list.value.map((row) => (row.id === item.id ? updated : row));
+    sceneTagsEditor.value.open = false;
+  } catch (e) {
+    error.value = getAppErrorMessage(e, t('attractions.sceneTagsSaveFailed'));
+  } finally {
+    sceneTagsEditor.value.saving = false;
+  }
+}
 
 function imageSourceLabel(source?: string | null) {
   if (!source) return ADMIN_TABLE_EMPTY_PLACEHOLDER;
@@ -210,7 +333,16 @@ const columns = computed<AdminExportColumn<AttractionInfo>[]>(() => [
     width: 120,
     exportValue: (record) => imageSourceLabel(record.imageSource),
   },
-  { title: t('attractions.colAction'), key: 'action', width: 140 },
+  {
+    title: t('attractions.colSceneTags'),
+    key: 'sceneTags',
+    width: 200,
+    exportValue: (record) =>
+      (record.sceneTags ?? [])
+        .map((slug) => sceneTagLabel(slug))
+        .join(', '),
+  },
+  { title: t('attractions.colAction'), key: 'action', width: 180 },
 ]);
 
 async function fetchExportRows(): Promise<Record<string, unknown>[]> {
@@ -241,5 +373,11 @@ onMounted(load);
 .muted {
   color: #9ca3af;
   font-size: 12px;
+}
+
+.scene-tags-desc {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 16px;
 }
 </style>

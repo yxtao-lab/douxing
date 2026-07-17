@@ -182,6 +182,8 @@ gantt
 | v0.9.28 | 2026-06-18 | **H3-a 领养 API** | `POST/PATCH /api/pets/*` · `pet:adopt-cases` · 双语 ApiMessageKey | Step 25 ✅ |
 | v0.9.30 | 2026-07-06 | **AI流程编排路线图 v1.1** | 可行性分析 · Phase W0～W5 · MW1～MW4 · §12 术语表 | 与 M6 并行；不阻塞 Step 35～40 |
 | v0.9.41 | 2026-07-10 | **新页面 UI 规范** | 三端风格/布局 · 主题预留 · 组件复用 · [Cursor-Agent规则.md](./Cursor-Agent规则.md) · `.cursor/rules/page-ui-standards.mdc` | 与 H1 品牌 Token、G9 i18n 对齐 |
+| v0.9.42 | 2026-07-17 | **P-TAG-01 场景标签 + 标签专题区** | `shared/i18n/scene-tags.ts` · `attractions/travel_routes/users` 新增 `scene_tags`/`preferred_scenes` · `PATCH /admin/attractions/:id/scene-tags` · C2 `detectSceneTags` + C3 RAG 场景重排 · mobile/pc 首页场景 chip + `/scenes/:slug` 专题页 · Web 景点管理场景标签列与编辑 · `p-tag:scene-cases` 全绿 | [精准化路线图 §2](./精准化与人群定制路线图.md#2-p-tag-01-场景标签--标签专题区) · P-TAG-01 ✅ |
+| v0.9.43 | 2026-07-17 | **系统资源统计（数据中台）** | 远程 Git 浅克隆 · `GET /analytics/system-resources` · Web `/system-resources` · ECharts 多图 · [系统资源统计.md](./系统资源统计.md) | 侧栏「数据中台 → 系统资源统计」；`data:analytics:view` |
 | v0.9.31 | 2026-06-18 | **M5 达成** | H7/H8/H3-d 行中智能 · `h5:m5-accept` · 指针 → Step 35 I2 LoRA | — |
 | v0.9.32 | 2026-06-22 | **I2 Step 35 上传脚本** | `pnpm ml:upload-dataset` · `i2:pai-lora-cases` · `manifests/pai-job-v0.1.json` · OSS 校验 | PAI 微调任务待执行 |
 | v0.9.33 | 2026-06-24 | **S1 RBAC 闭环** | `role_menu` · `requirePerm` · 登录 `permissions` · 角色菜单分配 UI · `s1:rbac-cases` | 见 [系统管理.md](./系统管理.md) |
@@ -289,6 +291,7 @@ gantt
 | 2026-06-08 | P0～P4 PC 用户端功能迁移 | [§ P0～P4](./开发记录-重难点与亮点.md#p0p4-pc-用户端功能迁移) |
 | 2026-06-08 | 双端 Logo 与主题色 | [§ 双端品牌](./开发记录-重难点与亮点.md#双端-logo-与主题色) |
 | 2026-06-09 | G4/DT1 管理端数据分析与数据中台 | [§ G4/DT1](./开发记录-重难点与亮点.md#g4dt1-管理端数据分析与数据中台) |
+| 2026-07-17 | 系统资源统计（远程 Git） | [§ 系统资源统计](./开发记录-重难点与亮点.md#系统资源统计远程-git工程资产看板2026-07-17) |
 | 2026-06-26 | DT5 旅行运营大屏（一期） | [旅行运营大屏.md](./旅行运营大屏.md) · [§ DT5](./开发记录-重难点与亮点.md#dt5-旅行运营大屏一期2026-06-26) |
 | 2026-06-09 | 双模块架构 · 系统管理与发单接单（产品定稿） | [§ 双模块](./开发记录-重难点与亮点.md#双模块架构系统管理与发单接单2026-06-09) |
 | 2026-06-10 | F 线 · 数字孪生与三维建模（方案定稿） | [§ F 线](./开发记录-重难点与亮点.md#f-线数字孪生与三维建模思路录入2026-06-10) |
@@ -429,6 +432,7 @@ GET  /api/analytics/top-cities
 GET  /api/analytics/funnel
 GET  /api/analytics/geo/distribution
 GET  /api/analytics/geo/flows
+GET  /api/analytics/system-resources
 POST /api/analytics/events
 ```
 
@@ -473,7 +477,7 @@ POST /api/analytics/events
 | §13 | 前沿技术 | — | Web3、联邦学习等 |
 | 移动端 UX | iconfont TabBar、四 Tab | **H1-a/b/c 已完成**；全站 `--dx-*` token + 双主题；**H2-a 手帐海报** 已落地；见 [§5 宣传类目](#宣传类目h1--h2--d5-最小版分-phase-实施) | — |
 | **PC 用户端 UX** | C 端桌面浏览器 | **P0～P4 已完成**（2026-06-08）：规划 · 路线详情 · 个人中心 · 分享手帐；**P5** 生产部署待做 | 见 [§ 阶段 P](#阶段-pc-用户端c-端桌面网页2026-06-08-录入) · [品牌视觉规范 §15](./品牌视觉规范.md) |
-| Web 管理端 UX | Ant Design Vue 4 左右布局 | **W1 已完成**（2026-06-03）：侧栏+Logo+多标签页；**2026-06-08** 品牌 Logo/主题色；**G4/DT1 已完成**（2026-06-09）：数据中台菜单 + 数据分析 ECharts 看板；**W2 已完成**（2026-06-15）：统一筛选栏 · XLSX 报表导出 · 空值 `-` | [Web管理端表格规范.md](./Web管理端表格规范.md) · [品牌视觉规范 §14](./品牌视觉规范.md) · [数据中台](./数据中台.md) |
+| Web 管理端 UX | Ant Design Vue 4 左右布局 | **W1 已完成**（2026-06-03）：侧栏+Logo+多标签页；**2026-06-08** 品牌 Logo/主题色；**G4/DT1 已完成**（2026-06-09）：数据中台菜单 + 数据分析 ECharts 看板；**2026-07-17** 系统资源统计；**W2 已完成**（2026-06-15）：统一筛选栏 · XLSX 报表导出 · 空值 `-` | [Web管理端表格规范.md](./Web管理端表格规范.md) · [品牌视觉规范 §14](./品牌视觉规范.md) · [数据中台](./数据中台.md) · [系统资源统计](./系统资源统计.md) |
 | 分享与传播 | 广场公开路线 | **H2-a + D5-a 已完成**；**H2-a+ / H2-b / H2-c** 待续；远期 **H10** UGC 视频+热评增强可信度 | D5 完整 H5 只读页 + 搭子链分享；**分享拉新奖励**见 [用户粘性与旅友圈战略 §3.1](./用户粘性与旅友圈战略.md#31-推广分享奖励--优先做) |
 | **§8 + Web** | **系统管理（S 线）** | **S0～S2 已完成**（2026-06-26）：RBAC · `requirePerm` · 动态侧栏 | **S3** 运营账号规范（可选）；见 [系统管理.md](./系统管理.md) |
 | **§5.5 + 新增** | **发单接单（M 线 · 模块 B）** | **M5～M7 ✅ · E2 接线 ✅**（2026-07-15） | MB4 通道预览；沙箱真机一笔收口；见 [发单接单路线图](./发单接单路线图.md) |
@@ -830,6 +834,7 @@ generateRoute 管道
 | **DT3** | [x] | 2026-06-26 | 客户端埋点 | DT1 | mobile/pc `POST /analytics/events`；`GET /analytics/funnel`；看板漏斗 | 规划完成等行为可统计 |
 | **DT4** | [ ] | — | ClickHouse 升级（可选） | DT2、§7 详细设计 | MySQL → ClickHouse 同步 | 大数据量 OLAP |
 | **DT5** | [x] | 2026-06-26 | 旅行运营大屏（一期） | DT1、DT3 | `web` `ScreenLayout` + `/screen/travel`；`GET /analytics/geo/*` · `/funnel`；ECharts 全国分布 + 漏斗 + 热力点 | 管理员全屏可见全站旅行分布与路径漏斗；`dt5:analytics-cases` 全绿；见 [旅行运营大屏.md](./旅行运营大屏.md) |
+| **工程资产** | [x] | 2026-07-17 | 系统资源统计 | DT1 | 远程 Git 浅克隆；`GET /analytics/system-resources`；Web `/system-resources` | 侧栏可见代码/组件/模块/文档与提交趋势；见 [系统资源统计.md](./系统资源统计.md) |
 
 **推荐顺序（当前）**：`DT1` ✅ → `DT3` ✅ → `DT2` ✅ → **`DT5` 一期 ✅** → `DT4`（按需）· **DT5 二期**（全球 3D / 时间窗切换，按需）。DT5 二期与 F 线 L3 3D 底图可叠加 Cesium。
 
@@ -1499,7 +1504,7 @@ Step 35～40（M6 主链验收）
 
 | 优先级 | ID | 待办项 | 用户价值 | 当前缺口 | 建议落点 | 验收标准 | 关联文档/阶段 |
 |--------|----|--------|----------|----------|----------|----------|---------------|
-| **P1** | **P-TAG-01** | **场景标签 + 标签专题区**（溜娃/约会/玩水/纳凉） | 按场景而非类型找需求 | `interestTags` 偏类型，无场景维度 | `attractions.sceneTags` + `travel_routes.sceneTags` + 专题页 | 首页场景 chip → 专题页聚合景点/路线/标品/需求；`p-tag:scene-cases` 全绿 | [精准化路线图 §2](./精准化与人群定制路线图.md#2-p-tag-01-场景标签--标签专题区) |
+| **P1** | **P-TAG-01** ✅ | **场景标签 + 标签专题区**（溜娃/约会/玩水/纳凉） | 按场景而非类型找需求 | `interestTags` 偏类型，无场景维度 | `attractions.sceneTags` + `travel_routes.sceneTags` + 专题页 | 首页场景 chip → 专题页聚合景点/路线/标品/需求；`p-tag:scene-cases` 全绿 | [精准化路线图 §2](./精准化与人群定制路线图.md#2-p-tag-01-场景标签--标签专题区) · **已完成 2026-07-17** |
 | **P1** | **P-MEMORY-01** | **已去景点避重推荐** | 不再推荐去过的地方 | `user_travel_persona.avoidList` 已有字段未注入规划 | C2/C3 注入 + Enricher 去重 + 用户可控开关 | 默认严格避重；可切换软避重/关闭；`p-memory:avoid-repeat-cases` 全绿 | [精准化路线图 §6](./精准化与人群定制路线图.md#6-p-memory-01-已去景点避重推荐) · A-COGNITION-01 |
 | **P1** | **P-INPUT-01** | **规划对话标签化定制** | 不打字也能发起规划 | 规划页仅文本输入，约束易遗漏 | 标签/滑块/选择器面板 + 直接构建 `TravelIntentSnapshot` | 仅点选标签可发起规划；标签+文本混合生效；`p-input:tag-customize-cases` 全绿 | [精准化路线图 §8](./精准化与人群定制路线图.md#8-p-input-01-规划对话标签化定制) · C1/C2/C7 |
 | **P1** | **P-ONBOARD-01** | **首次进入标签引导 + 分类标签体系 + 人群定制推荐** | 新用户从第一次就精准 | 注册后画像为空，首页无个性化 | 3 步分类引导（基础属性/旅行半径/旅行场景）+ 可跳过 + 默认非空 + 推荐引擎 | 引导可跳过且画像非空；首页按画像差异化；`p-onboard:tag-guide-cases` + `p-recommend:personalized-cases` 全绿 | [精准化路线图 §9](./精准化与人群定制路线图.md#9-p-onboard-01-首次进入标签引导--分类标签体系) · A1/A-COGNITION-01 |
@@ -1571,4 +1576,4 @@ Step 35～40（M6 主链验收）
 
 ---
 
-*文档版本 3.49 · 最后更新：2026-07-17（精准化与人群定制待办池 + AI 流程优化联动 21 点录入）*
+*文档版本 3.50 · 最后更新：2026-07-17（P-TAG-01 场景标签 + 标签专题区落地，v0.9.42）*

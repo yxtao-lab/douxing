@@ -3,6 +3,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   home: 'web.home',
   data: 'web.menu.data',
   analytics: 'web.analytics',
+  'system-resources': 'web.systemResources',
   'plan-diagnostics': 'web.planDiagnostics',
   'workflow-templates': 'web.workflowTemplates',
   biz: 'web.menu.biz',

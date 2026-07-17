@@ -112,6 +112,12 @@
       }
     },
     {
+      "path": "pages/scenes/detail",
+      "style": {
+        "navigationBarTitleText": "场景专题"
+      }
+    },
+    {
       "path": "pages/marketplace/create",
       "style": {
         "navigationBarTitleText": "发布需求"

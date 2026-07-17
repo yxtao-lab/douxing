@@ -24,6 +24,8 @@ export const attractions = mysqlTable(
     latitude: decimal('latitude', { precision: 10, scale: 7 }),
     longitude: decimal('longitude', { precision: 10, scale: 7 }),
     tags: json('tags').$type<string[]>().notNull(),
+    /** P-TAG-01：场景标签（slug 列表，如 kids/date/water…）；null 表示未打场景标签，业务层兜底为空数组 */
+    sceneTags: json('scene_tags').$type<string[]>(),
     description: text('description'),
     ticketPrice: int('ticket_price').notNull().default(0),
     aliases: json('aliases').$type<string[]>(),

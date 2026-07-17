@@ -18,6 +18,17 @@ export const mobileEnUS = {
     hotRoutesEmpty: 'No public routes yet — publish and share yours',
     hotRoutesGuestHint: 'Sign in to browse community itineraries',
     hotRoutesLoadFailed: 'Could not load popular routes',
+    sceneExploreTitle: 'Browse by scene',
+    sceneExploreHint: 'Family fun, date, water play… pick a scene and go',
+  },
+  scenes: {
+    pageTitle: 'Scene hub',
+    attractionsTitle: 'Popular sights',
+    routesTitle: 'Featured routes',
+    attractionsEmpty: 'No sights for this scene yet — try planning a route',
+    routesEmpty: 'No public routes for this scene yet',
+    loadFailed: 'Could not load scene content',
+    back: 'Back',
   },
   emptyState: {
     achievementsDesc: 'Check in at sights to unlock more achievements',

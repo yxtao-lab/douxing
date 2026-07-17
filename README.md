@@ -22,7 +22,7 @@
 | 包管理与 npm/pnpm 对照 | [docs/包管理与命令.md](docs/包管理与命令.md) |
 | 详细设计（Markdown + §17 补充） | [docs/详细设计文档.md](docs/详细设计文档.md) |
 | 功能路线图（含 S/M/F/K-A/P6 线） | [docs/ROADMAP.md](docs/ROADMAP.md) |
-| 数据中台（DT 线） | [docs/数据中台.md](docs/数据中台.md) · [docs/旅行运营大屏.md](docs/旅行运营大屏.md) |
+| 数据中台（DT 线） | [docs/数据中台.md](docs/数据中台.md) · [docs/系统资源统计.md](docs/系统资源统计.md) · [docs/旅行运营大屏.md](docs/旅行运营大屏.md) |
 | 下一步工作（当前 Sprint） | [docs/下一步工作.md](docs/下一步工作.md) |
 | API 接口文档 + OpenAPI | [docs/API接口文档.md](docs/API接口文档.md) · [docs/openapi.yaml](docs/openapi.yaml) |
 | 旅程相册（J 线） | [docs/旅行照片存储系统.md](docs/旅行照片存储系统.md) |

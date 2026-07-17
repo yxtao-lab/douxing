@@ -113,6 +113,7 @@ export async function createRouteFromPrompt(userId: number, input: GenerateRoute
     budgetRange: draft.budgetRange,
     days: draft.days,
     interestTags: draft.interestTags,
+    sceneTags: draft.sceneTags ?? [],
     routeDetail: detail,
     creatorId: userId,
     status: RouteStatus.DRAFT,
@@ -172,6 +173,7 @@ export async function createRouteFromAgentDraft(
     budgetRange: draft.budgetRange,
     days: draft.days,
     interestTags: draft.interestTags,
+    sceneTags: draft.sceneTags ?? [],
     routeDetail: detail,
     creatorId: userId,
     status: RouteStatus.DRAFT,
@@ -296,6 +298,7 @@ export async function updateDraftRoute(
   if (input.budgetRange !== undefined) patch.budgetRange = input.budgetRange;
   if (input.days !== undefined) patch.days = input.days;
   if (input.interestTags !== undefined) patch.interestTags = input.interestTags;
+  if (input.sceneTags !== undefined) patch.sceneTags = input.sceneTags;
 
   if (input.routeDetail !== undefined) {
     patch.routeDetail = {
@@ -447,6 +450,7 @@ export async function regenerateRouteFromPrompt(
       budgetRange: draft.budgetRange,
       days: draft.days,
       interestTags: draft.interestTags,
+      sceneTags: draft.sceneTags ?? [],
       routeDetail: detail,
     })
     .where(eq(travelRoutes.id, routeId));
@@ -519,6 +523,7 @@ export async function updateRouteFromAgentDraft(
       budgetRange: draft.budgetRange,
       days: draft.days,
       interestTags: draft.interestTags,
+      sceneTags: draft.sceneTags ?? [],
       routeDetail: detail,
     })
     .where(eq(travelRoutes.id, routeId));

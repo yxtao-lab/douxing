@@ -18,6 +18,8 @@ export const travelRoutes = mysqlTable('travel_routes', {
   budgetRange: varchar('budget_range', { length: 64 }),
   days: int('days').notNull().default(1),
   interestTags: json('interest_tags').$type<string[]>(),
+  /** P-TAG-01：路线场景标签（slug 列表），规划生成时由 LLM 抽取或用户标签化定制时写入 */
+  sceneTags: json('scene_tags').$type<string[]>(),
   routeDetail: json('route_detail').$type<Record<string, unknown>>(),
   creatorId: int('creator_id')
     .notNull()

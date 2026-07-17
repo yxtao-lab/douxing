@@ -384,6 +384,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'system-resources',
+          name: 'system-resources',
+          component: () => import('@/views/SystemResourcesView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.systemResources',
+            menuGroupKey: 'web.menu.data',
+            icon: 'PieChartOutlined',
+            perm: 'data:analytics:view',
+          },
+        },
+        {
           path: 'plan-sessions/diagnostics/:sessionId?',
           name: 'plan-diagnostics',
           component: () => import('@/views/PlanWorkflowDiagnosticsView.vue'),

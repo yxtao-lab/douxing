@@ -241,6 +241,8 @@ export const ApiMessageKey = {
   ANALYTICS_EVENT_NOT_ALLOWED: 'api.analyticsEventNotAllowed',
   ANALYTICS_GEO_DISTRIBUTION_FAILED: 'api.analyticsGeoDistributionFailed',
   ANALYTICS_GEO_FLOWS_FAILED: 'api.analyticsGeoFlowsFailed',
+  SYSTEM_RESOURCES_FAILED: 'api.systemResourcesFailed',
+  SYSTEM_RESOURCES_GIT_FAILED: 'api.systemResourcesGitFailed',
 
   MEMBERSHIP_PRODUCT_NOT_FOUND: 'api.membershipProductNotFound',
   MEMBERSHIP_ALREADY_MAX: 'api.membershipAlreadyMax',

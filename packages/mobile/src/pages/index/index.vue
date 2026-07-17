@@ -47,6 +47,25 @@
           </view>
         </view>
 
+        <view class="section scene-section">
+          <view class="section-head">
+            <text class="section-title">{{ t('home.sceneExploreTitle') }}</text>
+          </view>
+          <scroll-view scroll-x class="scene-chips" show-scrollbar="false">
+            <view class="scene-chips-inner">
+              <view
+                v-for="slug in sceneTagSlugs"
+                :key="slug"
+                class="scene-chip"
+                @click="goScene(slug)"
+              >
+                <text class="scene-chip-emoji">{{ sceneEmoji(slug) }}</text>
+                <text class="scene-chip-label">{{ sceneLabel(slug) }}</text>
+              </view>
+            </view>
+          </scroll-view>
+        </view>
+
         <view class="section hot-section">
           <view class="section-head">
             <text class="section-title">{{ t('home.hotRoutesTitle') }}</text>
@@ -144,7 +163,7 @@
 import { ref, computed, watch, nextTick, getCurrentInstance } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
 import type { TravelRouteInfo } from '@douxing/shared';
-import { normalizePaginatedItems } from '@douxing/shared';
+import { normalizePaginatedItems, sceneTagPresets, formatSceneTagLabel, type SceneTagSlug } from '@douxing/shared';
 import { fetchPlazaRoutes } from '@/api/routes';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
@@ -156,7 +175,7 @@ import { useTf } from '@/i18n/useTf';
 
 const PLAZA_SCOPE_STORAGE_KEY = 'routes_initial_scope';
 
-const { t, tf } = useTf();
+const { t, tf, locale } = useTf();
 const { themeClass } = useTheme();
 usePageTitle('nav.index');
 
@@ -178,6 +197,33 @@ const valueProps = computed(() => [
   t('home.valueProp2'),
   t('home.valueProp3'),
 ]);
+
+const sceneTagSlugs = sceneTagPresets as SceneTagSlug[];
+
+function sceneLabel(slug: SceneTagSlug) {
+  return formatSceneTagLabel(slug, (locale.value ?? 'zh-CN') as 'zh-CN' | 'en-US');
+}
+
+const SCENE_EMOJI: Record<SceneTagSlug, string> = {
+  kids: '👨‍👩‍👧',
+  date: '💑',
+  water: '💦',
+  cool: '🍃',
+  flower: '🌸',
+  night: '🌃',
+  'summer-escape': '🏔️',
+  spring: '🌱',
+  blessing: '🏮',
+  camping: '⛺',
+};
+
+function sceneEmoji(slug: SceneTagSlug) {
+  return SCENE_EMOJI[slug] ?? '✨';
+}
+
+function goScene(slug: SceneTagSlug) {
+  uni.navigateTo({ url: `/pages/scenes/detail?slug=${encodeURIComponent(slug)}` });
+}
 
 const welcomeText = computed(() => {
   if (!user.value) return '';
@@ -561,6 +607,39 @@ function goRouteDetail(id: number) {
   font-size: 26rpx;
   color: var(--dx-primary);
   font-weight: 500;
+}
+
+.scene-chips {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.scene-chips-inner {
+  display: inline-flex;
+  gap: 16rpx;
+  padding: 4rpx 0 8rpx;
+}
+
+.scene-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10rpx;
+  padding: 16rpx 24rpx;
+  border-radius: 999rpx;
+  background: var(--dx-surface);
+  border: 1rpx solid var(--dx-border);
+  box-shadow: var(--dx-shadow-sm);
+}
+
+.scene-chip-emoji {
+  font-size: 32rpx;
+  line-height: 1;
+}
+
+.scene-chip-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--dx-text);
 }
 
 .hot-carousel {

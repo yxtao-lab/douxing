@@ -11,6 +11,7 @@ import badgesRouter from './badges.js';
 import leaderboardRouter from './leaderboard.js';
 import usersRouter from './users.js';
 import attractionsRouter from './attractions.js';
+import scenesRouter from './scenes.js';
 import speechRouter from './speech.js';
 import shareRouter from './share.js';
 
@@ -34,6 +35,7 @@ router.use(`${API_PREFIX}/status`, statusRouter);
 router.use(`${API_PREFIX}/auth`, authRouter);
 router.use(`${API_PREFIX}/users`, usersRouter);
 router.use(`${API_PREFIX}/attractions`, attractionsRouter);
+router.use(`${API_PREFIX}/scenes`, scenesRouter);
 router.use(`${API_PREFIX}/routes`, routesRouter);
 router.use(`${API_PREFIX}/checkins`, checkinsRouter);
 router.use(`${API_PREFIX}/orders`, ordersRouter);

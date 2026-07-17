@@ -84,3 +84,17 @@ export async function refreshAttractionCoverFromAmap(id: number) {
   );
   return data.data;
 }
+
+/**
+ * 更新景点场景标签（P-TAG-01，运营维护）。
+ *
+ * @param id - 景点 ID
+ * @param sceneTags - 场景标签 slug 列表；覆盖现有标签
+ */
+export async function updateAttractionSceneTags(id: number, sceneTags: string[]) {
+  const { data } = await http.patch<ApiResponse<AttractionInfo>>(
+    `/attractions/admin/${id}/scene-tags`,
+    { sceneTags },
+  );
+  return data.data;
+}

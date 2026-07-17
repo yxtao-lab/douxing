@@ -51,6 +51,26 @@
       </div>
     </section>
 
+    <section class="mx-auto max-w-7xl px-4 py-8 lg:px-8">
+      <div class="mb-4 flex items-end justify-between">
+        <div>
+          <h2 class="text-xl font-semibold text-dx-text">{{ t('home.sceneExploreTitle') }}</h2>
+          <p class="mt-1 text-sm text-dx-muted">{{ t('home.sceneExploreHint') }}</p>
+        </div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <RouterLink
+          v-for="slug in sceneTagSlugs"
+          :key="slug"
+          :to="{ name: 'scene-detail', params: { slug } }"
+          class="inline-flex items-center gap-2 rounded-full border border-dx-border bg-white px-4 py-2 text-sm font-medium text-dx-text shadow-sm transition hover:border-dx-primary hover:text-dx-primary"
+        >
+          <span class="text-lg">{{ sceneEmoji(slug) }}</span>
+          <span>{{ sceneLabel(slug) }}</span>
+        </RouterLink>
+      </div>
+    </section>
+
     <section class="mx-auto max-w-7xl px-4 py-10 lg:px-8">
       <div class="mb-6 flex items-end justify-between">
         <h2 class="text-xl font-semibold text-dx-text">{{ t('home.hotRoutesTitle') }}</h2>
@@ -93,7 +113,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import type { TravelRouteInfo } from '@douxing/shared';
+import type { TravelRouteInfo, SceneTagSlug } from '@douxing/shared';
+import { sceneTagPresets, formatSceneTagLabel } from '@douxing/shared';
 import { fetchPlazaRoutesPage } from '@/api/routes';
 import AppLogo from '@/components/AppLogo.vue';
 import RouteCard from '@/components/RouteCard.vue';
@@ -103,7 +124,30 @@ import { getAppErrorMessage } from '@/utils/error-message';
 
 const router = useRouter();
 const userStore = useUserStore();
-const { t } = useLocale();
+const { t, currentLocale } = useLocale();
+
+const sceneTagSlugs = sceneTagPresets as SceneTagSlug[];
+
+const SCENE_EMOJI: Record<SceneTagSlug, string> = {
+  kids: '👨‍👩‍👧',
+  date: '💑',
+  water: '💦',
+  cool: '🍃',
+  flower: '🌸',
+  night: '🌃',
+  'summer-escape': '🏔️',
+  spring: '🌱',
+  blessing: '🏮',
+  camping: '⛺',
+};
+
+function sceneLabel(slug: SceneTagSlug) {
+  return formatSceneTagLabel(slug, (currentLocale.value ?? 'zh-CN') as 'zh-CN' | 'en-US');
+}
+
+function sceneEmoji(slug: SceneTagSlug) {
+  return SCENE_EMOJI[slug] ?? '✨';
+}
 
 const hotRoutes = ref<TravelRouteInfo[]>([]);
 const hotLoading = ref(false);

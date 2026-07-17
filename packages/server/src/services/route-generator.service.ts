@@ -80,6 +80,8 @@ export interface GeneratedRouteDraft {
   budgetRange: string;
   days: number;
   interestTags: string[];
+  /** P-TAG-01：场景标签 slug 列表；来自 intent.sceneTags 或文本抽取 */
+  sceneTags: string[];
   routeDetail: RouteTemplate['routeDetail'];
   unlockPrice: number;
   matchedCity: string;
@@ -91,6 +93,35 @@ export interface GeneratedRouteDraft {
 function detectTags(prompt: string): string[] {
   const themes = parseTravelIntent(prompt).themes;
   return themes.length > 0 ? themes : ['休闲'];
+}
+
+/**
+ * 从文本中抽取场景标签 slug（P-TAG-01 优化点 3）。
+ *
+ * @param prompt - 用户原始输入文本
+ * @returns 命中的场景标签 slug 数组（去重）；无命中返回空数组
+ */
+function detectSceneTags(prompt: string): string[] {
+  const text = prompt.toLowerCase();
+  const hits: string[] = [];
+  const map: Array<[string, string[]]> = [
+    ['kids', ['溜娃', '带娃', '亲子', '孩子', '小孩', 'family fun']],
+    ['date', ['约会', '情侣', '浪漫', '二人世界', 'date']],
+    ['water', ['玩水', '戏水', '漂流', '水上乐园', 'water']],
+    ['cool', ['纳凉', '避暑', '凉爽', 'cool retreat']],
+    ['flower', ['赏花', '花海', '花季', 'flower']],
+    ['night', ['夜游', '夜景', '夜市', 'night tour']],
+    ['summer-escape', ['避暑', '消夏', 'summer escape']],
+    ['spring', ['踏青', '春游', 'spring outing']],
+    ['blessing', ['祈福', '烧香', '寺庙', 'blessing']],
+    ['camping', ['露营', '帐篷', '营地', 'camping']],
+  ];
+  for (const [slug, keywords] of map) {
+    if (keywords.some((k) => text.includes(k.toLowerCase()))) {
+      hits.push(slug);
+    }
+  }
+  return [...new Set(hits)];
 }
 
 function resolveIntent(input: GenerateRouteInput): Promise<TravelIntentSnapshot> {
@@ -121,6 +152,7 @@ async function resolveRagCandidates(
   return retrieveAttractionsForPlanning({
     city: resolvePlanningCity(intent),
     themes: intent.themes,
+    sceneTags: intent.sceneTags,
     prompt: input.prompt,
     days: intent.days,
     excludeIds: input.excludePoiIds,
@@ -228,9 +260,17 @@ export async function generateRoute(
     llmProvider?: string,
     llmUsage?: NodeSpanLlmUsage,
   ) => {
+    // P-TAG-01：确保所有生成路径都带 sceneTags（LLM/RAG/模板统一兜底）
+    const sceneTags =
+      draft.sceneTags && draft.sceneTags.length > 0
+        ? draft.sceneTags
+        : intent.sceneTags && intent.sceneTags.length > 0
+          ? intent.sceneTags
+          : detectSceneTags(input.prompt);
+    const draftWithSceneTags: GeneratedRouteDraft = { ...draft, sceneTags };
     if (options?.draftOnly) {
       const prepared = await prepareRouteDraftBeforeEnrich(
-        draft,
+        draftWithSceneTags,
         enrichedInput,
         intent,
         ragCandidates,
@@ -244,7 +284,7 @@ export async function generateRoute(
       };
     }
     const finalized = await finalizeRouteDraft(
-      draft,
+      draftWithSceneTags,
       enrichedInput,
       intent,
       ragCandidates,
@@ -404,6 +444,7 @@ export function generateRouteFromTemplate(
     budgetRange,
     days,
     interestTags: [...new Set([...best.interestTags, ...tags])],
+    sceneTags: detectSceneTags(prompt),
     routeDetail,
     unlockPrice: best.unlockPrice,
     matchedCity: city ?? best.city,

@@ -43,6 +43,16 @@ export const pcZhCN = {
     hotRoutesEmpty: '暂无公开路线，发布后可分享到广场',
     hotRoutesGuestHint: '登录后可浏览社区热门行程',
     hotRoutesLoadFailed: '热门路线加载失败',
+    sceneExploreTitle: '按场景逛',
+    sceneExploreHint: '溜娃、约会、玩水…挑一个场景出发',
+  },
+  scenes: {
+    pageTitle: '场景专题',
+    attractionsTitle: '热门景点',
+    routesTitle: '精选路线',
+    attractionsEmpty: '该场景暂无景点，先去规划一条路线',
+    routesEmpty: '该场景暂无公开路线',
+    loadFailed: '场景内容加载失败',
   },
   login: {
     heroSubtitle: '登录后即可智能规划、打卡记录与分享路线',

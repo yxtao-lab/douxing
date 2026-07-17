@@ -243,6 +243,8 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_EVENT_NOT_ALLOWED]: '不允许上报该埋点事件',
   [ApiMessageKey.ANALYTICS_GEO_DISTRIBUTION_FAILED]: '获取旅行分布数据失败',
   [ApiMessageKey.ANALYTICS_GEO_FLOWS_FAILED]: '获取城际流动数据失败',
+  [ApiMessageKey.SYSTEM_RESOURCES_FAILED]: '获取系统资源统计失败',
+  [ApiMessageKey.SYSTEM_RESOURCES_GIT_FAILED]: '拉取远程仓库失败，请检查 Git 凭证与 SYSTEM_RESOURCES_GIT_REMOTE 配置',
 
   [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: '会员套餐不存在',
   [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: '已是最高会员等级',
@@ -592,6 +594,9 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.ANALYTICS_EVENT_NOT_ALLOWED]: 'This analytics event is not allowed',
   [ApiMessageKey.ANALYTICS_GEO_DISTRIBUTION_FAILED]: 'Failed to load travel distribution',
   [ApiMessageKey.ANALYTICS_GEO_FLOWS_FAILED]: 'Failed to load intercity flows',
+  [ApiMessageKey.SYSTEM_RESOURCES_FAILED]: 'Failed to load system resource stats',
+  [ApiMessageKey.SYSTEM_RESOURCES_GIT_FAILED]:
+    'Failed to fetch remote repository. Check Git credentials and SYSTEM_RESOURCES_GIT_REMOTE',
 
   [ApiMessageKey.MEMBERSHIP_PRODUCT_NOT_FOUND]: 'Membership plan not found',
   [ApiMessageKey.MEMBERSHIP_ALREADY_MAX]: 'Already at the highest membership tier',

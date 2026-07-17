@@ -36,6 +36,7 @@ function buildMockDraft(): GeneratedRouteDraft {
     budgetRange: '2000-4000',
     days: 3,
     interestTags: ['休闲'],
+    sceneTags: [],
     matchedCity: '杭州',
     unlockPrice: 9.9,
     isAiGenerated: true,

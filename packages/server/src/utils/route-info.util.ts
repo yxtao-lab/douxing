@@ -45,6 +45,7 @@ export function toRouteInfo(
     budgetRange: row.budgetRange,
     days: row.days,
     interestTags: row.interestTags,
+    sceneTags: row.sceneTags ?? null,
     routeDetail: detail,
     creatorId: row.creatorId,
     status: row.status,

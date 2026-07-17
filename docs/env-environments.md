@@ -115,6 +115,20 @@ pnpm build:web
 
 ---
 
+## 6.2 数据中台 · 系统资源统计（远程 Git）
+
+| 变量 | 说明 | 默认 |
+|------|------|------|
+| `SYSTEM_RESOURCES_GIT_REMOTE` | 远程仓库 URL；不配则回退读本机 `origin` | （本机 origin） |
+| `SYSTEM_RESOURCES_GIT_BRANCH` | 统计分支 | `main` |
+| `SYSTEM_RESOURCES_GIT_DEPTH` | 浅克隆深度 | `120` |
+| `SYSTEM_RESOURCES_GIT_CACHE_DIR` | 克隆缓存根目录（**须绝对路径**；勿放到仓库 `.git/` 下） | OS temp |
+| `PROJECT_ROOT` | 可选；仅用于回退读 `origin`，不扫业务源码 | 自动探测 |
+
+部署机需能访问该远程（SSH key 或 HTTPS token）。口径与踩坑见 [系统资源统计.md](./系统资源统计.md)。
+
+---
+
 ## 7. Agent 与向量 RAG（C7 / C3 扩展）
 
 | 变量 | 说明 | 默认 |

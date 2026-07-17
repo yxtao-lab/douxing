@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   AnalyticsEventCategory,
   AnalyticsEventSource,
+  ApiError,
   ApiMessageKey,
   isClientAnalyticsEventName,
 } from '@douxing/shared';
@@ -23,6 +24,7 @@ import {
   getAnalyticsGeoDistribution,
   getAnalyticsGeoFlows,
 } from '../services/analytics-geo.service.js';
+import { getSystemResourcesStats } from '../services/system-resources.service.js';
 
 const router = Router();
 
@@ -185,6 +187,31 @@ router.get('/geo/flows', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[analytics/geo/flows]', err);
     fail(res, ApiMessageKey.ANALYTICS_GEO_FLOWS_FAILED, 500, 500);
+  }
+});
+
+const systemResourcesQuerySchema = z.object({
+  refresh: z.coerce.boolean().optional(),
+});
+
+router.get('/system-resources', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'data:analytics:view'))) return;
+
+  const parsed = systemResourcesQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    fail(res, ApiMessageKey.PARAM_ERROR, 400, 400);
+    return;
+  }
+
+  try {
+    success(res, await getSystemResourcesStats(parsed.data.refresh === true));
+  } catch (err) {
+    console.error('[analytics/system-resources]', err);
+    if (err instanceof ApiError) {
+      fail(res, err.messageKey, 500, 500, err.params);
+      return;
+    }
+    fail(res, ApiMessageKey.SYSTEM_RESOURCES_FAILED, 500, 500);
   }
 });
 

@@ -8,7 +8,7 @@ info:
     - 鉴权：Header `Authorization: Bearer <Access Token JWT>`；过期后客户端用 Refresh Token 调 `POST /api/auth/refresh`（见 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md)）
     - 国际化：Header `Accept-Language: zh-CN | en-US`
     - 人类可读说明见 [API接口文档.md](./API接口文档.md)
-  version: 1.4.0
+  version: 1.4.1
   contact:
     name: 兜行项目
 
@@ -2592,6 +2592,38 @@ paths:
         '403':
           description: 非管理员
 
+  /api/analytics/system-resources:
+    get:
+      tags: [数据分析]
+      summary: 系统资源统计（远程 Git，管理员）
+      description: |
+        浅克隆远程仓库后分类统计代码/组件/页面/模块/文档与提交趋势。
+        不扫描部署机本机业务工作区。详见 docs/系统资源统计.md。
+      operationId: analyticsSystemResources
+      parameters:
+        - name: refresh
+          in: query
+          description: 为 true/1 时强制重新 fetch 远程并刷新缓存
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: 成功
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/SystemResourcesStats'
+        '403':
+          description: 非管理员或无 data:analytics:view
+        '500':
+          description: 远程 Git 拉取或聚合失败（messageKey api.systemResourcesGitFailed / api.systemResourcesFailed）
+
   /api/analytics/events:
     post:
       tags: [数据分析]
@@ -3638,6 +3670,107 @@ components:
             total: { type: integer }
             newLast7Days: { type: integer }
         generatedAt: { type: string, format: date-time }
+
+    SystemResourcesStats:
+      type: object
+      description: GET /api/analytics/system-resources 响应体（远程 Git 快照）
+      properties:
+        source:
+          type: string
+          enum: [git-remote]
+        remoteUrl: { type: string, description: 脱敏后的远程地址 }
+        branch: { type: string }
+        commitSha: { type: string }
+        commitAt: { type: string, format: date-time }
+        apiRouteCount: { type: integer }
+        generatedAt: { type: string, format: date-time }
+        projectRoot:
+          type: string
+          deprecated: true
+          description: 兼容字段，优先使用 remoteUrl
+        packages:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        fileTypes:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceFileTypeStat' }
+        docs:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceDocStat' }
+        componentsByApp:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        pagesByApp:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        modules:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        plugins:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        dependencies:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourcePackageStat' }
+        commitTrends:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceCommitDayStat' }
+        moduleChurn:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceModuleChurnStat' }
+        overview:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceMetricItem' }
+        i18nKeys:
+          type: array
+          items: { $ref: '#/components/schemas/SystemResourceMetricItem' }
+
+    SystemResourcePackageStat:
+      type: object
+      properties:
+        name: { type: string }
+        path: { type: string }
+        fileCount: { type: integer }
+        lineCount: { type: integer }
+
+    SystemResourceFileTypeStat:
+      type: object
+      properties:
+        ext: { type: string }
+        fileCount: { type: integer }
+        lineCount: { type: integer }
+
+    SystemResourceDocStat:
+      type: object
+      properties:
+        path: { type: string }
+        fileCount: { type: integer }
+        lineCount: { type: integer }
+
+    SystemResourceCommitDayStat:
+      type: object
+      properties:
+        date: { type: string, example: '2026-07-17' }
+        insertions: { type: integer }
+        deletions: { type: integer }
+        sourceInsertions: { type: integer }
+        sourceDeletions: { type: integer }
+        commits: { type: integer }
+        totalLines: { type: integer }
+
+    SystemResourceModuleChurnStat:
+      type: object
+      properties:
+        name: { type: string }
+        insertions: { type: integer }
+        deletions: { type: integer }
+
+    SystemResourceMetricItem:
+      type: object
+      properties:
+        labelKey: { type: string }
+        value: { type: number }
+        descKey: { type: string }
 
     AnalyticsDailyPoint:
       type: object

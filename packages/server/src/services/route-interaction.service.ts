@@ -68,6 +68,23 @@ function buildKeywordCondition(keyword?: string) {
   return or(like(travelRoutes.name, kw), like(travelRoutes.description, kw));
 }
 
+/**
+ * 构造场景标签过滤条件（P-TAG-01）。
+ *
+ * @param sceneTags - 场景标签 slug 列表；空或 undefined 返回 undefined（不过滤）
+ * @returns drizzle where 条件；命中任一 slug 即返回（OR 语义），NULL 字段视为空数组
+ */
+function buildSceneTagsCondition(sceneTags?: string[]) {
+  if (!sceneTags || sceneTags.length === 0) return undefined;
+  const cleaned = sceneTags.map((s) => s.trim()).filter(Boolean);
+  if (cleaned.length === 0) return undefined;
+  // JSON_CONTAINS(IFNULL(scene_tags, '[]'), JSON_QUOTE('slug'))
+  const clauses = cleaned.map(
+    (slug) => sql`JSON_CONTAINS(IFNULL(${travelRoutes.sceneTags}, '[]'), JSON_QUOTE(${slug}))`,
+  );
+  return clauses.length === 1 ? clauses[0] : or(...clauses);
+}
+
 function resolveOrderBy(sort: RouteListQuery['sort'], scope: RouteListQuery['scope']) {
   if (sort === 'views') return desc(travelRoutes.viewCount);
   if (sort === 'hot' || scope === 'hot' || scope === 'plaza') {
@@ -108,12 +125,14 @@ export async function listRoutesForUser(
   const orderBy = resolveOrderBy(query.sort, scope);
 
   const keywordCondition = buildKeywordCondition(query.keyword);
+  const sceneTagsCondition = buildSceneTagsCondition(query.sceneTags);
 
   if (scope === 'plaza' || scope === 'hot') {
     const where = and(
       eq(travelRoutes.status, RouteStatus.PUBLISHED),
       eq(travelRoutes.isPublic, 1),
       keywordCondition,
+      sceneTagsCondition,
     );
     const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);
     const rows = await db
@@ -153,6 +172,9 @@ export async function listRoutesForUser(
   }
   if (keywordCondition) {
     conditions.push(keywordCondition);
+  }
+  if (sceneTagsCondition) {
+    conditions.push(sceneTagsCondition);
   }
   const where = and(...conditions);
   const [{ value: total }] = await db.select({ value: count() }).from(travelRoutes).where(where);

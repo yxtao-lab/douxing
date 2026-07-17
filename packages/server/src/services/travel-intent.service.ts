@@ -225,6 +225,35 @@ function detectThemes(text: string): string[] {
   return uniqueThemes(themes);
 }
 
+/**
+ * 从文本中抽取场景标签 slug（P-TAG-01 优化点 3：C2 解析 sceneTags）。
+ *
+ * @param text - 用户原始输入
+ * @returns 命中的场景标签 slug 数组（去重）；无命中返回空数组
+ */
+const SCENE_TAG_KEYWORDS: Array<{ slug: string; keywords: string[] }> = [
+  { slug: 'kids', keywords: ['溜娃', '带娃', '亲子', '孩子', '小孩'] },
+  { slug: 'date', keywords: ['约会', '情侣', '浪漫', '二人世界'] },
+  { slug: 'water', keywords: ['玩水', '戏水', '漂流', '水上乐园'] },
+  { slug: 'cool', keywords: ['纳凉', '避暑', '凉爽'] },
+  { slug: 'flower', keywords: ['赏花', '花海', '花季'] },
+  { slug: 'night', keywords: ['夜游', '夜景', '夜市'] },
+  { slug: 'summer-escape', keywords: ['消夏'] },
+  { slug: 'spring', keywords: ['踏青', '春游'] },
+  { slug: 'blessing', keywords: ['祈福', '烧香', '寺庙'] },
+  { slug: 'camping', keywords: ['露营', '帐篷', '营地'] },
+];
+
+function detectSceneTags(text: string): string[] {
+  const hits: string[] = [];
+  for (const { slug, keywords } of SCENE_TAG_KEYWORDS) {
+    if (keywords.some((k) => text.includes(k))) {
+      hits.push(slug);
+    }
+  }
+  return [...new Set(hits)];
+}
+
 function isModificationText(text: string): boolean {
   return /(改成|改为|换成|调整?为|降到|提高到|增加|缩短|延长|不要|去掉|加点|加上|预算|天数|天$)/.test(text);
 }
@@ -300,6 +329,7 @@ export function createEmptyIntent(): TravelIntentSnapshot {
     budgetMin: null,
     budgetMax: null,
     themes: [],
+    sceneTags: [],
     confidence: 'low',
     transportPreference: null,
     lodgingArea: null,
@@ -553,6 +583,7 @@ export function parseTravelIntent(text: string): TravelIntentSnapshot {
     budgetMin: budget.min,
     budgetMax: budget.max,
     themes: detectThemes(trimmed),
+    sceneTags: detectSceneTags(trimmed),
     confidence: 'low',
     transportPreference: null,
     lodgingArea: null,
@@ -595,6 +626,15 @@ export function buildIntentFromConversation(
       if (patch.removeThemes?.length) {
         intent.themes = intent.themes.filter((t) => !patch.removeThemes!.includes(t));
       }
+      // P-TAG-01：修改轮若显式提到场景，则覆盖更新场景标签
+      const modScenes = detectSceneTags(trimmed);
+      if (modScenes.length > 0) {
+        if (/(不要|去掉|取消)/.test(trimmed)) {
+          intent.sceneTags = (intent.sceneTags ?? []).filter((s) => !modScenes.includes(s));
+        } else {
+          intent.sceneTags = [...new Set([...(intent.sceneTags ?? []), ...modScenes])];
+        }
+      }
     } else {
       const parsed = parseTravelIntent(trimmed);
       if (parsed.city) intent.city = parsed.city;
@@ -606,6 +646,9 @@ export function buildIntentFromConversation(
       }
       if (parsed.themes.length > 0) {
         intent.themes = uniqueThemes([...intent.themes, ...parsed.themes]);
+      }
+      if (parsed.sceneTags && parsed.sceneTags.length > 0) {
+        intent.sceneTags = [...new Set([...(intent.sceneTags ?? []), ...parsed.sceneTags])];
       }
       if (parsed.transportPreference) {
         intent.transportPreference = mergeTransportPreference(
@@ -723,6 +766,10 @@ export function formatIntentConstraintsForLlm(intent: TravelIntentSnapshot): str
   }
   if (intent.themes.length > 0) {
     lines.push(`- 主题偏好：${intent.themes.join('、')}，interestTags 须包含这些标签`);
+  }
+  // P-TAG-01 优化点 7：Prompt 注入场景标签
+  if (intent.sceneTags && intent.sceneTags.length > 0) {
+    lines.push(`- 旅行场景：${intent.sceneTags.join('、')}，优先推荐符合该场景的景点`);
   }
   if (intent.transportPreference && intent.transportPreference !== 'any') {
     const labelMap: Record<TransportPreference, string> = {

@@ -17,6 +17,7 @@ import {
   approveAttraction,
   listAttractionsForAdminPaginated,
   updateAttractionCoverImage,
+  updateAttractionSceneTags,
 } from '../services/attraction.service.js';
 import { resolvePublicBaseFromRequest, resolvePublicAssetUrl } from '../utils/public-asset-url.util.js';
 import { refreshAttractionCoverFromAmap } from '../services/attraction-image-enricher.service.js';
@@ -76,6 +77,15 @@ const listQuerySchema = z.object({
   category: z.enum(['attraction', 'restaurant', 'hotel']).optional(),
   keyword: z.string().max(64).optional(),
   tags: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const arr = Array.isArray(v) ? v : v.split(',');
+      return arr.map((t) => t.trim()).filter(Boolean);
+    }),
+  /** P-TAG-01：按场景标签 slug 过滤，逗号分隔或数组 */
+  sceneTags: z
     .union([z.string(), z.array(z.string())])
     .optional()
     .transform((v) => {
@@ -265,6 +275,36 @@ router.post('/admin/:id/approve', authMiddleware, async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : '审核失败';
     return fail(res, message);
+  }
+});
+
+const updateSceneTagsSchema = z.object({
+  /** P-TAG-01：场景标签 slug 列表；传入会覆盖现有标签 */
+  sceneTags: z.array(z.string().min(1).max(32)).max(10),
+});
+
+/**
+ * 更新景点场景标签（P-TAG-01，运营维护）。
+ */
+router.patch('/admin/:id/scene-tags', authMiddleware, async (req, res) => {
+  try {
+    if (!(await requirePerm(req, res, 'content:attractions:manage'))) return;
+    const id = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(id) || id <= 0) {
+      return fail(res, ApiMessageKey.ATTRACTION_INVALID_ID);
+    }
+    const parsed = updateSceneTagsSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR, 1, 400);
+    }
+    const item = await updateAttractionSceneTags(id, parsed.data.sceneTags);
+    if (!item) {
+      return fail(res, ApiMessageKey.ATTRACTION_NOT_FOUND, 404, 404);
+    }
+    success(res, item, ApiMessageKey.OK);
+  } catch (err) {
+    console.error('[attractions/admin/scene-tags]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
   }
 });
 

@@ -168,6 +168,7 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 18 | POST | `/api/attractions/admin/:id/cover` | 管理员 | 景点 |
 | 19 | POST | `/api/attractions/admin/:id/cover/refresh-amap` | 管理员 | 景点 |
 | 20 | POST | `/api/attractions/admin/:id/approve` | 管理员 | 景点 |
+| 20.1 | PATCH | `/api/attractions/admin/:id/scene-tags` | 管理员 | 景点场景标签 P-TAG-01 |
 | 21 | GET | `/api/routes/llm-providers` | 公开 | 路线 |
 | 22 | GET | `/api/routes/llm-status` | 公开 | 路线 |
 | 23 | POST | `/api/routes/generate` | 登录 | 路线 |
@@ -240,41 +241,42 @@ HTTP 状态码：多数业务错误仍返回 **200** + `code !== 0`；鉴权失�
 | 90 | POST | `/api/analytics/events/batch` | 登录可选 | 数据分析（DT3 批量埋点） |
 | 91 | GET | `/api/analytics/geo/distribution` | 管理员 | 数据分析（DT5 地理分布） |
 | 92 | GET | `/api/analytics/geo/flows` | 管理员 | 数据分析（DT5 城际 OD） |
-| 93 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
-| 94 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
-| 95 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
-| 96 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
-| 97 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 98 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
-| 99 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 100 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
-| 101 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
-| 102 | GET | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
-| 103 | POST | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
-| 104 | DELETE | `/api/routes/:routeId/media/:mediaId` | 登录 | 路线视频 H10 |
-| 105 | GET | `/api/attractions/admin/media/pending` | 管理员 | 视频审核 H10 |
-| 106 | PATCH | `/api/attractions/admin/media/:mediaId/review` | 管理员 | 视频审核 H10 |
-| 107 | GET | `/api/admin/plan-sessions/recent` | 管理员 | 规划诊断 · 最近会话 |
-| 108 | POST | `/api/admin/plan-sessions/sandbox-run` | 管理员 | 规划沙箱（同步） |
-| 109 | POST | `/api/admin/plan-sessions/sandbox-run/async` | 管理员 | 规划沙箱（异步 + SSE） |
-| 110 | GET | `/api/admin/plan-sessions/:sessionId/stream` | 管理员 | 规划沙箱 SSE |
-| 111 | GET | `/api/admin/plan-sessions/:sessionId/workflow-trace` | 管理员 | 规划诊断 · NodeSpan 时间线 |
-| 112 | GET | `/api/admin/plan-sessions/:sessionId/cost-summary` | 管理员 | 规划诊断 · 费用汇总 |
-| 113 | GET | `/api/admin/workflow-templates/default-graph` | 管理员 | 工作流模板 · 默认参考图 |
-| 114 | POST | `/api/admin/workflow-templates/validate-graph` | 管理员 | 工作流模板 · 图校验 |
-| 115 | GET | `/api/admin/workflow-templates` | 管理员 | 工作流模板列表 |
-| 116 | POST | `/api/admin/workflow-templates` | 管理员 | 创建工作流模板 |
-| 117 | GET | `/api/admin/workflow-templates/:id` | 管理员 | 工作流模板详情 |
-| 118 | PUT | `/api/admin/workflow-templates/:id` | 管理员 | 更新工作流模板 |
-| 119 | POST | `/api/admin/workflow-templates/:id/publish-graph` | 管理员 | 发布模板 DAG 图 |
-| 120 | DELETE | `/api/admin/workflow-templates/:id` | 管理员 | 删除工作流模板 |
-| 121 | GET | `/api/marketplace/health` | 公开 | 发单接单 M0 |
-| 122 | GET | `/api/marketplace/categories` | 公开 | 发单接单 M0 |
-| 123 | GET | `/api/marketplace/demands/mine` | 登录 | 发单接单 M0 |
-| 124 | GET | `/api/marketplace/demands/:id` | 登录 | 发单接单 M0 |
-| 125 | GET | `/api/marketplace/admin/orgs` | 管理员 | 发单接单 M0 |
+| 93 | GET | `/api/analytics/system-resources` | 管理员 | 数据分析（系统资源 / 远程 Git） |
+| 94 | POST | `/api/pets/adopt` | 登录 | 旅行宠物 |
+| 95 | GET | `/api/pets/me` | 登录 | 旅行宠物 |
+| 96 | PATCH | `/api/pets/me` | 登录 | 旅行宠物 |
+| 97 | GET | `/api/pets/me/floating-context` | 登录 | 旅行宠物 |
+| 98 | GET | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 99 | POST | `/api/pets/me/memories` | 登录 | 旅行宠物 |
+| 100 | PATCH | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 101 | DELETE | `/api/pets/me/memories/:id` | 登录 | 旅行宠物 |
+| 102 | POST | `/api/pets/me/analyze` | 登录 | 旅行宠物 |
+| 103 | GET | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
+| 104 | POST | `/api/routes/:routeId/media` | 登录 | 路线视频 H10 |
+| 105 | DELETE | `/api/routes/:routeId/media/:mediaId` | 登录 | 路线视频 H10 |
+| 106 | GET | `/api/attractions/admin/media/pending` | 管理员 | 视频审核 H10 |
+| 107 | PATCH | `/api/attractions/admin/media/:mediaId/review` | 管理员 | 视频审核 H10 |
+| 108 | GET | `/api/admin/plan-sessions/recent` | 管理员 | 规划诊断 · 最近会话 |
+| 109 | POST | `/api/admin/plan-sessions/sandbox-run` | 管理员 | 规划沙箱（同步） |
+| 110 | POST | `/api/admin/plan-sessions/sandbox-run/async` | 管理员 | 规划沙箱（异步 + SSE） |
+| 111 | GET | `/api/admin/plan-sessions/:sessionId/stream` | 管理员 | 规划沙箱 SSE |
+| 112 | GET | `/api/admin/plan-sessions/:sessionId/workflow-trace` | 管理员 | 规划诊断 · NodeSpan 时间线 |
+| 113 | GET | `/api/admin/plan-sessions/:sessionId/cost-summary` | 管理员 | 规划诊断 · 费用汇总 |
+| 114 | GET | `/api/admin/workflow-templates/default-graph` | 管理员 | 工作流模板 · 默认参考图 |
+| 115 | POST | `/api/admin/workflow-templates/validate-graph` | 管理员 | 工作流模板 · 图校验 |
+| 116 | GET | `/api/admin/workflow-templates` | 管理员 | 工作流模板列表 |
+| 117 | POST | `/api/admin/workflow-templates` | 管理员 | 创建工作流模板 |
+| 118 | GET | `/api/admin/workflow-templates/:id` | 管理员 | 工作流模板详情 |
+| 119 | PUT | `/api/admin/workflow-templates/:id` | 管理员 | 更新工作流模板 |
+| 120 | POST | `/api/admin/workflow-templates/:id/publish-graph` | 管理员 | 发布模板 DAG 图 |
+| 121 | DELETE | `/api/admin/workflow-templates/:id` | 管理员 | 删除工作流模板 |
+| 122 | GET | `/api/marketplace/health` | 公开 | 发单接单 M0 |
+| 123 | GET | `/api/marketplace/categories` | 公开 | 发单接单 M0 |
+| 124 | GET | `/api/marketplace/demands/mine` | 登录 | 发单接单 M0 |
+| 125 | GET | `/api/marketplace/demands/:id` | 登录 | 发单接单 M0 |
+| 126 | GET | `/api/marketplace/admin/orgs` | 管理员 | 发单接单 M0 |
 
-> 注：`/api/system/*` 等系统管理接口见 [系统管理.md](./系统管理.md)，未纳入上表 **125** 项主链。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
+> 注：`/api/system/*` 等系统管理接口见 [系统管理.md](./系统管理.md)，未纳入上表 **126** 项主链。含 `GET /api/system/logs/api`（接口日志）。管理端导航菜单树：`GET /api/system/menus/tree`（登录 + 按角色过滤）。
 
 ---
 
@@ -501,6 +503,16 @@ interface RefreshTokenResult {
 #### POST `/admin/:id/approve`
 
 审核通过 pending 景点。
+
+#### PATCH `/admin/:id/scene-tags`
+
+更新景点场景标签（P-TAG-01 · 管理员维护）。
+
+**Body**：`{ sceneTags: string[] }`（slug 列表，覆盖现有；非法 slug 会被 `normalizeSceneTags` 过滤）
+
+**返回**：`AttractionInfo`（含更新后的 `sceneTags`）
+
+**权限**：`requirePerm`（景点管理）
 
 #### GET `/admin/media/pending`
 
@@ -1106,7 +1118,7 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 
 ## 19. 数据分析 analytics
 
-前缀：`/api/analytics`。读接口（overview/trends/top-cities/funnel/geo）需 **管理员** JWT + `data:analytics:view`；埋点写入（`POST /events`、`/events/batch`）使用 `optionalAuthMiddleware`（**登录可选**，mobile/pc 客户端上报）。指标口径与分阶段路线见 [数据中台.md](./数据中台.md)；运营大屏见 [旅行运营大屏.md](./旅行运营大屏.md)。
+前缀：`/api/analytics`。读接口（overview/trends/top-cities/funnel/geo/system-resources）需 **管理员** JWT + `data:analytics:view`；埋点写入（`POST /events`、`/events/batch`）使用 `optionalAuthMiddleware`（**登录可选**，mobile/pc 客户端上报）。指标口径与分阶段路线见 [数据中台.md](./数据中台.md)；工程资产见 [系统资源统计.md](./系统资源统计.md)；运营大屏见 [旅行运营大屏.md](./旅行运营大屏.md)。
 
 ### GET `/overview`
 
@@ -1223,6 +1235,31 @@ H7 · 对比计划 POI 与打卡/GPS，返回「应到未到」列表与 RAG 替
 | `limit` | number | 20 | 1～50 |
 
 **响应 `data`**：`AnalyticsGeoFlow[]` — 起终点城市码、名称、经纬度、`count`
+
+### GET `/system-resources`
+
+系统资源统计（远程 Git 浅克隆快照；**不扫**部署机本机业务工作区）。详见 [系统资源统计.md](./系统资源统计.md)。
+
+**Query**
+
+| 参数 | 类型 | 默认 | 说明 |
+|------|------|------|------|
+| `refresh` | boolean | false | `1` / `true` 强制重新 fetch 远程并刷新内存缓存 |
+
+**响应 `data`**：`SystemResourcesStats`
+
+| 字段 | 说明 |
+|------|------|
+| `source` | 恒为 `git-remote` |
+| `remoteUrl` / `branch` / `commitSha` / `commitAt` | 远程元信息（URL 已脱敏） |
+| `packages` / `fileTypes` / `modules` / `plugins` / `docs` | HEAD 工作树存量分类 |
+| `componentsByApp` / `pagesByApp` | 各端组件 / 页面数 |
+| `commitTrends` | 浅克隆窗口内按日源码增删与估算总量 |
+| `moduleChurn` | 窗口内按子包源码 churn |
+| `overview` | 卡片用概览指标 |
+| `generatedAt` | ISO 生成时间 |
+
+**错误**：`api.systemResourcesGitFailed`（克隆/fetch 失败）· `api.systemResourcesFailed`（其它聚合失败）
 
 ---
 
@@ -1909,6 +1946,7 @@ H3-b 悬浮层上下文（宠物摘要 + Top-K 记忆 + 分析缓存提示），
 | 2026-07-14 | **M3-2 团体发单**：§25 增 `publisherGroupId` · 团体成员权限 · 防自报价；验收 `m3:marketplace-group-cases` |
 | 2026-07-14 | **M3-1 团体**：§25 增 `/groups/*` CRUD 与成员邀请；验收 `m3:marketplace-group-cases` |
 | 2026-07-13 | **M7-α Partner**：§25 增 M1/M2/M7-α API 速查表 · `GET/POST /partner/*`；MB2 ✅ 状态同步 |
+| 2026-07-17 | **系统资源统计**：§19 增 `GET /system-resources`；总览 **126** 项；专题 [系统资源统计.md](./系统资源统计.md)；OpenAPI 同步 |
 | 2026-07-10 | **M0 发单接单**：§25 `/api/marketplace/*`（5 个 GET）；§23 增 marketplace 枚举；总览 **125** 项；OpenAPI **103** 路径 / **122** 操作 |
 | 2026-07-09 | **C7-W**：§24 管理端 `admin/plan-sessions`（6 项）+ `admin/workflow-templates`（8 项）；§8 SSE 增 `node_status` 与 `tool_call.nodeId`；总览 **120** 项；OpenAPI **98** 路径 / **117** 操作 |
 | 2026-07-07 | **双 Token**：§4 增 `POST /refresh` · `POST /logout`；`LoginResult` 增 `refreshToken` · `expiresIn`；总览认证项 +2（见 §2）；专题 [双Token认证与无感刷新.md](./双Token认证与无感刷新.md) |

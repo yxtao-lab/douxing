@@ -20,6 +20,8 @@ export interface UserInfo {
   email: string | null;
   /** 用户兴趣偏好标签 */
   interestTags: string[] | null;
+  /** P-TAG-01：用户偏好场景标签 slug 列表 */
+  preferredScenes?: string[] | null;
   /** 会员等级，见 MemberLevel */
   memberLevel: number;
   status: number;
@@ -34,6 +36,8 @@ export interface UpdateUserProfileRequest {
   avatar?: string | null;
   email?: string | null;
   interestTags?: string[];
+  /** P-TAG-01：用户偏好场景标签 slug 列表 */
+  preferredScenes?: string[];
 }
 
 export interface LoginResult {
@@ -306,6 +310,8 @@ export interface AttractionInfo {
   latitude: number | null;
   longitude: number | null;
   tags: string[];
+  /** P-TAG-01：场景标签 slug 列表；DB 可空，业务层兜底为空数组 */
+  sceneTags?: string[];
   description: string | null;
   ticketPrice: number;
   aliases: string[] | null;
@@ -339,6 +345,8 @@ export interface TravelRouteInfo {
   budgetRange: string | null;
   days: number;
   interestTags: string[] | null;
+  /** P-TAG-01：路线场景标签 slug 列表；规划生成或标签化定制时写入 */
+  sceneTags?: string[] | null;
   routeDetail: Record<string, unknown> | null;
   creatorId: number;
   status: number;
@@ -381,6 +389,8 @@ export interface RouteListQuery {
   sort?: RouteListSort;
   /** 按路线名称、简介模糊搜索（不含行程景点与 routeDetail） */
   keyword?: string;
+  /** P-TAG-01：按场景标签 slug 过滤（命中任一即返回） */
+  sceneTags?: string[];
   /** @deprecated 请使用 pageSize */
   limit?: number;
   page?: number;
@@ -397,6 +407,8 @@ export interface UpdateRouteDraftRequest {
   budgetRange?: string | null;
   days?: number;
   interestTags?: string[];
+  /** P-TAG-01：路线场景标签 slug 列表 */
+  sceneTags?: string[];
   routeDetail?: RouteDetailPayload;
 }
 
@@ -593,6 +605,8 @@ export interface TravelIntentSnapshot {
   budgetMin: number | null;
   budgetMax: number | null;
   themes: string[];
+  /** P-TAG-01：场景标签 slug 列表（kids/date/water…），C2 从文本抽取或标签化定制时写入 */
+  sceneTags?: string[];
   confidence: 'low' | 'medium' | 'high';
   /** H9：大交通偏好（高铁/飞机/自驾等） */
   transportPreference?: TransportPreference | null;
@@ -1325,4 +1339,134 @@ export interface MemoryRecallPackage {
     excludePoiNames: string[];
     boostPoiNames: string[];
   };
+}
+
+/* ===================== 系统资源统计（数据中台） ===================== */
+
+/** 单个 monorepo 子包的代码规模统计 */
+export interface SystemResourcePackageStat {
+  /** 包名，如 mobile / web / pc / server / shared */
+  name: string;
+  /** 包根目录相对路径，如 packages/mobile */
+  path: string;
+  /** 源代码文件数（ts/tsx/js/jsx/vue） */
+  fileCount: number;
+  /** 源代码总行数 */
+  lineCount: number;
+}
+
+/** 按文件扩展名聚合的代码规模 */
+export interface SystemResourceFileTypeStat {
+  /** 扩展名（不含点），如 ts / vue / json / md */
+  ext: string;
+  fileCount: number;
+  lineCount: number;
+}
+
+/** 单个目录的文档/资源统计 */
+export interface SystemResourceDocStat {
+  /** 目录相对路径，如 docs / .cursor/rules */
+  path: string;
+  /** 该目录下被统计的文件数 */
+  fileCount: number;
+  /** 总行数 */
+  lineCount: number;
+}
+
+/** 单个维度的计数指标（用于「资源数量概览」卡片） */
+export interface SystemResourceMetricItem {
+  /** i18n key，前端用于展示标题 */
+  labelKey: string;
+  /** 数值 */
+  value: number;
+  /** 可选副文案 key */
+  descKey?: string;
+}
+
+/** GET /analytics/system-resources 响应体 */
+export interface SystemResourcesStats {
+  /** 数据来源：始终为远程 Git 快照 */
+  source: 'git-remote';
+  /** 远程仓库地址（已脱敏，不含 token） */
+  remoteUrl: string;
+  /** 统计所用分支 */
+  branch: string;
+  /** HEAD 短/长 SHA */
+  commitSha: string;
+  /** HEAD 提交时间（ISO） */
+  commitAt: string;
+  /** 近 N 日提交增减行趋势（按日聚合） */
+  commitTrends: SystemResourceCommitDayStat[];
+  /** 统计窗口内按子包聚合的增删行（ churn ） */
+  moduleChurn: SystemResourceModuleChurnStat[];
+  /** 各子包代码规模（远程 HEAD 工作树） */
+  packages: SystemResourcePackageStat[];
+  /** 按扩展名聚合的代码规模 */
+  fileTypes: SystemResourceFileTypeStat[];
+  /** 文档目录统计（docs / .cursor/rules / .cursor/skills 等） */
+  docs: SystemResourceDocStat[];
+  /** 各端组件数（mobile/web/pc 的 components 目录下 .vue 文件数） */
+  componentsByApp: SystemResourcePackageStat[];
+  /** 各端页面数（mobile pages / web views / pc views） */
+  pagesByApp: SystemResourcePackageStat[];
+  /**
+   * 业务模块规模：后端 services/routes、各端 api/composables 等
+   * （`name` 为模块展示名，`fileCount`/`lineCount` 为规模）
+   */
+  modules: SystemResourcePackageStat[];
+  /**
+   * 插件/扩展类资源：Cursor skills、rules、scripts 等
+   * （`fileCount` 为条目数，`lineCount` 为行数；目录型 skill 以子目录计数）
+   */
+  plugins: SystemResourcePackageStat[];
+  /** 后端 API 路由文件数（packages/server/src/routes 下 .ts 文件数） */
+  apiRouteCount: number;
+  /** i18n 文案 key 数量，按 locale 分组 */
+  i18nKeys: SystemResourceMetricItem[];
+  /** 各 package.json 的依赖数（`lineCount` 字段复用为依赖个数） */
+  dependencies: SystemResourcePackageStat[];
+  /** 顶层资源数量概览（用于卡片展示） */
+  overview: SystemResourceMetricItem[];
+  /** 统计生成时间（ISO 字符串） */
+  generatedAt: string;
+  /**
+   * 兼容字段：展示用远程地址（脱敏），不再表示本机磁盘项目根
+   * @deprecated 请优先使用 `remoteUrl`
+   */
+  projectRoot: string;
+}
+
+/** 按日聚合的远程提交增删行 */
+export interface SystemResourceCommitDayStat {
+  /** 日期 yyyy-mm-dd（提交作者日期） */
+  date: string;
+  /** 当日源码口径新增行（与 sourceInsertions 相同，便于通用字段消费） */
+  insertions: number;
+  /** 当日源码口径删除行（与 sourceDeletions 相同） */
+  deletions: number;
+  /**
+   * 当日源码口径新增行（packages 下 ts/vue/js/py 等；不含 md/json/锁文件）
+   */
+  sourceInsertions: number;
+  /**
+   * 当日源码口径删除行
+   */
+  sourceDeletions: number;
+  /** 当日提交次数 */
+  commits: number;
+  /**
+   * 当日结束时估算的源码总量（行）。
+   * 按窗口内源码净增相对曲线等比缩放到末日 = HEAD，保证每日有值且与「源代码行数」对齐。
+   */
+  totalLines: number;
+}
+
+/** 统计窗口内某子包的提交 churn */
+export interface SystemResourceModuleChurnStat {
+  /** 子包名，如 server / mobile；无法归类为 other */
+  name: string;
+  /** 新增行 */
+  insertions: number;
+  /** 删除行 */
+  deletions: number;
 }

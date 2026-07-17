@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { users, roles, userRoles } from '../db/schema/index.js';
 import type { UserInfo, UpdateUserProfileRequest } from '@douxing/shared';
-import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel, ApiError, ApiMessageKey } from '@douxing/shared';
+import { USER_INTEREST_MAX, USER_INTEREST_PRESETS, normalizeMemberLevel, ApiError, ApiMessageKey, normalizeSceneTags } from '@douxing/shared';
 import { rewritePublicAssetUrl, normalizeStoredAssetPath } from '../utils/public-asset-url.util.js';
 import { getPermissionsForUser } from './permission.service.js';
 import { syncMerchantRoleForUser } from './marketplace/marketplace-merchant-role.service.js';
@@ -26,6 +26,17 @@ function normalizeInterestTags(tags: string[] | undefined): string[] | undefined
   return unique;
 }
 
+/**
+ * 规整用户偏好场景标签（P-TAG-01）。
+ *
+ * @param tags - 原始输入；undefined 表示不更新
+ * @returns 合法且去重后的 slug 数组；undefined 表示不更新
+ */
+function normalizePreferredScenes(tags: string[] | undefined): string[] | undefined {
+  if (tags === undefined) return undefined;
+  return normalizeSceneTags(tags);
+}
+
 function mapUserRow(
   user: typeof users.$inferSelect,
   roleCodes: string[],
@@ -39,6 +50,7 @@ function mapUserRow(
     phone: user.phone,
     email: user.email,
     interestTags: user.interestTags ?? null,
+    preferredScenes: user.preferredScenes ?? null,
     memberLevel: normalizeMemberLevel(user.memberLevel),
     status: user.status,
     roles: roleCodes,
@@ -105,6 +117,10 @@ export async function updateUserProfile(
 
   if (input.interestTags !== undefined) {
     patch.interestTags = normalizeInterestTags(input.interestTags);
+  }
+
+  if (input.preferredScenes !== undefined) {
+    patch.preferredScenes = normalizePreferredScenes(input.preferredScenes);
   }
 
   if (Object.keys(patch).length === 0) {

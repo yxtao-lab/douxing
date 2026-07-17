@@ -52,6 +52,8 @@ const updateProfileSchema = z.object({
   avatar: z.string().max(512).nullable().optional(),
   email: z.string().email().max(128).nullable().optional(),
   interestTags: z.array(z.string().min(1).max(16)).max(USER_INTEREST_MAX).optional(),
+  /** P-TAG-01：用户偏好场景标签 slug 列表 */
+  preferredScenes: z.array(z.string().min(1).max(32)).max(10).optional(),
 });
 
 router.get('/me', authMiddleware, async (req, res) => {

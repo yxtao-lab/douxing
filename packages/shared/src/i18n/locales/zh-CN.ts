@@ -144,6 +144,7 @@ export const sharedZhCN = {
     planDiagnostics: '规划诊断',
     workflowTemplates: '工作流模板',
     workflowEditor: '流程编排编辑器',
+    systemResources: '系统资源统计',
     sysUsers: '用户管理',
     sysRoles: '角色管理',
     sysMenus: '菜单管理',

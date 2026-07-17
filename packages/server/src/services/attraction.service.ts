@@ -9,6 +9,7 @@ import {
   ApiError,
   ApiMessageKey,
   buildPaginatedResult,
+  normalizeSceneTags,
 } from '@douxing/shared';
 import type { AttractionInfo, AttractionOpenHours, PaginatedResult, RouteDetailPayload } from '@douxing/shared';
 import { ATTRACTION_SEEDS } from '../data/attraction-seeds.js';
@@ -27,6 +28,7 @@ function toAttractionInfo(row: typeof attractions.$inferSelect): AttractionInfo 
     latitude: row.latitude != null ? Number(row.latitude) : null,
     longitude: row.longitude != null ? Number(row.longitude) : null,
     tags: row.tags,
+    sceneTags: row.sceneTags ?? [],
     description: row.description,
     ticketPrice: row.ticketPrice,
     aliases: row.aliases ?? null,
@@ -63,6 +65,8 @@ export async function listAttractions(options: {
   cityCode?: string;
   category?: string;
   tags?: string[];
+  /** P-TAG-01：按场景标签 slug 过滤（命中任一即返回） */
+  sceneTags?: string[];
   keyword?: string;
   limit?: number;
   offset?: number;
@@ -100,6 +104,10 @@ export async function listAttractions(options: {
   if (options.tags && options.tags.length > 0) {
     const tagSet = new Set(options.tags);
     rows = rows.filter((row) => row.tags.some((t) => tagSet.has(t)));
+  }
+  if (options.sceneTags && options.sceneTags.length > 0) {
+    const sceneSet = new Set(options.sceneTags);
+    rows = rows.filter((row) => (row.sceneTags ?? []).some((t) => sceneSet.has(t)));
   }
 
   return rows.map(toAttractionInfo);
@@ -505,6 +513,32 @@ export async function updateAttractionCoverImage(
   if (previousPath && previousPath !== storedPath) {
     await deleteStoredAttractionCover(previousPath);
   }
+
+  const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
+  return updated[0] ? toAttractionInfo(updated[0]) : null;
+}
+
+/**
+ * 更新景点的场景标签（P-TAG-01，管理端维护）。
+ *
+ * @param id - 景点 ID
+ * @param sceneTags - 场景标签 slug 列表；非法 slug 会被过滤
+ * @returns 更新后的景点信息；景点不存在返回 null
+ */
+export async function updateAttractionSceneTags(
+  id: number,
+  sceneTags: string[],
+) {
+  const db = getDb();
+  const rows = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
+  const row = rows[0];
+  if (!row) return null;
+
+  const cleaned = normalizeSceneTags(sceneTags);
+  await db
+    .update(attractions)
+    .set({ sceneTags: cleaned })
+    .where(eq(attractions.id, id));
 
   const updated = await db.select().from(attractions).where(eq(attractions.id, id)).limit(1);
   return updated[0] ? toAttractionInfo(updated[0]) : null;

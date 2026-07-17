@@ -14,6 +14,8 @@ export const users = mysqlTable('users', {
   avatar: varchar('avatar', { length: 512 }),
   /** 用户兴趣偏好标签 */
   interestTags: json('interest_tags').$type<string[]>(),
+  /** P-TAG-01：用户偏好场景标签（slug 列表），用于首页/专题/规划个性化推荐 */
+  preferredScenes: json('preferred_scenes').$type<string[]>(),
   /** 会员等级，见 @douxing/shared MemberLevel */
   memberLevel: tinyint('member_level').notNull().default(0),
   /** 付费会员到期时间（免费会员为 null） */

@@ -77,6 +77,15 @@ const listQuerySchema = z.object({
   status: optionalQueryInt(0, 2),
   sort: z.enum(['recent', 'hot', 'views']).optional(),
   keyword: z.string().max(64).optional(),
+  /** P-TAG-01：按场景标签 slug 过滤，逗号分隔或数组 */
+  sceneTags: z
+    .union([z.string(), z.array(z.string())])
+    .optional()
+    .transform((v) => {
+      if (!v) return undefined;
+      const arr = Array.isArray(v) ? v : v.split(',');
+      return arr.map((t) => t.trim()).filter(Boolean);
+    }),
   limit: optionalQueryInt(1, 100),
   page: optionalQueryInt(1, 10_000),
   pageSize: optionalQueryInt(1, 100),
@@ -88,6 +97,8 @@ const updateDraftSchema = z.object({
   budgetRange: z.string().max(64).nullable().optional(),
   days: z.number().int().min(1).max(30).optional(),
   interestTags: z.array(z.string().min(1).max(16)).max(8).optional(),
+  /** P-TAG-01：路线场景标签 slug 列表 */
+  sceneTags: z.array(z.string().min(1).max(32)).max(10).optional(),
   routeDetail: z
     .object({
       days: z.array(z.any()),

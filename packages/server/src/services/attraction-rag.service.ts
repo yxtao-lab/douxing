@@ -47,6 +47,8 @@ export interface HotelRetrievalInput {
 export interface RagRetrievalInput {
   city?: string | null;
   themes?: string[];
+  /** P-TAG-01：场景标签 slug 列表，用于 RAG topK 场景匹配重排 */
+  sceneTags?: string[];
   prompt?: string;
   days?: number | null;
   limit?: number;
@@ -75,6 +77,7 @@ function scoreRow(
   row: typeof attractions.$inferSelect,
   themes: string[],
   keywords: string[],
+  sceneTags?: string[],
 ): number {
   let score = 0;
   const tagSet = new Set(row.tags);
@@ -86,6 +89,15 @@ function scoreRow(
   for (const theme of themes) {
     for (const tag of row.tags) {
       if (tag.includes(theme) || theme.includes(tag)) score += 2;
+    }
+  }
+
+  // P-TAG-01 优化点 4：场景标签匹配加权（命中任一场景 +3）
+  if (sceneTags && sceneTags.length > 0) {
+    const rowScenes = row.sceneTags ?? [];
+    const rowSceneSet = new Set(rowScenes);
+    for (const scene of sceneTags) {
+      if (rowSceneSet.has(scene)) score += 3;
     }
   }
 
@@ -209,6 +221,7 @@ export async function retrieveAttractionsForPlanning(
       excludeNames: input.excludeNames,
       boostNames: input.boostNames,
       mmrLambda: input.mmrLambda,
+      sceneTags: input.sceneTags,
     });
   }
 
@@ -218,6 +231,7 @@ export async function retrieveAttractionsForPlanning(
     excludeNames: input.excludeNames,
     boostNames: input.boostNames,
     mmrLambda: input.mmrLambda,
+    sceneTags: input.sceneTags,
   });
 }
 
@@ -288,6 +302,8 @@ function rankCandidates(
     excludeNames?: string[];
     boostNames?: string[];
     mmrLambda?: number;
+    /** P-TAG-01：场景标签 slug 列表 */
+    sceneTags?: string[];
   },
 ): RagAttractionCandidate[] {
   const excludeIdSet = new Set(options?.excludeIds ?? []);
@@ -297,12 +313,13 @@ function rankCandidates(
   const boostNameSet = new Set(
     (options?.boostNames ?? []).map((n) => normalizeName(n)),
   );
+  const sceneTags = options?.sceneTags;
 
   const scored = rows
     .filter((row) => !excludeIdSet.has(row.id))
     .filter((row) => !excludeNameSet.has(normalizeName(row.name)))
     .map((row) => {
-      let score = scoreRow(row, themes, keywords);
+      let score = scoreRow(row, themes, keywords, sceneTags);
       if (boostNameSet.has(normalizeName(row.name))) score += 6;
       for (const alias of row.aliases ?? []) {
         if (boostNameSet.has(normalizeName(alias))) score += 4;
@@ -523,6 +540,7 @@ export function buildRouteFromRagCatalog(
     budgetRange,
     days,
     interestTags: themes,
+    sceneTags: intent.sceneTags ?? [],
     routeDetail: { days: dayPlans },
     unlockPrice: 9.9,
     matchedCity: city,

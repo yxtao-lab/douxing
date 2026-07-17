@@ -53,6 +53,12 @@ const router = createRouter({
           },
         },
         {
+          path: 'scenes/:slug',
+          name: 'scene-detail',
+          component: () => import('@/views/SceneDetailView.vue'),
+          meta: { titleKey: 'scenes.pageTitle', navKey: 'home' },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),
