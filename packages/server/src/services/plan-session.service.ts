@@ -43,6 +43,7 @@ import { finalizePlanningIntent } from './travel-intent.service.js';
 import {
   loadPlanUserContext,
   mergeIntentWithUserContext,
+  injectPersonaSummary,
 } from './plan-user-context.service.js';
 import { runAgentPlan, isAgentPlanEnabled, type AgentPlanResult, type AgentPlanStreamHooks } from './agent-plan-client.service.js';
 import { answerFoodQa } from './answer-food-qa.service.js';
@@ -636,7 +637,7 @@ export async function createPlanSession(
   });
   const userContext = await loadPlanUserContext(userId);
   const resolvedIntent = finalizePlanningIntent(
-    mergeIntentWithUserContext(intent, userContext),
+    injectPersonaSummary(mergeIntentWithUserContext(intent, userContext), userContext),
   );
 
   const generateInput: GenerateRouteInput = {
@@ -866,7 +867,7 @@ export async function appendPlanSessionMessage(
 
     const userContext = await loadPlanUserContext(userId);
     const resolvedIntent = finalizePlanningIntent(
-      mergeIntentWithUserContext(intent, userContext),
+      injectPersonaSummary(mergeIntentWithUserContext(intent, userContext), userContext),
     );
 
     let routeContentUpdated = false;

@@ -38,3 +38,4 @@ export * from './marketplace-product.js';
 export * from './marketplace-settlement.js';
 export * from './marketplace-review.js';
 export * from './marketplace-dispute.js';
+export * from './user-travel-persona.js';

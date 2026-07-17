@@ -1,5 +1,5 @@
 /**
- * Phase 4：规划前注入用户画像（兴趣标签 + H3 记忆）
+ * Phase 4：规划前注入用户画像（兴趣标签 + H3 记忆 + 旅行人格）
  */
 import { eq } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
@@ -11,12 +11,15 @@ import {
   extractVisitedPoiNames,
   recallUserMemory,
 } from './pet-memory.service.js';
+import { getPersonaSummaryForPlanning } from './travel-persona.service.js';
 
 export interface PlanUserContext {
   interestTags: string[];
   memoryThemes: string[];
   excludePoiNames: string[];
   boostPoiNames: string[];
+  /** A-COGNITION-01：旅行画像摘要 */
+  personaSummary: string | null;
 }
 
 export async function loadPlanUserContext(userId: number): Promise<PlanUserContext> {
@@ -33,11 +36,14 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
   const excludePoiNames = extractVisitedPoiNames(memories);
   const boostPoiNames = extractBoostPoiNames(memories);
 
+  const personaSummary = await getPersonaSummaryForPlanning(userId);
+
   return {
     interestTags,
     memoryThemes,
     excludePoiNames,
     boostPoiNames,
+    personaSummary,
   };
 }
 
@@ -58,19 +64,42 @@ export function mergeIntentWithUserContext(
   };
 }
 
-/** C7-c：将 memory_agent 召回摘要写入 intent.constraintSummary */
+/**
+ * 将旅行画像摘要注入 intent.constraintSummary（非 Agent 路径使用）。
+ *
+ * @param intent - 当前规划意图
+ * @param context - 用户上下文（含 personaSummary）
+ * @returns 注入画像摘要后的意图
+ */
+export function injectPersonaSummary(
+  intent: TravelIntentSnapshot,
+  context: PlanUserContext,
+): TravelIntentSnapshot {
+  const personaSummary = context.personaSummary?.trim();
+  if (!personaSummary) return intent;
+  const existing = intent.constraintSummary?.trim();
+  return {
+    ...intent,
+    constraintSummary: existing ? `${existing}；${personaSummary}` : personaSummary,
+  };
+}
+
+/** C7-c：将 memory_agent 召回摘要 + 旅行画像写入 intent.constraintSummary */
 export function applyMemoryContextToIntent(
   intent: TravelIntentSnapshot,
   context: PlanUserContext,
   memorySummary?: string,
 ): TravelIntentSnapshot {
   let merged = mergeIntentWithUserContext(intent, context);
-  const summary = memorySummary?.trim();
-  if (summary) {
-    const existing = merged.constraintSummary?.trim();
+  const summaryParts: string[] = [];
+  const existingSummary = merged.constraintSummary?.trim();
+  if (existingSummary) summaryParts.push(existingSummary);
+  if (context.personaSummary?.trim()) summaryParts.push(context.personaSummary.trim());
+  if (memorySummary?.trim()) summaryParts.push(memorySummary.trim());
+  if (summaryParts.length > 0) {
     merged = {
       ...merged,
-      constraintSummary: existing ? `${existing}；${summary}` : summary,
+      constraintSummary: summaryParts.join('；'),
     };
   }
   return merged;

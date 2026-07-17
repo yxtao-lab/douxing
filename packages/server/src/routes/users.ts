@@ -9,6 +9,7 @@ import { success, fail, failFromError } from '../utils/response.js';
 import { getUserWithRoles, updateUserProfile, setUserAvatar } from '../services/user.service.js';
 import { getMembershipInfoForUser } from '../services/membership.service.js';
 import { getUserPhotoStorageInfo } from '../services/photo-quota.service.js';
+import { getUserPersona, refreshUserPersona } from '../services/travel-persona.service.js';
 import { ApiMessageKey, USER_INTEREST_MAX } from '@douxing/shared';
 
 const router = Router();
@@ -128,6 +129,32 @@ router.post('/me/avatar', authMiddleware, (req, res, next) => {
   } catch (err) {
     console.error('[users/me/avatar]', err);
     return fail(res, ApiMessageKey.AVATAR_UPLOAD_FAILED, 500, 500);
+  }
+});
+
+router.get('/me/persona', authMiddleware, async (req, res) => {
+  try {
+    const persona = await getUserPersona(req.auth!.userId);
+    if (!persona) {
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
+    }
+    success(res, persona);
+  } catch (err) {
+    console.error('[users/me/persona GET]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+router.post('/me/persona/refresh', authMiddleware, async (req, res) => {
+  try {
+    const persona = await refreshUserPersona(req.auth!.userId);
+    if (!persona) {
+      return fail(res, ApiMessageKey.USER_NOT_FOUND, 404, 404);
+    }
+    success(res, persona, ApiMessageKey.SUCCESS);
+  } catch (err) {
+    console.error('[users/me/persona/refresh]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
   }
 });
 
