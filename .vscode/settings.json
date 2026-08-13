@@ -13,5 +13,13 @@
   },
   "[typescript]": {
     "files.eol": "\n"
-  }
+  },
+  "cSpell.words": [
+    "certbot",
+    "douxing",
+    "gitee",
+    "opencloudos",
+    "wechat",
+    "weixin"
+  ]
 }
