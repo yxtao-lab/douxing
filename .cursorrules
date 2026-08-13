@@ -5,8 +5,8 @@
 - 修改代码前，必须先阅读并理解当前的代码上下文，不要盲目重构。
 
 # 技术栈约束
-- 前端组件统一使用函数式组件 + Hooks。
-- 样式统一使用 Tailwind CSS。
+- 前端统一 **Vue 3**：SFC（`.vue`）+ `<script setup>` + Composition API / composables（`useXxx`）；禁止 React / Next.js。
+- Web 管理端用 Ant Design Vue；PC 用户端与移动端样式以 Tailwind / 设计 Token 为主（见各端规范）。
 - 禁止在代码中硬编码敏感信息（如 API Key、密码），必须使用环境变量。
 - 新页面须符合三端品牌风格与布局，预留主题与国际化，优先复用/封装通用组件；详见 `.cursor/rules/page-ui-standards.mdc`。
 - 用户可见时间展示统一为 `yyyy-mm-dd HH:mm:ss`；详见 `.cursor/rules/display-datetime-format.mdc`。

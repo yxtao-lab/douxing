@@ -38,18 +38,20 @@ packages:
     dir: packages/web
     name: "@douxing/web"
     port: 5173
+    framework: vue3 # 禁止 React；SFC + Composition API
     uiLibrary: ant-design-vue # 管理端 UI
   pc:
     enabled: true
     dir: packages/pc
     name: "@douxing/pc"
     port: 5176
+    framework: vue3 # 禁止 React；与 Web 同栈、Tailwind 样式
     uiLibrary: tailwindcss # C 端 PC 网页
   mobile:
     enabled: true
     dir: packages/mobile
     name: "@douxing/mobile"
-    framework: uniapp-vue3 # 无第三方 UI 库，自研组件 + uni 内置组件
+    framework: uniapp-vue3 # Vue 3；无第三方 UI 库，自研组件 + uni 内置组件
     ports:
       h5: 5174
       appDev: 5175

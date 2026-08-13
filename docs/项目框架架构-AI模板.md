@@ -1,8 +1,9 @@
 # 多端 Monorepo 项目框架架构（AI 模板）
 
-> **版本**：1.0（基于兜行 Douxing 仓库抽象）  
+> **版本**：1.1（基于兜行 Douxing 仓库抽象）  
 > **配套配置**：仓库根目录 [`project.manifest.yaml`](../project.manifest.yaml)  
 > **目标读者**：人类架构师、Cursor/Claude 等 AI Agent  
+> **前端栈（强制）**：**仅 Vue 3**（Web / PC / UniApp 移动端）。**禁止** React、Next.js、React Native 等 React 生态作为业务前端。
 
 ---
 
@@ -12,7 +13,7 @@
 
 收到本仓库或本模板后，AI 应能：
 
-1. **新建**：生成与兜行同类型的 **pnpm/npm workspace Monorepo**（Web 管理端 + UniApp 移动端 + Node API + shared）。
+1. **新建**：生成与兜行同类型的 **pnpm/npm workspace Monorepo**（Vue 3 Web 管理端 + Vue 3 PC 用户端 + UniApp 移动端 + Node API + shared）。
 2. **改造**：在已有仓库中对照本架构补齐缺失层（API 契约、i18n、脚本、部署），并替换 `project.manifest.yaml` 中的项目专属项。
 
 ### 0.2 执行顺序（强制）
@@ -20,17 +21,18 @@
 ```text
 1. 读取并理解 project.manifest.yaml（用户应先改好 meta / domains / packages 开关）
 2. 读取本 MD 的「固定架构」章节 — 不得随意删减目录职责
-3. 按 manifest.placeholders 与 §12 映射表替换占位符
+3. 按 manifest.placeholders 与 §13 映射表替换占位符
 4. 按 manifest.packages.*.enabled 裁剪可选包（ai-service、ml-training）
 5. 生成/更新 .env.example、README、根 package.json scripts
-6. 自检 §13 清单
+6. 自检 §11 / §12 清单
 ```
 
 ### 0.3 禁止事项
 
+- **前端不得引入 React**（含 `react` / `react-dom` / Next.js / React Flow 等）；管理端可视化用 **Vue Flow**，与 Vue 3 同栈。
 - 不得在代码或 manifest 中硬编码 **API Key、密码、私钥**；仅使用环境变量。
 - 不得破坏 **统一 API 响应体** `ApiResponse` 与 **messageKey** 国际化机制。
-- 不得在未读 `packages/shared` 的情况下在三端重复定义相同常量/类型。
+- 不得在未读 `packages/shared` 的情况下在多端重复定义相同常量/类型。
 - 不得去掉 `scripts/pm.mjs` 的双包管理器兼容（若仓库已包含）。
 
 ---
@@ -41,15 +43,17 @@
 
 ```mermaid
 flowchart TB
-  subgraph clients [客户端]
+  subgraph clients [客户端 全部 Vue3]
     Web[Web 管理端 Vue3 + Ant Design Vue]
-    Mobile[UniApp 移动端 H5 / 小程序 / App]
+    Pc[PC 用户端 Vue3 + Tailwind]
+    Mobile[UniApp 移动端 Vue3 H5 / 小程序 / App]
   end
 
   subgraph monorepo [Monorepo 根目录]
     Shared["@scope/shared 类型·常量·i18n"]
     Server["@scope/server Express API"]
     WebPkg["@scope/web"]
+    PcPkg["@scope/pc"]
     MobilePkg["@scope/mobile"]
     AiOpt["@scope/ai Python 可选"]
   end
@@ -61,8 +65,10 @@ flowchart TB
   end
 
   Web --> Shared
+  Pc --> Shared
   Mobile --> Shared
   Web -->|HTTPS VITE_API_BASE_URL| Server
+  Pc -->|HTTPS VITE_API_BASE_URL| Server
   Mobile -->|HTTPS VITE_API_BASE_URL| Server
   Server --> Shared
   Server --> MySQL
@@ -78,12 +84,15 @@ flowchart TB
 | Monorepo | pnpm workspace（推荐）+ npm workspaces | `pnpm-workspace.yaml` + 根 `package.json#workspaces` |
 | 共享包 | TypeScript 纯类型/常量 | 构建输出 `dist/`，子包 `workspace:*` 引用 |
 | 后端 | Node 18+、Express、TypeScript、Drizzle ORM、MySQL | `tsx` 开发，`tsc` 生产（低内存可 tsx） |
-| Web | Vue 3、Vite、Pinia、Vue Router、Ant Design Vue 4 | 管理端，非 UniApp |
-| 移动端 | UniApp 3（Vue 3）、Vite、无第三方 UI 库 | 自研组件 + `view/text/button` + `theme.css` |
+| Web | **Vue 3**、Vite、Pinia、Vue Router、Ant Design Vue 4 | B 端 / 管理端；组件用 `<script setup>` + Composition API |
+| PC | **Vue 3**、Vite、Pinia、Vue Router、Tailwind CSS | C 端桌面网页；**非 React** |
+| 移动端 | UniApp 3（**Vue 3**）、Vite、无第三方 UI 库 | 自研组件 + `view/text/button` + `theme.css` |
 | 部署 | Docker Compose、PM2、Nginx、Certbot | 脚本在 `scripts/`、`deploy/` |
-| 国际化 | `@scope/shared` 统一 ApiMessageKey + 各端 vue-i18n | `Accept-Language` 中间件 |
+| 国际化 | `@scope/shared` 统一 ApiMessageKey + 各端 **vue-i18n** | `Accept-Language` 中间件 |
 
-业务域（兜行实例）：AI 行程规划、路线、打卡、成就徽章、订单支付、内容库 —— **新建项目可换业务，但分层不变**。
+> **栈边界**：业务 UI **只用 Vue 3**。勿因「函数式组件 / Hooks」等通用措辞误选 React；本仓库对应写法为 **SFC + Composition API / composables（`useXxx`）**。
+
+业务域（兜行实例）：AI 行程规划、路线、打卡、成就徽章、订单支付、内容库 —— **新建项目可换业务，但分层与前端 Vue 3 选型不变**。
 
 ---
 
@@ -122,8 +131,9 @@ flowchart TB
 └── packages/
     ├── shared/
     ├── server/
-    ├── web/
-    ├── mobile/
+    ├── web/                   # Vue 3 管理端 / B 端
+    ├── pc/                    # Vue 3 PC 用户端（C 端）
+    ├── mobile/                # UniApp Vue 3
     ├── ai-service/            # 可选
     └── ml-training/           # 可选
 ```
@@ -208,7 +218,9 @@ router.use(`${API_PREFIX}/users`, usersRouter);
 
 ### 3.3 `@scope/web`
 
-**职责**：运营管理端（Ant Design Vue），非用户 C 端。系统管理（S 线）与发单接单 **商户工作台**（M 线 · **M7-α** `/partner`）分域；C 端 AI 规划与模块 B marketplace 产品入口独立。
+**职责**：运营管理端与全部 B 端（Ant Design Vue），**非**用户 C 端主入口。系统管理（S 线）与发单接单 **商户工作台**（M 线 · **M7-α** `/partner`）分域。
+
+**技术约束**：**Vue 3 SFC**（`.vue`）+ `<script setup lang="ts">` + Pinia + Vue Router；**禁止** React / JSX 业务页面。
 
 ```text
 packages/web/src/
@@ -220,8 +232,9 @@ packages/web/src/
 ├── router/index.ts
 ├── stores/                  # Pinia
 ├── layouts/                 # BasicLayout + Sider + Tabs
-├── views/                   # 页面
-├── components/              # 复用组件
+├── views/                   # 页面（*.vue）
+├── components/              # 复用组件（*.vue）
+├── composables/             # Composition API 组合式函数 useXxx
 ├── i18n/
 ├── theme/antd-theme.ts
 └── utils/
@@ -231,15 +244,38 @@ packages/web/src/
 
 **表格列表**：数据页统一 `DouxingAdminTable` + 筛选 + XLSX 导出 + 空值 `-`；见 [Web管理端表格规范.md](./Web管理端表格规范.md)。
 
-### 3.4 `@scope/mobile`
+### 3.4 `@scope/pc`
 
-**职责**：用户端 UniApp（H5 / 微信小程序 / App）。
+**职责**：PC **C 端**用户网页（规划 / 路线 / 打卡 / 发单方能力等）。**禁止**在此包做 B 端商户入驻、接单、卖方履约（见 [PC双平台分工.md](./PC双平台分工.md)）。
+
+**技术约束**：与 Web 同为 **Vue 3** + Vite + Pinia + Vue Router；样式用 **Tailwind**（`dx-*` Token），**非** Ant Design Vue，**非** React。
+
+```text
+packages/pc/src/
+├── main.ts
+├── App.vue
+├── api/
+├── router/index.ts
+├── stores/
+├── layouts/
+├── views/                   # 页面（*.vue）
+├── components/              # 含 SubPageShell 等
+├── composables/             # useXxx
+├── i18n/
+└── styles/
+```
+
+**环境变量**：`VITE_API_BASE_URL`，与 manifest `domains.*.apiBaseUrl` 一致。
+
+### 3.5 `@scope/mobile`
+
+**职责**：用户端 UniApp（H5 / 微信小程序 / App），框架为 **Vue 3**（非 React Native）。
 
 ```text
 packages/mobile/src/
 ├── App.vue
 ├── pages.json               # 页面路由 + tabBar
-├── pages/{feature}/         # 页面
+├── pages/{feature}/         # 页面（*.vue）
 ├── components/              # 业务组件（Douxing* 前缀）
 ├── utils/
 │   ├── request.ts           # uni.request 封装，解析 ApiResponse
@@ -253,13 +289,13 @@ packages/mobile/src/
 
 **多端编译**：由根脚本 `dev:mp-weixin`、`build:app-android` 等经 `pm.mjs` 转发。
 
-### 3.5 `@scope/ai`（可选，manifest `aiService.enabled`）
+### 3.6 `@scope/ai`（可选，manifest `aiService.enabled`）
 
 - Python 3.12+、FastAPI、LangChain
 - Node 通过 `AI_SERVICE_URL` HTTP 调用，失败回退 Node 内置 LLM
 - 根命令：`dev:ai-service` → `scripts/run-ai-service.mjs`
 
-### 3.6 `@scope/ml`（可选）
+### 3.7 `@scope/ml`（可选）
 
 - 训练数据 JSONL、YAML 配置，无运行时服务
 - 根命令：`ml:generate-dataset`、`ml:validate-dataset` 转发到 server scripts
@@ -394,9 +430,10 @@ git pull → pnpm install --frozen-lockfile
 - [ ] 更新 `docker-compose.yml` container_name、数据库名
 - [ ] 更新 `deploy/ecosystem.config.cjs` PM2 名称
 - [ ] 生成 `.env.example`（无真实密钥）
-- [ ] 配置三端 `VITE_API_BASE_URL` 与 manifest domains 一致
+- [ ] 配置多端 `VITE_API_BASE_URL` 与 manifest domains 一致
+- [ ] 前端仅为 Vue 3（web / pc / mobile），`package.json` 无 `react` / `react-dom` 依赖
 - [ ] 实现最小闭环：`auth` 登录 + 一条核心业务 CRUD
-- [ ] 根脚本 `pnpm dev` 能同时起 server + web + mobile(h5)
+- [ ] 根脚本 `pnpm dev` 能同时起 server + web + pc + mobile(h5)
 - [ ] README + docs/包管理与命令.md
 
 ---
@@ -404,6 +441,7 @@ git pull → pnpm install --frozen-lockfile
 ## 12. 改造项目 — AI 检查清单
 
 - [ ] 对照 §3 补齐缺失目录（如只有前端无 shared → 先抽 shared）
+- [ ] 若误用 React：改为 Vue 3 SFC + Composition API，删除 React 依赖与双栈构建
 - [ ] API 响应统一为 `ApiResponse`，禁止 `{ success: true }` 混用
 - [ ] 路由统一加 `API_PREFIX` 前缀
 - [ ] 环境变量迁入 `.env.example` 文档化
@@ -441,10 +479,11 @@ git pull → pnpm install --frozen-lockfile
 你将基于「多端 Monorepo 项目框架架构（AI 模板）」工作。
 
 1. 先读取仓库根目录 project.manifest.yaml，并列出你将修改的 meta、domains、packages 开关。
-2. 严格遵守 ApiResponse、shared 常量、server routes→services 分层。
-3. 所有项目专属名称、域名、端口、AppID 只从 manifest 读取，不得臆造。
-4. 密钥只出现在 .env.example 的键名注释中，不要写入代码或 manifest。
-5. 完成后按 docs/项目框架架构-AI模板.md §11 或 §12 自检清单逐项说明结果。
+2. 前端固定为 Vue 3（Web / PC / UniApp），禁止引入 React 或双栈。
+3. 严格遵守 ApiResponse、shared 常量、server routes→services 分层。
+4. 所有项目专属名称、域名、端口、AppID 只从 manifest 读取，不得臆造。
+5. 密钥只出现在 .env.example 的键名注释中，不要写入代码或 manifest。
+6. 完成后按 docs/项目框架架构-AI模板.md §11 或 §12 自检清单逐项说明结果。
 
 当前任务：[在此描述新建/改造目标]
 ```

@@ -9,7 +9,7 @@ alwaysApply: true
 
 ## 禁止
 
-- 新增 `export` 函数、Hook、Service、路由 handler 却无 JSDoc
+- 新增 `export` 函数、Vue composable（`useXxx`）、Service、路由 handler 却无 JSDoc
 - 仅复述函数名的单行注释（如 `/** 合并项 */`）
 - 有 `@param` 却缺少 `@returns`（有返回值时）
 - 用注释替代 i18n 用户可见文案
@@ -21,7 +21,7 @@ alwaysApply: true
 |------|------|
 | `export` 函数 / 方法 | 完整 JSDoc |
 | 模块内业务函数（有参数或返回值） | 完整 JSDoc |
-| React 自定义 Hook（`useXxx`） | 完整 JSDoc |
+| Vue 组合式函数 / composable（`useXxx`） | 完整 JSDoc |
 | 类公有方法 | 完整 JSDoc |
 | 路由 handler、Service 方法 | 完整 JSDoc + 权限/副作用 |
 
@@ -49,7 +49,7 @@ alwaysApply: true
 | `@throws` | 会抛错时 |
 | `@example` | 用法不直观或公共 API 时可选 |
 
-## Hook 示例
+## Composable 示例（Vue 3）
 
 ```typescript
 /**
