@@ -12,16 +12,8 @@ const NAIVE_DATETIME_4Y_RE = /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/;
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const HAS_TZ_OFFSET_RE = /[zZ]|[+-]\d{2}:?\d{2}$/;
 
-const SHANGHAI_FORMATTER = new Intl.DateTimeFormat('sv-SE', {
-  timeZone: APP_TIMEZONE,
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-});
+/** 东八区相对 UTC 的固定偏移（毫秒）；上海无夏令时，不可用 `Intl`（微信小程序无该全局对象） */
+const SHANGHAI_OFFSET_MS = 8 * 60 * 60 * 1000;
 
 /** Date.prototype.toString() 一类：`Tue Jul 14 2026 15:47:48 GMT+0800 (...)` */
 const JS_DATE_TOSTRING_RE = /^(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s+\w+\s+\d{1,2}\s+\d{4}\s+\d{2}:\d{2}:\d{2}\s+GMT[+-]\d{4}/i;
@@ -54,6 +46,16 @@ function pad2(value: number): string {
  */
 function formatUtcComponentsAsWallClock(date: Date): string {
   return `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())} ${pad2(date.getUTCHours())}:${pad2(date.getUTCMinutes())}:${pad2(date.getUTCSeconds())}`;
+}
+
+/**
+ * 将绝对时刻格式化为 Asia/Shanghai 墙钟串（不依赖 `Intl`，兼容微信小程序）。
+ *
+ * @param date - 有效 Date 实例
+ * @returns `yyyy-mm-dd HH:mm:ss`（东八区）
+ */
+function formatShanghaiWallClock(date: Date): string {
+  return formatUtcComponentsAsWallClock(new Date(date.getTime() + SHANGHAI_OFFSET_MS));
 }
 
 /**
@@ -112,12 +114,12 @@ export function formatDisplayDateTime(value: Date | string | null | undefined): 
     const parsed = new Date(raw);
     return Number.isNaN(parsed.getTime())
       ? raw.slice(0, 19).replace('T', ' ')
-      : SHANGHAI_FORMATTER.format(parsed);
+      : formatShanghaiWallClock(parsed);
   }
 
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) return '';
-    return SHANGHAI_FORMATTER.format(value);
+    return formatShanghaiWallClock(value);
   }
 
   return String(value).slice(0, 19).replace('T', ' ');
