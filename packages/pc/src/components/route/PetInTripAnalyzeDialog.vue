@@ -59,16 +59,16 @@ const emit = defineEmits<{
   close: [];
 }>();
 
-const { t, locale } = useLocale();
+const { t, currentLocale } = useLocale();
 
 const loading = ref(false);
 const errorText = ref('');
 const result = ref<PetAnalyzeResult | null>(null);
 
-const titleText = computed(() => formatPetMemoryWallAnalyzeInTrip(locale.value));
-const analyzingText = computed(() => formatPetMemoryWallAnalyzing(locale.value));
-const insightTitle = computed(() => formatPetMemoryWallInsightTitle(locale.value));
-const replyTitle = computed(() => formatPetMemoryWallPetReplyTitle(locale.value));
+const titleText = computed(() => formatPetMemoryWallAnalyzeInTrip(currentLocale.value));
+const analyzingText = computed(() => formatPetMemoryWallAnalyzing(currentLocale.value));
+const insightTitle = computed(() => formatPetMemoryWallInsightTitle(currentLocale.value));
+const replyTitle = computed(() => formatPetMemoryWallPetReplyTitle(currentLocale.value));
 
 async function loadAnalyze() {
   if (!props.visible || !props.routeId) return;

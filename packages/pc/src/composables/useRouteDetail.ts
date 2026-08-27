@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import type {
+  FetchRouteCommentsParams,
   RouteCommentInfo,
   RoutePoiExternalLinkInfo,
   RouteDayPlan,
@@ -218,7 +219,7 @@ export function useRouteDetail(routeId: () => number) {
       return;
     }
     try {
-      const params: { limit?: number; dayIndex?: number; attractionId?: number } = { limit: 50 };
+      const params: FetchRouteCommentsParams = { limit: 50 };
       if (commentFocus.value?.attractionId != null) {
         params.attractionId = commentFocus.value.attractionId;
       } else if (commentFocus.value != null) {
