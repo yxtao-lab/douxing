@@ -65,7 +65,7 @@ const { t } = useLocale();
 const loading = ref(false);
 const items = ref<ServiceOrderDetail[]>([]);
 
-const columns = computed<AdminExportColumn[]>(() => [
+const columns = computed<AdminExportColumn<ServiceOrderDetail>[]>(() => [
   { title: t('partner.colDemand'), key: 'demand', width: 220, exportValue: (row) => formatAdminTableCell(row.demandTitle || row.demandNo) },
   { title: t('partner.colAmount'), dataIndex: 'totalAmount', width: 120 },
   { title: t('partner.colOrderStatus'), key: 'status', width: 140, exportValue: (row) => orderStatusLabel(row.status) },

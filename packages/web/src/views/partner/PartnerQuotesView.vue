@@ -58,7 +58,7 @@ const { t } = useLocale();
 const loading = ref(false);
 const items = ref<PartnerQuoteListItem[]>([]);
 
-const columns = computed<AdminExportColumn[]>(() => [
+const columns = computed<AdminExportColumn<PartnerQuoteListItem>[]>(() => [
   { title: t('partner.colDemand'), key: 'demand', width: 220, exportValue: (row) => formatAdminTableCell(row.demandTitle || row.demandNo) },
   { title: t('partner.colAmount'), dataIndex: 'amount', width: 120 },
   { title: t('partner.colQuoteStatus'), key: 'status', width: 120, exportValue: (row) => quoteStatusLabel(row.status) },

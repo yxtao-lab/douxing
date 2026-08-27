@@ -124,7 +124,7 @@ const { items: list, loading, pagination, reload, handleTableChange } =
     }),
   );
 
-const columns = computed<AdminExportColumn[]>(() => [
+const columns = computed<AdminExportColumn<ServiceDemandSummary>[]>(() => [
   { title: t('marketplace.demandColTitle'), dataIndex: 'title', width: 220 },
   { title: t('marketplace.demandColDestination'), dataIndex: 'destination', width: 140 },
   { title: t('marketplace.demandColStatus'), key: 'status', width: 120, exportValue: (row) => demandStatusLabel(row.status) },

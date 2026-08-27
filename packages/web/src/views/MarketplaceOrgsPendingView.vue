@@ -119,7 +119,6 @@ import { usePageTitle } from '@/i18n/usePageTitle';
 import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { fetchAllPaginatedRows } from '@/utils/fetchAllPaginatedRows';
 import {
-  ADMIN_TABLE_EMPTY_PLACEHOLDER,
   formatAdminTableCell,
 } from '@/utils/adminTableColumns';
 

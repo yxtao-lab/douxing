@@ -87,11 +87,10 @@
     >
       <a-spin :spinning="menuLoading">
         <a-tree
-          v-if="menuTree.length"
+          v-if="menuTreeData.length"
           v-model:checked-keys="checkedMenuIds"
           checkable
-          :tree-data="menuTree"
-          :field-names="{ title: 'menuName', key: 'id', children: 'children' }"
+          :tree-data="menuTreeData"
           default-expand-all
         />
         <a-empty v-else :description="t('system.empty')" />
@@ -106,6 +105,7 @@ import { message } from 'ant-design-vue';
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons-vue';
 import { useI18n } from 'vue-i18n';
 import type { TableColumnsType } from 'ant-design-vue';
+import type { DataNode } from 'ant-design-vue/es/tree';
 import { createRole, deleteRole, fetchMenusTree, fetchRoleMenus, fetchRoles, updateRole, updateRoleMenus, type MenuRow, type RoleRow } from '@/api/system';
 import AdminSearchBar from '@/components/admin/AdminSearchBar.vue';
 import AdminTableExportButton from '@/components/admin/AdminTableExportButton.vue';
@@ -130,6 +130,7 @@ const menuModalOpen = ref(false);
 const menuLoading = ref(false);
 const menuSaving = ref(false);
 const menuTree = ref<MenuRow[]>([]);
+const menuTreeData = computed(() => toMenuTreeData(menuTree.value));
 const checkedMenuIds = ref<number[]>([]);
 const assigningRoleId = ref<number | null>(null);
 
@@ -140,6 +141,20 @@ const columns = computed<TableColumnsType<RoleRow>>(() => [
   { title: t('system.colUserCount'), dataIndex: 'userCount', width: 100 },
   { title: t('system.colAction'), key: 'action', width: 220, fixed: 'right' },
 ]);
+
+/**
+ * 将菜单树转为 Ant Design Tree 节点（补充 key / title 字段）。
+ *
+ * @param nodes - 后端菜单树
+ * @returns 符合 DataNode 结构的树数据
+ */
+function toMenuTreeData(nodes: MenuRow[]): DataNode[] {
+  return nodes.map((node) => ({
+    key: node.id,
+    title: node.menuName,
+    children: node.children?.length ? toMenuTreeData(node.children) : undefined,
+  }));
+}
 
 async function load() {
   loading.value = true;

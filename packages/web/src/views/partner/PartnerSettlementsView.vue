@@ -127,7 +127,7 @@ const statusOptions = computed(() => [
   { value: SettlementStatus.VOID, label: t('marketplace.settlementStatus.void') },
 ]);
 
-const columns = computed<AdminExportColumn[]>(() => [
+const columns = computed<AdminExportColumn<OrgSettlementSummary>[]>(() => [
   {
     title: t('partner.colOrderNo'),
     key: 'orderNo',

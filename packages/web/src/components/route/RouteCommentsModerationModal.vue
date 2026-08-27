@@ -20,7 +20,7 @@
             <a-switch
               :checked="record.isFeatured === true"
               :loading="togglingId === record.id"
-              @change="(checked: boolean) => handleFeaturedToggle(record, checked)"
+              @change="(checked) => handleFeaturedToggle(record, checked === true)"
             />
           </template>
           <template v-else-if="column.key === 'content'">
@@ -40,7 +40,7 @@ import type { RouteCommentInfo, TravelRouteInfo } from '@douxing/shared';
 import { fetchRouteComments, setRouteCommentFeatured } from '@/api/routes';
 import DouxingAdminTable from '@/components/DouxingAdminTable.vue';
 import { message } from 'ant-design-vue';
-import type { AdminExportColumn } from '@/utils/adminTableColumns';
+import type { AdminExportColumn } from '@/utils/adminTableExport';
 import { formatAdminTableCell } from '@/utils/adminTableColumns';
 
 const props = defineProps<{
@@ -70,7 +70,8 @@ const columns = computed<AdminExportColumn<RouteCommentInfo>[]>(() => [
     title: t('routes.colCommentUser'),
     dataIndex: 'userNickname',
     width: 120,
-    customRender: ({ record }) => formatAdminTableCell(record.userNickname),
+    customRender: ({ record }: { record: RouteCommentInfo }) =>
+      formatAdminTableCell(record.userNickname),
   },
   {
     title: t('routes.colCommentContent'),
@@ -82,7 +83,8 @@ const columns = computed<AdminExportColumn<RouteCommentInfo>[]>(() => [
     title: t('routes.colCommentLikes'),
     dataIndex: 'likeCount',
     width: 88,
-    customRender: ({ record }) => formatAdminTableCell(record.likeCount ?? 0),
+    customRender: ({ record }: { record: RouteCommentInfo }) =>
+      formatAdminTableCell(record.likeCount ?? 0),
   },
   {
     title: t('routes.colCommentFeatured'),

@@ -95,7 +95,7 @@ const loading = ref(false);
 const items = ref<ServiceOrderDetail[]>([]);
 const calendarValue = ref<Dayjs>(dayjs());
 
-const columns = computed<AdminExportColumn[]>(() => [
+const columns = computed<AdminExportColumn<ServiceOrderDetail>[]>(() => [
   {
     title: t('partner.colDemand'),
     key: 'title',
