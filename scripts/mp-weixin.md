@@ -3,7 +3,7 @@
 > 命令默认写 `pnpm`；仅用 npm 时改为 `npm run`。见 [docs/包管理与命令.md](../docs/包管理与命令.md)。  
 > 环境变量见 [docs/env-environments.md](../docs/env-environments.md)。执行 **`pnpm env:status`** 可查看当前 API 地址。
 
-AppID：`wx2c8d1e2b2e502819`
+AppID：`wxb6bf41dd9f4da3bb`
 
 ---
 

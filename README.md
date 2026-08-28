@@ -429,7 +429,7 @@ LLM_MODEL=你的模型名称
 
 ## 微信小程序
 
-AppID：`wx2c8d1e2b2e502819`（已写入 `packages/mobile/src/manifest.json`）
+AppID：`wxb6bf41dd9f4da3bb`（已写入 `packages/mobile/src/manifest.json`）
 
 常用命令见 [命令速查 · 开发运行](#开发运行dev) 与 [构建](#构建build)。
 

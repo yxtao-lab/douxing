@@ -137,7 +137,7 @@ deploy:
     - scripts/setup-ubuntu22.sh
 
 mobileWechat:
-  mpAppId: wx2c8d1e2b2e502819 # 小程序 AppID，勿填 AppSecret
+  mpAppId: wxb6bf41dd9f4da3bb # 小程序 AppID，勿填 AppSecret
   devTools:
     autoOpenOnCompile: true # dev:mp-weixin 编译完成后打开开发者工具
     envKeys:
