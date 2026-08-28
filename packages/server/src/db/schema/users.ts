@@ -17,7 +17,7 @@ export const users = mysqlTable('users', {
   /** P-TAG-01：用户偏好场景标签（slug 列表），用于首页/专题/规划个性化推荐 */
   preferredScenes: json('preferred_scenes').$type<string[]>(),
   /** P-ONBOARD-01：性别（自愿） */
-  gender: varchar('gender', { length: 16 }),
+  gender: varchar('gender', { length: 32 }),
   /** P-ONBOARD-01：年龄段（不收集精确年龄） */
   ageRange: varchar('age_range', { length: 16 }),
   /** P-ONBOARD-01：旅行半径 */

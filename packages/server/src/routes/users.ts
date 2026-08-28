@@ -54,7 +54,7 @@ const updateProfileSchema = z.object({
   interestTags: z.array(z.string().min(1).max(16)).max(USER_INTEREST_MAX).optional(),
   /** P-TAG-01：用户偏好场景标签 slug 列表 */
   preferredScenes: z.array(z.string().min(1).max(32)).max(10).optional(),
-  gender: z.string().max(16).nullable().optional(),
+  gender: z.string().max(32).nullable().optional(),
   ageRange: z.string().max(16).nullable().optional(),
   travelRadius: z.string().max(16).nullable().optional(),
   companionStructure: z.array(z.string().min(1).max(16)).max(4).optional(),
@@ -62,7 +62,7 @@ const updateProfileSchema = z.object({
 });
 
 const completeOnboardingSchema = z.object({
-  gender: z.string().max(16).nullable().optional(),
+  gender: z.string().max(32).nullable().optional(),
   ageRange: z.string().max(16).nullable().optional(),
   travelRadius: z.string().max(16).nullable().optional(),
   preferredScenes: z.array(z.string().min(1).max(32)).max(10).nullable().optional(),
