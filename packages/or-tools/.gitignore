@@ -1,0 +1,7 @@
+# 本地编译产物（勿提交）
+build/
+cmake-build*/
+out/
+*.user
+.vs/
+.idea/
