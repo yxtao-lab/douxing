@@ -1,31 +1,33 @@
 {
   "name": "@douxing/or-tools",
-  "version": "9.15.0",
+  "version": "0.1.0",
   "private": true,
-  "description": "兜行对 route-solver（OR-Tools 独立分叉）的工作区封装；上游为 yxtao-lab/route-solver，不跟踪 Google 官方仓库",
+  "description": "兜行路径优化：消费 PyPI ortools 的 Python 产品仓（yxtao-lab/python-route-solver）",
   "license": "Apache-2.0",
-  "homepage": "https://github.com/yxtao-lab/route-solver",
+  "homepage": "https://github.com/yxtao-lab/python-route-solver",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yxtao-lab/route-solver.git",
+    "url": "https://github.com/yxtao-lab/python-route-solver.git",
     "directory": "packages/or-tools/upstream"
   },
   "scripts": {
     "upstream:status": "git -C upstream status -sb && git -C upstream rev-parse --short HEAD && git -C upstream remote -v",
     "upstream:pull": "git -C upstream pull --ff-only",
-    "info": "node -e \"console.log('@douxing/or-tools ->', 'https://github.com/yxtao-lab/route-solver'); console.log(require('fs').readFileSync('upstream/Version.txt','utf8').trim())\""
+    "example:basic": "python upstream/basic_example.py",
+    "example:day-route": "python examples/solve_day_route.py",
+    "info": "node -e \"console.log('@douxing/or-tools -> https://github.com/yxtao-lab/python-route-solver'); console.log('submodule', require('child_process').execSync('git -C upstream rev-parse --short HEAD',{encoding:'utf8'}).trim())\""
   },
   "files": [
     "upstream/**",
+    "examples/**",
     "README.md",
     "package.json"
   ],
   "keywords": [
     "or-tools",
+    "python",
     "route-solver",
     "tsp",
-    "routing",
-    "cp-sat",
-    "optimization"
+    "routing"
   ]
 }

@@ -1,16 +1,22 @@
 # @douxing/or-tools
 
-兜行 monorepo 内对 **自有产品仓** [yxtao-lab/route-solver](https://github.com/yxtao-lab/route-solver) 的封装。
+兜行 monorepo 内对 **Python 版路径求解产品仓** 的封装。
 
-- 源码目录：`packages/or-tools/upstream`（git submodule）
-- 跟踪分支：`douxing`（专供兜行系统；通用产品线仍可用远端 `stable`）
-- 远程：**你的 fork**，不再指向 `google/or-tools`
-- 许可：Apache-2.0（继承自 OR-Tools；产品仓需保留 LICENSE / NOTICE）
+| 项 | 内容 |
+|----|------|
+| 产品仓 | [yxtao-lab/python-route-solver](https://github.com/yxtao-lab/python-route-solver) |
+| 本地路径 | `packages/or-tools/upstream`（git submodule） |
+| 跟踪分支 | `douxing`（专供兜行；远端另有 `main`） |
+| 运行时依赖 | PyPI [`ortools`](https://pypi.org/project/ortools/)（见 `upstream/requirements.txt`） |
+| 语言 | **Python**（通过官方绑定调用 OR-Tools，日常定制算法用 Python 即可） |
+
+> 已不再引用 C++ 源码仓 `yxtao-lab/route-solver`。若需改求解器内核，再单独使用该 C++ fork。
 
 ## 初始化
 
 ```bash
 git submodule update --init --depth 1 packages/or-tools/upstream
+pip install -r packages/or-tools/upstream/requirements.txt
 ```
 
 ```bash
@@ -18,24 +24,29 @@ pnpm --filter @douxing/or-tools info
 pnpm --filter @douxing/or-tools upstream:status
 ```
 
-## 修改内核代码（推到你的产品仓）
+## 运行示例
 
-在 `upstream/` 内改完后：
+```bash
+# 上游模板自带
+pnpm --filter @douxing/or-tools example:basic
+
+# 兜行一日行程（酒店 + POI）
+pip install -r packages/or-tools/examples/requirements.txt
+pnpm --filter @douxing/or-tools example:day-route
+```
+
+## 修改与提交
+
+在 `upstream/`（`douxing` 分支）改 Python 代码后：
 
 ```bash
 cd packages/or-tools/upstream
-git checkout -b feat/your-change
 git add -A && git commit -m "feat: ..."
-git push -u origin feat/your-change
+git push origin douxing
 
 cd ../../..
 git add packages/or-tools/upstream
-git commit -m "chore(or-tools): 更新 route-solver 指针"
+git commit -m "chore(or-tools): 更新 python-route-solver 指针"
 ```
 
-## 与 Google 上游的关系
-
-- **默认不同步** Google，避免影响你的独立产品。
-- 若需参考官方更新：在产品仓临时 `git remote add google https://github.com/google/or-tools.git`，手动 cherry-pick，勿直接 merge 进默认分支 unless 你明确要跟。
-
-本包不参与根目录业务 `pnpm build`；C++/Bazel 构建按 route-solver / OR-Tools 文档在本地进行。
+算法定制（策略、时间窗、矩阵）优先在 Python 层完成，见 `examples/solve_day_route.py`。

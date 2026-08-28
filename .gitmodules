@@ -1,5 +1,5 @@
-[submodule "or-tools"]
+[submodule "python-route-solver"]
 	path = packages/or-tools/upstream
-	url = https://github.com/yxtao-lab/route-solver.git
+	url = https://github.com/yxtao-lab/python-route-solver.git
 	branch = douxing
 	shallow = true
