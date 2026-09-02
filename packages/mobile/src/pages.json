@@ -118,6 +118,12 @@
       }
     },
     {
+      "path": "pages/attractions/detail",
+      "style": {
+        "navigationBarTitleText": "景点详情"
+      }
+    },
+    {
       "path": "pages/marketplace/create",
       "style": {
         "navigationBarTitleText": "发布需求"

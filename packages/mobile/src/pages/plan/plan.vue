@@ -14,29 +14,31 @@
               </view>
               <text class="title">{{ t('plan.title') }}</text>
             </view>
-            <view v-if="sessionId || currentRouteId || previousSessionId" class="header-actions">
-              <text
-                v-if="previousSessionId && !sessionId"
-                class="header-route-link"
-                @click="restorePreviousSession"
-              >{{ t('plan.backToChat') }}</text>
-              <text v-if="sessionId" class="new-session" @click="startNewSession">{{ t('plan.newSession') }}</text>
+            <view v-if="showHeaderActions" class="header-actions">
+              <view
+                v-if="showMoreActions"
+                class="header-more-btn"
+                :aria-label="t('plan.moreActions')"
+                @click.stop="toggleMoreMenu"
+              >
+                <image class="header-more-icon" src="/static/iconfont/svg/more.svg" mode="aspectFit" />
+              </view>
             </view>
           </view>
           <text v-if="!sessionId && messages.length === 0" class="desc">{{ t('plan.desc') }}</text>
         </view>
       </view>
-      <view v-if="intentSummary" class="intent-bar">
+      <view v-if="intentSummary" class="intent-bar" :class="{ 'intent-bar--compact': !!sessionId }">
         <text class="intent-label">{{ t('plan.intentLabel') }}</text>
         <text class="intent-value">{{ intentSummary }}{{ intentBarExtra }}</text>
       </view>
-      <PlanPetFocusCard v-if="petFocus" :view-model="petFocus" />
-      <view v-if="membershipHint" class="membership-bar">
-        <text class="membership-label">{{ membershipHint }}</text>
-      </view>
-      <view v-if="appendLockedHint" class="append-locked-bar">
-        <text class="append-locked-text">{{ appendLockedHint }}</text>
-        <text class="append-locked-link" @click="goMembership">{{ t('nav.membership') }}</text>
+      <view
+        v-if="membershipHint"
+        class="session-status-bar"
+        :class="{ 'session-status-bar--compact': !!sessionId }"
+      >
+        <text class="session-status-text">{{ membershipHint }}</text>
+        <text class="session-status-link" @click="goMembership">{{ t('nav.membership') }}</text>
       </view>
       <view v-if="showLlmStatus" class="llm-status warn">
         <text>{{ llmIssueMessage }}</text>
@@ -88,8 +90,8 @@
           class="msg-row"
         >
           <view class="msg-avatar-slot">
-            <view v-if="msg.role === 'assistant'" class="msg-avatar assistant-avatar">
-              <text class="iconfont icon-plan assistant-icon" />
+            <view v-if="msg.role === 'assistant'" class="msg-avatar assistant-avatar assistant-avatar--pet">
+              <text class="assistant-pet-emoji">{{ assistantPetEmoji }}</text>
             </view>
           </view>
           <view class="msg-content" :class="msg.role">
@@ -178,18 +180,6 @@
         </view>
       </scroll-view>
 
-      <view v-if="recentPrompts.length" class="recent-dock">
-        <text class="recent-dock-label">{{ t('plan.recentPromptsTitle') }}</text>
-        <scroll-view class="recent-dock-scroll" scroll-x enable-flex :show-scrollbar="false">
-          <text
-            v-for="item in recentPrompts"
-            :key="`dock-${item}`"
-            class="chip chip-recent chip-dock"
-            @click="applyRecentPrompt(item)"
-          >{{ recentPromptLabel(item) }}</text>
-        </scroll-view>
-      </view>
-
       <VoiceTextComposer
         ref="composerRef"
         v-model="inputText"
@@ -198,6 +188,71 @@
         :loading="aiPlanning"
         @send="handleSend"
       />
+    </view>
+
+    <view
+      v-if="moreMenuOpen"
+      class="plan-menu-mask"
+      @click="closeMoreMenu"
+      @touchmove.stop.prevent
+    >
+      <view class="plan-more-menu" :style="moreMenuStyle" @click.stop>
+        <view
+          v-if="canResumeLastSession"
+          class="plan-more-item"
+          @click="onMoreAction('resume')"
+        >
+          <image class="plan-more-item-icon" src="/static/iconfont/svg/chat-resume.svg" mode="aspectFit" />
+          <text class="plan-more-item-label">{{ t('plan.resumeLastSession') }}</text>
+        </view>
+        <view
+          v-if="canStartNewSession"
+          class="plan-more-item"
+          @click="onMoreAction('new')"
+        >
+          <image class="plan-more-item-icon" src="/static/iconfont/svg/plus.svg" mode="aspectFit" />
+          <text class="plan-more-item-label">{{ t('plan.newSession') }}</text>
+        </view>
+        <view
+          v-if="canClearChat"
+          class="plan-more-item"
+          @click="onMoreAction('clear')"
+        >
+          <image class="plan-more-item-icon" src="/static/iconfont/svg/clear.svg" mode="aspectFit" />
+          <text class="plan-more-item-label">{{ t('plan.clearChat') }}</text>
+        </view>
+        <view
+          v-if="recentPrompts.length"
+          class="plan-more-item"
+          @click="onMoreAction('recent')"
+        >
+          <image class="plan-more-item-icon" src="/static/iconfont/svg/history.svg" mode="aspectFit" />
+          <text class="plan-more-item-label">{{ t('plan.recentPromptsTitle') }}</text>
+        </view>
+      </view>
+    </view>
+
+    <view
+      v-if="recentSheetOpen"
+      class="plan-recent-mask"
+      @click="closeRecentSheet"
+      @touchmove.stop.prevent
+    >
+      <view class="plan-recent-sheet" @click.stop>
+        <view class="plan-recent-sheet-head">
+          <text class="plan-recent-sheet-title">{{ t('plan.recentPromptsTitle') }}</text>
+          <text class="plan-recent-sheet-close" @click="closeRecentSheet">×</text>
+        </view>
+        <view v-if="recentPrompts.length" class="plan-recent-sheet-list">
+          <text
+            v-for="item in recentPrompts"
+            :key="`sheet-${item}`"
+            class="chip chip-recent plan-recent-sheet-chip"
+            @click="applyRecentPrompt(item)"
+          >{{ recentPromptLabel(item) }}</text>
+        </view>
+        <text v-else class="plan-recent-sheet-empty">{{ t('plan.recentPromptsEmpty') }}</text>
+      </view>
     </view>
 
     <DouxingTabBar :current="1" />
@@ -212,18 +267,19 @@ import {
   appendPlanMessage,
   createPlanSession,
   fetchPlanSession,
+  fetchPlanSessions,
   selectPlanCandidate,
 } from '@/api/plan-sessions';
 import * as authStorage from '@/utils/auth-storage';
 import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
 import { fetchMembershipInfo } from '@/api/user';
+import { fetchTravelPetFloatingContext } from '@/api/pets';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
 import { getAppErrorMessage } from '@/utils/request';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import { trackAnalytics } from '@/utils/analytics';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
 import VoiceTextComposer from '@/components/voice-text-composer/VoiceTextComposer.vue';
-import PlanPetFocusCard from '@/components/plan/PlanPetFocusCard.vue';
 import type {
   LlmProviderChoice,
   LlmProviderOption,
@@ -244,9 +300,16 @@ import {
   getPlanCandidateCountByMemberLevel,
   canAppendPlanByMemberLevel,
   formatPlanRecentPromptLabel,
-  resolvePlanPetFocusViewModel,
+  resolveTravelPetSpeciesEmoji,
+  stripPlanIntentHintFromAssistantReply,
 } from '@douxing/shared';
 import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
+import {
+  clearPlanLastSessionId,
+  loadPlanLastSessionId,
+  savePlanLastSessionId,
+} from '@/utils/plan-last-session';
+import { consumePlanLaunchIntent, hasPlanLaunchIntent } from '@/utils/plan-launch-intent';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
@@ -267,7 +330,8 @@ const inputText = ref('');
 const composerRef = ref<InstanceType<typeof VoiceTextComposer> | null>(null);
 const user = ref<UserInfo | null>(authStorage.getStoredUser());
 const sessionId = ref<number | null>(null);
-const previousSessionId = ref<number | null>(null);
+/** 本地持久化的上次会话，用于进入页面自动恢复 / 菜单继续对话 */
+const lastSessionId = ref<number | null>(null);
 const currentRouteId = ref<number | null>(null);
 const currentRoutePreview = ref<Pick<TravelRouteInfo, 'name' | 'days' | 'budgetRange'> | null>(
   null,
@@ -284,6 +348,15 @@ const llmIssueMessage = ref('');
 const memberPlanCount = ref(getPlanCandidateCountByMemberLevel(0));
 const canAppendPlan = ref(canAppendPlanByMemberLevel(0));
 const recentPrompts = ref<string[]>([]);
+const moreMenuOpen = ref(false);
+const recentSheetOpen = ref(false);
+/** 场景定制入口传入的 sceneTags，仅用于下一次新建规划会话 */
+const pendingSceneTags = ref<string[] | null>(null);
+/** 更多操作菜单相对视口的定位（由按钮实测得到） */
+const moreMenuStyle = ref<Record<string, string>>({
+  top: '0px',
+  right: '16px',
+});
 /** 模型选择仅开发环境展示，生产包使用服务端默认策略 */
 const showModelPicker = import.meta.env.DEV;
 
@@ -301,11 +374,6 @@ const membershipHint = computed(() => {
     count: memberPlanCount.value,
     followUp,
   });
-});
-
-const appendLockedHint = computed(() => {
-  if (!sessionId.value || canAppendPlan.value) return '';
-  return t('plan.appendLockedHint');
 });
 
 const composerLocked = computed(() => aiPlanning.value || (!!sessionId.value && !canAppendPlan.value));
@@ -337,6 +405,36 @@ function refreshRecentPrompts() {
   recentPrompts.value = loadPlanRecentPrompts(user.value?.id);
 }
 
+/**
+ * 从本地存储刷新「上次会话」ID。
+ *
+ * @returns void
+ */
+function refreshLastSessionId() {
+  lastSessionId.value = loadPlanLastSessionId(user.value?.id);
+}
+
+/**
+ * 将指定会话记为上次对话并写入本地存储。
+ *
+ * @param id - 规划会话 ID
+ * @returns void
+ */
+function rememberLastSession(id: number) {
+  lastSessionId.value = id;
+  savePlanLastSessionId(id, user.value?.id);
+}
+
+/**
+ * 清除本地「上次会话」记录（会话失效或不存在时）。
+ *
+ * @returns void
+ */
+function forgetLastSession() {
+  lastSessionId.value = null;
+  clearPlanLastSessionId(user.value?.id);
+}
+
 function recordRecentPrompt(content: string) {
   recentPrompts.value = savePlanRecentPrompt(content, user.value?.id);
 }
@@ -345,8 +443,145 @@ function recentPromptLabel(prompt: string): string {
   return formatPlanRecentPromptLabel(prompt);
 }
 
+const canStartNewSession = computed(() => Boolean(sessionId.value));
+const canClearChat = computed(
+  () => Boolean(sessionId.value) || messages.value.length > 0,
+);
+const canResumeLastSession = computed(
+  () =>
+    Boolean(lastSessionId.value)
+    && (!sessionId.value || sessionId.value !== lastSessionId.value),
+);
+const showMoreActions = computed(
+  () =>
+    canStartNewSession.value
+    || canClearChat.value
+    || canResumeLastSession.value
+    || recentPrompts.value.length > 0,
+);
+const showHeaderActions = computed(
+  () =>
+    Boolean(sessionId.value || currentRouteId.value)
+    || showMoreActions.value,
+);
+
+/**
+ * 根据「更多」按钮的实际位置，更新下拉菜单贴靠坐标。
+ *
+ * @returns 定位完成后 resolve 的 Promise
+ */
+function updateMoreMenuPosition(): Promise<void> {
+  return new Promise((resolve) => {
+    void nextTick(() => {
+      uni
+        .createSelectorQuery()
+        .select('.header-more-btn')
+        .boundingClientRect()
+        .exec((results) => {
+          const box = results?.[0];
+          if (box && !Array.isArray(box) && typeof box.bottom === 'number') {
+            let windowWidth = 0;
+            try {
+              windowWidth = uni.getSystemInfoSync().windowWidth || 0;
+            } catch {
+              windowWidth = 0;
+            }
+            const gapPx = typeof uni.upx2px === 'function' ? uni.upx2px(8) : 4;
+            const rightPx = Math.max(8, windowWidth - (box.right || 0));
+            moreMenuStyle.value = {
+              top: `${box.bottom + gapPx}px`,
+              right: `${rightPx}px`,
+            };
+          }
+          resolve();
+        });
+    });
+  });
+}
+
+/**
+ * 切换顶部「更多操作」下拉菜单的开关状态。
+ *
+ * @returns void
+ */
+async function toggleMoreMenu() {
+  if (aiPlanLoadingState.active) return;
+  if (moreMenuOpen.value) {
+    moreMenuOpen.value = false;
+    return;
+  }
+  recentSheetOpen.value = false;
+  await updateMoreMenuPosition();
+  moreMenuOpen.value = true;
+}
+
+/**
+ * 关闭顶部更多操作菜单。
+ *
+ * @returns void
+ */
+function closeMoreMenu() {
+  moreMenuOpen.value = false;
+}
+
+/**
+ * 关闭最近发送底部面板。
+ *
+ * @returns void
+ */
+function closeRecentSheet() {
+  recentSheetOpen.value = false;
+}
+
+/**
+ * 处理更多操作菜单项点击。
+ *
+ * @param action - `resume` 继续上次；`new` 新建；`clear` 清空；`recent` 最近发送
+ * @returns void
+ */
+function onMoreAction(action: 'resume' | 'new' | 'clear' | 'recent') {
+  closeMoreMenu();
+  if (action === 'resume') {
+    void resumeLastSession();
+    return;
+  }
+  if (action === 'new') {
+    startNewSession();
+    return;
+  }
+  if (action === 'clear') {
+    confirmClearChat();
+    return;
+  }
+  recentSheetOpen.value = true;
+}
+
+/**
+ * 确认后清空当前规划对话视图；本地仍保留上次会话 ID 以便继续。
+ *
+ * @returns void
+ */
+function confirmClearChat() {
+  if (aiPlanLoadingState.active) return;
+  uni.showModal({
+    title: t('plan.clearChatConfirmTitle'),
+    content: t('plan.clearChatConfirmContent'),
+    success: (res) => {
+      if (!res.confirm) return;
+      clearSessionView();
+    },
+  });
+}
+
+/**
+ * 将最近发送内容填入输入框，并关闭最近发送面板。
+ *
+ * @param text - 最近发送原文
+ * @returns void
+ */
 function applyRecentPrompt(text: string) {
   inputText.value = text;
+  closeRecentSheet();
 }
 
 function formatRouteDays(days: number | undefined | null): string {
@@ -441,16 +676,41 @@ function candidateLabel(item: PlanRouteCandidate): string {
 
 const ragMatchedCount = ref(0);
 const petMeta = ref<PlanPetMeta | null>(null);
+/** 会话未返回 petMeta 时，从旅行伙伴接口补全物种 emoji */
+const fallbackPetSpecies = ref('fox');
 
-const petFocus = computed(() => {
-  if (!sessionId.value) return null;
-  return resolvePlanPetFocusViewModel(petMeta.value, currentLocale.value);
-});
+/**
+ * 助手消息头像：优先会话 petMeta，否则用用户旅行伙伴物种。
+ *
+ * @returns 宠物 emoji 字符串
+ */
+const assistantPetEmoji = computed(() =>
+  resolveTravelPetSpeciesEmoji(petMeta.value?.species ?? fallbackPetSpecies.value),
+);
 
 function syncPetMeta(
   source?: { petMeta?: PlanPetMeta | null; agentState?: PlanSessionAgentState | null } | null,
 ) {
   petMeta.value = source?.petMeta ?? source?.agentState?.petMeta ?? null;
+}
+
+/**
+ * 预拉用户旅行伙伴物种，供聊天助手头像与会话前展示。
+ *
+ * @returns void
+ */
+async function ensurePetAvatarSpecies() {
+  if (petMeta.value?.species) return;
+  if (!authStorage.getStoredUser()) return;
+  try {
+    const ctx = await fetchTravelPetFloatingContext();
+    fallbackPetSpecies.value = ctx.pet.species;
+    if (!petMeta.value && ctx.petMeta) {
+      petMeta.value = ctx.petMeta;
+    }
+  } catch {
+    /* 未登录或无宠物时保持默认 fox */
+  }
 }
 
 const intentBarExtra = computed(() => {
@@ -511,11 +771,20 @@ function refreshStatusForProvider() {
   }
 }
 
+/**
+ * 将会话消息映射为聊天气泡；助手消息去掉与顶部意图条重复的「已理解需求」段。
+ *
+ * @param list - 会话消息列表
+ * @returns 前端聊天消息
+ */
 function mapMessages(list: PlanSessionMessageInfo[]): ChatMessage[] {
   return list.map((item) => ({
     id: item.id,
     role: item.role,
-    content: item.content,
+    content:
+      item.role === 'assistant'
+        ? stripPlanIntentHintFromAssistantReply(item.content)
+        : item.content,
   }));
 }
 
@@ -536,6 +805,11 @@ function resetComposerInput() {
   composerRef.value?.clear();
 }
 
+/**
+ * 清空当前规划页会话视图（消息、候选方案、意图等），不发起网络请求。
+ *
+ * @returns void
+ */
 function clearSessionView() {
   sessionId.value = null;
   currentRouteId.value = null;
@@ -550,20 +824,34 @@ function clearSessionView() {
   refreshStatusForProvider();
 }
 
+/**
+ * 结束当前会话视图并进入新建规划状态；进行中的规划不可打断。
+ * 本地仍保留上次会话 ID，可从菜单「继续上次对话」恢复。
+ *
+ * @returns void
+ */
 function startNewSession() {
   if (aiPlanLoadingState.active) return;
   if (sessionId.value) {
-    previousSessionId.value = sessionId.value;
+    rememberLastSession(sessionId.value);
   }
   clearSessionView();
+  closeMoreMenu();
+  closeRecentSheet();
 }
 
-async function restorePreviousSession() {
-  if (aiPlanLoadingState.active || !previousSessionId.value) return;
+/**
+ * 从本地记录的上次会话 ID 拉取并恢复对话。
+ *
+ * @returns void
+ */
+async function resumeLastSession() {
+  if (aiPlanLoadingState.active || !lastSessionId.value) return;
+  if (sessionId.value && sessionId.value === lastSessionId.value) return;
   try {
-    await loadSession(previousSessionId.value);
-    previousSessionId.value = null;
+    await loadSession(lastSessionId.value);
   } catch (e) {
+    forgetLastSession();
     uni.showToast({
       title: getAppErrorMessage(e, t('plan.restoreSessionFailed')),
       icon: 'none',
@@ -580,9 +868,17 @@ function goMembership() {
   uni.navigateTo({ url: '/pages/profile/membership' });
 }
 
+/**
+ * 拉取并渲染指定规划会话详情到当前页。
+ *
+ * @param id - 规划会话 ID
+ * @returns void
+ * @throws 会话不存在或网络失败时向上抛出，由调用方处理
+ */
 async function loadSession(id: number) {
   const session = await fetchPlanSession(id);
   sessionId.value = session.id;
+  rememberLastSession(session.id);
   intentSnapshot.value = session.intentSnapshot ?? null;
   candidates.value = session.candidates ?? [];
   currentRouteId.value = session.routeId;
@@ -623,8 +919,30 @@ async function handleSelectCandidate(item: PlanRouteCandidate) {
   }
 }
 
+/**
+ * 解析应恢复的上次会话 ID：优先本地缓存，否则取服务端最近一条。
+ *
+ * @returns 可用会话 ID；无则 `null`
+ */
+async function resolveLastSessionIdToRestore(): Promise<number | null> {
+  refreshLastSessionId();
+  if (lastSessionId.value) return lastSessionId.value;
+  if (!authStorage.getStoredUser()) return null;
+  try {
+    const list = await fetchPlanSessions(1);
+    const latest = list[0];
+    if (!latest?.id) return null;
+    rememberLastSession(latest.id);
+    return latest.id;
+  } catch {
+    return null;
+  }
+}
+
 onMounted(async () => {
   refreshRecentPrompts();
+  refreshLastSessionId();
+  void ensurePetAvatarSpecies();
   try {
     const [{ options }, status] = await Promise.all([fetchLlmProviders(), fetchLlmStatus()]);
     providerOptions.value = options;
@@ -650,6 +968,8 @@ onShow(() => {
   trackAnalytics(AnalyticsEventName.PLAN_PAGE_VIEW);
   user.value = authStorage.getStoredUser();
   refreshRecentPrompts();
+  refreshLastSessionId();
+  void ensurePetAvatarSpecies();
   if (user.value) {
     memberPlanCount.value = getPlanCandidateCountByMemberLevel(user.value.memberLevel);
     canAppendPlan.value = canAppendPlanByMemberLevel(user.value.memberLevel);
@@ -657,14 +977,46 @@ onShow(() => {
       .then((info) => {
         memberPlanCount.value = info.planCandidateCount;
         canAppendPlan.value = info.canAppendPlan;
+        // 与会员权益页对齐：展示有效等级（过期后为免费）
+        if (user.value) {
+          const nextUser = { ...user.value, memberLevel: info.level };
+          user.value = nextUser;
+          const token = authStorage.getStoredToken();
+          if (token) authStorage.setAuth(token, nextUser);
+        }
       })
       .catch(() => {
         /* 使用本地缓存等级 */
       });
   }
+  void applyPlanLaunchIntent();
 });
 
+/**
+ * 消费场景专题等写入的规划启动意图：可清会话、预填并自动发送。
+ *
+ * @returns void
+ */
+async function applyPlanLaunchIntent() {
+  const intent = consumePlanLaunchIntent();
+  if (!intent?.prompt) return;
+  if (intent.fresh) {
+    if (sessionId.value) {
+      rememberLastSession(sessionId.value);
+    }
+    clearSessionView();
+  }
+  pendingSceneTags.value =
+    intent.sceneTags && intent.sceneTags.length > 0 ? [...intent.sceneTags] : null;
+  inputText.value = intent.prompt;
+  if (!intent.autoSend) return;
+  await nextTick();
+  await handleSend(intent.prompt);
+}
+
 onLoad(async (query) => {
+  user.value = authStorage.getStoredUser();
+  refreshLastSessionId();
   const fromPrompt = query?.prompt;
   if (typeof fromPrompt === 'string' && fromPrompt.trim()) {
     inputText.value = decodeURIComponent(fromPrompt.trim());
@@ -679,13 +1031,30 @@ onLoad(async (query) => {
         /* 忽略无效会话 */
       }
     }
+    return;
+  }
+  // 有待消费的场景定制意图时，不恢复上次对话，交给 onShow 处理
+  if (hasPlanLaunchIntent()) return;
+  // 无显式 sessionId 时：自动恢复上次对话，避免每次进入都是空白新建页
+  if (authStorage.getStoredUser()) {
+    const id = await resolveLastSessionIdToRestore();
+    if (id) {
+      try {
+        await loadSession(id);
+      } catch {
+        forgetLastSession();
+      }
+    }
   }
 });
 
 async function submitNewPlanSession(text: string) {
+  const sceneTags = pendingSceneTags.value ?? undefined;
+  pendingSceneTags.value = null;
   return createPlanSession({
     prompt: text,
     provider: provider.value,
+    ...(sceneTags && sceneTags.length > 0 ? { sceneTags } : {}),
   });
 }
 
@@ -723,6 +1092,7 @@ async function handleSend(text: string) {
     if (!sessionId.value) {
       const planActionResult = await submitNewPlanSession(content);
       sessionId.value = planActionResult.sessionId;
+      rememberLastSession(planActionResult.sessionId);
       trackAnalytics(AnalyticsEventName.PLAN_SESSION_CREATED, {
         sessionId: planActionResult.sessionId,
         routeId: planActionResult.id,
@@ -863,11 +1233,103 @@ async function handleSend(text: string) {
   gap: 20rpx;
   flex-shrink: 0;
 }
-.header-route-link,
-.new-session {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.92);
+.header-more-btn {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: var(--dx-radius-md);
+  background: rgba(255, 255, 255, 0.18);
+  border: 2rpx solid rgba(255, 255, 255, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.header-more-icon {
+  width: 30rpx;
+  height: 30rpx;
+}
+.plan-menu-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 10050;
+  background: rgba(15, 23, 42, 0.18);
+}
+.plan-more-menu {
+  position: absolute;
+  min-width: 280rpx;
+  padding: 8rpx 0;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-md);
+  box-shadow: var(--dx-shadow-md);
+  overflow: hidden;
+}
+.plan-more-item {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 22rpx 28rpx;
+}
+.plan-more-item:active {
+  background: var(--dx-primary-light);
+}
+.plan-more-item-icon {
+  width: 32rpx;
+  height: 32rpx;
+  flex-shrink: 0;
+}
+.plan-more-item-label {
+  font-size: 28rpx;
+  color: var(--dx-text);
   font-weight: 500;
+}
+.plan-recent-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 10060;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.plan-recent-sheet {
+  width: 100%;
+  max-height: 60vh;
+  padding: 28rpx var(--page-gutter) calc(28rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-xl) var(--dx-radius-xl) 0 0;
+  box-shadow: var(--dx-shadow-md);
+}
+.plan-recent-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+.plan-recent-sheet-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--dx-text);
+}
+.plan-recent-sheet-close {
+  width: 48rpx;
+  height: 48rpx;
+  line-height: 48rpx;
+  text-align: center;
+  font-size: 36rpx;
+  color: var(--dx-text-muted);
+}
+.plan-recent-sheet-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.plan-recent-sheet-chip {
+  max-width: 100%;
+}
+.plan-recent-sheet-empty {
+  font-size: 26rpx;
+  color: var(--dx-text-muted);
 }
 .title {
   font-size: 36rpx;
@@ -898,36 +1360,39 @@ async function handleSend(text: string) {
   border-left: 6rpx solid var(--dx-primary);
   box-shadow: var(--dx-shadow-sm);
 }
-.membership-bar {
-  margin-top: 12rpx;
-  padding: 10rpx 16rpx;
+.intent-bar--compact {
+  gap: 4rpx;
+  padding: 10rpx 14rpx;
+}
+.session-status-bar {
+  margin-top: 8rpx;
+  padding: 10rpx 14rpx;
   background: linear-gradient(90deg, #fff7ed 0%, #fef3c7 100%);
   border-radius: var(--dx-radius-sm);
-}
-.membership-label {
-  font-size: 22rpx;
-  color: #b45309;
-}
-.append-locked-bar {
-  margin-top: 12rpx;
-  padding: 12rpx 16rpx;
-  background: #fef2f2;
-  border-radius: var(--dx-radius-sm);
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 8rpx;
+  gap: 12rpx;
 }
-.append-locked-text {
-  font-size: 22rpx;
-  color: #b91c1c;
+.session-status-bar--compact {
+  margin-top: 6rpx;
+  padding: 6rpx 12rpx;
+}
+.session-status-text {
   flex: 1;
   min-width: 0;
+  font-size: 22rpx;
+  line-height: 1.35;
+  color: #b45309;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.append-locked-link {
+.session-status-link {
+  flex-shrink: 0;
   font-size: 22rpx;
   color: var(--dx-primary);
-  flex-shrink: 0;
+  font-weight: 500;
 }
 .llm-status {
   margin-top: 16rpx;
@@ -1014,24 +1479,6 @@ async function handleSend(text: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.recent-dock {
-  margin-bottom: 16rpx;
-}
-.recent-dock-label {
-  display: block;
-  margin-bottom: 8rpx;
-  font-size: 22rpx;
-  color: var(--dx-text-muted);
-}
-.recent-dock-scroll {
-  display: flex;
-  flex-direction: row;
-  white-space: nowrap;
-}
-.chip-dock {
-  flex-shrink: 0;
-  margin-right: 12rpx;
 }
 .intent-label {
   font-size: 22rpx;
@@ -1166,12 +1613,13 @@ async function handleSend(text: string) {
   font-weight: 600;
   line-height: 1;
 }
-.assistant-avatar {
-  background: linear-gradient(135deg, var(--dx-accent-dark) 0%, var(--dx-accent) 100%);
+.assistant-avatar--pet {
+  background: #fff7ed;
+  border: 2rpx solid rgba(251, 191, 36, 0.35);
 }
-.assistant-icon {
-  color: var(--dx-text-inverse);
+.assistant-pet-emoji {
   font-size: 36rpx;
+  line-height: 1;
 }
 .bubble {
   max-width: 100%;

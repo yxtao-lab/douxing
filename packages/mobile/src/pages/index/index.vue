@@ -13,7 +13,6 @@
               <text class="brand-sub">{{ t('home.subtitle') }}</text>
             </view>
           </view>
-          <text class="tagline">{{ t('home.tagline') }}</text>
           <view class="value-props">
             <text v-for="item in valueProps" :key="item" class="value-chip">{{ item }}</text>
           </view>
@@ -30,40 +29,42 @@
       </view>
     </view>
 
-    <scroll-view :scroll-y="contentNeedsScroll" class="page-content" enable-back-to-top>
+    <view class="page-content">
       <view class="page-body">
-        <view class="quick-actions">
-          <view class="quick-item" @click="goPlan">
-            <view class="quick-icon quick-icon--plan">✨</view>
-            <text class="quick-label">{{ t('home.quickPlan') }}</text>
-          </view>
-          <view class="quick-item" @click="goRoutes">
-            <view class="quick-icon quick-icon--routes">🗺️</view>
-            <text class="quick-label">{{ t('home.quickRoutes') }}</text>
-          </view>
-          <view class="quick-item" @click="goProfile">
-            <view class="quick-icon quick-icon--profile">🏅</view>
-            <text class="quick-label">{{ t('home.quickProfile') }}</text>
-          </view>
-        </view>
-
-        <view class="section scene-section">
-          <view class="section-head">
-            <text class="section-title">{{ t('home.sceneExploreTitle') }}</text>
-          </view>
-          <scroll-view scroll-x class="scene-chips" show-scrollbar="false">
-            <view class="scene-chips-inner">
-              <view
-                v-for="slug in sceneTagSlugs"
-                :key="slug"
-                class="scene-chip"
-                @click="goScene(slug)"
-              >
-                <text class="scene-chip-emoji">{{ sceneEmoji(slug) }}</text>
-                <text class="scene-chip-label">{{ sceneLabel(slug) }}</text>
-              </view>
+        <view class="page-body-top">
+          <view class="quick-actions">
+            <view class="quick-item" @click="goPlan">
+              <view class="quick-icon quick-icon--plan">✨</view>
+              <text class="quick-label">{{ t('home.quickPlan') }}</text>
             </view>
-          </scroll-view>
+            <view class="quick-item" @click="goRoutes">
+              <view class="quick-icon quick-icon--routes">🗺️</view>
+              <text class="quick-label">{{ t('home.quickRoutes') }}</text>
+            </view>
+            <view class="quick-item" @click="goProfile">
+              <view class="quick-icon quick-icon--profile">🏅</view>
+              <text class="quick-label">{{ t('home.quickProfile') }}</text>
+            </view>
+          </view>
+
+          <view class="section scene-section">
+            <view class="section-head">
+              <text class="section-title">{{ t('home.sceneExploreTitle') }}</text>
+            </view>
+            <scroll-view scroll-x class="scene-chips" :show-scrollbar="false">
+              <view class="scene-chips-inner">
+                <view
+                  v-for="slug in sceneTagSlugs"
+                  :key="slug"
+                  class="scene-chip"
+                  @click="goScene(slug)"
+                >
+                  <text class="scene-chip-emoji">{{ sceneEmoji(slug) }}</text>
+                  <text class="scene-chip-label">{{ sceneLabel(slug) }}</text>
+                </view>
+              </view>
+            </scroll-view>
+          </view>
         </view>
 
         <view class="section hot-section">
@@ -153,7 +154,7 @@
           </view>
         </view>
       </view>
-    </scroll-view>
+    </view>
 
     <DouxingTabBar :current="0" />
   </view>
@@ -187,8 +188,10 @@ const hotLoading = ref(false);
 const hotError = ref('');
 const hotCurrent = ref(0);
 const hotSwiperHeightPx = ref(0);
-const contentNeedsScroll = ref(false);
 const pageProxy = getCurrentInstance()?.proxy;
+
+/** 热门路线卡片轮播最小高度（rpx），避免极小屏下卡片不可读 */
+const HOT_SWIPER_MIN_HEIGHT_RPX = 200;
 
 const hotSwiperStyle = computed(() =>
   hotSwiperHeightPx.value > 0 ? { height: `${hotSwiperHeightPx.value}px` } : {},
@@ -274,6 +277,11 @@ watch(hotLoading, (loading) => {
   }
 });
 
+/**
+ * 根据剩余可视高度计算热门路线轮播高度，使下方内容区不出现纵向滚动条。
+ *
+ * @returns Promise<void>
+ */
 function syncPageLayout() {
   void nextTick(() => {
     const query = uni.createSelectorQuery();
@@ -281,31 +289,43 @@ function syncPageLayout() {
       query.in(pageProxy);
     }
     query.select('.page-content').boundingClientRect();
-    query.select('.page-body').boundingClientRect();
-    query.select('.hot-swiper-item .hot-card').boundingClientRect();
+    query.select('.page-body-top').boundingClientRect();
+    query.select('.hot-section .section-head').boundingClientRect();
     query.exec((results) => {
       const container = results[0];
-      const body = results[1];
-      const card = results[2];
-
-      if (
-        container &&
-        body &&
-        !Array.isArray(container) &&
-        !Array.isArray(body) &&
-        container.height > 0 &&
-        body.height > 0
-      ) {
-        contentNeedsScroll.value = body.height > container.height + 2;
-      }
+      const topBlock = results[1];
+      const hotHead = results[2];
 
       if ((hotRoutes.value ?? []).length === 0) {
         hotSwiperHeightPx.value = 0;
         return;
       }
-      if (card && !Array.isArray(card) && card.height > 0) {
-        hotSwiperHeightPx.value = Math.ceil(card.height);
+
+      if (
+        !container ||
+        !topBlock ||
+        Array.isArray(container) ||
+        Array.isArray(topBlock) ||
+        container.height <= 0
+      ) {
+        return;
       }
+
+      const hotHeadHeight =
+        hotHead && !Array.isArray(hotHead) && hotHead.height > 0 ? hotHead.height : uni.upx2px(44);
+      const dotsReserve =
+        hotRoutes.value.length > 1 ? uni.upx2px(36) : uni.upx2px(12);
+      const hotSectionGap = uni.upx2px(24);
+      const bodyBottomPad = uni.upx2px(24);
+      const remaining =
+        container.height -
+        topBlock.height -
+        hotHeadHeight -
+        hotSectionGap -
+        dotsReserve -
+        bodyBottomPad;
+      const minHeight = uni.upx2px(HOT_SWIPER_MIN_HEIGHT_RPX);
+      hotSwiperHeightPx.value = Math.max(Math.floor(remaining), minHeight);
     });
   });
 }
@@ -401,11 +421,20 @@ function goRouteDetail(id: number) {
   flex: 1;
   height: 0;
   width: 100%;
+  overflow: hidden;
 }
 
 .page-body {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   padding: 0 var(--page-gutter) 24rpx;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.page-body-top {
+  flex-shrink: 0;
 }
 
 .hero {
@@ -468,15 +497,6 @@ function goRouteDetail(id: number) {
 .brand-sub {
   font-size: 24rpx;
   color: rgba(255, 255, 255, 0.88);
-}
-
-.tagline {
-  display: block;
-  margin-top: 28rpx;
-  font-size: 34rpx;
-  font-weight: 600;
-  line-height: 1.45;
-  color: var(--dx-text-inverse);
 }
 
 .value-props {
@@ -561,17 +581,16 @@ function goRouteDetail(id: number) {
 .quick-actions {
   display: flex;
   gap: 16rpx;
-  padding-top: 8rpx;
-  margin-top: -24rpx;
 }
 
 .quick-item {
   flex: 1;
   background: var(--dx-surface);
   border-radius: var(--dx-radius-md);
-  padding: 24rpx 12rpx;
+  padding: 20rpx 12rpx;
   text-align: center;
-  box-shadow: var(--dx-shadow-sm);
+  border: 1rpx solid var(--dx-border);
+  box-shadow: 0 0 16rpx rgba(15, 23, 42, 0.06);
 }
 
 .quick-icon {
@@ -603,7 +622,15 @@ function goRouteDetail(id: number) {
 }
 
 .section {
-  padding-top: 32rpx;
+  padding-top: 24rpx;
+}
+
+.hot-section {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .section-head {
@@ -659,8 +686,13 @@ function goRouteDetail(id: number) {
 }
 
 .hot-carousel {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   margin: 0 -8rpx;
-  padding: 8rpx 0 4rpx;
+  padding: 4rpx 0 0;
+  overflow: hidden;
 }
 
 .hot-swiper {
@@ -680,7 +712,8 @@ function goRouteDetail(id: number) {
 .hot-card {
   flex-shrink: 0;
   width: 480rpx;
-  padding: 28rpx;
+  max-height: 100%;
+  padding: 24rpx;
   box-sizing: border-box;
   background: var(--dx-surface);
   border-radius: var(--dx-radius-xl);
@@ -695,6 +728,7 @@ function goRouteDetail(id: number) {
     opacity 0.38s ease,
     filter 0.38s ease,
     box-shadow 0.38s ease;
+  overflow: hidden;
 }
 
 .hot-card--active {
@@ -734,7 +768,8 @@ function goRouteDetail(id: number) {
   align-items: center;
   justify-content: center;
   gap: 12rpx;
-  margin-top: 20rpx;
+  margin-top: 12rpx;
+  flex-shrink: 0;
 }
 
 .hot-dot {
@@ -781,13 +816,13 @@ function goRouteDetail(id: number) {
 }
 
 .hot-desc {
-  margin-top: 12rpx;
+  margin-top: 10rpx;
   font-size: 24rpx;
   color: var(--dx-text-secondary);
-  line-height: 1.45;
+  line-height: 1.4;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 1;
   -webkit-box-orient: vertical;
   display: -webkit-box;
 }

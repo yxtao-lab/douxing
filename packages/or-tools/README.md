@@ -1,52 +1,43 @@
 # @douxing/or-tools
 
-兜行 monorepo 内对 **Python 版路径求解产品仓** 的封装。
+兜行 monorepo 内路径优化能力封装。
 
 | 项 | 内容 |
 |----|------|
-| 产品仓 | [yxtao-lab/python-route-solver](https://github.com/yxtao-lab/python-route-solver) |
-| 本地路径 | `packages/or-tools/upstream`（git submodule） |
-| 跟踪分支 | `douxing`（专供兜行；远端另有 `main`） |
-| 运行时依赖 | PyPI [`ortools`](https://pypi.org/project/ortools/)（见 `upstream/requirements.txt`） |
-| 语言 | **Python**（通过官方绑定调用 OR-Tools，日常定制算法用 Python 即可） |
+| Python 产品仓（示例/模板） | [yxtao-lab/python-route-solver](https://github.com/yxtao-lab/python-route-solver) → `upstream/` |
+| **外置求解服务（解耦）** | `service/`（FastAPI + OR-Tools，默认端口 8200） |
+| 管理端可视化 | Web「数据中台 → 路径算法实验室」`/route-solver-lab` |
 
-> 已不再引用 C++ 源码仓 `yxtao-lab/route-solver`。若需改求解器内核，再单独使用该 C++ fork。
+## 外置服务（推荐接入方式）
 
-## 初始化
+```bash
+# 安装依赖并启动
+cd packages/or-tools/service
+python -m venv .venv && .venv/Scripts/pip install -r requirements.txt   # Windows
+pnpm dev:route-solver
+```
+
+根目录 `.env`：
+
+```text
+ROUTE_SOLVER_ENABLED=true
+ROUTE_SOLVER_URL=http://127.0.0.1:8200
+```
+
+契约：`GET /health` · `GET /v1/route/factors` · `POST /v1/route/solve`  
+详见 `service/README.md`。
+
+Node 仅做鉴权代理（`/api/admin/route-solver/*`），**不内嵌算法**；业务路线 Enricher 后续也可同 URL 调用。
+
+## 本地示例脚本
+
+```bash
+pip install -r packages/or-tools/examples/requirements.txt
+python packages/or-tools/examples/solve_day_route.py
+```
+
+## Submodule
 
 ```bash
 git submodule update --init --depth 1 packages/or-tools/upstream
-pip install -r packages/or-tools/upstream/requirements.txt
 ```
-
-```bash
-pnpm --filter @douxing/or-tools info
-pnpm --filter @douxing/or-tools upstream:status
-```
-
-## 运行示例
-
-```bash
-# 上游模板自带
-pnpm --filter @douxing/or-tools example:basic
-
-# 兜行一日行程（酒店 + POI）
-pip install -r packages/or-tools/examples/requirements.txt
-pnpm --filter @douxing/or-tools example:day-route
-```
-
-## 修改与提交
-
-在 `upstream/`（`douxing` 分支）改 Python 代码后：
-
-```bash
-cd packages/or-tools/upstream
-git add -A && git commit -m "feat: ..."
-git push origin douxing
-
-cd ../../..
-git add packages/or-tools/upstream
-git commit -m "chore(or-tools): 更新 python-route-solver 指针"
-```
-
-算法定制（策略、时间窗、矩阵）优先在 Python 层完成，见 `examples/solve_day_route.py`。

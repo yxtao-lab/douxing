@@ -5,7 +5,6 @@
       <view class="hero-content">
         <text class="hero-emoji">{{ sceneEmoji }}</text>
         <text class="hero-title">{{ sceneLabel }}</text>
-        <text class="hero-sub">{{ t('scenes.pageTitle') }}</text>
       </view>
     </view>
 
@@ -23,9 +22,12 @@
         />
 
         <template v-else>
-          <view class="section">
+          <view class="section section-panel">
             <view class="section-head">
-              <text class="section-title">{{ t('scenes.attractionsTitle') }}</text>
+              <view class="section-title-row">
+                <text class="section-title">{{ t('scenes.attractionsTitle') }}</text>
+                <text v-if="attractions.length > 0" class="section-badge">{{ t('scenes.attractionsTopBadge') }}</text>
+              </view>
             </view>
             <DouxingEmptyState
               v-if="attractions.length === 0"
@@ -33,47 +35,47 @@
               compact
               :title="t('scenes.attractionsEmpty')"
             />
-            <view v-else class="attraction-grid">
+            <scroll-view
+              v-else
+              scroll-x
+              class="attraction-strip"
+              :show-scrollbar="false"
+              enable-flex
+            >
               <view
                 v-for="item in attractions"
                 :key="item.id"
-                class="attraction-card"
+                class="attraction-chip"
+                hover-class="attraction-chip--hover"
+                @click="goAttraction(item.id)"
               >
                 <image
                   v-if="item.coverImageUrl"
-                  class="attraction-cover"
+                  class="attraction-thumb"
                   :src="item.coverImageUrl"
                   mode="aspectFill"
                 />
-                <view v-else class="attraction-cover attraction-cover--placeholder">
-                  <text class="placeholder-emoji">📍</text>
+                <view v-else class="attraction-thumb attraction-thumb--placeholder">
+                  <text class="thumb-emoji">📍</text>
                 </view>
-                <view class="attraction-info">
-                  <text class="attraction-name">{{ item.name }}</text>
-                  <text class="attraction-city">{{ item.city }}</text>
-                  <view v-if="(item.sceneTags ?? []).length > 0" class="attraction-tags">
-                    <text
-                      v-for="slug in item.sceneTags"
-                      :key="slug"
-                      class="attraction-tag"
-                    >
-                      {{ formatSceneTagLabel(slug, currentLocale) }}
-                    </text>
-                  </view>
-                </view>
+                <text class="attraction-chip-name">{{ item.name }}</text>
               </view>
-            </view>
+            </scroll-view>
           </view>
 
-          <view class="section">
-            <view class="section-head">
+          <view class="section section-panel">
+            <view class="section-head section-head--with-action">
               <text class="section-title">{{ t('scenes.routesTitle') }}</text>
+              <text class="section-action" @click="goCustomPlan">{{ t('scenes.planCustomRoute') }}</text>
             </view>
             <DouxingEmptyState
               v-if="routes.length === 0"
               embedded
               compact
               :title="t('scenes.routesEmpty')"
+              :description="t('scenes.routesEmptyDesc')"
+              :action-label="t('scenes.planCustomRoute')"
+              @action="goCustomPlan"
             />
             <view v-else class="route-list">
               <view
@@ -108,13 +110,18 @@ import type { AttractionInfo, TravelRouteInfo, SceneTagSlug } from '@douxing/sha
 import { formatSceneTagLabel, isSceneTagSlug } from '@douxing/shared';
 import { fetchSceneDetail } from '@/api/scenes';
 import { getAppErrorMessage } from '@/utils/request';
+import { getStoredUser } from '@/utils/auth-storage';
+import { ensureLoggedInUser } from '@/utils/ensure-logged-in';
+import { launchSceneCustomPlan } from '@/utils/plan-launch-intent';
 import DouxingEmptyState from '@/components/douxing-empty-state/DouxingEmptyState.vue';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
+import { useInterestTagLabel } from '@/i18n/useInterestTagLabel';
 
 const { themeClass } = useTheme();
-const { t, tf, locale } = useTf();
+const { t, tf } = useTf();
+const { currentLocale } = useInterestTagLabel();
 usePageTitle('scenes.pageTitle');
 
 const slug = ref<SceneTagSlug>('kids');
@@ -122,8 +129,6 @@ const attractions = ref<AttractionInfo[]>([]);
 const routes = ref<TravelRouteInfo[]>([]);
 const loading = ref(false);
 const error = ref('');
-
-const currentLocale = computed(() => (locale.value ?? 'zh-CN') as 'zh-CN' | 'en-US');
 
 const sceneLabel = computed(() => formatSceneTagLabel(slug.value, currentLocale.value));
 
@@ -154,11 +159,16 @@ onShow(() => {
   }
 });
 
+/**
+ * 拉取场景专题下的景点与公开路线。
+ *
+ * @returns void
+ */
 async function loadDetail() {
   loading.value = true;
   error.value = '';
   try {
-    const data = await fetchSceneDetail(slug.value, { attractionLimit: 12, pageSize: 12 });
+    const data = await fetchSceneDetail(slug.value, { attractionLimit: 10, pageSize: 12 });
     attractions.value = data.attractions ?? [];
     routes.value = data.routes?.items ?? [];
   } catch (e) {
@@ -170,6 +180,12 @@ async function loadDetail() {
   }
 }
 
+/**
+ * 格式化路线卡片副标题（天数 · 预算）。
+ *
+ * @param item - 路线摘要
+ * @returns 展示文案
+ */
 function routeMeta(item: TravelRouteInfo) {
   return tf('routes.cardMeta', {
     days: item.days,
@@ -177,8 +193,50 @@ function routeMeta(item: TravelRouteInfo) {
   });
 }
 
+/**
+ * 进入景点详情页。
+ *
+ * @param id - 景点 ID
+ * @returns void
+ */
+function goAttraction(id: number) {
+  uni.navigateTo({ url: `/pages/attractions/detail?id=${id}` });
+}
+
+/**
+ * 进入路线详情页。
+ *
+ * @param id - 路线 ID
+ * @returns void
+ */
 function goRoute(id: number) {
   uni.navigateTo({ url: `/pages/routes/detail?id=${id}` });
+}
+
+/**
+ * 按当前场景发起定制规划：画像 + 场景 prompt，跳转规划页并自动发送。
+ * 有/无精选路线均可使用；后续追问仍受会员等级约束。
+ *
+ * @returns void
+ */
+function goCustomPlan() {
+  if (!ensureLoggedInUser()) {
+    uni.navigateTo({ url: '/pages/login/login' });
+    return;
+  }
+  const user = getStoredUser();
+  launchSceneCustomPlan(
+    slug.value,
+    {
+      interestTags: user?.interestTags,
+      preferredScenes: user?.preferredScenes,
+      ageRange: user?.ageRange,
+      travelRadius: user?.travelRadius,
+      companionStructure: user?.companionStructure,
+      budgetTier: user?.budgetTier,
+    },
+    currentLocale.value,
+  );
 }
 </script>
 
@@ -209,15 +267,15 @@ function goRoute(id: number) {
 .hero-content {
   position: relative;
   z-index: 1;
-  padding: 32rpx 8rpx 40rpx;
+  padding: 48rpx 8rpx 56rpx;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 8rpx;
+  gap: 10rpx;
 }
 
 .hero-emoji {
-  font-size: 56rpx;
+  font-size: 52rpx;
   line-height: 1;
 }
 
@@ -225,11 +283,6 @@ function goRoute(id: number) {
   font-size: 44rpx;
   font-weight: 700;
   color: var(--dx-text-inverse);
-}
-
-.hero-sub {
-  font-size: 24rpx;
-  color: rgba(255, 255, 255, 0.85);
 }
 
 .page-content {
@@ -243,81 +296,106 @@ function goRoute(id: number) {
 }
 
 .section {
-  padding-top: 32rpx;
+  margin-top: 24rpx;
+}
+
+.section-panel {
+  padding: 28rpx 24rpx;
+  background: var(--dx-surface);
+  border-radius: var(--dx-radius-lg);
+  box-shadow: var(--dx-shadow-sm);
+  border: 1rpx solid var(--dx-border);
+}
+
+.section-panel + .section-panel {
+  margin-top: 28rpx;
 }
 
 .section-head {
   margin-bottom: 20rpx;
 }
+.section-head--with-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16rpx;
+}
+.section-action {
+  flex-shrink: 0;
+  font-size: 26rpx;
+  color: var(--dx-primary);
+  font-weight: 500;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
 
 .section-title {
-  font-size: 32rpx;
+  font-size: 30rpx;
   font-weight: 700;
   color: var(--dx-text);
 }
 
-.attraction-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 20rpx;
-}
-
-.attraction-card {
-  width: calc(50% - 10rpx);
-  background: var(--dx-surface);
-  border-radius: var(--dx-radius-lg);
-  overflow: hidden;
-  box-shadow: var(--dx-shadow-sm);
-}
-
-.attraction-cover {
-  width: 100%;
-  height: 200rpx;
-  background: var(--dx-bg-muted, #f5f5f5);
-}
-
-.attraction-cover--placeholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.placeholder-emoji {
-  font-size: 56rpx;
-}
-
-.attraction-info {
-  padding: 20rpx;
-}
-
-.attraction-name {
-  display: block;
-  font-size: 28rpx;
-  font-weight: 600;
-  color: var(--dx-text);
-  line-height: 1.35;
-}
-
-.attraction-city {
-  display: block;
-  margin-top: 6rpx;
-  font-size: 22rpx;
-  color: var(--dx-text-muted);
-}
-
-.attraction-tags {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  margin-top: 12rpx;
-}
-
-.attraction-tag {
+.section-badge {
+  flex-shrink: 0;
   font-size: 20rpx;
+  font-weight: 600;
   color: var(--dx-primary);
   background: var(--dx-primary-light);
   padding: 4rpx 12rpx;
-  border-radius: 999rpx;
+  border-radius: 8rpx;
+  letter-spacing: 0.5rpx;
+}
+
+.attraction-strip {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.attraction-chip {
+  display: inline-flex;
+  flex-direction: column;
+  width: 168rpx;
+  margin-right: 16rpx;
+  vertical-align: top;
+}
+
+.attraction-chip--hover {
+  opacity: 0.85;
+}
+
+.attraction-thumb {
+  width: 168rpx;
+  height: 120rpx;
+  border-radius: 16rpx;
+  background: var(--dx-bg-muted, #f5f5f5);
+  overflow: hidden;
+}
+
+.attraction-thumb--placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(145deg, var(--dx-primary-light), var(--dx-bg));
+}
+
+.thumb-emoji {
+  font-size: 36rpx;
+}
+
+.attraction-chip-name {
+  display: block;
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: var(--dx-text);
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .route-list {
@@ -328,9 +406,9 @@ function goRoute(id: number) {
 
 .route-card {
   padding: 24rpx;
-  background: var(--dx-surface);
-  border-radius: var(--dx-radius-lg);
-  box-shadow: var(--dx-shadow-sm);
+  background: var(--dx-bg);
+  border-radius: var(--dx-radius-md, 16rpx);
+  border: 1rpx solid var(--dx-border);
 }
 
 .route-card-top {

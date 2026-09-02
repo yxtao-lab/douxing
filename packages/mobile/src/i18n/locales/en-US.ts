@@ -1,4 +1,4 @@
-﻿/** 移动端英文文案 */
+/** 移动端英文文案 */
 export const mobileEnUS = {
   home: {
     subtitle: 'AI-powered trips from one sentence',
@@ -24,11 +24,28 @@ export const mobileEnUS = {
   scenes: {
     pageTitle: 'Scene hub',
     attractionsTitle: 'Popular sights',
+    attractionsTopBadge: 'TOP 10',
     routesTitle: 'Featured routes',
-    attractionsEmpty: 'No sights for this scene yet — try planning a route',
+    attractionsEmpty: 'No attractions for this scene yet',
     routesEmpty: 'No public routes for this scene yet',
+    routesEmptyDesc:
+      'We can craft a trip from your profile and this scene. Follow-up edits depend on your membership tier.',
+    planCustomRoute: 'Plan a custom route',
     loadFailed: 'Could not load scene content',
     back: 'Back',
+  },
+  attractions: {
+    loadFailed: 'Could not load attraction',
+    freeTicket: 'Free',
+    ticketLabel: 'Ticket',
+    ticketValue: 'About ¥{price}',
+    openHoursLabel: 'Hours',
+    openHoursAllDay: 'All day / not listed',
+    descriptionLabel: 'About',
+    tagsLabel: 'Tags',
+    openMap: 'Open on map',
+    noLocation: 'No coordinates available',
+    descriptionEmpty: 'No description yet',
   },
   emptyState: {
     achievementsDesc: 'Check in at sights to unlock more achievements',
@@ -206,6 +223,12 @@ export const mobileEnUS = {
     routeDetail: 'Route details',
     routeDetailCtaHint: 'View map, itinerary flow chart & check-in',
     newSession: 'New',
+    moreActions: 'More',
+    clearChat: 'Clear chat',
+    clearChatConfirmTitle: 'Clear chat',
+    clearChatConfirmContent: 'This will clear the current planning conversation. Continue?',
+    resumeLastSession: 'Resume last chat',
+    recentPromptsEmpty: 'No recent prompts',
     intentLabel: 'Understood',
     intentDays: '{days} days',
     intentBudget: 'Budget {budget}',

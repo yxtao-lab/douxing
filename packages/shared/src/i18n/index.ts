@@ -65,6 +65,7 @@ export {
 } from './profile-tags.js';
 export {
   formatPlanIntentSummary,
+  stripPlanIntentHintFromAssistantReply,
   buildMultiCandidateAssistantReply,
   buildPlanAssistantReply,
   buildPlanCandidateSwitchedReply,

@@ -28,6 +28,7 @@ const createSessionSchema = z.object({
   days: z.number().int().min(1).max(7).optional(),
   budget: z.string().optional(),
   provider: providerSchema,
+  sceneTags: z.array(z.string().min(1).max(32)).max(10).optional(),
 });
 
 const appendMessageSchema = z.object({

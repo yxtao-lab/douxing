@@ -15,6 +15,7 @@
     "upstream:pull": "git -C upstream pull --ff-only",
     "example:basic": "python upstream/basic_example.py",
     "example:day-route": "python examples/solve_day_route.py",
+    "dev:service": "node ../../scripts/run-route-solver.mjs",
     "info": "node -e \"console.log('@douxing/or-tools -> https://github.com/yxtao-lab/python-route-solver'); console.log('submodule', require('child_process').execSync('git -C upstream rev-parse --short HEAD',{encoding:'utf8'}).trim())\""
   },
   "files": [

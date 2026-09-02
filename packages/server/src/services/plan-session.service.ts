@@ -21,6 +21,7 @@ import {
   formatPlanVariantHint,
   formatPlanVariantLabel,
   normalizeAgentToolTrace,
+  normalizeSceneTags,
   type LocaleCode,
 } from '@douxing/shared';
 import { getDb } from '../db/client.js';
@@ -637,9 +638,19 @@ export async function createPlanSession(
     budget: input.budget,
   });
   const userContext = await loadPlanUserContext(userId);
-  const resolvedIntent = finalizePlanningIntent(
+  let resolvedIntent = finalizePlanningIntent(
     injectPersonaSummary(mergeIntentWithUserContext(intent, userContext), userContext),
   );
+  // 场景专题定制入口：显式 sceneTags 作为路线归属主标签（与常逛偏好解耦）
+  if (input.sceneTags && input.sceneTags.length > 0) {
+    const explicitScenes = normalizeSceneTags(input.sceneTags);
+    if (explicitScenes.length > 0) {
+      resolvedIntent = {
+        ...resolvedIntent,
+        sceneTags: [...new Set([...explicitScenes, ...(resolvedIntent.sceneTags ?? [])])],
+      };
+    }
+  }
 
   const generateInput: GenerateRouteInput = {
     prompt,

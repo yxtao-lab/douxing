@@ -61,7 +61,8 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
 }
 
 /**
- * 将用户上下文合并进意图：兴趣进 themes，偏好场景并入 sceneTags。
+ * 将用户上下文合并进意图：兴趣进 themes；偏好场景仅写入约束摘要作软偏好，
+ * **不**并入 sceneTags，避免把「常逛场景」写进路线归属导致专题广场串类。
  *
  * @param intent - 当前规划意图
  * @param context - 用户上下文
@@ -78,16 +79,17 @@ export function mergeIntentWithUserContext(
       ...context.memoryThemes,
     ]),
   ];
-  const sceneTags = [
-    ...new Set([
-      ...(intent.sceneTags ?? []),
-      ...context.preferredScenes,
-    ]),
-  ];
+  const preferredScenesHint =
+    context.preferredScenes.length > 0
+      ? `用户常逛场景偏好（软参考，勿强制归类）：${context.preferredScenes.join('、')}`
+      : '';
+  const existingSummary = intent.constraintSummary?.trim();
+  const constraintSummary = [existingSummary, preferredScenesHint].filter(Boolean).join('；') || null;
   return {
     ...intent,
     themes,
-    sceneTags,
+    sceneTags: [...new Set(intent.sceneTags ?? [])],
+    constraintSummary,
   };
 }
 

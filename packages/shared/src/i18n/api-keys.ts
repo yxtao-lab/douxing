@@ -177,6 +177,10 @@ export const ApiMessageKey = {
   WECHAT_PAY_PARAMS_MISSING: 'api.wechatPayParamsMissing',
   SMS_SEND_RETRY: 'api.smsSendRetry',
   AI_SERVICE_DISABLED: 'api.aiServiceDisabled',
+  ROUTE_SOLVER_DISABLED: 'api.routeSolverDisabled',
+  ROUTE_SOLVER_UNAVAILABLE: 'api.routeSolverUnavailable',
+  ROUTE_SOLVER_SOLVE_FAILED: 'api.routeSolverSolveFailed',
+  ROUTE_SOLVER_INVALID_REQUEST: 'api.routeSolverInvalidRequest',
 
   PLAYBOOK_LIST_SUCCESS: 'api.playbookListSuccess',
   PLAYBOOK_LIST_FAILED: 'api.playbookListFailed',

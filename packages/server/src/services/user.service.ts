@@ -10,6 +10,7 @@ import {
   USER_INTEREST_MAX,
   USER_INTEREST_PRESETS,
   normalizeMemberLevel,
+  getEffectiveMemberLevel,
   ApiError,
   ApiMessageKey,
   normalizeSceneTags,
@@ -91,7 +92,8 @@ function mapUserRow(
     companionStructure: user.companionStructure ?? null,
     budgetTier: user.budgetTier ?? null,
     onboardedAt: user.onboardedAt ? formatDbDateTimeForApi(user.onboardedAt) : null,
-    memberLevel: normalizeMemberLevel(user.memberLevel),
+    // C 端展示/权益一律用有效等级（过期后降为免费），与 /users/me/membership 一致
+    memberLevel: getEffectiveMemberLevel(user.memberLevel, user.memberExpiresAt),
     status: user.status,
     roles: roleCodes,
     permissions,

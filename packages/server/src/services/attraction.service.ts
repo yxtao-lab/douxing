@@ -92,6 +92,17 @@ export async function listAttractions(options: {
       or(like(attractions.name, kw), like(attractions.description, kw))!,
     );
   }
+  // 场景标签必须在 SQL 层过滤后再 limit，避免先截断再 filter 导致永远查空
+  if (options.sceneTags && options.sceneTags.length > 0) {
+    const cleaned = options.sceneTags.map((s) => s.trim()).filter(Boolean);
+    if (cleaned.length > 0) {
+      const clauses = cleaned.map(
+        (slug) =>
+          sql`JSON_CONTAINS(IFNULL(${attractions.sceneTags}, '[]'), JSON_QUOTE(${slug}))`,
+      );
+      conditions.push(clauses.length === 1 ? clauses[0]! : or(...clauses)!);
+    }
+  }
 
   let rows = await db
     .select()
@@ -104,10 +115,6 @@ export async function listAttractions(options: {
   if (options.tags && options.tags.length > 0) {
     const tagSet = new Set(options.tags);
     rows = rows.filter((row) => row.tags.some((t) => tagSet.has(t)));
-  }
-  if (options.sceneTags && options.sceneTags.length > 0) {
-    const sceneSet = new Set(options.sceneTags);
-    rows = rows.filter((row) => (row.sceneTags ?? []).some((t) => sceneSet.has(t)));
   }
 
   return rows.map(toAttractionInfo);

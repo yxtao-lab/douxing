@@ -102,10 +102,34 @@ export function formatPlanIntentSummary(
   return parts.length > 0 ? parts.join(' · ') : planMsg('plan.intent.default', locale);
 }
 
-function buildIntentHintLine(intent: TravelIntentSnapshot | undefined, locale: LocaleCode): string {
-  if (!intent) return '';
-  const summary = formatPlanIntentSummary(intent, locale);
-  return planMsg('plan.intent.prefixLine', locale, { summary });
+/**
+ * 构建助手回复中的意图提示行。
+ * 规划页顶部已有「已理解需求」条，助手正文不再重复插入，避免占屏。
+ *
+ * @param _intent - 意图快照（保留参数以兼容调用方）
+ * @param _locale - 语言
+ * @returns 空字符串
+ */
+function buildIntentHintLine(
+  _intent: TravelIntentSnapshot | undefined,
+  _locale: LocaleCode,
+): string {
+  return '';
+}
+
+/**
+ * 从历史助手消息中剥离「已理解需求」重复段落（兼容旧会话入库内容）。
+ *
+ * @param content - 助手原文
+ * @returns 去掉意图重复段落后的文案；无匹配则原样返回
+ */
+export function stripPlanIntentHintFromAssistantReply(content: string): string {
+  if (!content) return content;
+  return content
+    .replace(/\n?已理解需求：[^\n]*/g, '')
+    .replace(/\n?Understood:\s*[^\n]*/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trimEnd();
 }
 
 /** 多套候选方案助手回复 */

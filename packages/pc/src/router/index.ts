@@ -72,6 +72,12 @@ const router = createRouter({
           meta: { titleKey: 'scenes.pageTitle', navKey: 'home' },
         },
         {
+          path: 'attractions/:id',
+          name: 'attraction-detail',
+          component: () => import('@/views/AttractionDetailView.vue'),
+          meta: { titleKey: 'nav.attractionDetail', navKey: 'home' },
+        },
+        {
           path: 'profile',
           name: 'profile',
           component: () => import('@/views/ProfileView.vue'),

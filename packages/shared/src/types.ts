@@ -37,7 +37,7 @@ export interface UserInfo {
    * null 表示尚未完成引导
    */
   onboardedAt?: string | null;
-  /** 会员等级，见 MemberLevel */
+  /** 当前生效会员等级（过期后降为免费，与权益接口一致） */
   memberLevel: number;
   status: number;
   roles: string[];
@@ -832,6 +832,11 @@ export interface CreatePlanSessionRequest {
   days?: number;
   budget?: string;
   provider?: LlmProviderChoice;
+  /**
+   * 显式场景标签（如从「按场景逛」定制入口传入）。
+   * 写入本轮意图 sceneTags，作为路线专题归属，不与用户常逛偏好混写。
+   */
+  sceneTags?: string[];
 }
 
 /** 管理端沙箱规划（可注入草稿 graphDef 调试） */

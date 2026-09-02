@@ -6,6 +6,7 @@ export const MENU_KEY_TITLE_KEYS: Record<string, string> = {
   'system-resources': 'web.systemResources',
   'plan-diagnostics': 'web.planDiagnostics',
   'workflow-templates': 'web.workflowTemplates',
+  'route-solver-lab': 'web.routeSolverLab',
   biz: 'web.menu.biz',
   routes: 'web.routes',
   orders: 'web.orders',

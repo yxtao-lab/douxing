@@ -179,6 +179,10 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.WECHAT_PAY_PARAMS_MISSING]: '微信支付参数缺失',
   [ApiMessageKey.SMS_SEND_RETRY]: '短信发送失败，请稍后重试',
   [ApiMessageKey.AI_SERVICE_DISABLED]: 'Python AI 微服务未启用',
+  [ApiMessageKey.ROUTE_SOLVER_DISABLED]: '路径求解服务未启用（请配置 ROUTE_SOLVER_ENABLED）',
+  [ApiMessageKey.ROUTE_SOLVER_UNAVAILABLE]: '路径求解服务不可用，请确认已启动 route-solver',
+  [ApiMessageKey.ROUTE_SOLVER_SOLVE_FAILED]: '路径求解失败，请检查节点、矩阵或时间窗约束',
+  [ApiMessageKey.ROUTE_SOLVER_INVALID_REQUEST]: '路径求解请求参数无效',
 
   [ApiMessageKey.PLAYBOOK_LIST_SUCCESS]: '玩法动线列表已加载',
   [ApiMessageKey.PLAYBOOK_LIST_FAILED]: '获取玩法动线列表失败',
@@ -533,6 +537,13 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.WECHAT_PAY_PARAMS_MISSING]: 'WeChat Pay parameters missing',
   [ApiMessageKey.SMS_SEND_RETRY]: 'Failed to send SMS, try again later',
   [ApiMessageKey.AI_SERVICE_DISABLED]: 'Python AI microservice is disabled',
+  [ApiMessageKey.ROUTE_SOLVER_DISABLED]:
+    'Route solver is disabled (set ROUTE_SOLVER_ENABLED=true)',
+  [ApiMessageKey.ROUTE_SOLVER_UNAVAILABLE]:
+    'Route solver is unavailable; ensure the service is running',
+  [ApiMessageKey.ROUTE_SOLVER_SOLVE_FAILED]:
+    'Route solve failed; check nodes, matrix, or time windows',
+  [ApiMessageKey.ROUTE_SOLVER_INVALID_REQUEST]: 'Invalid route solver request',
 
   [ApiMessageKey.PLAYBOOK_LIST_SUCCESS]: 'Playbooks loaded',
   [ApiMessageKey.PLAYBOOK_LIST_FAILED]: 'Failed to load playbooks',

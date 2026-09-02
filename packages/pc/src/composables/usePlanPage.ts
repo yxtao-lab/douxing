@@ -34,6 +34,7 @@ import {
   canAppendPlanByMemberLevel,
   formatPlanRecentPromptLabel,
   resolvePlanPetFocusViewModel,
+  stripPlanIntentHintFromAssistantReply,
 } from '@douxing/shared';
 import { loadPlanRecentPrompts, savePlanRecentPrompt } from '@/utils/plan-recent-prompts';
 import { trackAnalytics } from '@/utils/analytics';
@@ -198,11 +199,20 @@ export function usePlanPage() {
     }
   }
 
+  /**
+   * 将会话消息映射为聊天气泡；助手消息去掉与顶部意图条重复的「已理解需求」段。
+   *
+   * @param list - 会话消息列表
+   * @returns 前端聊天消息
+   */
   function mapMessages(list: PlanSessionMessageInfo[]): ChatMessage[] {
     return list.map((item) => ({
       id: item.id,
       role: item.role,
-      content: item.content,
+      content:
+        item.role === 'assistant'
+          ? stripPlanIntentHintFromAssistantReply(item.content)
+          : item.content,
     }));
   }
 
@@ -354,6 +364,8 @@ export function usePlanPage() {
     recentPrompts.value = savePlanRecentPrompt(content, userStore.user?.id);
   }
 
+  const pendingSceneTags = ref<string[] | null>(null);
+
   function recentPromptLabel(prompt: string): string {
     return formatPlanRecentPromptLabel(prompt);
   }
@@ -386,7 +398,13 @@ export function usePlanPage() {
 
     try {
       if (!sessionId.value) {
-        const result = await createPlanSession({ prompt: content, provider: provider.value });
+        const sceneTags = pendingSceneTags.value ?? undefined;
+        pendingSceneTags.value = null;
+        const result = await createPlanSession({
+          prompt: content,
+          provider: provider.value,
+          ...(sceneTags && sceneTags.length > 0 ? { sceneTags } : {}),
+        });
         sessionId.value = result.sessionId;
         trackAnalytics(AnalyticsEventName.PLAN_SESSION_CREATED, {
           sessionId: result.sessionId,
@@ -473,11 +491,6 @@ export function usePlanPage() {
     await initLlmStatus();
     await refreshMembership();
 
-    const prompt = route.query.prompt;
-    if (typeof prompt === 'string' && prompt.trim()) {
-      inputText.value = decodeURIComponent(prompt.trim());
-    }
-
     const rawSessionId = route.query.sessionId;
     if (typeof rawSessionId === 'string' && rawSessionId.trim() && userStore.token) {
       const id = Number(rawSessionId);
@@ -487,6 +500,31 @@ export function usePlanPage() {
         } catch {
           /* 忽略无效会话 */
         }
+      }
+      return;
+    }
+
+    const prompt = route.query.prompt;
+    const fresh = route.query.fresh === '1' || route.query.fresh === 'true';
+    const autoSend = route.query.autoSend === '1' || route.query.autoSend === 'true';
+    const sceneTagsQuery = route.query.sceneTags;
+    if (typeof sceneTagsQuery === 'string' && sceneTagsQuery.trim()) {
+      pendingSceneTags.value = sceneTagsQuery.split(',').map((s) => s.trim()).filter(Boolean);
+    } else if (Array.isArray(sceneTagsQuery)) {
+      pendingSceneTags.value = sceneTagsQuery
+        .filter((s): s is string => typeof s === 'string')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    if (fresh) {
+      clearSessionView();
+    }
+    if (typeof prompt === 'string' && prompt.trim()) {
+      inputText.value = decodeURIComponent(prompt.trim());
+      if (autoSend && userStore.token) {
+        await nextTick();
+        await handleSend();
+        router.replace({ name: 'plan' });
       }
     }
   });

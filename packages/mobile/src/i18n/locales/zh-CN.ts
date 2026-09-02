@@ -1,4 +1,4 @@
-﻿/** 移动端中文文案 */
+/** 移动端中文文案 */
 export const mobileZhCN = {
   home: {
     subtitle: 'AI 驱动 · 一句话生成专属旅行',
@@ -24,11 +24,27 @@ export const mobileZhCN = {
   scenes: {
     pageTitle: '场景专题',
     attractionsTitle: '热门景点',
+    attractionsTopBadge: 'TOP 10',
     routesTitle: '精选路线',
-    attractionsEmpty: '该场景暂无景点，先去规划一条路线',
+    attractionsEmpty: '该场景暂无景点',
     routesEmpty: '该场景暂无公开路线',
+    routesEmptyDesc: '可按你的画像与该场景偏好，定制一套专属行程；是否支持追问调整取决于会员等级',
+    planCustomRoute: '定制专属路线',
     loadFailed: '场景内容加载失败',
     back: '返回',
+  },
+  attractions: {
+    loadFailed: '景点加载失败',
+    freeTicket: '免费',
+    ticketLabel: '门票参考',
+    ticketValue: '约 ¥{price}',
+    openHoursLabel: '开放时间',
+    openHoursAllDay: '全天开放 / 未标注',
+    descriptionLabel: '简介',
+    tagsLabel: '标签',
+    openMap: '查看地图位置',
+    noLocation: '暂无坐标，无法打开地图',
+    descriptionEmpty: '暂无景点介绍',
   },
   emptyState: {
     achievementsDesc: '完成景点打卡，解锁更多成就',
@@ -206,6 +222,12 @@ export const mobileZhCN = {
     routeDetail: '路线详情',
     routeDetailCtaHint: '查看地图、行程流程图与打卡',
     newSession: '新建',
+    moreActions: '更多操作',
+    clearChat: '清空对话',
+    clearChatConfirmTitle: '清空对话',
+    clearChatConfirmContent: '将清空当前规划对话内容，是否继续？',
+    resumeLastSession: '继续上次对话',
+    recentPromptsEmpty: '暂无最近发送',
     intentLabel: '已理解需求',
     intentDays: '{days}天',
     intentBudget: '预算{budget}',

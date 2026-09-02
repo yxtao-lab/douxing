@@ -8,7 +8,7 @@ import {
   type SceneTagSlug,
 } from '@douxing/shared';
 import { success, fail } from '../utils/response.js';
-import { listAttractions } from '../services/attraction.service.js';
+import { listHotAttractionsForScene } from '../services/scene-detail.service.js';
 import { listRoutesForUser } from '../services/route-interaction.service.js';
 import { optionalAuthMiddleware } from '../middleware/auth.js';
 
@@ -57,15 +57,12 @@ router.get('/:slug', optionalAuthMiddleware, async (req, res) => {
     }
     const locale = res.locals.locale ?? 'zh-CN';
     const sceneSlug = slug as SceneTagSlug;
-    const attractionLimit = parsed.data.attractionLimit ?? 12;
+    const attractionLimit = parsed.data.attractionLimit ?? 10;
     const routePageSize = parsed.data.pageSize ?? parsed.data.routeLimit ?? 12;
     const routePage = parsed.data.page ?? 1;
 
-    const attractions = await listAttractions({
-      sceneTags: [sceneSlug],
-      limit: attractionLimit,
-      offset: 0,
-    });
+    // 优先库内 sceneTags；不足则从该场景公开路线 POI 热度补齐
+    const attractions = await listHotAttractionsForScene(sceneSlug, attractionLimit);
 
     const routesResult = await listRoutesForUser(req.auth?.userId ?? 0, {
       scope: 'plaza',

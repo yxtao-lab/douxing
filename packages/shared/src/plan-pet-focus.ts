@@ -7,9 +7,12 @@ import {
   formatPlanPetMemoryTitle,
   formatPetPersonalityLabel,
 } from './i18n/pet-messages.js';
+import { resolveTravelPetSpeciesEmoji } from './travel-pet-floating.js';
 
 export interface PlanPetFocusViewModel {
   nickname: string;
+  /** 物种对应 emoji，用于规划页宠物头像展示 */
+  speciesEmoji: string;
   personalityLabel: string;
   title: string;
   /** @deprecated 规划页不再展开记忆列表，保留供浮层/测试兼容 */
@@ -42,6 +45,7 @@ export function resolvePlanPetFocusViewModel(
     (petMeta.recallExplain?.length ?? 0) > 0 || Boolean(petMeta.memorySummary?.trim());
   return {
     nickname: petMeta.nickname,
+    speciesEmoji: resolveTravelPetSpeciesEmoji(petMeta.species),
     personalityLabel: formatPetPersonalityLabel(petMeta.personality, locale),
     title: formatPlanPetFocusTitle(locale),
     memoryTitle: formatPlanPetMemoryTitle(locale),

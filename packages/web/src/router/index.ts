@@ -420,6 +420,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'route-solver-lab',
+          name: 'route-solver-lab',
+          component: () => import('@/views/RouteSolverLabView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.routeSolverLab',
+            menuGroupKey: 'web.menu.data',
+            icon: 'ExperimentOutlined',
+            perm: 'data:analytics:view',
+          },
+        },
+        {
           path: 'workflow-templates/:id/editor',
           name: 'workflow-template-editor',
           component: () => import('@/views/WorkflowVisualEditorView.vue'),

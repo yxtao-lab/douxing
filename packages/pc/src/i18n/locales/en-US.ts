@@ -49,10 +49,26 @@ export const pcEnUS = {
   scenes: {
     pageTitle: 'Scene hub',
     attractionsTitle: 'Popular sights',
+    attractionsTopBadge: 'TOP 10',
     routesTitle: 'Featured routes',
-    attractionsEmpty: 'No sights for this scene yet — try planning a route',
+    attractionsEmpty: 'No attractions for this scene yet',
     routesEmpty: 'No public routes for this scene yet',
+    routesEmptyDesc:
+      'We can craft a trip from your profile and this scene. Follow-up edits depend on your membership tier.',
+    planCustomRoute: 'Plan a custom route',
     loadFailed: 'Could not load scene content',
+  },
+  attractions: {
+    loadFailed: 'Could not load attraction',
+    freeTicket: 'Free',
+    ticketLabel: 'Ticket',
+    ticketValue: 'About ¥{price}',
+    openHoursLabel: 'Hours',
+    openHoursAllDay: 'All day / not listed',
+    descriptionLabel: 'About',
+    tagsLabel: 'Tags',
+    openMap: 'Open on map',
+    descriptionEmpty: 'No description yet',
   },
   login: {
     heroSubtitle: 'Sign in to plan trips, check in, and share routes',
