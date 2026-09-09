@@ -1,0 +1,147 @@
+[dev] 并行启动: api, ai, web, pc, mobile, mp, app
+[api] 
+[api] > douxing@1.0.0 dev:server E:\Desktop\TYX\项目\兜行项目\project
+[api] > node scripts/pm.mjs filter @douxing/shared build && node scripts/pm.mjs filter @douxing/server dev
+[api] 
+[pc] 
+[pc] > douxing@1.0.0 dev:pc E:\Desktop\TYX\项目\兜行项目\project
+[pc] > node scripts/dev-pc.mjs
+[pc] 
+[ai] 
+[ai] > douxing@1.0.0 dev:ai-service E:\Desktop\TYX\项目\兜行项目\project
+[ai] > node scripts/run-ai-service.mjs
+[ai] 
+[web] 
+[web] > douxing@1.0.0 dev:web E:\Desktop\TYX\项目\兜行项目\project
+[web] > node scripts/dev-web.mjs
+[web] 
+[mobile] 
+[mobile] > douxing@1.0.0 dev:mobile E:\Desktop\TYX\项目\兜行项目\project
+[mobile] > node scripts/pm.mjs filter @douxing/mobile dev:h5
+[mobile] 
+[mp] 
+[mp] > douxing@1.0.0 dev:mp-weixin E:\Desktop\TYX\项目\兜行项目\project
+[mp] > node scripts/pm.mjs filter @douxing/mobile dev:mp-weixin
+[mp] 
+[app] 
+[app] > douxing@1.0.0 dev:app-android E:\Desktop\TYX\项目\兜行项目\project
+[app] > node scripts/pm.mjs filter @douxing/mobile dev:app-android
+[app] 
+[api] [pm:pnpm] > pnpm --filter @douxing/shared build
+[ai] [ai-service] E:\Desktop\TYX\项目\兜行项目\project\packages\ai-service\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --reload-dir app --host 127.0.0.1 --port 8100
+[mobile] [pm:pnpm] > pnpm --filter @douxing/mobile dev:h5
+[mp] [pm:pnpm] > pnpm --filter @douxing/mobile dev:mp-weixin
+[app] [pm:pnpm] > pnpm --filter @douxing/mobile dev:app-android
+[ai] INFO:     Will watch for changes in these directories: ['E:\\Desktop\\TYX\\��Ŀ\\������Ŀ\\project\\packages\\ai-service\\app']
+[api] 
+[api] > @douxing/shared@1.0.0 build E:\Desktop\TYX\项目\兜行项目\project\packages\shared
+[api] > node scripts/sync-admin-divisions.mjs && tsc
+[api] 
+[web] 
+[web] > @douxing/web@1.0.0 dev E:\Desktop\TYX\项目\兜行项目\project\packages\web
+[web] > vite
+[web] 
+[mobile] 
+[mobile] > @douxing/mobile@1.0.0 dev:h5 E:\Desktop\TYX\项目\兜行项目\project\packages\mobile
+[mobile] > uni
+[mobile] 
+[pc] 
+[pc] > @douxing/pc@1.0.0 dev E:\Desktop\TYX\项目\兜行项目\project\packages\pc
+[pc] > vite
+[pc] 
+[mp] 
+[mp] > @douxing/mobile@1.0.0 dev:mp-weixin E:\Desktop\TYX\项目\兜行项目\project\packages\mobile
+[mp] > node ../../scripts/dev-mp-weixin.mjs
+[mp] 
+[app] 
+[app] > @douxing/mobile@1.0.0 dev:app-android E:\Desktop\TYX\项目\兜行项目\project\packages\mobile
+[app] > uni -p app-android
+[app] 
+[api] [shared] 已同步 cn-division 省/市数据 → data/admin-divisions/
+[mp] [mp-weixin] 开发 API: http://127.0.0.1:3000/api
+[mp] [mp-weixin] 导入目录: E:\Desktop\TYX\项目\兜行项目\project\packages\mobile\dist\dev\mp-weixin
+[pc] 
+[pc]   [32m[1mVITE[22m v6.4.2[39m  [2mready in [0m[1m699[22m[2m[0m ms[22m
+[pc] 
+[pc]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5176[22m/[39m
+[pc]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.217.1:[1m5176[22m/[39m
+[pc]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.198.1:[1m5176[22m/[39m
+[pc]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.8.203:[1m5176[22m/[39m
+[pc]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.23.64.1:[1m5176[22m/[39m
+[pc]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.26.192.1:[1m5176[22m/[39m
+[web] 
+[web]   [32m[1mVITE[22m v6.4.2[39m  [2mready in [0m[1m825[22m[2m[0m ms[22m
+[web] 
+[web]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5173[22m/[39m
+[web]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.217.1:[1m5173[22m/[39m
+[web]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.198.1:[1m5173[22m/[39m
+[web]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.8.203:[1m5173[22m/[39m
+[web]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.23.64.1:[1m5173[22m/[39m
+[web]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.26.192.1:[1m5173[22m/[39m
+[mobile] 请注意运行模式下，因日志输出、sourcemap 以及未压缩源码等原因，性能和包体积，均不及发行模式。
+[mobile] vite是按需编译，运行时点击某个未编译页面会先编译后加载，导致显示较慢，发行后无此问题。
+[app] 请注意运行模式下，因日志输出、sourcemap 以及未压缩源码等原因，性能和包体积，均不及发行模式。
+[app] 编译器版本：4.84（vue3）
+[app] 正在编译中...
+[mobile] 编译器版本：4.84（vue3）
+[mobile] 正在编译中...
+[mp] 请注意运行模式下，因日志输出、sourcemap 以及未压缩源码等原因，性能和包体积，均不及发行模式。若要正式发布，请点击发行菜单或使用 cli 发布命令进行发布
+[mp] 正在编译中...
+[mp] [mp-weixin] 编译完成（poll），正在打开微信开发者工具...
+[ai] 2026-09-09 17:15:24 INFO [app.logging_config] [logging] ��д���ļ� E:\Desktop\TYX\��Ŀ\������Ŀ\project\packages\ai-service\logs\ai-service.log
+[ai] 2026-09-09 17:15:24 INFO [uvicorn.error] Uvicorn running on http://127.0.0.1:8100 (Press CTRL+C to quit)
+[ai] 2026-09-09 17:15:24 INFO [uvicorn.error] Started reloader process [66632] using WatchFiles
+[mobile] 
+[mobile] uni-app 有新版本发布，请执行 `npx @dcloudio/uvm@latest` 更新，更新日志详见：https://download1.dcloud.net.cn/hbuilderx/changelog/5.24.2026081301.html
+[mobile] [36m
+[mobile]   vite v5.2.8[39m[32m dev server running at:
+[mobile] [39m
+[mobile]   [32m➜[39m  [1mLocal[22m:   [36mhttp://localhost:[1m5174[22m/[39m
+[mobile]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.217.1:[1m5174[22m/[39m
+[mobile]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.198.1:[1m5174[22m/[39m
+[mobile]   [32m➜[39m  [1mNetwork[22m: [36mhttp://192.168.8.203:[1m5174[22m/[39m
+[mobile]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.23.64.1:[1m5174[22m/[39m
+[mobile]   [32m➜[39m  [1mNetwork[22m: [36mhttp://172.26.192.1:[1m5174[22m/[39m
+[mobile] 
+[mobile]   [36mready in 3055ms.[39m
+[mobile] 
+[app] 
+[app] uni-app 有新版本发布，请执行 `npx @dcloudio/uvm@latest` 更新，更新日志详见：https://download1.dcloud.net.cn/hbuilderx/changelog/5.24.2026081301.html
+[api] [pm:pnpm] > pnpm --filter @douxing/server dev
+[mp] - initialize
+[mp] 
+[mp] (node:73584) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+[mp] (Use `微信开发者工具 --trace-deprecation ...` to show where the warning was created)
+[mp] ✔ IDE server has started, listening on http://127.0.0.1:22059
+[mp] - preparing
+[ai] 2026-09-09 17:15:27 INFO [app.logging_config] [logging] ��д���ļ� E:\Desktop\TYX\��Ŀ\������Ŀ\project\packages\ai-service\logs\ai-service.log
+[ai] 2026-09-09 17:15:27 INFO [uvicorn.error] Started server process [45076]
+[ai] 2026-09-09 17:15:27 INFO [uvicorn.error] Waiting for application startup.
+[ai] 2026-09-09 17:15:27 INFO [uvicorn.error] Application startup complete.
+[api] 
+[api] > @douxing/server@1.0.0 dev E:\Desktop\TYX\项目\兜行项目\project\packages\server
+[api] > tsx watch src/index.ts
+[api] 
+[mp] 
+[mp] uni-app 有新版本发布，请执行 `npx @dcloudio/uvm@latest` 更新，更新日志详见：https://download1.dcloud.net.cn/hbuilderx/changelog/5.24.2026081301.html
+[app] DONE  Build complete. Watching for changes...
+[app] 运行方式：打开 HBuilderX, 导入 [36mdist\dev\app[39m 运行。
+[app] [36mready in 8660ms.[39m
+[app] 
+[api] [env] .env 中存在重复配置（后者会覆盖前者）: TENCENT_SECRET_ID, TENCENT_SECRET_KEY
+[mp] ✔ open
+[mp] [mp-weixin] 已打开（cli: D:/wechat devtool/微信web开发者工具/cli.bat）
+[api] [order-timeout] 待支付超时扫描已启动（间隔 60s）
+[api] [analytics-rollup] 日汇总定时任务已启动（每日 2:00 汇总昨日）
+[api] [server] 兜行 API listening on http://localhost:3000
+[api] [checkin] 地理围栏 已关闭（CHECKIN_GEOFENCE_ENABLED=false）
+[api] [route-unlock] 解锁支付 已启用（ROUTE_UNLOCK_PAYMENT_REQUIRED=true）
+[api] [assets] 静态资源公网基址 http://127.0.0.1:3000
+[api] [site-status] PC 静态站 已上线（static/.pc-site-offline）
+[api] [seed] Synced menu icons and sortOrder from DEFAULT_MENU_SEED
+[api] [seed] sys_menu 缺失项已同步（如有新增菜单）
+[mp] DONE  Build complete. Watching for changes...
+[mp] 运行方式：打开 微信开发者工具, 导入 [36mdist\dev\mp-weixin[39m 运行。
+[mp] [36mready in 14167ms.[39m
+[mp] 
+[pc] [pc] 正在打开 PC 用户端 http://localhost:5176/
