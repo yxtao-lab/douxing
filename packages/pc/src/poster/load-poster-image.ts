@@ -57,7 +57,13 @@ export async function loadPosterImages(payload: PosterPayload): Promise<PosterIm
   return map;
 }
 
-/** PC 端可选拉取小程序码作 QR 兜底 */
+/**
+ * PC 端拉取路线分享小程序码并写入 imageMap（海报扫码直达小程序的首选来源）。
+ *
+ * @param routeId - 已发布路线 ID
+ * @param imageMap - 写入目标；成功时设置 `POSTER_WXACODE_KEY`
+ * @returns void；失败时静默跳过，由上层改用 URL Link / Web 分享页
+ */
 export async function loadPosterWxacode(
   routeId: number,
   imageMap: PosterImageMap,

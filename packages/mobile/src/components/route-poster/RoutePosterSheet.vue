@@ -313,18 +313,20 @@ async function generatePreview() {
         : await queryPosterCanvas('routePosterCanvas', componentInstance, canvasHeight);
     surface.ctx.clearRect(0, 0, surface.width, surface.height);
     const imageMap = await loadPosterImages(surface.canvas, payload);
-    let qrUrl = payload.qrUrl;
-    if (!qrUrl) {
-      await loadPosterWxacode(surface.canvas, payload.routeId, imageMap);
-      if (!imageMap.has(POSTER_WXACODE_KEY)) {
-        try {
-          const link = await fetchRouteShareLink(payload.routeId);
-          if (link.url?.trim()) {
-            qrUrl = link.url.trim();
-          }
-        } catch {
-          /* URL Link 失败时仍尝试占位 */
+    // 优先小程序码（微信扫一扫直达）；失败再 URL Link，最后 H5 只读页
+    await loadPosterWxacode(surface.canvas, payload.routeId, imageMap);
+    let qrUrl: string | null = null;
+    if (!imageMap.has(POSTER_WXACODE_KEY)) {
+      try {
+        const link = await fetchRouteShareLink(payload.routeId);
+        if (link.url?.trim()) {
+          qrUrl = link.url.trim();
         }
+      } catch {
+        /* URL Link 失败时再试 H5 */
+      }
+      if (!qrUrl) {
+        qrUrl = payload.qrUrl;
       }
     }
     const renderPayload = {
@@ -352,10 +354,13 @@ async function generatePreview() {
   }
 }
 
+/**
+ * 海报生成前的扫码提示文案（最终文案在出码结果确定后再覆盖）。
+ *
+ * @returns i18n 后的扫码提示
+ */
 function payloadScanHint(): string {
-  const base = import.meta.env.VITE_H5_BASE_URL?.trim();
-  if (base) return t('routes.poster.scanHint');
-  return t('routes.poster.scanHintMpOnly');
+  return t('routes.poster.scanHint');
 }
 
 function handleClose() {

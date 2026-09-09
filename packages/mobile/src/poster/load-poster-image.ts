@@ -93,7 +93,14 @@ export async function loadPosterImages(
   return map;
 }
 
-/** 从服务端拉取路线分享小程序码并写入 imageMap（无 H5 链接时的 fallback） */
+/**
+ * 从服务端拉取路线分享小程序码并写入 imageMap（海报扫码直达小程序的首选来源）。
+ *
+ * @param canvas - 海报 Canvas 节点（用于 `createImage`）
+ * @param routeId - 已发布路线 ID
+ * @param imageMap - 写入目标；成功时设置 `POSTER_WXACODE_KEY`
+ * @returns void；失败时静默跳过，由上层改用 URL Link / H5
+ */
 export async function loadPosterWxacode(
   canvas: PosterCanvasNode,
   routeId: number,

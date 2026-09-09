@@ -284,16 +284,18 @@ async function generatePreview() {
     surface.ctx.clearRect(0, 0, surface.width, surface.height);
 
     const imageMap = await loadPosterImages(payload);
-    let qrUrl = payload.qrUrl;
-    if (!qrUrl) {
-      await loadPosterWxacode(payload.routeId, imageMap);
-      if (!imageMap.has(POSTER_WXACODE_KEY)) {
-        try {
-          const link = await fetchRouteShareLink(payload.routeId);
-          if (link.url?.trim()) qrUrl = link.url.trim();
-        } catch {
-          /* ignore */
-        }
+    // 优先小程序码（微信扫一扫直达）；失败再 URL Link，最后 Web 分享页
+    await loadPosterWxacode(payload.routeId, imageMap);
+    let qrUrl: string | null = null;
+    if (!imageMap.has(POSTER_WXACODE_KEY)) {
+      try {
+        const link = await fetchRouteShareLink(payload.routeId);
+        if (link.url?.trim()) qrUrl = link.url.trim();
+      } catch {
+        /* ignore */
+      }
+      if (!qrUrl) {
+        qrUrl = payload.qrUrl;
       }
     }
 

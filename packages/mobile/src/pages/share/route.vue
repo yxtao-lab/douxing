@@ -62,7 +62,7 @@
 import { computed, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import type { RouteDayPlan, RouteDetailPayload, TravelRouteInfo } from '@douxing/shared';
-import { fetchSharedRoute } from '@/api/share';
+import { fetchRouteShareLink, fetchSharedRoute } from '@/api/share';
 import RouteMediaPlayerSheet from '@/components/route-media/RouteMediaPlayerSheet.vue';
 import { useTheme } from '@/i18n/useTheme';
 import { usePageTitle } from '@/i18n/usePageTitle';
@@ -137,6 +137,12 @@ function dayTitle(day: RouteDayPlan, index: number) {
   return tf('routes.flowDayTab', { day: index + 1 });
 }
 
+/**
+ * 从分享落地页 query / 小程序码 scene 解析路线 ID。
+ *
+ * @param query - `onLoad` 传入的页面参数；小程序码扫入时含 `scene=id={n}`
+ * @returns 正整数路线 ID；无法解析时返回 `0`
+ */
 function parseRouteIdFromQuery(query: Record<string, string | undefined> | undefined): number {
   const direct = parseInt(String(query?.id ?? ''), 10);
   if (direct > 0) return direct;
@@ -165,7 +171,26 @@ async function loadRoute() {
   }
 }
 
-function openApp() {
+/**
+ * 打开完整路线详情：小程序内直跳详情；H5 优先走微信 URL Link 唤起小程序。
+ *
+ * @returns void
+ */
+async function openApp() {
+  const platform = import.meta.env.UNI_PLATFORM as string | undefined;
+  if (platform !== 'mp-weixin') {
+    try {
+      const link = await fetchRouteShareLink(routeId);
+      const url = link.url?.trim();
+      if (url && typeof window !== 'undefined') {
+        window.location.href = url;
+        return;
+      }
+    } catch {
+      /* URL Link 不可用时回退站内详情 */
+    }
+  }
+
   uni.navigateTo({
     url: `/pages/routes/detail?id=${routeId}`,
     fail: () => {
