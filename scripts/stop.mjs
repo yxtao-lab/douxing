@@ -4,10 +4,10 @@
  * 用法: pnpm stop [--skip-docker] [--docker-only]
  */
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import killPort from 'kill-port';
+import { listDevPortsToFree, loadRootEnv } from './dev-ports.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -16,25 +16,11 @@ const args = process.argv.slice(2);
 const skipDocker = args.includes('--skip-docker');
 const dockerOnly = args.includes('--docker-only');
 
-function loadEnv() {
-  const envPath = resolve(root, '.env');
-  if (!existsSync(envPath)) return;
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
-    process.env[key] = value;
-  }
-}
-
 function getDevPorts() {
-  const serverPort = Number(process.env.SERVER_PORT) || 3000;
+  loadRootEnv();
   const dockerMysqlPort = Number(process.env.DOCKER_MYSQL_HOST_PORT) || 3307;
   return {
-    dev: [serverPort, 5173, 5174, 5175, 5176, 8100],
+    dev: listDevPortsToFree(),
     docker: [dockerMysqlPort],
   };
 }
@@ -72,7 +58,7 @@ async function main() {
   console.log('  兜行 · 一键停止');
   console.log('========================================\n');
 
-  loadEnv();
+  loadRootEnv();
 
   if (dockerOnly) {
     stopDocker();

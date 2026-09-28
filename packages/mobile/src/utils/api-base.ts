@@ -33,7 +33,7 @@ export function getApiBaseUrl(): string {
         '[兜行] 未配置 VITE_API_BASE_URL，开发默认 127.0.0.1（仅模拟器可用；真机请在 .env.local 配置局域网 IP）',
       );
     }
-    return 'http://127.0.0.1:3000/api';
+    return 'http://127.0.0.1:13000/api';
   }
 
   return '/api';

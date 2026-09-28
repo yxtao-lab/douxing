@@ -10,6 +10,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadRootEnv } from './lib/load-root-env.mjs';
 import { openWechatProject, printWechatOpenHelp } from './lib/wechat-devtools.mjs';
+import { shouldOpenBrowserForTag } from './lib/open-targets.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, '..');
@@ -26,7 +27,7 @@ for (const key of Object.keys(process.env)) {
 }
 
 const viteEnv = loadEnv('development', root, 'VITE_');
-const apiBaseUrl = viteEnv.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:3000/api';
+const apiBaseUrl = viteEnv.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:13000/api';
 console.log(`[mp-weixin] 开发 API: ${apiBaseUrl}`);
 console.log(`[mp-weixin] 导入目录: ${mpDevDir}`);
 if (/yxtao\.site/i.test(apiBaseUrl)) {
@@ -54,7 +55,7 @@ let opened = false;
 let warned = false;
 
 async function tryOpenDevTools(reason) {
-  if (opened || opening || process.env.DOUXING_NO_OPEN === '1') return;
+  if (opened || opening || !shouldOpenBrowserForTag('mp-weixin')) return;
   if (!existsSync(readyMarker)) return;
 
   opening = true;

@@ -16,7 +16,7 @@ const venvPython = join(
   isWin ? 'Scripts/python.exe' : 'bin/python',
 );
 const pythonBin = existsSync(venvPython) ? venvPython : isWin ? 'python' : 'python3';
-const port = process.env.ROUTE_SOLVER_PORT ?? '8200';
+const port = process.env.ROUTE_SOLVER_PORT ?? '18200';
 
 if (!existsSync(venvPython)) {
   console.warn(

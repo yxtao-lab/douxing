@@ -1,6 +1,7 @@
 /**
  * 兜行多端平台定义（开发 / 构建 / 产物路径）
  */
+import { DEV_PORTS } from './dev-ports.mjs';
 import { pmFilterCmd, pmRunCmd, getRunHint } from './pm.mjs';
 
 export const PLATFORMS = {
@@ -10,7 +11,7 @@ export const PLATFORMS = {
     group: 'backend',
     dev: { shell: pmRunCmd('dev:server') },
     build: { shell: pmFilterCmd('@douxing/server', 'build') },
-    port: () => Number(process.env.SERVER_PORT) || 3000,
+    port: () => DEV_PORTS.server,
     output: null,
   },
   web: {
@@ -19,7 +20,7 @@ export const PLATFORMS = {
     group: 'frontend',
     dev: { shell: pmRunCmd('dev:web') },
     build: { shell: pmFilterCmd('@douxing/web', 'build') },
-    port: () => 5173,
+    port: () => DEV_PORTS.web,
     output: 'packages/web/dist',
   },
   pc: {
@@ -29,7 +30,7 @@ export const PLATFORMS = {
     aliases: ['desktop', 'web-user'],
     dev: { shell: pmRunCmd('dev:pc') },
     build: { shell: pmFilterCmd('@douxing/pc', 'build') },
-    port: () => 5176,
+    port: () => DEV_PORTS.pc,
     output: 'packages/pc/dist',
   },
   mobile: {
@@ -39,7 +40,7 @@ export const PLATFORMS = {
     aliases: ['h5'],
     dev: { shell: pmRunCmd('dev:mobile') },
     build: { shell: pmFilterCmd('@douxing/mobile', 'build:h5') },
-    port: () => 5174,
+    port: () => DEV_PORTS.mobile,
     output: 'packages/mobile/dist/build/h5',
   },
   'mp-weixin': {
@@ -59,7 +60,7 @@ export const PLATFORMS = {
     aliases: ['android'],
     dev: { shell: pmRunCmd('dev:app-android') },
     build: { shell: pmFilterCmd('@douxing/mobile', 'build:app-android') },
-    port: () => 5175,
+    port: () => DEV_PORTS.app,
     output: 'packages/mobile/dist/build/app',
     releaseDir: 'packages/mobile/dist/release/android',
   },
@@ -70,7 +71,7 @@ export const PLATFORMS = {
     aliases: ['ios'],
     dev: { shell: pmRunCmd('dev:app-ios') },
     build: { shell: pmFilterCmd('@douxing/mobile', 'build:app-ios') },
-    port: () => 5175,
+    port: () => DEV_PORTS.app,
     output: 'packages/mobile/dist/build/app',
     releaseDir: 'packages/mobile/dist/release/ios',
   },
@@ -81,7 +82,7 @@ export const PLATFORMS = {
     aliases: ['native'],
     dev: { shell: pmRunCmd('dev:app') },
     build: { shell: pmFilterCmd('@douxing/mobile', 'build:app') },
-    port: () => 5175,
+    port: () => DEV_PORTS.app,
     output: 'packages/mobile/dist/build/app',
   },
 };

@@ -1,9 +1,9 @@
-/** 本地开发默认 PC 用户端 Vite 端口 */
-const DEFAULT_PC_DEV_URL = 'http://localhost:5176';
+/** 本地开发默认 PC 用户端 Vite 端口（与 scripts/dev-ports.mjs 一致） */
+const DEFAULT_PC_DEV_URL = 'http://localhost:15176';
 
 /**
  * 解析 PC 用户端根地址，供管理端工作台外链跳转。
- * 优先读取构建时 `VITE_PC_BASE_URL`；开发环境回退 `localhost:5176`；生产未配置时回退当前页同源。
+ * 优先读取构建时 `VITE_PC_BASE_URL`；开发环境回退 `localhost:15176`；生产未配置时回退当前页同源。
  *
  * @returns 无尾部斜杠的 PC 用户端根 URL
  */

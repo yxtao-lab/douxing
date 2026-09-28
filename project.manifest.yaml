@@ -31,20 +31,20 @@ packages:
     enabled: true
     dir: packages/server
     name: "@douxing/server"
-    port: 3000
+    port: 13000
     apiPrefix: /api # 与 shared.constants.API_PREFIX 一致
   web:
     enabled: true
     dir: packages/web
     name: "@douxing/web"
-    port: 5173
+    port: 15173
     framework: vue3 # 禁止 React；SFC + Composition API
     uiLibrary: ant-design-vue # 管理端 UI
   pc:
     enabled: true
     dir: packages/pc
     name: "@douxing/pc"
-    port: 5176
+    port: 15176
     framework: vue3 # 禁止 React；与 Web 同栈、Tailwind 样式
     uiLibrary: tailwindcss # C 端 PC 网页
   mobile:
@@ -53,8 +53,8 @@ packages:
     name: "@douxing/mobile"
     framework: uniapp-vue3 # Vue 3；无第三方 UI 库，自研组件 + uni 内置组件
     ports:
-      h5: 5174
-      appDev: 5175
+      h5: 15174
+      appDev: 15175
     targets:
       h5: true
       mpWeixin: true
@@ -64,7 +64,7 @@ packages:
     enabled: false # true 时启用 packages/ai-service + 根 dev:ai-service
     dir: packages/ai-service
     name: "@douxing/ai"
-    port: 8100
+    port: 18100
   mlTraining:
     enabled: false
     dir: packages/ml-training
@@ -81,8 +81,8 @@ domains:
     apiBaseUrl: https://api-test.yxtao.site/api
     publicBaseUrl: https://api-test.yxtao.site
   development:
-    apiBaseUrl: http://127.0.0.1:3000/api
-    publicBaseUrl: http://127.0.0.1:3000
+    apiBaseUrl: http://127.0.0.1:13000/api
+    publicBaseUrl: http://127.0.0.1:13000
   # 品牌域名候选（尚未注册；选型与迁移见 docs/域名规划.md）
   candidates:
     - id: douxingai

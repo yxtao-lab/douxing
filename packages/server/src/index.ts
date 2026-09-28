@@ -26,7 +26,7 @@ import { success } from './utils/response.js';
 import { ApiMessageKey } from '@douxing/shared';
 
 const app = express();
-const port = Number(process.env.SERVER_PORT) || 3000;
+const port = Number(process.env.SERVER_PORT) || 13000;
 
 // Nginx 反代后信任 X-Forwarded-*，保证 req.protocol / 公开 URL 正确
 app.set('trust proxy', 1);

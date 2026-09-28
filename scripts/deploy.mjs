@@ -139,10 +139,10 @@ async function main() {
   console.log(`    ${getRunHint('bootstrap:dev')}`);
   console.log('');
   console.log('  启动后访问（pnpm dev 就绪后会自动打开浏览器）：');
-  console.log('    管理端  http://localhost:5173');
-  console.log('    PC 用户端  http://localhost:5176');
-  console.log('    移动端 H5  http://localhost:5174');
-  console.log('    后端    http://localhost:3000');
+  console.log('    管理端  http://localhost:15173');
+  console.log('    PC 用户端  http://localhost:15176');
+  console.log('    移动端 H5  http://localhost:15174');
+  console.log('    后端    http://localhost:13000');
   console.log('    微信小程序  微信开发者工具导入:');
   console.log('      packages/mobile/dist/dev/mp-weixin');
   console.log('    （开发阶段关闭「校验合法域名」）');

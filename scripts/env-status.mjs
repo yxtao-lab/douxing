@@ -32,7 +32,7 @@ function readCompiledMpDevApi() {
 
 function resolveDevApiUrl() {
   const env = loadEnv('development', projectRoot, 'VITE_');
-  return env.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:3000/api（默认）';
+  return env.VITE_API_BASE_URL?.trim() || 'http://127.0.0.1:13000/api（默认）';
 }
 
 function isOnlineApi(url) {

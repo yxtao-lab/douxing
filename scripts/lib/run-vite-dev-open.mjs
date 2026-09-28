@@ -6,6 +6,7 @@ import { spawn, exec } from 'node:child_process';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { pmFilterCmd } from '../pm.mjs';
+import { shouldOpenBrowserForTag } from './open-targets.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -108,7 +109,7 @@ export function runViteDevWithBrowserOpen(options) {
   const startedAt = Date.now();
 
   function openBrowser() {
-    if (opened || process.env.DOUXING_NO_OPEN === '1') return;
+    if (opened || !shouldOpenBrowserForTag(tag)) return;
     opened = true;
     const url = detectedUrl;
     setTimeout(() => {

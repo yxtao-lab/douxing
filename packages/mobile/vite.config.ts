@@ -1,11 +1,12 @@
 import { defineConfig } from 'vite';
 import uni from '@dcloudio/vite-plugin-uni';
 import { fileURLToPath, URL } from 'node:url';
+import { API_PROXY_TARGET, DEV_PORTS } from '../../scripts/dev-ports.mjs';
 
 const uniPlatform = process.env.UNI_PLATFORM ?? '';
 const isProduction = process.env.NODE_ENV === 'production';
-/** H5 与 App 并行 dev 时避免 5174 端口冲突 */
-const devServerPort = uniPlatform.startsWith('app') ? 5175 : 5174;
+/** H5 与 App 并行 dev 时避免端口冲突 */
+const devServerPort = uniPlatform.startsWith('app') ? DEV_PORTS.app : DEV_PORTS.mobile;
 
 export default defineConfig({
   envDir: fileURLToPath(new URL('../..', import.meta.url)),
@@ -33,13 +34,14 @@ export default defineConfig({
   server: {
     host: true,
     port: devServerPort,
+    strictPort: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:3000',
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://localhost:3000',
+        target: API_PROXY_TARGET,
         changeOrigin: true,
       },
     },

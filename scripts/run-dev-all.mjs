@@ -2,31 +2,14 @@
 /**
  * 并行启动全部开发服务（API + AI + Web + PC + H5 + 小程序 + Android App）
  */
-import { existsSync, readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { concurrently } from 'concurrently';
 import killPort from 'kill-port';
+import { listDevPortsToFree } from './dev-ports.mjs';
 import { pmRunCmd } from './pm.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-
-/**
- * 读取根目录 .env（仅用于 dev 端口）。
- */
-function loadEnv() {
-  const envPath = resolve(root, '.env');
-  if (!existsSync(envPath)) return;
-  for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith('#')) continue;
-    const eq = trimmed.indexOf('=');
-    if (eq === -1) continue;
-    const key = trimmed.slice(0, eq).trim();
-    const value = trimmed.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
-    process.env[key] = value;
-  }
-}
 
 /**
  * 启动前释放常用 dev 端口，避免上次未 stop 导致 EADDRINUSE。
@@ -34,10 +17,7 @@ function loadEnv() {
  * @returns Promise<void>
  */
 async function freeDevPortsBeforeStart() {
-  loadEnv();
-  const serverPort = Number(process.env.SERVER_PORT) || 3000;
-  const ports = [serverPort, 5173, 5174, 5175, 5176, 8100];
-  for (const port of ports) {
+  for (const port of listDevPortsToFree()) {
     try {
       await killPort(port, 'tcp');
     } catch {
@@ -57,6 +37,7 @@ const SERVICES = [
 ];
 
 console.log(`[dev] 并行启动: ${SERVICES.map((s) => s.name).join(', ')}`);
+console.log('[dev] 全量模式将自动打开：Web 管理端 + PC + 微信开发者工具（可用 DOUXING_OPEN_TARGETS 覆盖）');
 
 await freeDevPortsBeforeStart();
 
@@ -66,6 +47,13 @@ const { result } = concurrently(
     name,
     cwd: root,
     prefixColor: color,
+    env: {
+      ...process.env,
+      DOUXING_DEV_ALL: '1',
+      // 全量并行：管理端 + PC + 小程序；H5/App 不弹浏览器
+      DOUXING_OPEN_TARGETS:
+        process.env.DOUXING_OPEN_TARGETS?.trim() || 'web,pc,mp-weixin',
+    },
   })),
   {
     prefix: 'name',

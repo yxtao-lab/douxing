@@ -16,7 +16,7 @@ const venvPython = join(
   isWin ? 'Scripts/python.exe' : 'bin/python',
 );
 const pythonBin = existsSync(venvPython) ? venvPython : isWin ? 'python' : 'python3';
-const port = process.env.AI_SERVICE_PORT ?? '8100';
+const port = process.env.AI_SERVICE_PORT ?? '18100';
 
 if (!existsSync(venvPython)) {
   console.warn(
