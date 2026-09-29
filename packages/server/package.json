@@ -76,6 +76,12 @@
     "m7-ext:marketplace-trust-cases": "tsx src/scripts/m7-ext-marketplace-trust-cases.ts",
     "p-tag:scene-cases": "tsx src/scripts/p-tag-scene-cases.ts",
     "p-onboard:tag-guide-cases": "tsx src/scripts/p-onboard-tag-guide-cases.ts",
+    "u1:inspiration-cases": "tsx src/scripts/u1-inspiration-cases.ts",
+    "u2:heat-review-cases": "tsx src/scripts/u2-heat-review-cases.ts",
+    "u3:trust-recommend-cases": "tsx src/scripts/u3-trust-recommend-cases.ts",
+    "u4:verification-points-cases": "tsx src/scripts/u4-verification-points-cases.ts",
+    "u5:anti-abuse-cases": "tsx src/scripts/u5-anti-abuse-cases.ts",
+    "g-incentive:points-redemption-cases": "tsx src/scripts/g-incentive-points-redemption-cases.ts",
     "dev:self-check": "tsx src/scripts/dev-self-check.ts",
     "reset-admin-password": "tsx src/scripts/reset-admin-password.ts",
     "lint": "tsc --noEmit"

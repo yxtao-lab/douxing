@@ -28,6 +28,9 @@ import {
   type RouteMediaInfo,
   ROUTE_VIDEO_MAX_DURATION_SEC,
   type SetRoutePublicShareRequest,
+  type CreateInspirationRouteRequest,
+  type CreateRouteReportRequest,
+  type RouteReportInfo,
   type TravelRouteInfo,
   type UpdateRouteDraftRequest,
 } from '@douxing/shared';
@@ -122,6 +125,29 @@ export async function toggleRouteFavorite(id: number) {
 
 export async function setRoutePublicShare(id: number, body: SetRoutePublicShareRequest) {
   const { data } = await http.post<ApiResponse<TravelRouteInfo>>(`/routes/${id}/share`, body);
+  return data.data;
+}
+
+/**
+ * U1：上传灵感稿并公开到广场。
+ *
+ * @param body - 灵感稿内容
+ * @returns 已发布的路线详情
+ */
+export async function createInspirationRoute(body: CreateInspirationRouteRequest) {
+  const { data } = await http.post<ApiResponse<TravelRouteInfo>>('/routes/inspiration', body);
+  return data.data;
+}
+
+/**
+ * U5：提交路线报错（纠错工单）。
+ *
+ * @param id - 路线 ID
+ * @param body - 原因与说明
+ * @returns 新建工单
+ */
+export async function createRouteReport(id: number, body: CreateRouteReportRequest) {
+  const { data } = await http.post<ApiResponse<RouteReportInfo>>(`/routes/${id}/reports`, body);
   return data.data;
 }
 

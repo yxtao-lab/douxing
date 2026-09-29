@@ -11,6 +11,9 @@ import type {
   RouteLikeResult,
   RouteFavoriteResult,
   SetRoutePublicShareRequest,
+  CreateInspirationRouteRequest,
+  CreateRouteReportRequest,
+  RouteReportInfo,
   RouteCommentInfo,
   CreateRouteCommentRequest,
   FetchRouteCommentsParams,
@@ -132,6 +135,27 @@ export function toggleRouteFavorite(id: number) {
 
 export function setRoutePublicShare(id: number, data: SetRoutePublicShareRequest) {
   return request<TravelRouteInfo>(`/routes/${id}/share`, { method: 'POST', data });
+}
+
+/**
+ * U1：上传灵感稿并公开到广场。
+ *
+ * @param data - 灵感稿内容
+ * @returns 已发布的路线详情
+ */
+export function createInspirationRoute(data: CreateInspirationRouteRequest) {
+  return request<TravelRouteInfo>('/routes/inspiration', { method: 'POST', data });
+}
+
+/**
+ * U5：提交路线报错（纠错工单）。
+ *
+ * @param id - 路线 ID
+ * @param data - 原因与说明
+ * @returns 新建工单
+ */
+export function createRouteReport(id: number, data: CreateRouteReportRequest) {
+  return request<RouteReportInfo>(`/routes/${id}/reports`, { method: 'POST', data });
 }
 
 export function fetchRouteComments(id: number, params: FetchRouteCommentsParams = {}) {

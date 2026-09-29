@@ -170,6 +170,18 @@ const router = createRouter({
           },
         },
         {
+          path: 'ugc/moderation',
+          name: 'ugc-moderation',
+          component: () => import('@/views/UgcModerationView.vue'),
+          meta: {
+            requiresAuth: true,
+            titleKey: 'web.ugcModeration',
+            menuGroupKey: 'web.menu.content',
+            icon: 'SafetyCertificateOutlined',
+            perm: 'content:attractions:pending',
+          },
+        },
+        {
           path: 'attractions/manage',
           name: 'attractions-manage',
           component: () => import('@/views/AttractionsManageView.vue'),

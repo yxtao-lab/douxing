@@ -39,10 +39,127 @@ export interface UserInfo {
   onboardedAt?: string | null;
   /** 当前生效会员等级（过期后降为免费，与权益接口一致） */
   memberLevel: number;
+  /**
+   * U4：验证积分账户余额（与热度/可信度分离；消耗侧见 G-INCENTIVE）
+   */
+  verificationPoints?: number;
   status: number;
   roles: string[];
   /** 管理端权限标识（S1 RBAC）；C 端用户通常为空数组 */
   permissions: string[];
+}
+
+/** U4：验证积分账本条目 */
+export interface VerificationPointEventInfo {
+  id: number;
+  userId: number;
+  eventType: string;
+  points: number;
+  balanceAfter: number;
+  routeId: number | null;
+  checkInId: number | null;
+  attractionId: number | null;
+  meta: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+/** U4：验证积分账户摘要 */
+export interface VerificationPointsSummary {
+  balance: number;
+  events: VerificationPointEventInfo[];
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+/** G-INCENTIVE-01：用户兑换权益快照 */
+export interface PointRedemptionEntitlements {
+  balance: number;
+  bonusPlanCandidates: number;
+  bonusPhotoCount: number;
+  bonusPhotoBytes: number;
+  posterStickerUnlocked: boolean;
+  effectivePlanCandidates: number;
+  effectivePhotoMaxCount: number;
+  effectivePhotoMaxBytes: number;
+}
+
+/** G-INCENTIVE-01：兑换目录项（含是否可兑） */
+export interface PointRedemptionCatalogItem {
+  id: string;
+  costPoints: number;
+  grantPlanCandidates?: number;
+  grantPhotoCount?: number;
+  grantPhotoBytes?: number;
+  grantMemberLevel?: number;
+  grantMemberDays?: number;
+  grantPosterSticker?: boolean;
+  maxOwned?: number;
+  ownedCount: number;
+  canRedeem: boolean;
+  blockedReason?: string | null;
+}
+
+/** G-INCENTIVE-01：提交兑换 */
+export interface RedeemPointsRequest {
+  productId: string;
+  /** 客户端幂等键（可选） */
+  clientRequestId?: string | null;
+}
+
+/** G-INCENTIVE-01：兑换结果 */
+export interface PointRedemptionResult {
+  productId: string;
+  pointsSpent: number;
+  balance: number;
+  entitlements: PointRedemptionEntitlements;
+  redemptionId: number;
+}
+
+/** G-INCENTIVE-01：兑换记录 */
+export interface PointRedemptionRecord {
+  id: number;
+  productId: string;
+  pointsSpent: number;
+  createdAt: string;
+}
+
+/** U5：提交路线报错 */
+export interface CreateRouteReportRequest {
+  reason: string;
+  detail?: string | null;
+}
+
+/** U5：路线报错工单 */
+export interface RouteReportInfo {
+  id: number;
+  routeId: number;
+  routeName?: string | null;
+  reporterUserId: number;
+  reporterNickname?: string | null;
+  reason: string;
+  detail: string | null;
+  status: string;
+  resolverUserId: number | null;
+  resolveNote: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+}
+
+/** U5：管理端抽检路线条目 */
+export interface RouteSpotCheckItem {
+  id: number;
+  name: string;
+  creatorId: number;
+  contentTier: string;
+  verificationStatus: string;
+  moderationStatus: string;
+  trustScore: number;
+  heatScore: number;
+  openReportCount: number;
+  trustCrowned: boolean;
+  updatedAt: string;
+  spotReasons: string[];
 }
 
 /** 更新当前用户资料（PUT /users/me） */
@@ -394,6 +511,36 @@ export interface TravelRouteInfo {
   commentCount?: number;
   /** 是否已公开到广场 */
   isPublic?: boolean;
+  /** U1：路线来源 crawl | ai_draft | ugc_original | ugc_fork */
+  sourceKind?: string;
+  /** U1：内容层级 inspiration | travel_ready */
+  contentTier?: string;
+  /** U1：核验状态 pending | verified */
+  verificationStatus?: string;
+  /** U1：审核状态 pending | approved | rejected */
+  moderationStatus?: string;
+  /** U1：fork 父路线 ID */
+  parentRouteId?: number | null;
+  /** U1：是否应展示「待核验」（爬取且未核验） */
+  pendingVerification?: boolean;
+  /** U2：广场热度分（按集中权重计算，便于调试展示） */
+  heatScore?: number;
+  /** U3：可信度总分（与热度分独立） */
+  trustScore?: number;
+  /** U3：运营加冕可出行 */
+  trustCrowned?: boolean;
+  /** U3：可信度拆解（可解释） */
+  trustBreakdown?: {
+    fulfillment: number;
+    recency: number;
+    consensus: number;
+    quality: number;
+    penalty: number;
+    total: number;
+    reasonKeys: string[];
+  } | null;
+  /** U5：未结案报错条数 */
+  openReportCount?: number;
   /** 创建者昵称（广场列表展示） */
   creatorNickname?: string | null;
   /** 创建者头像 */
@@ -419,7 +566,7 @@ export interface TravelRouteInfo {
 /** 路线列表查询（GET /routes） */
 export type RouteListScope = 'mine' | 'hot' | 'favorites' | 'plaza';
 
-export type RouteListSort = 'recent' | 'hot' | 'views';
+export type RouteListSort = 'recent' | 'hot' | 'views' | 'trust';
 
 export interface RouteListQuery {
   scope?: RouteListScope;
@@ -460,9 +607,28 @@ export interface RouteFavoriteResult {
   collectCount: number;
 }
 
-/** 公开分享到广场 */
+/** 公开分享到广场（U1 可附带来源） */
 export interface SetRoutePublicShareRequest {
   isPublic: boolean;
+  /** U1：显式指定来源；未传则按 AI/UGC 推断 */
+  sourceKind?: 'crawl' | 'ai_draft' | 'ugc_original' | 'ugc_fork';
+  /** U1：fork 父路线 */
+  parentRouteId?: number | null;
+}
+
+/** U1：用户上传灵感稿并公开到广场 */
+export interface CreateInspirationRouteRequest {
+  name: string;
+  description?: string | null;
+  budgetRange?: string | null;
+  days: number;
+  interestTags?: string[];
+  sceneTags?: string[];
+  /** 行程 JSON（与 routeDetail.days 同结构，可空） */
+  routeDetail?: RouteDetailPayload | null;
+  /** 默认 ugc_original；fork 时传 ugc_fork + parentRouteId */
+  sourceKind?: 'ugc_original' | 'ugc_fork' | 'ai_draft';
+  parentRouteId?: number | null;
 }
 
 /** H10-b/c：路线短视频摘要（详情 API 注入） */
@@ -514,6 +680,10 @@ export interface RouteCommentInfo {
   isFeatured?: boolean;
   /** H10-d：当前用户是否已点赞 */
   isLiked?: boolean;
+  /** U2：可选星级 1～5 */
+  rating?: number | null;
+  /** U2：结构化评价标签 slug 列表 */
+  reviewTags?: string[];
   createdAt: string;
 }
 
@@ -558,6 +728,10 @@ export interface CreateRouteCommentRequest {
   dayIndex?: number;
   attractionId?: number;
   poiName?: string;
+  /** U2：可选星级 1～5 */
+  rating?: number | null;
+  /** U2：结构化评价标签（预设 slug） */
+  reviewTags?: string[];
 }
 
 /** H10-a：拉取路线评论时的筛选参数 */

@@ -173,11 +173,15 @@ async function seedSampleRoutes(creatorId: number | null) {
     creatorId,
     status: RouteStatus.PUBLISHED,
     isPublic: 1,
+    sourceKind: 'crawl',
+    contentTier: 'inspiration',
+    verificationStatus: 'pending',
+    moderationStatus: 'approved',
     viewCount: 128,
     likeCount: 12,
     collectCount: 5,
   });
-  console.log('[seed] Created sample travel route');
+  console.log('[seed] Created sample travel route (crawl · pending verification)');
 }
 
 async function seedSystemConfig() {

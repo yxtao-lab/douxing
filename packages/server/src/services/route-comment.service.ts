@@ -4,7 +4,15 @@ import { routeComments } from '../db/schema/route-comments.js';
 import { routeCommentLikes } from '../db/schema/route-comment-likes.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { users } from '../db/schema/users.js';
-import { RouteStatus, ApiError, ApiMessageKey } from '@douxing/shared';
+import {
+  RouteStatus,
+  ApiError,
+  ApiMessageKey,
+  normalizeRouteReviewTags,
+  parseRouteReviewRating,
+  isRouteReviewTagSlug,
+  ROUTE_REVIEW_TAG_MAX,
+} from '@douxing/shared';
 import type { RouteCommentInfo, RouteCommentLikeResult } from '@douxing/shared';
 import { rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
 
@@ -18,12 +26,14 @@ export interface ListRouteCommentsOptions {
   viewerUserId?: number;
 }
 
-/** 发表路线评论时的 POI 上下文（均可选，兼容旧客户端） */
+/** 发表路线评论时的 POI 上下文与 U2 评价字段（均可选，兼容旧客户端） */
 export interface CreateRouteCommentInput {
   content: string;
   dayIndex?: number;
   attractionId?: number;
   poiName?: string;
+  rating?: number | null;
+  reviewTags?: string[];
 }
 
 type CommentRow = {
@@ -34,11 +44,30 @@ type CommentRow = {
   dayIndex: number | null;
   attractionId: number | null;
   poiName: string | null;
+  rating: number | null;
+  reviewTags: string[] | null;
   likeCount: number;
   isFeatured: number;
   createdAt: Date;
   userNickname: string;
   userAvatar: string | null;
+};
+
+const commentSelectFields = {
+  id: routeComments.id,
+  routeId: routeComments.routeId,
+  userId: routeComments.userId,
+  content: routeComments.content,
+  dayIndex: routeComments.dayIndex,
+  attractionId: routeComments.attractionId,
+  poiName: routeComments.poiName,
+  rating: routeComments.rating,
+  reviewTags: routeComments.reviewTags,
+  likeCount: routeComments.likeCount,
+  isFeatured: routeComments.isFeatured,
+  createdAt: routeComments.createdAt,
+  userNickname: users.nickname,
+  userAvatar: users.avatar,
 };
 
 /**
@@ -117,6 +146,8 @@ function toRouteCommentInfo(row: CommentRow, likedIds?: Set<number>): RouteComme
     dayIndex: row.dayIndex,
     attractionId: row.attractionId,
     poiName: row.poiName,
+    rating: row.rating ?? null,
+    reviewTags: Array.isArray(row.reviewTags) ? row.reviewTags : [],
     likeCount: row.likeCount ?? 0,
     isFeatured: row.isFeatured === 1,
     isLiked: likedIds ? likedIds.has(row.id) : undefined,
@@ -157,20 +188,7 @@ export async function listRouteComments(
       : [desc(routeComments.createdAt)];
 
   const rows = await db
-    .select({
-      id: routeComments.id,
-      routeId: routeComments.routeId,
-      userId: routeComments.userId,
-      content: routeComments.content,
-      dayIndex: routeComments.dayIndex,
-      attractionId: routeComments.attractionId,
-      poiName: routeComments.poiName,
-      likeCount: routeComments.likeCount,
-      isFeatured: routeComments.isFeatured,
-      createdAt: routeComments.createdAt,
-      userNickname: users.nickname,
-      userAvatar: users.avatar,
-    })
+    .select(commentSelectFields)
     .from(routeComments)
     .innerJoin(users, eq(routeComments.userId, users.id))
     .where(and(...conditions))
@@ -189,13 +207,13 @@ export async function listRouteComments(
 }
 
 /**
- * 在广场公开路线上发表评论，可附带 POI 上下文。
+ * 在广场公开路线上发表评论，可附带 POI 上下文与 U2 结构化评价。
  *
  * @param routeId - 路线 ID
  * @param userId - 评论用户 ID
- * @param input - 评论正文与可选 POI 关联
+ * @param input - 评论正文、可选 POI 关联、星级与评价标签
  * @returns 新评论；路线不可评论时为 `null`
- * @throws {ApiError} 内容为空时抛出 `ROUTE_COMMENT_EMPTY`
+ * @throws {ApiError} 内容为空、星级/标签非法时抛出对应 ApiMessageKey
  */
 export async function createRouteComment(
   routeId: number,
@@ -205,6 +223,15 @@ export async function createRouteComment(
   const route = await canCommentOnRoute(routeId);
   if (!route) return null;
 
+  const { assertUgcRateLimit } = await import('./ugc-rate-limit.service.js');
+  const { UGC_RATE_LIMITS } = await import('@douxing/shared');
+  await assertUgcRateLimit(
+    userId,
+    'comment',
+    UGC_RATE_LIMITS.COMMENT_PER_HOUR,
+    UGC_RATE_LIMITS.COMMENT_WINDOW_SEC,
+  );
+
   const payload: CreateRouteCommentInput =
     typeof input === 'string' ? { content: input } : input;
 
@@ -212,6 +239,19 @@ export async function createRouteComment(
   if (!trimmed) {
     throw new ApiError(ApiMessageKey.ROUTE_COMMENT_EMPTY);
   }
+
+  const rating = parseRouteReviewRating(payload.rating);
+  if (rating === undefined) {
+    throw new ApiError(ApiMessageKey.ROUTE_REVIEW_RATING_INVALID);
+  }
+  const rawTags = Array.isArray(payload.reviewTags) ? payload.reviewTags : [];
+  if (rawTags.length > ROUTE_REVIEW_TAG_MAX) {
+    throw new ApiError(ApiMessageKey.ROUTE_REVIEW_TAGS_INVALID);
+  }
+  if (rawTags.some((tag) => typeof tag !== 'string' || !isRouteReviewTagSlug(tag))) {
+    throw new ApiError(ApiMessageKey.ROUTE_REVIEW_TAGS_INVALID);
+  }
+  const reviewTags = normalizeRouteReviewTags(rawTags);
 
   const dayIndex =
     payload.dayIndex != null && Number.isFinite(payload.dayIndex)
@@ -231,6 +271,8 @@ export async function createRouteComment(
     dayIndex,
     attractionId,
     poiName,
+    rating,
+    reviewTags: reviewTags.length > 0 ? reviewTags : null,
   });
 
   await db
@@ -240,20 +282,7 @@ export async function createRouteComment(
 
   const commentId = Number(result.insertId);
   const rows = await db
-    .select({
-      id: routeComments.id,
-      routeId: routeComments.routeId,
-      userId: routeComments.userId,
-      content: routeComments.content,
-      dayIndex: routeComments.dayIndex,
-      attractionId: routeComments.attractionId,
-      poiName: routeComments.poiName,
-      likeCount: routeComments.likeCount,
-      isFeatured: routeComments.isFeatured,
-      createdAt: routeComments.createdAt,
-      userNickname: users.nickname,
-      userAvatar: users.avatar,
-    })
+    .select(commentSelectFields)
     .from(routeComments)
     .innerJoin(users, eq(routeComments.userId, users.id))
     .where(eq(routeComments.id, commentId))
@@ -351,20 +380,7 @@ export async function setRouteCommentFeatured(
     .where(eq(routeComments.id, commentId));
 
   const rows = await db
-    .select({
-      id: routeComments.id,
-      routeId: routeComments.routeId,
-      userId: routeComments.userId,
-      content: routeComments.content,
-      dayIndex: routeComments.dayIndex,
-      attractionId: routeComments.attractionId,
-      poiName: routeComments.poiName,
-      likeCount: routeComments.likeCount,
-      isFeatured: routeComments.isFeatured,
-      createdAt: routeComments.createdAt,
-      userNickname: users.nickname,
-      userAvatar: users.avatar,
-    })
+    .select(commentSelectFields)
     .from(routeComments)
     .innerJoin(users, eq(routeComments.userId, users.id))
     .where(eq(routeComments.id, commentId))

@@ -62,7 +62,10 @@ export async function getUserMemberLevel(userId: number): Promise<number> {
 
 export async function getPlanCandidateCountForUser(userId: number): Promise<number> {
   const level = await getUserMemberLevel(userId);
-  return getPlanCandidateCountByMemberLevel(level);
+  const base = getPlanCandidateCountByMemberLevel(level);
+  const { getUserBonusPlanCandidates } = await import('./points-redemption.service.js');
+  const bonus = await getUserBonusPlanCandidates(userId);
+  return base + Math.max(0, bonus);
 }
 
 export async function getMembershipInfoForUser(userId: number): Promise<MembershipInfo | null> {

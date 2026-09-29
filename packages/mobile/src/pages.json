@@ -34,6 +34,12 @@
       }
     },
     {
+      "path": "pages/routes/inspiration",
+      "style": {
+        "navigationBarTitleText": "上传灵感稿"
+      }
+    },
+    {
       "path": "pages/share/route",
       "style": {
         "navigationBarTitleText": "路线分享"
@@ -67,6 +73,18 @@
       "path": "pages/profile/pet-memories",
       "style": {
         "navigationBarTitleText": "记忆墙"
+      }
+    },
+    {
+      "path": "pages/profile/verification-points",
+      "style": {
+        "navigationBarTitleText": "验证积分"
+      }
+    },
+    {
+      "path": "pages/profile/points-redemption",
+      "style": {
+        "navigationBarTitleText": "积分兑换"
       }
     },
     {

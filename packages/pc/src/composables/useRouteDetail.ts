@@ -7,9 +7,10 @@ import type {
   RouteDetailPayload,
   TravelRouteInfo,
 } from '@douxing/shared';
-import { RouteStatus } from '@douxing/shared';
+import { RouteStatus, RouteReportReason, routeReviewTagPresets, ROUTE_REVIEW_TAG_MAX, type RouteReviewTagSlug } from '@douxing/shared';
 import {
   createRouteComment,
+  createRouteReport,
   fetchRouteComments,
   fetchRouteDetail,
   toggleRouteCommentLike,
@@ -48,10 +49,16 @@ export function useRouteDetail(routeId: () => number) {
   const editName = ref('');
   const editDesc = ref('');
   const regeneratePrompt = ref('');
+  const reportModalVisible = ref(false);
+  const reportReason = ref(RouteReportReason.OUTDATED);
+  const reportDetail = ref('');
+  const reporting = ref(false);
   const comments = ref<RouteCommentInfo[]>([]);
   const commentSort = ref<'hot' | 'recent'>('hot');
   const poiExternalLinks = ref<RoutePoiExternalLinkInfo[]>([]);
   const commentText = ref('');
+  const commentRating = ref<number | null>(null);
+  const commentReviewTags = ref<RouteReviewTagSlug[]>([]);
   const commentFocus = ref<{
     dayIndex: number;
     attractionId?: number;
@@ -75,6 +82,18 @@ export function useRouteDetail(routeId: () => number) {
   );
 
   const showInteraction = computed(() => route.value?.isPublic === true);
+
+  const canReportRoute = computed(
+    () => Boolean(route.value?.isPublic) && !isOwner.value,
+  );
+
+  const reportReasonOptions = computed(() => [
+    { value: RouteReportReason.OUTDATED, label: t('routes.reportReasonOutdated') },
+    { value: RouteReportReason.DANGEROUS, label: t('routes.reportReasonDangerous') },
+    { value: RouteReportReason.PLAGIARISM, label: t('routes.reportReasonPlagiarism') },
+    { value: RouteReportReason.AD, label: t('routes.reportReasonAd') },
+    { value: RouteReportReason.OTHER, label: t('routes.reportReasonOther') },
+  ]);
 
   const showComments = computed(() => route.value?.isPublic === true);
 
@@ -335,18 +354,46 @@ export function useRouteDetail(routeId: () => number) {
         dayIndex: commentFocus.value?.dayIndex,
         attractionId: commentFocus.value?.attractionId,
         poiName: commentFocus.value?.poiName || undefined,
+        rating: commentRating.value,
+        reviewTags: commentReviewTags.value,
       });
       comments.value = [created, ...comments.value];
       if (route.value) {
         route.value.commentCount = (route.value.commentCount ?? 0) + 1;
       }
       commentText.value = '';
+      commentRating.value = null;
+      commentReviewTags.value = [];
       showToast(t('routes.commentSuccess'), 'success');
     } catch (err) {
       showToast(getAppErrorMessage(err, t('routes.commentFailed')), 'error');
     } finally {
       postingComment.value = false;
     }
+  }
+
+  /**
+   * 切换评论星级；再次点击同一星级则取消。
+   *
+   * @param n - 1～5
+   */
+  function toggleCommentRating(n: number) {
+    commentRating.value = commentRating.value === n ? null : n;
+  }
+
+  /**
+   * 切换评价标签选中状态。
+   *
+   * @param tag - 评价标签 slug
+   */
+  function toggleCommentReviewTag(tag: RouteReviewTagSlug) {
+    const idx = commentReviewTags.value.indexOf(tag);
+    if (idx >= 0) {
+      commentReviewTags.value = commentReviewTags.value.filter((item) => item !== tag);
+      return;
+    }
+    if (commentReviewTags.value.length >= ROUTE_REVIEW_TAG_MAX) return;
+    commentReviewTags.value = [...commentReviewTags.value, tag];
   }
 
   async function handleLike() {
@@ -374,6 +421,44 @@ export function useRouteDetail(routeId: () => number) {
       }
     } catch (err) {
       showToast(getAppErrorMessage(err, t('routes.operationFailed')), 'error');
+    }
+  }
+
+  /**
+   * 打开报错弹窗。
+   */
+  function openReportModal() {
+    reportReason.value = RouteReportReason.OUTDATED;
+    reportDetail.value = '';
+    reportModalVisible.value = true;
+  }
+
+  /**
+   * 关闭报错弹窗。
+   */
+  function closeReportModal() {
+    if (reporting.value) return;
+    reportModalVisible.value = false;
+  }
+
+  /**
+   * 提交路线报错。
+   */
+  async function handleSubmitReport() {
+    const id = routeId();
+    if (!id || !reportReason.value || reporting.value) return;
+    reporting.value = true;
+    try {
+      await createRouteReport(id, {
+        reason: reportReason.value,
+        detail: reportDetail.value.trim() || null,
+      });
+      reportModalVisible.value = false;
+      showToast(t('routes.reportSuccess'), 'success');
+    } catch (err) {
+      showToast(getAppErrorMessage(err, t('routes.reportFailed')), 'error');
+    } finally {
+      reporting.value = false;
     }
   }
 
@@ -475,15 +560,26 @@ export function useRouteDetail(routeId: () => number) {
     editName,
     editDesc,
     regeneratePrompt,
+    reportModalVisible,
+    reportReason,
+    reportDetail,
+    reporting,
+    reportReasonOptions,
+    canReportRoute,
     comments,
     commentSort,
     poiExternalLinks,
     commentText,
+    commentRating,
+    commentReviewTags,
+    reviewTagPresets: routeReviewTagPresets,
     commentFocus,
     commentFilterLabel,
     focusRouteCommentPoi,
     clearCommentFocus,
     filterCommentsByActiveDay,
+    toggleCommentRating,
+    toggleCommentReviewTag,
     publishedStatus,
     isOwner,
     canEditRouteInfo,
@@ -508,6 +604,9 @@ export function useRouteDetail(routeId: () => number) {
     loadPoiExternalLinks,
     handleLike,
     handleFavorite,
+    openReportModal,
+    closeReportModal,
+    handleSubmitReport,
     handleSaveDraft,
     handleRegenerate,
     handleUnlock,

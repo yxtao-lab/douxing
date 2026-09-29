@@ -23,6 +23,24 @@
                 >
                   {{ routeStatusLabel }}
                 </span>
+                <span
+                  v-if="sourceBadgeLabel"
+                  class="rounded-full bg-white/15 px-3 py-0.5 text-xs font-medium"
+                >
+                  {{ sourceBadgeLabel }}
+                </span>
+                <span
+                  v-if="contentTierBadgeLabel"
+                  class="rounded-full bg-teal-600/90 px-3 py-0.5 text-xs font-medium"
+                >
+                  {{ contentTierBadgeLabel }}
+                </span>
+                <span
+                  v-if="showPendingVerificationBadge"
+                  class="rounded-full bg-amber-500/90 px-3 py-0.5 text-xs font-medium text-white"
+                >
+                  {{ t('routes.pendingVerification') }}
+                </span>
               </div>
               <p class="text-sm text-white/85">{{ heroMeta }}</p>
             </div>
@@ -74,6 +92,23 @@
                   class="h-6 w-11 rounded-full bg-gray-200 transition peer-checked:bg-dx-primary peer-disabled:opacity-50 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-white after:transition peer-checked:after:translate-x-5"
                 />
               </label>
+            </div>
+          </div>
+
+          <div v-if="route.isPublic" class="dx-card">
+            <p class="font-medium text-dx-text">{{ t('routes.trustTitle') }}</p>
+            <p class="mt-1 text-sm text-dx-muted">
+              {{ t('routes.trustScoreLabel', { score: route.trustScore ?? 0 }) }}
+              <span v-if="contentTierBadgeLabel"> · {{ contentTierBadgeLabel }}</span>
+            </p>
+            <div v-if="trustReasonLabels.length" class="mt-3 flex flex-wrap gap-1.5">
+              <span
+                v-for="reason in trustReasonLabels"
+                :key="reason"
+                class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-dx-muted"
+              >
+                {{ reason }}
+              </span>
             </div>
           </div>
 
@@ -321,6 +356,64 @@
                 </button>
               </div>
               <p class="mt-1 text-sm text-dx-muted">{{ c.content }}</p>
+              <div
+                v-if="c.rating || (c.reviewTags && c.reviewTags.length)"
+                class="mt-2 flex flex-wrap gap-1.5"
+              >
+                <span
+                  v-if="c.rating"
+                  class="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700"
+                >
+                  {{ t('routes.reviewRatingStar', { n: c.rating }) }}
+                </span>
+                <span
+                  v-for="tag in c.reviewTags || []"
+                  :key="tag"
+                  class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-dx-muted"
+                >
+                  {{ formatReviewTag(tag) }}
+                </span>
+              </div>
+            </div>
+            <div class="mb-3 space-y-3">
+              <div>
+                <p class="mb-1.5 text-xs text-dx-muted">{{ t('routes.reviewRatingLabel') }}</p>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="n in 5"
+                    :key="n"
+                    type="button"
+                    class="rounded-full px-2.5 py-1 text-xs transition"
+                    :class="
+                      commentRating === n
+                        ? 'bg-dx-primary-light font-medium text-dx-primary'
+                        : 'bg-gray-100 text-dx-muted hover:bg-gray-200'
+                    "
+                    @click="toggleCommentRating(n)"
+                  >
+                    {{ t('routes.reviewRatingStar', { n }) }}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <p class="mb-1.5 text-xs text-dx-muted">{{ t('routes.reviewTagsLabel') }}</p>
+                <div class="flex flex-wrap gap-2">
+                  <button
+                    v-for="tag in reviewTagPresets"
+                    :key="tag"
+                    type="button"
+                    class="rounded-full px-2.5 py-1 text-xs transition"
+                    :class="
+                      commentReviewTags.includes(tag)
+                        ? 'bg-dx-primary-light font-medium text-dx-primary'
+                        : 'bg-gray-100 text-dx-muted hover:bg-gray-200'
+                    "
+                    @click="toggleCommentReviewTag(tag)"
+                  >
+                    {{ formatReviewTag(tag) }}
+                  </button>
+                </div>
+              </div>
             </div>
             <textarea
               v-model="commentText"
@@ -359,6 +452,14 @@
                 @click="handleFavorite"
               >
                 {{ route.isFavorited ? t('routes.favorited') : t('routes.favorite') }}
+              </button>
+              <button
+                v-if="canReportRoute"
+                type="button"
+                class="dx-btn-secondary w-full"
+                @click="openReportModal"
+              >
+                {{ t('routes.reportAction') }}
               </button>
             </template>
             <button
@@ -431,6 +532,60 @@
             </button>
             <button type="button" class="dx-btn-primary" :disabled="savingDraft" @click="handleSaveDraft">
               {{ t('routes.saveDraft') }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- 报错纠错弹窗 -->
+    <Teleport to="body">
+      <div
+        v-if="reportModalVisible"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+        @click.self="closeReportModal"
+      >
+        <div class="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" @click.stop>
+          <div class="mb-4 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-dx-text">{{ t('routes.reportTitle') }}</h2>
+            <button type="button" class="text-dx-muted hover:text-dx-text" @click="closeReportModal">×</button>
+          </div>
+          <div class="mb-4 flex flex-wrap gap-2">
+            <button
+              v-for="opt in reportReasonOptions"
+              :key="opt.value"
+              type="button"
+              class="rounded-xl border px-3 py-2 text-sm"
+              :class="
+                reportReason === opt.value
+                  ? 'border-dx-primary bg-dx-primary/10 text-dx-primary'
+                  : 'border-dx-border text-dx-text'
+              "
+              @click="reportReason = opt.value"
+            >
+              {{ opt.label }}
+            </button>
+          </div>
+          <label class="mb-6 block">
+            <textarea
+              v-model="reportDetail"
+              rows="3"
+              maxlength="1000"
+              class="w-full rounded-xl border border-dx-border px-3 py-2 text-sm outline-none focus:border-dx-primary"
+              :placeholder="t('routes.reportDetailPlaceholder')"
+            />
+          </label>
+          <div class="flex justify-end gap-3">
+            <button type="button" class="dx-btn-secondary" @click="closeReportModal">
+              {{ t('routes.editCancel') }}
+            </button>
+            <button
+              type="button"
+              class="dx-btn-primary"
+              :disabled="reporting || !reportReason"
+              @click="handleSubmitReport"
+            >
+              {{ t('routes.reportSubmit') }}
             </button>
           </div>
         </div>
@@ -564,13 +719,13 @@ import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vu
 import { useRouteDetail } from '@/composables/useRouteDetail';
 import { useLocale } from '@/i18n/useLocale';
 import { useInterestTagLabels } from '@/composables/useInterestTagLabels';
-import { RouteStatus, type RouteCommentInfo, type RouteDetailPayload, ROUTE_VIDEO_MAX_DURATION_SEC, isAllowedExternalDiscussionUrl } from '@douxing/shared';
+import { RouteStatus, RouteSourceKind, RouteContentTier, isRoutePendingVerification, formatRouteReviewTagLabel, type RouteCommentInfo, type RouteDetailPayload, ROUTE_VIDEO_MAX_DURATION_SEC, isAllowedExternalDiscussionUrl } from '@douxing/shared';
 import { uploadRouteVideo } from '@/api/routes';
 import { appMessage } from '@/composables/useAppMessage';
 import { getAppErrorMessage } from '@/utils/error-message';
 
 const vueRoute = useRoute();
-const { t } = useLocale();
+const { t, currentLocale } = useLocale();
 const { joinLabels } = useInterestTagLabels();
 
 const posterSheetVisible = ref(false);
@@ -609,15 +764,26 @@ const {
   editName,
   editDesc,
   regeneratePrompt,
+  reportModalVisible,
+  reportReason,
+  reportDetail,
+  reporting,
+  reportReasonOptions,
+  canReportRoute,
   comments,
   commentSort,
   poiExternalLinks,
   commentText,
+  commentRating,
+  commentReviewTags,
+  reviewTagPresets,
   commentFocus,
   commentFilterLabel,
   focusRouteCommentPoi,
   clearCommentFocus,
   filterCommentsByActiveDay,
+  toggleCommentRating,
+  toggleCommentReviewTag,
   setCommentSort,
   handleCommentLike,
   handleAddPoiExternalLink,
@@ -641,11 +807,82 @@ const {
   handlePostComment,
   handleLike,
   handleFavorite,
+  openReportModal,
+  closeReportModal,
+  handleSubmitReport,
   handleSaveDraft,
   handleRegenerate,
   handleUnlock,
   handlePublish,
 } = useRouteDetail(() => numericRouteId.value);
+
+/**
+ * 评价标签展示文案。
+ *
+ * @param tag - slug
+ * @returns 本地化标签
+ */
+function formatReviewTag(tag: string) {
+  return formatRouteReviewTagLabel(tag, currentLocale.value);
+}
+
+const sourceBadgeLabel = computed(() => {
+  if (!route.value?.sourceKind) return '';
+  switch (route.value.sourceKind) {
+    case RouteSourceKind.CRAWL:
+      return t('routes.sourceCrawl');
+    case RouteSourceKind.AI_DRAFT:
+      return t('routes.sourceAiDraft');
+    case RouteSourceKind.UGC_ORIGINAL:
+      return t('routes.sourceUgcOriginal');
+    case RouteSourceKind.UGC_FORK:
+      return t('routes.sourceUgcFork');
+    default:
+      return '';
+  }
+});
+
+const contentTierBadgeLabel = computed(() => {
+  if (!route.value?.contentTier) return '';
+  if (route.value.contentTier === RouteContentTier.TRAVEL_READY) return t('routes.contentTravelReady');
+  if (route.value.contentTier === RouteContentTier.INSPIRATION) return t('routes.contentInspiration');
+  return '';
+});
+
+/**
+ * 将可信原因码转为展示文案。
+ *
+ * @param key - 原因码
+ * @returns 文案
+ */
+function formatTrustReason(key: string) {
+  const map: Record<string, string> = {
+    fulfillment: t('routes.trustReasonFulfillment'),
+    recency_verified: t('routes.trustReasonRecencyVerified'),
+    recency_fresh: t('routes.trustReasonRecencyFresh'),
+    consensus: t('routes.trustReasonConsensus'),
+    quality_structure: t('routes.trustReasonQualityStructure'),
+    quality_description: t('routes.trustReasonQualityDescription'),
+    quality_bound_poi: t('routes.trustReasonQualityBoundPoi'),
+    crawl_unverified: t('routes.trustReasonCrawlUnverified'),
+    stale: t('routes.trustReasonStale'),
+    open_reports: t('routes.trustReasonOpenReports'),
+    crowned: t('routes.trustReasonCrowned'),
+  };
+  return map[key] ?? key;
+}
+
+const trustReasonLabels = computed(() =>
+  (route.value?.trustBreakdown?.reasonKeys ?? []).map((key) => formatTrustReason(key)),
+);
+
+const showPendingVerificationBadge = computed(() => {
+  if (!route.value) return false;
+  return (
+    route.value.pendingVerification === true ||
+    isRoutePendingVerification(route.value.sourceKind, route.value.verificationStatus)
+  );
+});
 
 const externalLinkConfirmUrl = ref<string | null>(null);
 const externalLinkFormVisible = ref(false);

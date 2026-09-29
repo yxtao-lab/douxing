@@ -2,12 +2,12 @@ import { eq, desc, and, inArray, sql, count, gte, lte, or, like } from 'drizzle-
 import { getDb } from '../db/client.js';
 import { checkIns, type CheckInLocation } from '../db/schema/check-ins.js';
 import { attractions } from '../db/schema/attractions.js';
+import { travelRoutes } from '../db/schema/travel-routes.js';
 import {
   CheckInStatus,
-  CHECKIN_BASE_POINTS,
-  CHECKIN_PHOTO_BONUS,
-  CHECKIN_FIRST_ATTRACTION_BONUS,
   CHECKIN_MAX_PHOTOS,
+  computeCheckInVerificationAward,
+  extractRouteKeyAttractionIds,
 } from '@douxing/shared';
 import type { CheckInInfo, CheckInTimeRange, PaginatedResult } from '@douxing/shared';
 import { buildPaginatedResult } from '@douxing/shared';
@@ -17,6 +17,12 @@ import { grantPetExpOnCheckIn } from './pet-exp.service.js';
 import type { LocaleCode } from '@douxing/shared';
 import { getAttractionForCheckIn } from './attraction.service.js';
 import { ingestCheckInPhotosToAlbum, getAlbumPhotoUrlsByCheckInIds } from './journey-album.service.js';
+import { recomputeRouteTrustSafe } from './route-trust.service.js';
+import {
+  awardCheckInVerification,
+  hasCheckInVerificationForPoi,
+  maybeAwardFollowCompleteSafe,
+} from './verification-points.service.js';
 import {
   assertNotCheckedInToday,
   validateCheckInGeofence,
@@ -121,11 +127,28 @@ async function isFirstCheckInAtAttraction(userId: number, attractionId?: number)
   return Number(rows[0]?.count ?? 0) === 0;
 }
 
-function calculatePoints(hasPhotos: boolean, isFirstAtAttraction: boolean) {
-  let points = CHECKIN_BASE_POINTS;
-  if (hasPhotos) points += CHECKIN_PHOTO_BONUS;
-  if (isFirstAtAttraction) points += CHECKIN_FIRST_ATTRACTION_BONUS;
-  return points;
+/**
+ * 预估打卡验证分（仅用于插入前写入 points_earned；落库以后端账本为准）。
+ * 同点若已入账则返回 0。
+ *
+ * @param hasPhotos - 是否带图
+ * @param isFirstAtAttraction - 是否全局首次该景点
+ * @param isKeyNode - 是否路线关键节点
+ * @param alreadyAwardedForPoi - 同点是否已拿过验证分
+ * @returns 预计积分
+ */
+function estimateCheckInPoints(
+  hasPhotos: boolean,
+  isFirstAtAttraction: boolean,
+  isKeyNode: boolean,
+  alreadyAwardedForPoi: boolean,
+) {
+  return computeCheckInVerificationAward({
+    hasPhotos,
+    isFirstAtAttraction,
+    isKeyNode,
+    alreadyAwardedForPoi,
+  }).total;
 }
 
 export async function createCheckIn(
@@ -151,6 +174,15 @@ export async function createCheckIn(
 
   await assertNotCheckedInToday(userId, data.attractionId);
 
+  const { assertUgcRateLimit } = await import('./ugc-rate-limit.service.js');
+  const { UGC_RATE_LIMITS: ugcLimits } = await import('@douxing/shared');
+  await assertUgcRateLimit(
+    userId,
+    'checkin',
+    ugcLimits.CHECKIN_PER_DAY,
+    ugcLimits.CHECKIN_WINDOW_SEC,
+  );
+
   const distanceMeters = await validateCheckInGeofence({
     userId,
     userLatitude: data.location.latitude,
@@ -164,9 +196,30 @@ export async function createCheckIn(
   const photos = normalizeStoredAssetPaths((data.photos ?? []).slice(0, CHECKIN_MAX_PHOTOS));
   const cityCode = await resolveCityCode(data.attractionId, data.cityCode, data.cityName);
   const isFirstAtAttraction = await isFirstCheckInAtAttraction(userId, data.attractionId);
-  const pointsEarned = calculatePoints(photos.length > 0, isFirstAtAttraction);
 
   const db = getDb();
+  const routeRows = await db
+    .select({ routeDetail: travelRoutes.routeDetail })
+    .from(travelRoutes)
+    .where(eq(travelRoutes.id, data.routeId))
+    .limit(1);
+  const routeDetail = routeRows[0]?.routeDetail ?? null;
+
+  const keyIds = extractRouteKeyAttractionIds(routeDetail);
+  const attractionId = data.attractionId && data.attractionId > 0 ? data.attractionId : null;
+  const isKeyNode = attractionId != null && keyIds.includes(attractionId);
+  const alreadyAwardedForPoi = await hasCheckInVerificationForPoi(
+    userId,
+    data.routeId,
+    attractionId,
+  );
+  const pointsEarned = estimateCheckInPoints(
+    photos.length > 0,
+    isFirstAtAttraction,
+    isKeyNode,
+    alreadyAwardedForPoi,
+  );
+
   const [result] = await db.insert(checkIns).values({
     userId,
     routeId: data.routeId,
@@ -204,13 +257,37 @@ export async function createCheckIn(
 
   const albumPhotosByCheckInId = await getAlbumPhotoUrlsByCheckInIds([id]);
   const albumPhotos = albumPhotosByCheckInId.get(id);
-  const enrichedCheckIn: CheckInInfo = {
+  let enrichedCheckIn: CheckInInfo = {
     ...checkIn,
     photos:
       albumPhotos && albumPhotos.length > 0
         ? rewritePublicAssetUrls(albumPhotos)
         : checkIn.photos,
   };
+
+  try {
+    const { creditedPoints } = await awardCheckInVerification({
+      userId,
+      routeId: data.routeId,
+      checkInId: id,
+      attractionId,
+      isFirstAtAttraction,
+      hasPhotos: photos.length > 0,
+      routeDetail,
+    });
+    if (creditedPoints !== pointsEarned) {
+      await db.update(checkIns).set({ pointsEarned: creditedPoints }).where(eq(checkIns.id, id));
+      enrichedCheckIn = { ...enrichedCheckIn, pointsEarned: creditedPoints };
+    }
+  } catch (err) {
+    console.warn(
+      '[checkins] 验证积分入账失败',
+      id,
+      err instanceof Error ? err.message : err,
+    );
+  }
+
+  await maybeAwardFollowCompleteSafe(data.routeId, userId);
 
   const newAchievements = await evaluateAchievements(userId);
   const newBadges = await evaluateBadges(userId);
@@ -222,6 +299,7 @@ export async function createCheckIn(
     },
     data.locale ?? 'zh-CN',
   );
+  await recomputeRouteTrustSafe(data.routeId);
   return { checkIn: enrichedCheckIn, newAchievements, newBadges, petCelebration };
 }
 

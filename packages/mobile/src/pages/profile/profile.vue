@@ -16,6 +16,9 @@
                 </view>
               </view>
               <text class="sub">{{ planQuotaText }}</text>
+              <text v-if="user" class="sub points-line" @click.stop="goVerificationPoints">
+                {{ verificationPointsText }}
+              </text>
               <view v-if="user.interestTags?.length" class="tag-row">
                 <text v-for="tag in user.interestTags" :key="tag" class="user-tag">{{ labelOf(tag) }}</text>
               </view>
@@ -152,6 +155,10 @@ const planQuotaText = computed(() => {
   });
 });
 
+const verificationPointsText = computed(() =>
+  tf('profile.verificationPointsLine', { points: user.value?.verificationPoints ?? 0 }),
+);
+
 const memberBadgeClass = computed(() => getMemberLevelBadgeClass(user.value?.memberLevel));
 
 const travelGridItems = computed<GridItem[]>(() => [
@@ -174,6 +181,22 @@ const travelGridItems = computed<GridItem[]>(() => [
     bg: '#fff1f0',
     needLogin: true,
     action: goLeaderboard,
+  },
+  {
+    key: 'verificationPoints',
+    icon: '✨',
+    label: t('profile.gridVerificationPoints'),
+    bg: '#ecfdf5',
+    needLogin: true,
+    action: goVerificationPoints,
+  },
+  {
+    key: 'pointsRedemption',
+    icon: '🎁',
+    label: t('profile.gridPointsRedemption'),
+    bg: '#f0fdfa',
+    needLogin: true,
+    action: goPointsRedemption,
   },
   {
     key: 'petMemories',
@@ -256,6 +279,17 @@ function goAchievements() {
 
 function goLeaderboard() {
   uni.navigateTo({ url: '/pages/leaderboard/index' });
+}
+
+function goVerificationPoints() {
+  uni.navigateTo({ url: '/pages/profile/verification-points' });
+}
+
+/**
+ * 打开积分兑换页。
+ */
+function goPointsRedemption() {
+  uni.navigateTo({ url: '/pages/profile/points-redemption' });
 }
 
 function goPetMemories() {
@@ -505,6 +539,10 @@ watch(user, () => {
   font-size: 24rpx;
   margin-top: 8rpx;
   display: block;
+}
+.points-line {
+  text-decoration: underline;
+  text-underline-offset: 4rpx;
 }
 .page-body {
   padding: 0 var(--page-gutter) 24rpx;

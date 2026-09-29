@@ -4,6 +4,12 @@ import type {
   MembershipInfo,
   UserPhotoStorageInfo,
   CompleteOnboardingRequest,
+  VerificationPointsSummary,
+  PointRedemptionCatalogItem,
+  PointRedemptionEntitlements,
+  PointRedemptionRecord,
+  PointRedemptionResult,
+  RedeemPointsRequest,
 } from '@douxing/shared';
 import { request, setAuth } from '@/utils/request';
 import { getApiBaseUrl, assertRemoteApiBase } from '@/utils/api-base';
@@ -38,6 +44,56 @@ export function fetchMembershipInfo() {
  */
 export function fetchPhotoStorage() {
   return request<UserPhotoStorageInfo>('/users/me/storage');
+}
+
+/**
+ * U4：获取验证积分余额与账本。
+ *
+ * @param page - 页码
+ * @param pageSize - 每页条数
+ * @returns 余额与事件列表
+ */
+export function fetchVerificationPoints(page = 1, pageSize = 20) {
+  return request<VerificationPointsSummary>(
+    `/users/me/verification-points?page=${page}&pageSize=${pageSize}`,
+  );
+}
+
+/**
+ * G-INCENTIVE-01：兑换目录与权益。
+ *
+ * @returns 目录与权益快照
+ */
+export function fetchRedemptionCatalog() {
+  return request<{
+    catalog: PointRedemptionCatalogItem[];
+    entitlements: PointRedemptionEntitlements;
+  }>('/users/me/redemption/catalog');
+}
+
+/**
+ * G-INCENTIVE-01：兑换记录。
+ *
+ * @param limit - 条数
+ * @returns 记录列表
+ */
+export function fetchRedemptionHistory(limit = 20) {
+  return request<{ items: PointRedemptionRecord[] }>(
+    `/users/me/redemption/history?limit=${limit}`,
+  );
+}
+
+/**
+ * G-INCENTIVE-01：兑换商品。
+ *
+ * @param data - 商品与可选幂等键
+ * @returns 兑换结果
+ */
+export function redeemPoints(data: RedeemPointsRequest) {
+  return request<PointRedemptionResult>('/users/me/redemption/redeem', {
+    method: 'POST',
+    data,
+  });
 }
 
 /**

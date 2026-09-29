@@ -1,6 +1,6 @@
 import { travelRoutes } from '../db/schema/travel-routes.js';
-import { RouteStatus } from '@douxing/shared';
-import type { TravelRouteInfo } from '@douxing/shared';
+import { RouteStatus, computeRouteHeatScore } from '@douxing/shared';
+import type { TravelRouteInfo, RouteTrustBreakdown } from '@douxing/shared';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 
 export type RouteInfoViewerOptions = {
@@ -54,6 +54,22 @@ export function toRouteInfo(
     collectCount: row.collectCount ?? 0,
     commentCount: row.commentCount ?? 0,
     isPublic: row.isPublic === 1,
+    sourceKind: row.sourceKind,
+    contentTier: row.contentTier,
+    verificationStatus: row.verificationStatus,
+    moderationStatus: row.moderationStatus,
+    parentRouteId: row.parentRouteId ?? null,
+    pendingVerification:
+      row.sourceKind === 'crawl' && row.verificationStatus !== 'verified',
+    heatScore: computeRouteHeatScore({
+      likeCount: row.likeCount,
+      commentCount: row.commentCount,
+      collectCount: row.collectCount,
+      viewCount: row.viewCount,
+    }),
+    trustScore: row.trustScore ?? 0,
+    trustCrowned: row.trustCrowned === 1,
+    trustBreakdown: (row.trustBreakdown as RouteTrustBreakdown | null) ?? null,
     isAiGenerated: detailMeta?.isAiGenerated === true,
     unlockPrice: detailMeta?.unlockPrice as number | undefined,
     isUnlocked:

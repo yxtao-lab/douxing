@@ -94,6 +94,7 @@ function mapUserRow(
     onboardedAt: user.onboardedAt ? formatDbDateTimeForApi(user.onboardedAt) : null,
     // C 端展示/权益一律用有效等级（过期后降为免费），与 /users/me/membership 一致
     memberLevel: getEffectiveMemberLevel(user.memberLevel, user.memberExpiresAt),
+    verificationPoints: Number(user.verificationPoints ?? 0),
     status: user.status,
     roles: roleCodes,
     permissions,

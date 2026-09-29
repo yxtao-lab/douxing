@@ -4,7 +4,7 @@ import { travelRoutes } from '../db/schema/travel-routes.js';
 import { routeLikes } from '../db/schema/route-likes.js';
 import { routeFavorites } from '../db/schema/route-favorites.js';
 import { users } from '../db/schema/users.js';
-import { RouteStatus, buildPaginatedResult } from '@douxing/shared';
+import { RouteStatus, buildPaginatedResult, RouteModerationStatus, RouteContentTier, ROUTE_HEAT_WEIGHTS } from '@douxing/shared';
 import type { PaginatedResult, RouteListQuery, TravelRouteInfo } from '@douxing/shared';
 import { toRouteInfo } from '../utils/route-info.util.js';
 import { resolvePublicAssetUrl, rewritePublicAssetUrl } from '../utils/public-asset-url.util.js';
@@ -85,14 +85,36 @@ function buildSceneTagsCondition(sceneTags?: string[]) {
   return clauses.length === 1 ? clauses[0] : or(...clauses);
 }
 
-function resolveOrderBy(sort: RouteListQuery['sort'], scope: RouteListQuery['scope']) {
-  if (sort === 'views') return desc(travelRoutes.viewCount);
+/**
+ * 构建广场热度排序 SQL（权重来自 shared 集中配置）。
+ *
+ * @returns drizzle SQL 表达式
+ */
+function buildRouteHeatOrderExpr() {
+  return sql`(
+    ${travelRoutes.likeCount} * ${ROUTE_HEAT_WEIGHTS.LIKE}
+    + ${travelRoutes.commentCount} * ${ROUTE_HEAT_WEIGHTS.COMMENT}
+    + ${travelRoutes.collectCount} * ${ROUTE_HEAT_WEIGHTS.COLLECT}
+    + ${travelRoutes.viewCount} * ${ROUTE_HEAT_WEIGHTS.VIEW}
+  )`;
+}
+
+/**
+ * 解析路线列表排序子句：主推荐按可信度，热门按热度，二者不得混用。
+ *
+ * @param sort - 查询排序
+ * @param scope - 列表范围
+ * @returns drizzle orderBy 参数列表
+ */
+function resolveOrderClauses(sort: RouteListQuery['sort'], scope: RouteListQuery['scope']) {
+  const heatDesc = desc(buildRouteHeatOrderExpr());
+  if (sort === 'views') return [desc(travelRoutes.viewCount)];
+  if (sort === 'recent') return [desc(travelRoutes.createdAt)];
+  if (sort === 'trust') return [desc(travelRoutes.trustScore), heatDesc];
   if (sort === 'hot' || scope === 'hot' || scope === 'plaza') {
-    return desc(
-      sql`${travelRoutes.likeCount} * 2 + ${travelRoutes.viewCount} + ${travelRoutes.commentCount}`,
-    );
+    return [heatDesc];
   }
-  return desc(travelRoutes.createdAt);
+  return [desc(travelRoutes.createdAt)];
 }
 
 function mapRowsForViewer(rows: typeof travelRoutes.$inferSelect[], viewerId: number) {
@@ -122,15 +144,18 @@ export async function listRoutesForUser(
     100,
   );
   const offset = (page - 1) * pageSize;
-  const orderBy = resolveOrderBy(query.sort, scope);
+  const orderClauses = resolveOrderClauses(query.sort, scope);
 
   const keywordCondition = buildKeywordCondition(query.keyword);
   const sceneTagsCondition = buildSceneTagsCondition(query.sceneTags);
 
   if (scope === 'plaza' || scope === 'hot') {
+    const recommendOnly = query.sort === 'trust';
     const where = and(
       eq(travelRoutes.status, RouteStatus.PUBLISHED),
       eq(travelRoutes.isPublic, 1),
+      eq(travelRoutes.moderationStatus, RouteModerationStatus.APPROVED),
+      recommendOnly ? eq(travelRoutes.contentTier, RouteContentTier.TRAVEL_READY) : undefined,
       keywordCondition,
       sceneTagsCondition,
     );
@@ -139,7 +164,7 @@ export async function listRoutesForUser(
       .select()
       .from(travelRoutes)
       .where(where)
-      .orderBy(orderBy)
+      .orderBy(...orderClauses)
       .limit(pageSize)
       .offset(offset);
     const routes = mapRowsForViewer(rows, userId);
@@ -182,7 +207,7 @@ export async function listRoutesForUser(
     .select()
     .from(travelRoutes)
     .where(where)
-    .orderBy(orderBy)
+    .orderBy(...orderClauses)
     .limit(pageSize)
     .offset(offset);
 
@@ -231,6 +256,15 @@ export async function toggleRouteLike(routeId: number, userId: number) {
     const updated = await db.select().from(travelRoutes).where(eq(travelRoutes.id, routeId)).limit(1);
     return { liked: false, likeCount: updated[0]?.likeCount ?? 0 };
   }
+
+  const { assertUgcRateLimit } = await import('./ugc-rate-limit.service.js');
+  const { UGC_RATE_LIMITS } = await import('@douxing/shared');
+  await assertUgcRateLimit(
+    userId,
+    'like',
+    UGC_RATE_LIMITS.LIKE_PER_HOUR,
+    UGC_RATE_LIMITS.LIKE_WINDOW_SEC,
+  );
 
   await db.insert(routeLikes).values({ userId, routeId });
   await db

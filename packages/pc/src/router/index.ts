@@ -55,6 +55,16 @@ const router = createRouter({
           meta: { titleKey: 'pc.nav.routes', navKey: 'routes', requiresAuth: true, petFloating: true },
         },
         {
+          path: 'routes/inspiration',
+          name: 'route-inspiration',
+          component: () => import('@/views/InspirationCreateView.vue'),
+          meta: {
+            titleKey: 'routes.inspirationPageTitle',
+            navKey: 'routes',
+            requiresAuth: true,
+          },
+        },
+        {
           path: 'routes/:id',
           name: 'route-detail',
           component: () => import('@/views/RouteDetailView.vue'),
@@ -147,6 +157,18 @@ const router = createRouter({
           name: 'leaderboard',
           component: () => import('@/views/LeaderboardView.vue'),
           meta: { titleKey: 'nav.leaderboard', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'verification-points',
+          name: 'verification-points',
+          component: () => import('@/views/VerificationPointsView.vue'),
+          meta: { titleKey: 'verificationPoints.title', navKey: 'profile', requiresAuth: true },
+        },
+        {
+          path: 'points-redemption',
+          name: 'points-redemption',
+          component: () => import('@/views/PointsRedemptionView.vue'),
+          meta: { titleKey: 'pointsRedemption.title', navKey: 'profile', requiresAuth: true },
         },
         {
           path: 'orders',

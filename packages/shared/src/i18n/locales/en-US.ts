@@ -135,6 +135,7 @@ export const sharedEnUS = {
     checkinMap: 'Map',
     attractionsPending: 'Attraction Review',
     routeMediaPending: 'Route Video Review',
+    ugcModeration: 'UGC Spot Check',
     attractionsManage: 'Attraction Covers',
     playbooksManage: 'Route Playbooks',
     marketplaceOrgs: 'Business Orgs',

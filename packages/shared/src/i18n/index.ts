@@ -36,6 +36,18 @@ export {
   type SceneTagSlug,
 } from './scene-tags.js';
 export {
+  formatRouteReviewTagLabel,
+  isRouteReviewTagSlug,
+  normalizeRouteReviewTags,
+  parseRouteReviewRating,
+  routeReviewTagPresets,
+  ROUTE_REVIEW_TAG_SET,
+  ROUTE_REVIEW_TAG_MAX,
+  ROUTE_REVIEW_RATING_MIN,
+  ROUTE_REVIEW_RATING_MAX,
+  type RouteReviewTagSlug,
+} from './route-review-tags.js';
+export {
   genderPresets,
   ageRangePresets,
   travelRadiusPresets,

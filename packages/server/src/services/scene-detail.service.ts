@@ -1,5 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { RouteStatus, type AttractionInfo, type RouteDetailPayload } from '@douxing/shared';
+import { RouteStatus, RouteModerationStatus, type AttractionInfo, type RouteDetailPayload } from '@douxing/shared';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
 import { getAttractionsByIds, listAttractions } from './attraction.service.js';
@@ -28,6 +28,7 @@ async function listAttractionIdsFromSceneRoutes(
       and(
         eq(travelRoutes.status, RouteStatus.PUBLISHED),
         eq(travelRoutes.isPublic, 1),
+        eq(travelRoutes.moderationStatus, RouteModerationStatus.APPROVED),
         sql`JSON_CONTAINS(IFNULL(${travelRoutes.sceneTags}, '[]'), JSON_QUOTE(${sceneSlug}))`,
       ),
     )

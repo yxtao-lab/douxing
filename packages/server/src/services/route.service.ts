@@ -1,8 +1,14 @@
 import { eq, desc, and, count, like, or, gte, lte } from 'drizzle-orm';
 import { getDb } from '../db/client.js';
 import { travelRoutes } from '../db/schema/travel-routes.js';
-import { RouteStatus, ApiError, ApiMessageKey, buildPaginatedResult } from '@douxing/shared';
-import type { PaginatedResult, TravelRouteInfo, UpdateRouteDraftRequest } from '@douxing/shared';
+import { RouteStatus, ApiError, ApiMessageKey, buildPaginatedResult, RouteSourceKind, RouteContentTier, RouteVerificationStatus, RouteModerationStatus, isRouteSourceKind } from '@douxing/shared';
+import type {
+  CreateInspirationRouteRequest,
+  PaginatedResult,
+  SetRoutePublicShareRequest,
+  TravelRouteInfo,
+  UpdateRouteDraftRequest,
+} from '@douxing/shared';
 import { generateRoute, type GenerateRouteInput, type GeneratedRouteDraft } from './route-generator.service.js';
 import { syncAttractionsFromRouteDetail } from './attraction.service.js';
 import type { RouteDayPlan, TravelIntentSnapshot } from '@douxing/shared';
@@ -22,6 +28,8 @@ import {
 } from './route-interaction.service.js';
 import { isRouteUnlockPaymentRequired } from '../config/route-unlock.js';
 import { enrichRouteDetailWithPoiTrust } from './route-poi-trust.service.js';
+import { recomputeRouteTrustWithParent } from './route-trust.service.js';
+import { awardInspirationPublish } from './verification-points.service.js';
 
 export { toRouteInfo };
 
@@ -251,7 +259,12 @@ export async function getRouteById(routeId: number, userId?: number, options?: {
   return route ?? null;
 }
 
-export async function setRoutePublicShare(routeId: number, userId: number, isPublic: boolean) {
+export async function setRoutePublicShare(
+  routeId: number,
+  userId: number,
+  isPublic: boolean,
+  options?: Pick<SetRoutePublicShareRequest, 'sourceKind' | 'parentRouteId'>,
+) {
   const db = getDb();
   const rows = await db
     .select()
@@ -265,12 +278,155 @@ export async function setRoutePublicShare(routeId: number, userId: number, isPub
     throw new ApiError(ApiMessageKey.ROUTE_PUBLISH_BEFORE_SHARE);
   }
 
-  await db
-    .update(travelRoutes)
-    .set({ isPublic: isPublic ? 1 : 0 })
-    .where(eq(travelRoutes.id, routeId));
+  const patch: Partial<typeof travelRoutes.$inferInsert> = {
+    isPublic: isPublic ? 1 : 0,
+  };
+
+  if (isPublic) {
+    patch.moderationStatus = RouteModerationStatus.APPROVED;
+
+    const detail = (row.routeDetail ?? {}) as Record<string, unknown>;
+    let sourceKind = options?.sourceKind;
+    if (sourceKind !== undefined && !isRouteSourceKind(sourceKind)) {
+      throw new ApiError(ApiMessageKey.ROUTE_SOURCE_KIND_INVALID);
+    }
+    if (!sourceKind) {
+      sourceKind =
+        detail.isAiGenerated === true || row.sourceKind === RouteSourceKind.AI_DRAFT
+          ? RouteSourceKind.AI_DRAFT
+          : row.sourceKind || RouteSourceKind.UGC_ORIGINAL;
+    }
+    if (sourceKind === RouteSourceKind.UGC_FORK) {
+      const parentId = options?.parentRouteId ?? row.parentRouteId;
+      if (!parentId) {
+        throw new ApiError(ApiMessageKey.ROUTE_FORK_PARENT_REQUIRED);
+      }
+      const parentOk = await assertPublicParentRoute(parentId);
+      if (!parentOk) {
+        throw new ApiError(ApiMessageKey.ROUTE_FORK_PARENT_NOT_FOUND);
+      }
+      patch.parentRouteId = parentId;
+    } else if (options?.parentRouteId != null) {
+      patch.parentRouteId = options.parentRouteId;
+    }
+    patch.sourceKind = sourceKind;
+    patch.verificationStatus =
+      sourceKind === RouteSourceKind.CRAWL
+        ? RouteVerificationStatus.PENDING
+        : row.verificationStatus || RouteVerificationStatus.PENDING;
+  }
+
+  await db.update(travelRoutes).set(patch).where(eq(travelRoutes.id, routeId));
+  const parentId = patch.parentRouteId ?? row.parentRouteId ?? null;
+  await recomputeRouteTrustWithParent(routeId, parentId);
 
   return getRouteById(routeId, userId, { recordView: false });
+}
+
+/**
+ * 校验父路线存在且已公开（fork 用）。
+ *
+ * @param parentRouteId - 父路线 ID
+ * @returns 是否可用
+ */
+async function assertPublicParentRoute(parentRouteId: number): Promise<boolean> {
+  const db = getDb();
+  const rows = await db
+    .select({ id: travelRoutes.id })
+    .from(travelRoutes)
+    .where(
+      and(
+        eq(travelRoutes.id, parentRouteId),
+        eq(travelRoutes.status, RouteStatus.PUBLISHED),
+        eq(travelRoutes.isPublic, 1),
+        eq(travelRoutes.moderationStatus, RouteModerationStatus.APPROVED),
+      ),
+    )
+    .limit(1);
+  return Boolean(rows[0]);
+}
+
+/**
+ * U1：创建灵感稿并直接发布到广场。
+ *
+ * @param userId - 作者
+ * @param input - 上传内容
+ * @returns 路线详情
+ */
+export async function createInspirationRoute(userId: number, input: CreateInspirationRouteRequest) {
+  const name = input.name?.trim();
+  if (!name) {
+    throw new ApiError(ApiMessageKey.ROUTE_INSPIRATION_CREATE_FAILED);
+  }
+  const days = Number(input.days);
+  if (!Number.isFinite(days) || days < 1 || days > 30) {
+    throw new ApiError(ApiMessageKey.ROUTE_INSPIRATION_CREATE_FAILED);
+  }
+
+  const sourceKind = input.sourceKind ?? RouteSourceKind.UGC_ORIGINAL;
+  if (
+    sourceKind !== RouteSourceKind.UGC_ORIGINAL &&
+    sourceKind !== RouteSourceKind.UGC_FORK &&
+    sourceKind !== RouteSourceKind.AI_DRAFT
+  ) {
+    throw new ApiError(ApiMessageKey.ROUTE_SOURCE_KIND_INVALID);
+  }
+
+  let parentRouteId: number | null = input.parentRouteId ?? null;
+  if (sourceKind === RouteSourceKind.UGC_FORK) {
+    if (!parentRouteId) {
+      throw new ApiError(ApiMessageKey.ROUTE_FORK_PARENT_REQUIRED);
+    }
+    const parentOk = await assertPublicParentRoute(parentRouteId);
+    if (!parentOk) {
+      throw new ApiError(ApiMessageKey.ROUTE_FORK_PARENT_NOT_FOUND);
+    }
+  } else {
+    parentRouteId = null;
+  }
+
+  const detail = {
+    days: input.routeDetail?.days ?? [],
+    isAiGenerated: sourceKind === RouteSourceKind.AI_DRAFT,
+    isUnlocked: true,
+    generationSource: sourceKind === RouteSourceKind.AI_DRAFT ? 'llm' : undefined,
+  };
+
+  const db = getDb();
+  const [result] = await db.insert(travelRoutes).values({
+    name,
+    description: input.description?.trim() || null,
+    budgetRange: input.budgetRange?.trim() || null,
+    days,
+    interestTags: input.interestTags ?? [],
+    sceneTags: input.sceneTags ?? [],
+    routeDetail: detail,
+    creatorId: userId,
+    status: RouteStatus.PUBLISHED,
+    isPublic: 1,
+    sourceKind,
+    contentTier: RouteContentTier.INSPIRATION,
+    verificationStatus: RouteVerificationStatus.PENDING,
+    moderationStatus: RouteModerationStatus.APPROVED,
+    parentRouteId,
+  });
+
+  const id = Number(result.insertId);
+  await recomputeRouteTrustWithParent(id, parentRouteId);
+  try {
+    await awardInspirationPublish(userId, id);
+  } catch (err) {
+    console.warn(
+      '[routes/inspiration] 验证积分入账失败',
+      id,
+      err instanceof Error ? err.message : err,
+    );
+  }
+  const route = await getRouteById(id, userId, { recordView: false });
+  if (!route) {
+    throw new ApiError(ApiMessageKey.ROUTE_NOT_FOUND);
+  }
+  return route;
 }
 
 export async function updateDraftRoute(

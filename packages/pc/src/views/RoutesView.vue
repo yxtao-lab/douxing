@@ -58,9 +58,31 @@
           {{ t('common.reset') }}
         </button>
       </div>
-      <p v-if="searchKeyword" class="text-xs text-dx-muted lg:text-right">
-        {{ t('routes.searchResultCount', { count: listTotal }) }}
-      </p>
+      <div class="flex flex-wrap items-center gap-3">
+        <p v-if="searchKeyword" class="text-xs text-dx-muted lg:text-right">
+          {{ t('routes.searchResultCount', { count: listTotal }) }}
+        </p>
+        <button type="button" class="dx-btn-secondary" @click="goInspiration">
+          {{ t('routes.uploadInspiration') }}
+        </button>
+      </div>
+    </div>
+
+    <div v-if="activeScope === 'plaza'" class="mb-6 flex flex-wrap gap-2">
+      <button
+        v-for="f in plazaSortFilters"
+        :key="f.value"
+        type="button"
+        class="rounded-full px-3 py-1.5 text-xs transition"
+        :class="
+          plazaSort === f.value
+            ? 'bg-dx-primary-light font-medium text-dx-primary'
+            : 'bg-gray-100 text-dx-muted hover:bg-gray-200'
+        "
+        @click="plazaSort = f.value"
+      >
+        {{ f.label }}
+      </button>
     </div>
 
     <div v-if="activeScope === 'mine'" class="mb-6 flex flex-wrap gap-2">
@@ -96,7 +118,27 @@
         <button v-if="searchKeyword" type="button" class="dx-btn-secondary" @click="clearSearch">
           {{ t('common.reset') }}
         </button>
-        <button v-else type="button" class="dx-btn-primary" @click="goPlan">{{ t('routes.goPlan') }}</button>
+        <template v-else>
+          <button
+            v-if="activeScope === 'plaza'"
+            type="button"
+            class="dx-btn-primary"
+            @click="goInspiration"
+          >
+            {{ t('routes.uploadInspiration') }}
+          </button>
+          <button v-else type="button" class="dx-btn-primary" @click="goPlan">
+            {{ t('routes.goPlan') }}
+          </button>
+          <button
+            v-if="activeScope === 'mine'"
+            type="button"
+            class="dx-btn-secondary"
+            @click="goInspiration"
+          >
+            {{ t('routes.uploadInspiration') }}
+          </button>
+        </template>
         <button
           v-if="!searchKeyword && activeScope === 'mine' && statusFilter !== undefined"
           type="button"
@@ -130,7 +172,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import type { RouteListScope, TravelRouteInfo } from '@douxing/shared';
+import type { RouteListScope, RouteListSort, TravelRouteInfo } from '@douxing/shared';
 import { RouteStatus } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
 import InfiniteScrollFooter from '@/components/InfiniteScrollFooter.vue';
@@ -143,6 +185,7 @@ const vueRoute = useRoute();
 const { t } = useLocale();
 
 const activeScope = ref<RouteListScope>('mine');
+const plazaSort = ref<RouteListSort>('trust');
 const statusFilter = ref<number | undefined>(undefined);
 const searchInput = ref('');
 const searchKeyword = ref('');
@@ -162,6 +205,12 @@ const scopeTabs = computed(() => [
   { id: 'favorites' as RouteListScope, label: t('routes.scopeFavorites') },
 ]);
 
+const plazaSortFilters = computed(() => [
+  { label: t('routes.sortTrust'), value: 'trust' as RouteListSort },
+  { label: t('routes.sortHot'), value: 'hot' as RouteListSort },
+  { label: t('routes.sortRecent'), value: 'recent' as RouteListSort },
+]);
+
 const statusFilters = computed(() => [
   { label: t('routes.filterAll'), value: undefined as number | undefined },
   { label: t('routes.filterDraft'), value: RouteStatus.DRAFT },
@@ -171,6 +220,7 @@ const statusFilters = computed(() => [
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
   if (searchKeyword.value) return t('routes.emptySearch');
+  if (activeScope.value === 'plaza' && plazaSort.value === 'trust') return t('routes.emptyRecommend');
   if (activeScope.value === 'plaza') return t('routes.emptyPlaza');
   if (activeScope.value === 'favorites') return t('routes.emptyFavorites');
   return t('routes.emptyMine');
@@ -196,7 +246,7 @@ async function fetchPage(nextPage: number, append: boolean) {
     scope: activeScope.value,
     status: activeScope.value === 'mine' ? statusFilter.value : undefined,
     keyword: searchKeyword.value || undefined,
-    sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
+    sort: activeScope.value === 'plaza' ? plazaSort.value : 'recent',
     page: nextPage,
     pageSize,
   });
@@ -257,7 +307,14 @@ function goPlan() {
   router.push({ name: 'plan' });
 }
 
-watch([activeScope, statusFilter], () => {
+/**
+ * 跳转灵感稿上传页。
+ */
+function goInspiration() {
+  router.push({ name: 'route-inspiration' });
+}
+
+watch([activeScope, statusFilter, plazaSort], () => {
   void reload();
 });
 

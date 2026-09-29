@@ -358,6 +358,48 @@
       "when": 1752768000000,
       "tag": "0051_user_gender_varchar32",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "5",
+      "when": 1759075200000,
+      "tag": "0052_ugc_route_contribution",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "5",
+      "when": 1759161600000,
+      "tag": "0053_ugc_route_review_heat",
+      "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "5",
+      "when": 1759248000000,
+      "tag": "0054_ugc_route_trust",
+      "breakpoints": true
+    },
+    {
+      "idx": 55,
+      "version": "5",
+      "when": 1759334400000,
+      "tag": "0055_ugc_verification_points",
+      "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "5",
+      "when": 1759420800000,
+      "tag": "0056_ugc_anti_abuse",
+      "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "5",
+      "when": 1759507200000,
+      "tag": "0057_points_redemption",
+      "breakpoints": true
     }
   ]
 }

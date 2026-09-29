@@ -32,6 +32,16 @@ export const users = mysqlTable('users', {
   memberLevel: tinyint('member_level').notNull().default(0),
   /** 付费会员到期时间（免费会员为 null） */
   memberExpiresAt: timestamp('member_expires_at'),
+  /** U4：验证积分账户余额（事件账本汇总；与热度/可信度分离） */
+  verificationPoints: int('verification_points').notNull().default(0),
+  /** G-INCENTIVE-01：兑换获得的额外规划候选数 */
+  bonusPlanCandidates: int('bonus_plan_candidates').notNull().default(0),
+  /** G-INCENTIVE-01：兑换获得的额外相册张数 */
+  bonusPhotoCount: int('bonus_photo_count').notNull().default(0),
+  /** G-INCENTIVE-01：兑换获得的额外相册字节 */
+  bonusPhotoBytes: int('bonus_photo_bytes').notNull().default(0),
+  /** G-INCENTIVE-01：是否解锁海报贴纸包 */
+  posterStickerUnlocked: tinyint('poster_sticker_unlocked').notNull().default(0),
   status: tinyint('status').notNull().default(1),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow().onUpdateNow(),

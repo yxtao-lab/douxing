@@ -10,7 +10,14 @@ import { getUserWithRoles, updateUserProfile, setUserAvatar, completeUserOnboard
 import { getMembershipInfoForUser } from '../services/membership.service.js';
 import { getUserPhotoStorageInfo } from '../services/photo-quota.service.js';
 import { getUserPersona, refreshUserPersona } from '../services/travel-persona.service.js';
-import { ApiMessageKey, USER_INTEREST_MAX } from '@douxing/shared';
+import { listVerificationPointEvents } from '../services/verification-points.service.js';
+import {
+  getPointRedemptionEntitlements,
+  listPointRedemptionCatalog,
+  listPointRedemptions,
+  redeemPointsProduct,
+} from '../services/points-redemption.service.js';
+import { ApiError, ApiMessageKey, USER_INTEREST_MAX } from '@douxing/shared';
 
 const router = Router();
 
@@ -105,6 +112,93 @@ router.get('/me/storage', authMiddleware, async (req, res) => {
   } catch (err) {
     console.error('[users/me/storage]', err);
     return fail(res, ApiMessageKey.PHOTO_STORAGE_FETCH_FAILED, 500, 500);
+  }
+});
+
+/**
+ * U4：当前用户验证积分余额与账本（可审计）。
+ */
+router.get('/me/verification-points', authMiddleware, async (req, res) => {
+  try {
+    const page = Number(req.query.page ?? 1);
+    const pageSize = Number(req.query.pageSize ?? 20);
+    const summary = await listVerificationPointEvents(req.auth!.userId, page, pageSize);
+    success(res, summary);
+  } catch (err) {
+    console.error('[users/me/verification-points]', err);
+    return fail(res, ApiMessageKey.VERIFICATION_POINTS_FETCH_FAILED, 500, 500);
+  }
+});
+
+const redeemSchema = z.object({
+  productId: z.string().min(1).max(64),
+  clientRequestId: z.string().max(128).nullable().optional(),
+});
+
+/**
+ * G-INCENTIVE-01：兑换目录（含可兑状态）。
+ */
+router.get('/me/redemption/catalog', authMiddleware, async (req, res) => {
+  try {
+    const [catalog, entitlements] = await Promise.all([
+      listPointRedemptionCatalog(req.auth!.userId),
+      getPointRedemptionEntitlements(req.auth!.userId),
+    ]);
+    success(res, { catalog, entitlements });
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[users/me/redemption/catalog]', err);
+    return fail(res, ApiMessageKey.POINTS_REDEMPTION_FETCH_FAILED, 500, 500);
+  }
+});
+
+/**
+ * G-INCENTIVE-01：当前权益快照。
+ */
+router.get('/me/redemption/entitlements', authMiddleware, async (req, res) => {
+  try {
+    const entitlements = await getPointRedemptionEntitlements(req.auth!.userId);
+    success(res, entitlements);
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[users/me/redemption/entitlements]', err);
+    return fail(res, ApiMessageKey.POINTS_REDEMPTION_FETCH_FAILED, 500, 500);
+  }
+});
+
+/**
+ * G-INCENTIVE-01：兑换记录。
+ */
+router.get('/me/redemption/history', authMiddleware, async (req, res) => {
+  try {
+    const limit = Number(req.query.limit ?? 20);
+    const items = await listPointRedemptions(req.auth!.userId, limit);
+    success(res, { items });
+  } catch (err) {
+    console.error('[users/me/redemption/history]', err);
+    return fail(res, ApiMessageKey.POINTS_REDEMPTION_FETCH_FAILED, 500, 500);
+  }
+});
+
+/**
+ * G-INCENTIVE-01：兑换商品。
+ */
+router.post('/me/redemption/redeem', authMiddleware, async (req, res) => {
+  try {
+    const parsed = redeemSchema.safeParse(req.body ?? {});
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.POINTS_REDEMPTION_PRODUCT_INVALID);
+    }
+    const result = await redeemPointsProduct(
+      req.auth!.userId,
+      parsed.data.productId,
+      parsed.data.clientRequestId,
+    );
+    success(res, result, '兑换成功');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[users/me/redemption/redeem]', err);
+    return fail(res, ApiMessageKey.POINTS_REDEMPTION_FAILED, 500, 500);
   }
 });
 

@@ -17,12 +17,32 @@
       <h3 class="line-clamp-2 flex-1 text-base font-semibold text-dx-text group-hover:text-dx-primary">
         {{ route.name }}
       </h3>
-      <span
-        v-if="route.isAiGenerated"
-        class="shrink-0 rounded-full bg-dx-primary-light px-2 py-0.5 text-xs font-medium text-dx-primary"
-      >
-        AI
-      </span>
+      <div class="flex shrink-0 flex-wrap justify-end gap-1">
+        <span
+          v-if="route.isAiGenerated"
+          class="rounded-full bg-dx-primary-light px-2 py-0.5 text-xs font-medium text-dx-primary"
+        >
+          AI
+        </span>
+        <span
+          v-if="contentTierLabel"
+          class="rounded-full bg-teal-600 px-2 py-0.5 text-xs font-medium text-white"
+        >
+          {{ contentTierLabel }}
+        </span>
+        <span
+          v-if="sourceLabel"
+          class="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-dx-muted"
+        >
+          {{ sourceLabel }}
+        </span>
+        <span
+          v-if="showPendingVerification"
+          class="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700"
+        >
+          {{ t('routes.pendingVerification') }}
+        </span>
+      </div>
     </div>
 
     <p class="mb-1 text-sm text-dx-muted">{{ metaLine }}</p>
@@ -51,7 +71,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { TravelRouteInfo } from '@douxing/shared';
-import { RouteStatus } from '@douxing/shared';
+import { isRoutePendingVerification, RouteContentTier, RouteSourceKind, RouteStatus } from '@douxing/shared';
 import { useLocale } from '@/i18n/useLocale';
 import { getRouteCardCoverUrl } from '@/utils/route-cover';
 
@@ -69,6 +89,33 @@ const metaLine = computed(() =>
     days: props.route.days,
     budget: props.route.budgetRange || t('routes.budgetTbd'),
   }),
+);
+
+const sourceLabel = computed(() => {
+  switch (props.route.sourceKind) {
+    case RouteSourceKind.CRAWL:
+      return t('routes.sourceCrawl');
+    case RouteSourceKind.AI_DRAFT:
+      return t('routes.sourceAiDraft');
+    case RouteSourceKind.UGC_ORIGINAL:
+      return t('routes.sourceUgcOriginal');
+    case RouteSourceKind.UGC_FORK:
+      return t('routes.sourceUgcFork');
+    default:
+      return '';
+  }
+});
+
+const contentTierLabel = computed(() => {
+  if (props.route.contentTier === RouteContentTier.TRAVEL_READY) return t('routes.contentTravelReady');
+  if (props.route.contentTier === RouteContentTier.INSPIRATION) return t('routes.contentInspiration');
+  return '';
+});
+
+const showPendingVerification = computed(
+  () =>
+    props.route.pendingVerification === true ||
+    isRoutePendingVerification(props.route.sourceKind, props.route.verificationStatus),
 );
 
 const statusLabel = computed(() => {

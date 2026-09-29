@@ -26,6 +26,14 @@
               </RouterLink>
             </div>
             <p class="mt-1 text-sm text-white/85">{{ planQuotaText }}</p>
+            <button
+              v-if="user"
+              type="button"
+              class="mt-2 text-left text-sm font-medium text-white/95 underline-offset-2 hover:underline"
+              @click="goVerificationPoints"
+            >
+              {{ verificationPointsText }}
+            </button>
             <div v-if="user.interestTags?.length" class="mt-3 flex flex-wrap gap-2">
               <span
                 v-for="tag in user.interestTags"
@@ -151,6 +159,21 @@ const planQuotaText = computed(() => {
   });
 });
 
+const verificationPointsText = computed(() =>
+  t('profile.verificationPointsLine', { points: user.value?.verificationPoints ?? 0 }),
+);
+
+/**
+ * 跳转验证积分账本页。
+ */
+function goVerificationPoints() {
+  if (!user.value) {
+    router.push({ name: 'login', query: { redirect: '/verification-points' } });
+    return;
+  }
+  router.push({ name: 'verification-points' });
+}
+
 function labelOf(tag: string) {
   return formatInterestTagLabel(tag, currentLocale.value);
 }
@@ -162,6 +185,8 @@ const gridItems = computed(() => [
   { key: 'achievements', icon: '🏅', label: t('profile.gridAchievements'), bg: '#fff7e6', needLogin: true, to: { name: 'achievements' } },
   { key: 'badges', icon: '🎖️', label: t('profile.gridBadges'), bg: '#f9f0ff', needLogin: true, to: { name: 'badges' } },
   { key: 'leaderboard', icon: '🏆', label: t('profile.gridLeaderboard'), bg: '#fff1f0', needLogin: true, to: { name: 'leaderboard' } },
+  { key: 'verificationPoints', icon: '✨', label: t('profile.gridVerificationPoints'), bg: '#ecfdf5', needLogin: true, to: { name: 'verification-points' } },
+  { key: 'pointsRedemption', icon: '🎁', label: t('profile.gridPointsRedemption'), bg: '#f0fdfa', needLogin: true, to: { name: 'points-redemption' } },
   { key: 'petMemories', icon: '🧠', label: t('nav.petMemories'), bg: '#fffbeb', needLogin: true, to: { name: 'pet-memories' } },
   { key: 'membership', icon: '💎', label: t('nav.membership'), bg: '#e6fffb', needLogin: true, to: { name: 'membership' } },
 ]);

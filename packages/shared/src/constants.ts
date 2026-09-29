@@ -44,6 +44,83 @@ export const RouteStatus = {
   ARCHIVED: 2,
 } as const;
 
+/** U1：路线来源（travel_routes.source_kind） */
+export const RouteSourceKind = {
+  CRAWL: 'crawl',
+  AI_DRAFT: 'ai_draft',
+  UGC_ORIGINAL: 'ugc_original',
+  UGC_FORK: 'ugc_fork',
+} as const;
+
+export type RouteSourceKindValue = (typeof RouteSourceKind)[keyof typeof RouteSourceKind];
+
+/** U1：内容层级（travel_routes.content_tier） */
+export const RouteContentTier = {
+  INSPIRATION: 'inspiration',
+  TRAVEL_READY: 'travel_ready',
+} as const;
+
+export type RouteContentTierValue = (typeof RouteContentTier)[keyof typeof RouteContentTier];
+
+/** U1：核验状态（travel_routes.verification_status） */
+export const RouteVerificationStatus = {
+  PENDING: 'pending',
+  VERIFIED: 'verified',
+} as const;
+
+export type RouteVerificationStatusValue =
+  (typeof RouteVerificationStatus)[keyof typeof RouteVerificationStatus];
+
+/** U1：内容审核状态（travel_routes.moderation_status） */
+export const RouteModerationStatus = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+} as const;
+
+export type RouteModerationStatusValue =
+  (typeof RouteModerationStatus)[keyof typeof RouteModerationStatus];
+
+const ROUTE_SOURCE_KIND_SET = new Set<string>(Object.values(RouteSourceKind));
+const ROUTE_CONTENT_TIER_SET = new Set<string>(Object.values(RouteContentTier));
+
+/**
+ * 判断是否为合法路线来源。
+ *
+ * @param value - 原始值
+ * @returns 是否合法
+ */
+export function isRouteSourceKind(value: unknown): value is RouteSourceKindValue {
+  return typeof value === 'string' && ROUTE_SOURCE_KIND_SET.has(value);
+}
+
+/**
+ * 判断是否为合法内容层级。
+ *
+ * @param value - 原始值
+ * @returns 是否合法
+ */
+export function isRouteContentTier(value: unknown): value is RouteContentTierValue {
+  return typeof value === 'string' && ROUTE_CONTENT_TIER_SET.has(value);
+}
+
+/**
+ * 爬取源且未核验时展示「待核验」。
+ *
+ * @param sourceKind - 来源
+ * @param verificationStatus - 核验状态
+ * @returns 是否应展示待核验标
+ */
+export function isRoutePendingVerification(
+  sourceKind: string | null | undefined,
+  verificationStatus: string | null | undefined,
+): boolean {
+  return (
+    sourceKind === RouteSourceKind.CRAWL &&
+    verificationStatus !== RouteVerificationStatus.VERIFIED
+  );
+}
+
 /** 规划会话状态（plan_sessions.status） */
 export const PlanSessionStatus = {
   ACTIVE: 0,

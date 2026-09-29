@@ -10,6 +10,11 @@
           <view class="title-row">
             <text class="title">{{ route.name }}</text>
             <text v-if="isOwner" class="status-badge" :class="routeStatusClass">{{ routeStatusLabel }}</text>
+            <text v-if="sourceBadgeLabel" class="status-badge source-badge">{{ sourceBadgeLabel }}</text>
+            <text v-if="contentTierBadgeLabel" class="status-badge tier-badge">{{ contentTierBadgeLabel }}</text>
+            <text v-if="showPendingVerificationBadge" class="status-badge warn-badge">
+              {{ t('routes.pendingVerification') }}
+            </text>
           </view>
           <text class="meta">{{ heroMeta }}</text>
         </view>
@@ -30,6 +35,14 @@
         <text class="stat">{{ statComments }}</text>
       </view>
       <text v-if="route.creatorNickname && !isOwner" class="author">{{ authorLine }}</text>
+      </view>
+    </view>
+
+    <view v-if="route.isPublic && (route.trustScore != null || contentTierBadgeLabel)" class="card">
+      <text class="share-title">{{ t('routes.trustTitle') }}</text>
+      <text class="share-hint">{{ tf('routes.trustScoreLabel', { score: route.trustScore ?? 0 }) }} · {{ contentTierBadgeLabel }}</text>
+      <view v-if="trustReasonLabels.length" class="trust-reasons">
+        <text v-for="reason in trustReasonLabels" :key="reason" class="trust-reason">{{ reason }}</text>
       </view>
     </view>
 
@@ -151,6 +164,44 @@
       <button class="btn-interact" :class="{ active: route.isFavorited }" @click="handleFavorite">
         {{ route.isFavorited ? t('routes.favorited') : t('routes.favorite') }}
       </button>
+      <button
+        v-if="canReportRoute"
+        class="btn-interact btn-interact--report"
+        @click="openReportModal"
+      >
+        {{ t('routes.reportAction') }}
+      </button>
+    </view>
+
+    <view v-if="reportModalVisible" class="edit-modal-mask" @click="closeReportModal">
+      <view class="edit-modal" @click.stop>
+        <view class="edit-modal-header">
+          <text class="edit-modal-title">{{ t('routes.reportTitle') }}</text>
+          <text class="edit-modal-close" @click="closeReportModal">×</text>
+        </view>
+        <view class="report-reason-list">
+          <button
+            v-for="opt in reportReasonOptions"
+            :key="opt.value"
+            class="btn-report-reason"
+            :class="{ active: reportReason === opt.value }"
+            @click="reportReason = opt.value"
+          >
+            {{ opt.label }}
+          </button>
+        </view>
+        <view class="edit-field">
+          <textarea
+            v-model="reportDetail"
+            class="edit-textarea"
+            :placeholder="t('routes.reportDetailPlaceholder')"
+            :maxlength="1000"
+          />
+        </view>
+        <button class="btn-primary" :disabled="reporting || !reportReason" @click="handleSubmitReport">
+          {{ t('routes.reportSubmit') }}
+        </button>
+      </view>
     </view>
 
     <view v-if="canGeneratePoster" class="card poster-card">
@@ -268,6 +319,16 @@
           <text v-if="formatCommentScope(c)" class="comment-scope">{{ formatCommentScope(c) }}</text>
         </text>
         <text class="comment-content">{{ c.content }}</text>
+        <view v-if="c.rating || (c.reviewTags && c.reviewTags.length)" class="comment-review-meta">
+          <text v-if="c.rating" class="comment-rating">{{ tf('routes.reviewRatingStar', { n: c.rating }) }}</text>
+          <text
+            v-for="tag in c.reviewTags || []"
+            :key="tag"
+            class="comment-review-tag"
+          >
+            {{ formatReviewTag(tag) }}
+          </text>
+        </view>
         <view class="comment-like-row">
           <text
             class="comment-like-btn"
@@ -275,6 +336,32 @@
             @click="handleCommentLike(c.id)"
           >
             {{ t('routes.commentLike') }} {{ c.likeCount ?? 0 }}
+          </text>
+        </view>
+      </view>
+      <view class="review-editor">
+        <text class="review-label">{{ t('routes.reviewRatingLabel') }}</text>
+        <view class="review-chips">
+          <text
+            v-for="n in 5"
+            :key="n"
+            class="review-chip"
+            :class="{ active: commentRating === n }"
+            @click="toggleCommentRating(n)"
+          >
+            {{ tf('routes.reviewRatingStar', { n }) }}
+          </text>
+        </view>
+        <text class="review-label">{{ t('routes.reviewTagsLabel') }}</text>
+        <view class="review-chips">
+          <text
+            v-for="tag in reviewTagPresets"
+            :key="tag"
+            class="review-chip"
+            :class="{ active: commentReviewTags.includes(tag) }"
+            @click="toggleCommentReviewTag(tag)"
+          >
+            {{ formatReviewTag(tag) }}
           </text>
         </view>
       </view>
@@ -389,6 +476,7 @@ import {
   updateRouteDraft,
   toggleRouteLike,
   toggleRouteFavorite,
+  createRouteReport,
   setRoutePublicShare,
   fetchRouteComments,
   createRouteComment,
@@ -401,7 +489,7 @@ import { completeRouteUnlockPayment, getUnlockPayButtonLabel } from '@/utils/ord
 import { fetchOrderPaymentConfig } from '@/api/orders';
 import { createCheckIn, uploadCheckInPhoto } from '@/api/checkins';
 import { getCurrentLocation } from '@/utils/location';
-import { RouteStatus, AnalyticsEventName } from '@douxing/shared';
+import { RouteStatus, AnalyticsEventName, RouteSourceKind, RouteContentTier, RouteReportReason, isRoutePendingVerification, routeReviewTagPresets, formatRouteReviewTagLabel, ROUTE_REVIEW_TAG_MAX, type RouteReviewTagSlug } from '@douxing/shared';
 import { trackAnalytics } from '@/utils/analytics';
 import AiPlanBlockingOverlay from '@/components/ai-plan-blocking-overlay/AiPlanBlockingOverlay.vue';
 import TravelPetFloatingLayer from '@/components/travel-pet-floating-layer/TravelPetFloatingLayer.vue';
@@ -423,12 +511,13 @@ import { getDxPrimaryColor } from '@/utils/theme-colors';
 import { usePageTitle } from '@/i18n/usePageTitle';
 import { useTf } from '@/i18n/useTf';
 
-const { t, tf } = useTf();
+const { t, tf, locale } = useTf();
 const { themeClass, themeId } = useTheme();
 const switchColor = computed(() => getDxPrimaryColor(themeId.value));
 usePageTitle('nav.routeDetail');
 
 const { joinLabels } = useInterestTagLabel();
+const reviewTagPresets = routeReviewTagPresets;
 
 const route = ref<TravelRouteInfo | null>(null);
 const publishedStatus = RouteStatus.PUBLISHED;
@@ -441,6 +530,10 @@ const editDesc = ref('');
 const editModalVisible = ref(false);
 const savingDraft = ref(false);
 const sharing = ref(false);
+const reportModalVisible = ref(false);
+const reportReason = ref('');
+const reportDetail = ref('');
+const reporting = ref(false);
 const comments = ref<RouteCommentInfo[]>([]);
 const commentSort = ref<'hot' | 'recent'>('hot');
 const poiExternalLinks = ref<RoutePoiExternalLinkInfo[]>([]);
@@ -454,6 +547,8 @@ const externalLinkFormPoi = ref<{
   poiName: string;
 } | null>(null);
 const commentText = ref('');
+const commentRating = ref<number | null>(null);
+const commentReviewTags = ref<RouteReviewTagSlug[]>([]);
 const commentFocus = ref<{
   dayIndex: number;
   attractionId?: number;
@@ -502,11 +597,98 @@ const routeStatusClass = computed(() => {
   return 'status-draft';
 });
 
+const sourceBadgeLabel = computed(() => {
+  if (!route.value?.sourceKind) return '';
+  switch (route.value.sourceKind) {
+    case RouteSourceKind.CRAWL:
+      return t('routes.sourceCrawl');
+    case RouteSourceKind.AI_DRAFT:
+      return t('routes.sourceAiDraft');
+    case RouteSourceKind.UGC_ORIGINAL:
+      return t('routes.sourceUgcOriginal');
+    case RouteSourceKind.UGC_FORK:
+      return t('routes.sourceUgcFork');
+    default:
+      return '';
+  }
+});
+
+const contentTierBadgeLabel = computed(() => {
+  if (!route.value?.contentTier) return '';
+  if (route.value.contentTier === RouteContentTier.TRAVEL_READY) return t('routes.contentTravelReady');
+  if (route.value.contentTier === RouteContentTier.INSPIRATION) return t('routes.contentInspiration');
+  return '';
+});
+
+/**
+ * 将可信原因码转为展示文案。
+ *
+ * @param key - 原因码
+ * @returns 文案
+ */
+function formatTrustReason(key: string) {
+  const map: Record<string, string> = {
+    fulfillment: t('routes.trustReasonFulfillment'),
+    recency_verified: t('routes.trustReasonRecencyVerified'),
+    recency_fresh: t('routes.trustReasonRecencyFresh'),
+    consensus: t('routes.trustReasonConsensus'),
+    quality_structure: t('routes.trustReasonQualityStructure'),
+    quality_description: t('routes.trustReasonQualityDescription'),
+    quality_bound_poi: t('routes.trustReasonQualityBoundPoi'),
+    crawl_unverified: t('routes.trustReasonCrawlUnverified'),
+    stale: t('routes.trustReasonStale'),
+    open_reports: t('routes.trustReasonOpenReports'),
+    crowned: t('routes.trustReasonCrowned'),
+  };
+  return map[key] ?? key;
+}
+
+const trustReasonLabels = computed(() =>
+  (route.value?.trustBreakdown?.reasonKeys ?? []).map((key) => formatTrustReason(key)),
+);
+
+const showPendingVerificationBadge = computed(() => {
+  if (!route.value) return false;
+  return (
+    route.value.pendingVerification === true ||
+    isRoutePendingVerification(route.value.sourceKind, route.value.verificationStatus)
+  );
+});
+
 const showShareSetting = computed(
   () => isOwner.value && route.value?.status === RouteStatus.PUBLISHED,
 );
 
 const showInteraction = computed(() => route.value?.isPublic === true);
+
+const canReportRoute = computed(
+  () => Boolean(route.value?.isPublic) && !isOwner.value,
+);
+
+const reportReasonOptions = computed(() => [
+  { value: RouteReportReason.OUTDATED, label: t('routes.reportReasonOutdated') },
+  { value: RouteReportReason.DANGEROUS, label: t('routes.reportReasonDangerous') },
+  { value: RouteReportReason.PLAGIARISM, label: t('routes.reportReasonPlagiarism') },
+  { value: RouteReportReason.AD, label: t('routes.reportReasonAd') },
+  { value: RouteReportReason.OTHER, label: t('routes.reportReasonOther') },
+]);
+
+/**
+ * 打开报错弹层。
+ */
+function openReportModal() {
+  reportReason.value = RouteReportReason.OUTDATED;
+  reportDetail.value = '';
+  reportModalVisible.value = true;
+}
+
+/**
+ * 关闭报错弹层。
+ */
+function closeReportModal() {
+  if (reporting.value) return;
+  reportModalVisible.value = false;
+}
 
 const showComments = computed(() => route.value?.isPublic === true);
 
@@ -1026,18 +1208,56 @@ async function handlePostComment() {
       dayIndex: commentFocus.value?.dayIndex,
       attractionId: commentFocus.value?.attractionId,
       poiName: commentFocus.value?.poiName || undefined,
+      rating: commentRating.value,
+      reviewTags: commentReviewTags.value,
     });
     comments.value = [created, ...comments.value];
     if (route.value) {
       route.value.commentCount = (route.value.commentCount ?? 0) + 1;
     }
     commentText.value = '';
+    commentRating.value = null;
+    commentReviewTags.value = [];
     uni.showToast({ title: t('routes.commentSuccess'), icon: 'success' });
   } catch (err) {
     uni.showToast({ title: getAppErrorMessage(err, t('routes.commentFailed')), icon: 'none' });
   } finally {
     postingComment.value = false;
   }
+}
+
+/**
+ * 切换评论星级；再次点击同一星级则取消。
+ *
+ * @param n - 1～5
+ */
+function toggleCommentRating(n: number) {
+  commentRating.value = commentRating.value === n ? null : n;
+}
+
+/**
+ * 切换评价标签选中状态。
+ *
+ * @param tag - 评价标签 slug
+ */
+function toggleCommentReviewTag(tag: RouteReviewTagSlug) {
+  const idx = commentReviewTags.value.indexOf(tag);
+  if (idx >= 0) {
+    commentReviewTags.value = commentReviewTags.value.filter((item) => item !== tag);
+    return;
+  }
+  if (commentReviewTags.value.length >= ROUTE_REVIEW_TAG_MAX) return;
+  commentReviewTags.value = [...commentReviewTags.value, tag];
+}
+
+/**
+ * 评价标签展示文案。
+ *
+ * @param tag - slug
+ * @returns 本地化标签
+ */
+function formatReviewTag(tag: string) {
+  return formatRouteReviewTagLabel(tag, locale.value as 'zh-CN' | 'en-US');
 }
 
 async function handleLike() {
@@ -1061,6 +1281,26 @@ async function handleFavorite() {
     }
   } catch (e) {
     uni.showToast({ title: getAppErrorMessage(e, t('routes.operationFailed')), icon: 'none' });
+  }
+}
+
+/**
+ * 提交路线报错工单。
+ */
+async function handleSubmitReport() {
+  if (!reportReason.value || reporting.value) return;
+  reporting.value = true;
+  try {
+    await createRouteReport(routeId, {
+      reason: reportReason.value,
+      detail: reportDetail.value.trim() || null,
+    });
+    reportModalVisible.value = false;
+    uni.showToast({ title: t('routes.reportSuccess'), icon: 'success' });
+  } catch (e) {
+    uni.showToast({ title: getAppErrorMessage(e, t('routes.reportFailed')), icon: 'none' });
+  } finally {
+    reporting.value = false;
   }
 }
 
@@ -1397,6 +1637,15 @@ onLoad((query) => {
 .status-badge.status-archived {
   background: rgba(0, 0, 0, 0.18);
 }
+.status-badge.source-badge {
+  background: rgba(255, 255, 255, 0.16);
+}
+.status-badge.tier-badge {
+  background: rgba(15, 118, 110, 0.92);
+}
+.status-badge.warn-badge {
+  background: rgba(217, 119, 6, 0.92);
+}
 .hero-edit-btn {
   width: 64rpx;
   height: 64rpx;
@@ -1494,6 +1743,19 @@ onLoad((query) => {
   margin-top: 8rpx;
   display: block;
 }
+.trust-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+.trust-reason {
+  font-size: 22rpx;
+  color: var(--dx-text-secondary);
+  padding: 4rpx 12rpx;
+  border-radius: 999rpx;
+  background: var(--dx-bg);
+}
 .media-card {
   margin-top: 0;
 }
@@ -1553,9 +1815,33 @@ onLoad((query) => {
   border-radius: var(--dx-radius-sm);
   border: none;
 }
+.btn-interact--report {
+  flex: 1.2;
+  font-size: 26rpx;
+}
 .btn-interact.active {
   background: var(--dx-primary-light);
   color: var(--dx-primary);
+}
+.report-reason-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+.btn-report-reason {
+  flex: 0 0 calc(50% - 6rpx);
+  font-size: 24rpx;
+  padding: 16rpx 8rpx;
+  background: var(--dx-bg);
+  color: var(--dx-text);
+  border-radius: var(--dx-radius-sm);
+  border: 2rpx solid transparent;
+}
+.btn-report-reason.active {
+  border-color: var(--dx-primary);
+  color: var(--dx-primary);
+  background: var(--dx-primary-light);
 }
 .edit-modal-mask {
   position: fixed;
@@ -1810,6 +2096,53 @@ onLoad((query) => {
   margin-top: 8rpx;
   display: block;
   line-height: 1.5;
+}
+.comment-review-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+.comment-rating {
+  font-size: 22rpx;
+  color: #d97706;
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  background: rgba(217, 119, 6, 0.12);
+}
+.comment-review-tag {
+  font-size: 22rpx;
+  color: var(--dx-text-secondary);
+  padding: 2rpx 10rpx;
+  border-radius: 999rpx;
+  background: var(--dx-bg);
+}
+.review-editor {
+  margin-top: 20rpx;
+}
+.review-label {
+  display: block;
+  font-size: 24rpx;
+  color: var(--dx-text-secondary);
+  margin: 12rpx 0 8rpx;
+}
+.review-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+.review-chip {
+  font-size: 22rpx;
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--dx-bg);
+  color: var(--dx-text-secondary);
+  border: 1rpx solid var(--dx-border, rgba(0, 0, 0, 0.08));
+}
+.review-chip.active {
+  background: var(--dx-primary-light, rgba(16, 185, 129, 0.15));
+  color: var(--dx-primary);
+  border-color: transparent;
 }
 .comment-input {
   width: 100%;

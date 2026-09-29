@@ -48,13 +48,15 @@ export async function getUserPhotoStorageInfo(userId: number): Promise<UserPhoto
   const level = await getUserMemberLevel(userId);
   const quota = getPhotoQuotaByMemberLevel(level);
   const usage = await getUserPhotoUsage(userId);
+  const { getUserBonusPhotoQuota } = await import('./points-redemption.service.js');
+  const bonus = await getUserBonusPhotoQuota(userId);
 
   return {
     level,
     usedBytes: usage.usedBytes,
-    maxBytes: quota.maxBytes,
+    maxBytes: quota.maxBytes + Math.max(0, bonus.bonusPhotoBytes),
     usedCount: usage.usedCount,
-    maxCount: quota.maxCount,
+    maxCount: quota.maxCount + Math.max(0, bonus.bonusPhotoCount),
     maxFileBytes: quota.maxFileBytes,
   };
 }
@@ -66,25 +68,23 @@ export async function assertCanUploadTravelPhoto(
 ): Promise<void> {
   if (!isPhotoQuotaEnforced()) return;
 
-  const level = await getUserMemberLevel(userId);
-  const quota = getPhotoQuotaByMemberLevel(level);
+  const info = await getUserPhotoStorageInfo(userId);
 
-  if (byteSize > quota.maxFileBytes) {
+  if (byteSize > info.maxFileBytes) {
     throw new ApiError(ApiMessageKey.TRAVEL_PHOTO_FILE_TOO_LARGE);
   }
 
-  const usage = await getUserPhotoUsage(userId);
   const extraCount = options?.additionalCount ?? 0;
   const extraBytes = options?.additionalBytes ?? 0;
-  const nextCount = usage.usedCount + 1 + extraCount;
-  const nextBytes = usage.usedBytes + byteSize + extraBytes;
+  const nextCount = info.usedCount + 1 + extraCount;
+  const nextBytes = info.usedBytes + byteSize + extraBytes;
 
-  if (nextCount > quota.maxCount || nextBytes > quota.maxBytes) {
+  if (nextCount > info.maxCount || nextBytes > info.maxBytes) {
     throw new ApiError(ApiMessageKey.PHOTO_QUOTA_EXCEEDED, {
-      usedCount: String(usage.usedCount),
-      maxCount: String(quota.maxCount),
-      usedBytes: formatBytesForMessage(usage.usedBytes),
-      maxBytes: formatBytesForMessage(quota.maxBytes),
+      usedCount: String(info.usedCount),
+      maxCount: String(info.maxCount),
+      usedBytes: formatBytesForMessage(info.usedBytes),
+      maxBytes: formatBytesForMessage(info.maxBytes),
     });
   }
 }

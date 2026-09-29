@@ -1,11 +1,12 @@
+import { ApiMessageKey, ApiError } from '@douxing/shared';
+import type { CreateInspirationRouteRequest, LocaleCode } from '@douxing/shared';
 import { Router, type Response } from 'express';
 import { z } from 'zod';
-import type { LocaleCode } from '@douxing/shared';
-import { ApiMessageKey, ApiError } from '@douxing/shared';
 import { authMiddleware } from '../middleware/auth.js';
 import { success, fail, failFromError } from '../utils/response.js';
 import {
   createRouteFromPrompt,
+  createInspirationRoute,
   regenerateRouteFromPrompt,
   getRouteById,
   publishRoute,
@@ -24,6 +25,16 @@ import {
   toggleRouteFavorite,
 } from '../services/route-interaction.service.js';
 import { listRouteComments, createRouteComment, toggleRouteCommentLike, setRouteCommentFeatured } from '../services/route-comment.service.js';
+import {
+  acceptRouteReport,
+  createRouteReport,
+  listRouteReports,
+  rejectRouteReport,
+} from '../services/route-report.service.js';
+import {
+  applyRouteModerationAction,
+  listRouteSpotCheck,
+} from '../services/route-trust.service.js';
 import {
   listRoutePoiExternalLinks,
   createRoutePoiExternalLink,
@@ -75,7 +86,7 @@ const generateSchema = z.object({
 const listQuerySchema = z.object({
   scope: z.enum(['mine', 'hot', 'favorites', 'plaza']).optional(),
   status: optionalQueryInt(0, 2),
-  sort: z.enum(['recent', 'hot', 'views']).optional(),
+  sort: z.enum(['recent', 'hot', 'views', 'trust']).optional(),
   keyword: z.string().max(64).optional(),
   /** P-TAG-01：按场景标签 slug 过滤，逗号分隔或数组 */
   sceneTags: z
@@ -209,6 +220,144 @@ router.post('/generate', authMiddleware, async (req, res) => {
   }
 });
 
+/** U1：上传灵感稿并公开到广场 */
+router.post('/inspiration', authMiddleware, async (req, res) => {
+  try {
+    const parsed = inspirationCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
+    }
+    const route = await createInspirationRoute(req.auth!.userId, {
+      ...parsed.data,
+      routeDetail: parsed.data.routeDetail as CreateInspirationRouteRequest['routeDetail'],
+    });
+    success(res, route, '灵感稿已发布到广场');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[routes/inspiration]', err);
+    return fail(res, ApiMessageKey.ROUTE_INSPIRATION_CREATE_FAILED, 500, 500);
+  }
+});
+
+const reportCreateSchema = z.object({
+  reason: z.string().min(1).max(32),
+  detail: z.string().max(1000).nullable().optional(),
+});
+
+const reportListQuerySchema = z.object({
+  status: z.enum(['open', 'accepted', 'rejected']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(50).optional(),
+});
+
+const moderationActionSchema = z.object({
+  action: z.enum(['demote', 'hide', 'restore', 'crown', 'uncrown']),
+});
+
+const resolveReportSchema = z.object({
+  note: z.string().max(512).nullable().optional(),
+});
+
+/**
+ * U5：管理端报错工单列表。
+ */
+router.get('/admin/ugc-reports', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const parsed = reportListQuerySchema.safeParse(req.query);
+    const result = await listRouteReports({
+      status: parsed.success ? parsed.data.status : 'open',
+      page: parsed.success ? parsed.data.page : 1,
+      pageSize: parsed.success ? parsed.data.pageSize : 20,
+    });
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/admin/ugc-reports]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+/**
+ * U5：管理端采纳报错。
+ */
+router.post('/admin/ugc-reports/:reportId/accept', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const reportId = parseInt(String(req.params.reportId), 10);
+    if (Number.isNaN(reportId)) return fail(res, ApiMessageKey.PARAM_ERROR);
+    const parsed = resolveReportSchema.safeParse(req.body ?? {});
+    const report = await acceptRouteReport(
+      reportId,
+      req.auth!.userId,
+      parsed.success ? parsed.data.note : null,
+    );
+    success(res, report, '已采纳报错');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[routes/admin/ugc-reports/accept]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+/**
+ * U5：管理端驳回报错。
+ */
+router.post('/admin/ugc-reports/:reportId/reject', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const reportId = parseInt(String(req.params.reportId), 10);
+    if (Number.isNaN(reportId)) return fail(res, ApiMessageKey.PARAM_ERROR);
+    const parsed = resolveReportSchema.safeParse(req.body ?? {});
+    const report = await rejectRouteReport(
+      reportId,
+      req.auth!.userId,
+      parsed.success ? parsed.data.note : null,
+    );
+    success(res, report, '已驳回报错');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[routes/admin/ugc-reports/reject]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+/**
+ * U5：管理端抽检队列。
+ */
+router.get('/admin/ugc-spot-check', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const limit = Number(req.query.limit ?? 50);
+    const items = await listRouteSpotCheck(limit);
+    success(res, { items });
+  } catch (err) {
+    console.error('[routes/admin/ugc-spot-check]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
+/**
+ * U5：管理端对路线处置（降级/隐藏/恢复/加冕）。
+ */
+router.post('/admin/:id/moderation', authMiddleware, async (req, res) => {
+  if (!(await requirePerm(req, res, 'content:attractions:pending'))) return;
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    const parsed = moderationActionSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, ApiMessageKey.ROUTE_MODERATION_ACTION_INVALID);
+    }
+    await applyRouteModerationAction(routeId, parsed.data.action);
+    const route = await getRouteById(routeId, req.auth!.userId, { recordView: false });
+    success(res, route, '处置已生效');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[routes/admin/moderation]', err);
+    return fail(res, ApiMessageKey.SERVER_ERROR, 500, 500);
+  }
+});
+
 router.get('/', authMiddleware, async (req, res) => {
   try {
     const user = await getUserWithRoles(req.auth!.userId);
@@ -282,6 +431,26 @@ router.get('/hot', authMiddleware, async (req, res) => {
 
 const sharePublicSchema = z.object({
   isPublic: z.boolean(),
+  sourceKind: z.enum(['crawl', 'ai_draft', 'ugc_original', 'ugc_fork']).optional(),
+  parentRouteId: z.number().int().positive().nullable().optional(),
+});
+
+const inspirationCreateSchema = z.object({
+  name: z.string().min(1).max(128),
+  description: z.string().max(2000).nullable().optional(),
+  budgetRange: z.string().max(64).nullable().optional(),
+  days: z.number().int().min(1).max(30),
+  interestTags: z.array(z.string().min(1).max(32)).max(20).optional(),
+  sceneTags: z.array(z.string().min(1).max(32)).max(20).optional(),
+  routeDetail: z
+    .object({
+      days: z.array(z.unknown()).optional(),
+    })
+    .passthrough()
+    .nullable()
+    .optional(),
+  sourceKind: z.enum(['ugc_original', 'ugc_fork', 'ai_draft']).optional(),
+  parentRouteId: z.number().int().positive().nullable().optional(),
 });
 
 const commentListQuerySchema = z.object({
@@ -315,6 +484,8 @@ const commentSchema = z.object({
   dayIndex: z.number().int().min(0).max(29).optional(),
   attractionId: z.number().int().positive().optional(),
   poiName: z.string().min(1).max(128).optional(),
+  rating: z.number().int().min(1).max(5).nullable().optional(),
+  reviewTags: z.array(z.string().min(1).max(32)).max(5).optional(),
 });
 
 router.use('/:routeId/media', routeMediaRouter);
@@ -420,9 +591,7 @@ router.post('/:id/comments', authMiddleware, async (req, res) => {
     if (!comment) return fail(res, '仅广场公开路线可评论', 404, 404);
     success(res, comment, '评论成功');
   } catch (err) {
-    if (err instanceof Error && err.message.includes('评论')) {
-      return fail(res, err.message);
-    }
+    if (err instanceof ApiError) return failFromError(res, err);
     console.error('[routes/comments POST]', err);
     return fail(res, '发表评论失败', 500, 500);
   }
@@ -520,7 +689,10 @@ router.post('/:id/share', authMiddleware, async (req, res) => {
     if (!parsed.success) {
       return fail(res, parsed.error.errors[0]?.message ?? '参数错误');
     }
-    const route = await setRoutePublicShare(routeId, req.auth!.userId, parsed.data.isPublic);
+    const route = await setRoutePublicShare(routeId, req.auth!.userId, parsed.data.isPublic, {
+      sourceKind: parsed.data.sourceKind,
+      parentRouteId: parsed.data.parentRouteId,
+    });
     if (!route) return fail(res, '路线不存在', 404, 404);
     success(res, route, parsed.data.isPublic ? '已公开到广场' : '已取消公开');
   } catch (err) {
@@ -540,8 +712,29 @@ router.post('/:id/like', authMiddleware, async (req, res) => {
     if (!result) return fail(res, '路线未公开或不存在', 404, 404);
     success(res, result, result.liked ? '已点赞' : '已取消点赞');
   } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
     console.error('[routes/like]', err);
     return fail(res, '点赞操作失败', 500, 500);
+  }
+});
+
+/**
+ * U5：用户提交路线报错。
+ */
+router.post('/:id/reports', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    const parsed = reportCreateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return fail(res, parsed.error.errors[0]?.message ?? ApiMessageKey.PARAM_ERROR);
+    }
+    const report = await createRouteReport(routeId, req.auth!.userId, parsed.data);
+    success(res, report, '报错已提交');
+  } catch (err) {
+    if (err instanceof ApiError) return failFromError(res, err);
+    console.error('[routes/reports POST]', err);
+    return fail(res, ApiMessageKey.ROUTE_REPORT_CREATE_FAILED, 500, 500);
   }
 });
 

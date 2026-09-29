@@ -135,6 +135,7 @@ export const sharedZhCN = {
     checkinMap: '打卡地图',
     attractionsPending: '景点审核',
     routeMediaPending: '路线视频审核',
+    ugcModeration: 'UGC 抽检处置',
     attractionsManage: '景点封面',
     playbooksManage: '玩法动线',
     marketplaceOrgs: '商户管理',

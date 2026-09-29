@@ -135,6 +135,13 @@ export const WORKBENCH_QUICK_ACTIONS: WorkbenchQuickAction[] = [
     perm: 'content:attractions:pending',
   },
   {
+    id: 'ugcModeration',
+    labelKey: 'web.ugcModeration',
+    to: '/ugc/moderation',
+    icon: 'attractions',
+    perm: 'content:attractions:pending',
+  },
+  {
     id: 'attractionsManage',
     labelKey: 'web.attractionsManage',
     to: '/attractions/manage',

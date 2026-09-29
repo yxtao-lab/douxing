@@ -52,6 +52,18 @@
           <text class="search-count">{{ tf('routes.searchResultCount', { count: listTotal }) }}</text>
         </view>
 
+        <view v-if="activeScope === 'plaza'" class="filters">
+          <text
+            v-for="f in plazaSortFilters"
+            :key="f.value"
+            class="chip"
+            :class="{ active: plazaSort === f.value }"
+            @click="plazaSort = f.value"
+          >
+            {{ f.label }}
+          </text>
+        </view>
+
         <view v-if="activeScope === 'mine'" class="filters">
           <text
             v-for="f in statusFilters"
@@ -62,6 +74,10 @@
           >
             {{ f.label }}
           </text>
+        </view>
+
+        <view class="action-row">
+          <text class="action-btn" @click="goInspiration">{{ t('routes.uploadInspiration') }}</text>
         </view>
       </view>
     </view>
@@ -83,6 +99,11 @@
           <view class="card-head">
             <text class="name">{{ item.name }}</text>
             <text class="tag" v-if="item.isAiGenerated">AI</text>
+            <text class="tag tag-tier" v-if="contentTierLabel(item)">{{ contentTierLabel(item) }}</text>
+            <text class="tag tag-source" v-if="sourceLabel(item)">{{ sourceLabel(item) }}</text>
+            <text class="tag tag-warn" v-if="showPendingVerification(item)">
+              {{ t('routes.pendingVerification') }}
+            </text>
           </view>
           <text class="meta">{{ cardMeta(item) }}</text>
           <text v-if="activeScope === 'plaza' && item.creatorNickname" class="author">
@@ -112,10 +133,10 @@
 <script setup lang="ts">
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import { onShow } from '@dcloudio/uni-app';
-import type { TravelRouteInfo, RouteListScope } from '@douxing/shared';
+import type { TravelRouteInfo, RouteListScope, RouteListSort } from '@douxing/shared';
 import { fetchRoutesPage } from '@/api/routes';
 import { useInfiniteList } from '@/composables/useInfiniteList';
-import { RouteStatus } from '@douxing/shared';
+import { isRoutePendingVerification, RouteContentTier, RouteSourceKind, RouteStatus } from '@douxing/shared';
 import { getStoredUser, getAppErrorMessage } from '@/utils/request';
 import { hideNativeTabBar } from '@/utils/hide-native-tab-bar';
 import DouxingTabBar from '@/components/douxing-tab-bar/DouxingTabBar.vue';
@@ -130,6 +151,7 @@ const { themeClass } = useTheme();
 usePageTitle('nav.routes');
 
 const activeScope = ref<RouteListScope>('mine');
+const plazaSort = ref<RouteListSort>('trust');
 const statusFilter = ref<number | undefined>(undefined);
 const searchInput = ref('');
 const searchKeyword = ref('');
@@ -143,7 +165,7 @@ const { items: routes, loading, loadingMore, hasMore, total: listTotal, loadInit
       scope: activeScope.value,
       status: activeScope.value === 'mine' ? statusFilter.value : undefined,
       keyword: searchKeyword.value || undefined,
-      sort: activeScope.value === 'plaza' ? 'hot' : 'recent',
+      sort: activeScope.value === 'plaza' ? plazaSort.value : 'recent',
       page,
       pageSize,
     }),
@@ -153,6 +175,12 @@ const scopeTabs = computed(() => [
   { id: 'mine' as RouteListScope, label: t('routes.scopeMine') },
   { id: 'plaza' as RouteListScope, label: t('routes.scopePlaza') },
   { id: 'favorites' as RouteListScope, label: t('routes.scopeFavorites') },
+]);
+
+const plazaSortFilters = computed(() => [
+  { label: t('routes.sortTrust'), value: 'trust' as RouteListSort },
+  { label: t('routes.sortHot'), value: 'hot' as RouteListSort },
+  { label: t('routes.sortRecent'), value: 'recent' as RouteListSort },
 ]);
 
 const statusFilters = computed(() => [
@@ -170,6 +198,7 @@ const statusFilterLabel = computed(() => {
 const emptyText = computed(() => {
   if (loadError.value) return loadError.value;
   if (searchKeyword.value) return t('routes.emptySearch');
+  if (activeScope.value === 'plaza' && plazaSort.value === 'trust') return t('routes.emptyRecommend');
   if (activeScope.value === 'plaza') return t('routes.emptyPlaza');
   if (activeScope.value === 'favorites') return t('routes.emptyFavorites');
   return t('routes.emptyMine');
@@ -215,6 +244,7 @@ const emptyHints = computed(() => {
 const emptyActionLabel = computed(() => {
   if (loadError.value) return t('common.refresh');
   if (searchKeyword.value) return t('common.reset');
+  if (activeScope.value === 'plaza') return t('routes.uploadInspiration');
   if (activeScope.value === 'mine') return t('routes.goPlan');
   if (activeScope.value === 'favorites') return t('emptyState.explorePlaza');
   return t('routes.goPlan');
@@ -222,9 +252,11 @@ const emptyActionLabel = computed(() => {
 
 const emptySecondaryActionLabel = computed(() => {
   if (searchKeyword.value) return undefined;
+  if (activeScope.value === 'plaza') return t('routes.goPlan');
   if (activeScope.value === 'mine' && statusFilter.value !== undefined) {
     return t('emptyState.filterReset');
   }
+  if (activeScope.value === 'mine') return t('routes.uploadInspiration');
   return undefined;
 });
 
@@ -242,10 +274,22 @@ function handleEmptyAction() {
     switchScope('plaza');
     return;
   }
+  if (activeScope.value === 'plaza') {
+    goInspiration();
+    return;
+  }
   goPlan();
 }
 
 function handleEmptySecondaryAction() {
+  if (activeScope.value === 'plaza') {
+    goPlan();
+    return;
+  }
+  if (activeScope.value === 'mine' && statusFilter.value === undefined) {
+    goInspiration();
+    return;
+  }
   statusFilter.value = undefined;
   void loadRoutes();
 }
@@ -261,6 +305,52 @@ function footerLabel(item: TravelRouteInfo) {
   return statusText(item.status);
 }
 
+/**
+ * 解析路线来源展示文案。
+ *
+ * @param item - 路线
+ * @returns 来源标签；无来源时返回空串
+ */
+function sourceLabel(item: TravelRouteInfo) {
+  switch (item.sourceKind) {
+    case RouteSourceKind.CRAWL:
+      return t('routes.sourceCrawl');
+    case RouteSourceKind.AI_DRAFT:
+      return t('routes.sourceAiDraft');
+    case RouteSourceKind.UGC_ORIGINAL:
+      return t('routes.sourceUgcOriginal');
+    case RouteSourceKind.UGC_FORK:
+      return t('routes.sourceUgcFork');
+    default:
+      return '';
+  }
+}
+
+/**
+ * 内容层级标签（灵感稿 / 可出行）。
+ *
+ * @param item - 路线
+ * @returns 展示文案
+ */
+function contentTierLabel(item: TravelRouteInfo) {
+  if (item.contentTier === RouteContentTier.TRAVEL_READY) return t('routes.contentTravelReady');
+  if (item.contentTier === RouteContentTier.INSPIRATION) return t('routes.contentInspiration');
+  return '';
+}
+
+/**
+ * 是否展示「待核验」标。
+ *
+ * @param item - 路线
+ * @returns 是否展示
+ */
+function showPendingVerification(item: TravelRouteInfo) {
+  return (
+    item.pendingVerification === true ||
+    isRoutePendingVerification(item.sourceKind, item.verificationStatus)
+  );
+}
+
 function cardMeta(item: TravelRouteInfo) {
   return tf('routes.cardMeta', {
     days: item.days,
@@ -274,6 +364,13 @@ function goDetail(item: TravelRouteInfo) {
 
 function goPlan() {
   uni.switchTab({ url: '/pages/plan/plan' });
+}
+
+/**
+ * 跳转灵感稿上传页。
+ */
+function goInspiration() {
+  uni.navigateTo({ url: '/pages/routes/inspiration' });
 }
 
 async function loadRoutes() {
@@ -334,6 +431,10 @@ onShow(async () => {
 
 watch(statusFilter, () => {
   if (activeScope.value === 'mine') loadRoutes();
+});
+
+watch(plazaSort, () => {
+  if (activeScope.value === 'plaza') void loadRoutes();
 });
 
 watch(searchInput, (value) => {
@@ -532,6 +633,31 @@ watch(searchInput, (value) => {
   padding: 4rpx 12rpx;
   border-radius: 8rpx;
   flex-shrink: 0;
+}
+.tag-source {
+  background: var(--dx-bg);
+  color: var(--dx-text-secondary);
+  border: 1rpx solid var(--dx-border, rgba(0, 0, 0, 0.08));
+}
+.tag-tier {
+  background: #0f766e;
+  color: #fff;
+}
+.tag-warn {
+  background: #d97706;
+  color: #fff;
+}
+.action-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16rpx;
+}
+.action-btn {
+  font-size: 24rpx;
+  color: var(--dx-primary);
+  padding: 8rpx 16rpx;
+  border-radius: 999rpx;
+  background: var(--dx-primary-light, rgba(16, 185, 129, 0.12));
 }
 .meta {
   display: block;
