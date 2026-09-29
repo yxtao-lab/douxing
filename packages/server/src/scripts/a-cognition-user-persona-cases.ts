@@ -182,6 +182,7 @@ async function main() {
     excludePoiNames: [],
     boostPoiNames: [],
     personaSummary: persona.summary,
+    tripFeedbackSummaries: [],
   };
   const baseIntent: TravelIntentSnapshot = {
     destination: '杭州',
@@ -212,6 +213,7 @@ async function main() {
     excludePoiNames: [],
     boostPoiNames: [],
     personaSummary: null,
+    tripFeedbackSummaries: [],
   };
   const notInjected = injectPersonaSummary(baseIntent, nullContext);
   assert(

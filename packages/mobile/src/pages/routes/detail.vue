@@ -145,6 +145,13 @@
         <button class="btn-intrip" :disabled="inTripSheetVisible" @click="inTripSheetVisible = true">
           {{ t('routes.inTripAnalyze') }}
         </button>
+        <button
+          class="btn-feedback"
+          :disabled="tripFeedbackSheetVisible"
+          @click="tripFeedbackSheetVisible = true"
+        >
+          {{ t('routes.tripFeedbackEntry') }}
+        </button>
       </view>
     </view>
 
@@ -434,6 +441,12 @@
       @close="missedSheetVisible = false"
     />
 
+    <RouteTripFeedbackSheet
+      :visible="tripFeedbackSheetVisible"
+      :route-id="routeId"
+      @close="tripFeedbackSheetVisible = false"
+    />
+
     <PetInTripAnalyzeSheet
       :visible="inTripSheetVisible"
       :route-id="routeId"
@@ -501,6 +514,7 @@ import RoutePosterSheet from '@/components/route-poster/RoutePosterSheet.vue';
 import RouteJourneyAlbumPanel from '@/components/route-journey-album/RouteJourneyAlbumPanel.vue';
 import RouteReplanSheet from '@/components/route-replan/RouteReplanSheet.vue';
 import RouteMissedPoiSheet from '@/components/route-missed/RouteMissedPoiSheet.vue';
+import RouteTripFeedbackSheet from '@/components/route-trip-feedback/RouteTripFeedbackSheet.vue';
 import PetInTripAnalyzeSheet from '@/components/travel-pet/PetInTripAnalyzeSheet.vue';
 import PetCheckInCelebrationSheet from '@/components/travel-pet/PetCheckInCelebrationSheet.vue';
 import { aiPlanLoadingState, isAiPlanCancelledError } from '@/utils/ai-plan-loading';
@@ -562,6 +576,7 @@ const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(nu
 const posterSheetVisible = ref(false);
 const replanSheetVisible = ref(false);
 const missedSheetVisible = ref(false);
+const tripFeedbackSheetVisible = ref(false);
 const inTripSheetVisible = ref(false);
 const celebrationVisible = ref(false);
 const celebrationData = ref<import('@douxing/shared').PetCheckInCelebration | null>(null);
@@ -1715,6 +1730,7 @@ onLoad((query) => {
 }
 .btn-replan,
 .btn-missed,
+.btn-feedback,
 .btn-intrip {
   width: 100%;
   font-size: 28rpx;

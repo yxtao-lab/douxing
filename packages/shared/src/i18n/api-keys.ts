@@ -371,6 +371,10 @@ export const ApiMessageKey = {
   MARKETPLACE_DISPUTE_NOT_FOUND: 'api.marketplaceDisputeNotFound',
   MARKETPLACE_DISPUTE_STATUS_INVALID: 'api.marketplaceDisputeStatusInvalid',
   MARKETPLACE_DISPUTE_RESOLVE_FORBIDDEN: 'api.marketplaceDisputeResolveForbidden',
+
+  TRIP_FEEDBACK_NOT_FOUND: 'api.tripFeedbackNotFound',
+  TRIP_FEEDBACK_ALREADY_FINALIZED: 'api.tripFeedbackAlreadyFinalized',
+  TRIP_FEEDBACK_FAILED: 'api.tripFeedbackFailed',
 } as const;
 
 export type ApiMessageKeyType = (typeof ApiMessageKey)[keyof typeof ApiMessageKey];

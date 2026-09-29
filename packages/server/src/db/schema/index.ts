@@ -41,4 +41,5 @@ export * from './marketplace-dispute.js';
 export * from './user-travel-persona.js';
 export * from './verification-point-events.js';
 export * from './point-redemptions.js';
+export * from './trip-feedbacks.js';
 export * from './route-reports.js';

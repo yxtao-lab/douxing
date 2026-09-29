@@ -91,9 +91,12 @@ function checkIntentInjection() {
   };
   const context = {
     interestTags: ['摄影'],
+    preferredScenes: [] as string[],
     memoryThemes: ['偏爱美食'],
     excludePoiNames: ['武侯祠'],
     boostPoiNames: ['蜀大侠火锅'],
+    personaSummary: null as string | null,
+    tripFeedbackSummaries: [] as string[],
   };
   const merged = applyMemoryContextToIntent(intent, context, '召回 2 条记忆：· 偏爱美食');
   assert(merged.themes.includes('摄影'), '合并 interestTags');

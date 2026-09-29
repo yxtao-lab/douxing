@@ -12,6 +12,7 @@ import {
   recallUserMemory,
 } from './pet-memory.service.js';
 import { getPersonaSummaryForPlanning } from './travel-persona.service.js';
+import { recallRecentTripFeedbackSummaries } from './trip-feedback.service.js';
 
 export interface PlanUserContext {
   interestTags: string[];
@@ -22,10 +23,12 @@ export interface PlanUserContext {
   boostPoiNames: string[];
   /** A-COGNITION-01：旅行画像摘要 */
   personaSummary: string | null;
+  /** A-COGNITION-02：最近行程复盘摘要（供规划召回） */
+  tripFeedbackSummaries: string[];
 }
 
 /**
- * 加载规划用用户上下文（兴趣、场景偏好、记忆、画像摘要）。
+ * 加载规划用用户上下文（兴趣、场景偏好、记忆、画像摘要、复盘回流）。
  *
  * @param userId - 用户 ID
  * @returns PlanUserContext；无数据时字段为空数组或 null
@@ -49,6 +52,7 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
   const boostPoiNames = extractBoostPoiNames(memories);
 
   const personaSummary = await getPersonaSummaryForPlanning(userId);
+  const tripFeedbackSummaries = await recallRecentTripFeedbackSummaries(userId, 3);
 
   return {
     interestTags,
@@ -57,6 +61,7 @@ export async function loadPlanUserContext(userId: number): Promise<PlanUserConte
     excludePoiNames,
     boostPoiNames,
     personaSummary,
+    tripFeedbackSummaries,
   };
 }
 
@@ -113,7 +118,28 @@ export function injectPersonaSummary(
   };
 }
 
-/** C7-c：将 memory_agent 召回摘要 + 旅行画像写入 intent.constraintSummary */
+/**
+ * 将行程复盘摘要注入 intent.constraintSummary。
+ *
+ * @param intent - 当前规划意图
+ * @param context - 用户上下文
+ * @returns 注入后的意图
+ */
+export function injectTripFeedbackSummary(
+  intent: TravelIntentSnapshot,
+  context: PlanUserContext,
+): TravelIntentSnapshot {
+  const feedback =
+    context.tripFeedbackSummaries?.filter((s) => s.trim()).join('；') ?? '';
+  if (!feedback) return intent;
+  const existing = intent.constraintSummary?.trim();
+  return {
+    ...intent,
+    constraintSummary: existing ? `${existing}；${feedback}` : feedback,
+  };
+}
+
+/** C7-c：将 memory_agent 召回摘要 + 旅行画像 + 复盘回流写入 intent.constraintSummary */
 export function applyMemoryContextToIntent(
   intent: TravelIntentSnapshot,
   context: PlanUserContext,
@@ -125,6 +151,9 @@ export function applyMemoryContextToIntent(
   if (existingSummary) summaryParts.push(existingSummary);
   if (context.personaSummary?.trim()) summaryParts.push(context.personaSummary.trim());
   if (memorySummary?.trim()) summaryParts.push(memorySummary.trim());
+  const feedback =
+    context.tripFeedbackSummaries?.filter((s) => s.trim()).join('；') ?? '';
+  if (feedback) summaryParts.push(feedback);
   if (summaryParts.length > 0) {
     merged = {
       ...merged,

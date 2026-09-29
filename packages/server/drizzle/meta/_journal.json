@@ -400,6 +400,13 @@
       "when": 1759507200000,
       "tag": "0057_points_redemption",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "5",
+      "when": 1759593600000,
+      "tag": "0058_trip_feedback",
+      "breakpoints": true
     }
   ]
 }

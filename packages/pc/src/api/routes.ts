@@ -232,6 +232,45 @@ export async function recordRouteMissedPois(id: number, body: RouteMissedPoiReco
   return data.data;
 }
 
+/**
+ * 读取已落库行程复盘。
+ *
+ * @param id - 路线 ID
+ * @returns 复盘或 null
+ */
+export async function getRouteTripFeedback(id: number) {
+  const { data } = await http.get<
+    ApiResponse<import('@douxing/shared').TripFeedbackInfo | null>
+  >(`/routes/${id}/trip-feedback`);
+  return data.data;
+}
+
+/**
+ * 预览计划 vs 实际 diff（不落库）。
+ *
+ * @param id - 路线 ID
+ * @returns 复盘预览
+ */
+export async function previewRouteTripFeedback(id: number) {
+  const { data } = await http.post<
+    ApiResponse<import('@douxing/shared').TripFeedbackInfo>
+  >(`/routes/${id}/trip-feedback/preview`);
+  return data.data;
+}
+
+/**
+ * 确认行程复盘并回流记忆 / Golden Case。
+ *
+ * @param id - 路线 ID
+ * @returns 已确认复盘
+ */
+export async function finalizeRouteTripFeedback(id: number) {
+  const { data } = await http.post<
+    ApiResponse<import('@douxing/shared').TripFeedbackInfo>
+  >(`/routes/${id}/trip-feedback/finalize`);
+  return data.data;
+}
+
 export interface UploadRouteMediaParams {
   scope: 'route' | 'poi';
   durationSec: number;

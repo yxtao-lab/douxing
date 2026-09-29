@@ -223,6 +223,13 @@
               <button type="button" class="dx-btn-secondary w-full sm:w-auto" @click="inTripDialogVisible = true">
                 {{ t('routes.inTripAnalyze') }}
               </button>
+              <button
+                type="button"
+                class="dx-btn-secondary w-full sm:w-auto"
+                @click="tripFeedbackDialogVisible = true"
+              >
+                {{ t('routes.tripFeedbackEntry') }}
+              </button>
             </div>
           </div>
 
@@ -687,6 +694,13 @@
       @close="missedDialogVisible = false"
     />
 
+    <RouteTripFeedbackDialog
+      v-if="route"
+      :visible="tripFeedbackDialogVisible"
+      :route-id="numericRouteId"
+      @close="tripFeedbackDialogVisible = false"
+    />
+
     <PetInTripAnalyzeDialog
       v-if="route"
       :visible="inTripDialogVisible"
@@ -714,6 +728,7 @@ import RouteMapByDay from '@/components/route/RouteMapByDay.vue';
 import RoutePosterSheet from '@/components/route/RoutePosterSheet.vue';
 import RouteReplanDialog from '@/components/route/RouteReplanDialog.vue';
 import RouteMissedPoiDialog from '@/components/route/RouteMissedPoiDialog.vue';
+import RouteTripFeedbackDialog from '@/components/route/RouteTripFeedbackDialog.vue';
 import PetInTripAnalyzeDialog from '@/components/route/PetInTripAnalyzeDialog.vue';
 import RouteJourneyAlbumPanel from '@/components/route/RouteJourneyAlbumPanel.vue';
 import { useRouteDetail } from '@/composables/useRouteDetail';
@@ -731,6 +746,7 @@ const { joinLabels } = useInterestTagLabels();
 const posterSheetVisible = ref(false);
 const replanDialogVisible = ref(false);
 const missedDialogVisible = ref(false);
+const tripFeedbackDialogVisible = ref(false);
 const inTripDialogVisible = ref(false);
 const detailTab = ref<'itinerary' | 'album'>('itinerary');
 const albumPanelRef = ref<InstanceType<typeof RouteJourneyAlbumPanel> | null>(null);

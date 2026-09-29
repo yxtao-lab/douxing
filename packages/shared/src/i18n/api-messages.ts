@@ -373,6 +373,10 @@ const zhCN: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_DISPUTE_NOT_FOUND]: '争议不存在',
   [ApiMessageKey.MARKETPLACE_DISPUTE_STATUS_INVALID]: '争议状态非法',
   [ApiMessageKey.MARKETPLACE_DISPUTE_RESOLVE_FORBIDDEN]: '仅平台运营可仲裁争议',
+
+  [ApiMessageKey.TRIP_FEEDBACK_NOT_FOUND]: '行程复盘不存在',
+  [ApiMessageKey.TRIP_FEEDBACK_ALREADY_FINALIZED]: '该行程复盘已确认，无需重复提交',
+  [ApiMessageKey.TRIP_FEEDBACK_FAILED]: '行程复盘处理失败',
 };
 
 const enUS: Record<string, string> = {
@@ -764,6 +768,10 @@ const enUS: Record<string, string> = {
   [ApiMessageKey.MARKETPLACE_DISPUTE_NOT_FOUND]: 'Dispute not found',
   [ApiMessageKey.MARKETPLACE_DISPUTE_STATUS_INVALID]: 'Invalid dispute status',
   [ApiMessageKey.MARKETPLACE_DISPUTE_RESOLVE_FORBIDDEN]: 'Only platform operators can arbitrate disputes',
+
+  [ApiMessageKey.TRIP_FEEDBACK_NOT_FOUND]: 'Trip feedback not found',
+  [ApiMessageKey.TRIP_FEEDBACK_ALREADY_FINALIZED]: 'Trip feedback already finalized',
+  [ApiMessageKey.TRIP_FEEDBACK_FAILED]: 'Failed to process trip feedback',
 };
 
 export const API_MESSAGES: Record<LocaleCode, Record<string, string>> = {

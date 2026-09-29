@@ -225,6 +225,44 @@ export function recordRouteMissedPois(id: number, data: RouteMissedPoiRecordInpu
   });
 }
 
+/**
+ * 读取已落库行程复盘。
+ *
+ * @param id - 路线 ID
+ * @returns 复盘或 null
+ */
+export function getRouteTripFeedback(id: number) {
+  return request<import('@douxing/shared').TripFeedbackInfo | null>(
+    `/routes/${id}/trip-feedback`,
+  );
+}
+
+/**
+ * 预览计划 vs 实际 diff（不落库）。
+ *
+ * @param id - 路线 ID
+ * @returns 复盘预览
+ */
+export function previewRouteTripFeedback(id: number) {
+  return request<import('@douxing/shared').TripFeedbackInfo>(
+    `/routes/${id}/trip-feedback/preview`,
+    { method: 'POST' },
+  );
+}
+
+/**
+ * 确认行程复盘并回流记忆 / Golden Case。
+ *
+ * @param id - 路线 ID
+ * @returns 已确认复盘
+ */
+export function finalizeRouteTripFeedback(id: number) {
+  return request<import('@douxing/shared').TripFeedbackInfo>(
+    `/routes/${id}/trip-feedback/finalize`,
+    { method: 'POST' },
+  );
+}
+
 export interface UploadRouteMediaParams {
   scope: 'route' | 'poi';
   durationSec: number;

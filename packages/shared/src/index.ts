@@ -30,6 +30,7 @@ export * from './route-trust.js';
 export * from './verification-points.js';
 export * from './points-redemption.js';
 export * from './ugc-anti-abuse.js';
+export * from './trip-feedback.js';
 export * from './shooting-params.js';
 export * from './travel-pet.js';
 export * from './travel-pet-floating.js';

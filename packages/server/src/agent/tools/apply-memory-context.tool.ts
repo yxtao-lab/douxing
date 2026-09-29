@@ -18,7 +18,7 @@ export async function runApplyMemoryContextTool(raw: unknown) {
 
   const mergedContext: PlanUserContext = partial
     ? {
-        interestTags: loaded.interestTags,
+        ...loaded,
         memoryThemes: partial.memoryThemes ?? loaded.memoryThemes,
         excludePoiNames: partial.excludePoiNames ?? loaded.excludePoiNames,
         boostPoiNames: partial.boostPoiNames ?? loaded.boostPoiNames,

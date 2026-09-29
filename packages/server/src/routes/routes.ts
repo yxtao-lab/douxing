@@ -65,6 +65,11 @@ import {
   analyzeRouteMissedPois,
   recordMissedPoiRegrets,
 } from '../services/missed-poi.service.js';
+import {
+  finalizeTripFeedback,
+  getTripFeedback,
+  previewTripFeedback,
+} from '../services/trip-feedback.service.js';
 import planSessionsRouter from './plan-sessions.js';
 import routeMediaRouter from './route-media.js';
 
@@ -911,6 +916,58 @@ router.post('/:id/missed-pois/record', authMiddleware, async (req, res) => {
     success(res, result);
   } catch (err) {
     console.error('[routes/missed-pois/record]', err);
+    return failFromError(res, err);
+  }
+});
+
+/**
+ * A-COGNITION-02：读取已落库行程复盘（无则 data=null）。
+ */
+router.get('/:id/trip-feedback', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const result = await getTripFeedback(routeId, req.auth!.userId);
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/trip-feedback GET]', err);
+    return failFromError(res, err);
+  }
+});
+
+/**
+ * A-COGNITION-02：预览计划 vs 实际 diff（不落库）。
+ */
+router.post('/:id/trip-feedback/preview', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const result = await previewTripFeedback(routeId, req.auth!.userId);
+    success(res, result);
+  } catch (err) {
+    console.error('[routes/trip-feedback/preview]', err);
+    return failFromError(res, err);
+  }
+});
+
+/**
+ * A-COGNITION-02：确认复盘 → 写记忆 + Golden 载荷 + 规划可召回。
+ */
+router.post('/:id/trip-feedback/finalize', authMiddleware, async (req, res) => {
+  try {
+    const routeId = parseInt(String(req.params.id), 10);
+    if (Number.isNaN(routeId)) {
+      return fail(res, ApiMessageKey.INVALID_ROUTE_ID);
+    }
+    const locale = getRequestLocale(res);
+    const result = await finalizeTripFeedback(routeId, req.auth!.userId, locale);
+    success(res, result, ApiMessageKey.OK);
+  } catch (err) {
+    console.error('[routes/trip-feedback/finalize]', err);
     return failFromError(res, err);
   }
 });
